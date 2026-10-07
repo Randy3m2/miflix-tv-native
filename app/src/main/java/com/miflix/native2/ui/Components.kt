@@ -1,6 +1,5 @@
 package com.miflix.native2.ui
 
-import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -20,8 +19,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.key.nativeKeyEvent
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -41,14 +43,15 @@ val SoftWhite = Color(0xFFF3F3F3)
 private val FastMotion = tween<Float>(durationMillis = 90, easing = LinearOutSlowInEasing)
 
 fun Modifier.tvClick(onClick: () -> Unit): Modifier = this.onPreviewKeyEvent { event ->
-    val native = event.nativeKeyEvent
-    val activate = native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_CENTER ||
-        native.keyCode == AndroidKeyEvent.KEYCODE_ENTER ||
-        native.keyCode == AndroidKeyEvent.KEYCODE_NUMPAD_ENTER
-    if (activate && native.action == AndroidKeyEvent.ACTION_UP) {
+    val activate = event.key == Key.DirectionCenter ||
+        event.key == Key.Enter ||
+        event.key == Key.NumPadEnter
+    if (activate && event.type == KeyEventType.KeyUp) {
         onClick()
         true
-    } else false
+    } else {
+        false
+    }
 }
 
 @Composable

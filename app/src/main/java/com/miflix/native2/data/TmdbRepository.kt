@@ -27,6 +27,21 @@ class TmdbRepository(var token: String) {
     suspend fun popularSeries(): List<MediaSummary> = parseList(get("/tv/popular"), "series")
     suspend fun topRatedMovies(): List<MediaSummary> = parseList(get("/movie/top_rated"), "movie")
     suspend fun search(query: String): List<MediaSummary> = parseList(get("/search/multi", mapOf("query" to query)))
+    suspend fun discoverGenre(genreId: Int): List<MediaSummary> = parseList(
+        get("/discover/movie", mapOf("with_genres" to genreId.toString(), "sort_by" to "popularity.desc")),
+        "movie"
+    )
+    suspend fun discoverProvider(providerId: Int, region: String = "US"): List<MediaSummary> = parseList(
+        get(
+            "/discover/movie",
+            mapOf(
+                "with_watch_providers" to providerId.toString(),
+                "watch_region" to region,
+                "sort_by" to "popularity.desc"
+            )
+        ),
+        "movie"
+    )
 
     suspend fun details(item: MediaSummary): MediaDetails {
         val kind = if (item.type == "series") "tv" else "movie"

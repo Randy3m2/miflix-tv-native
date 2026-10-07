@@ -48,6 +48,36 @@ class SupabaseRepository(private val url: String, private val key: String) {
         return profiles to setup
     }
 
+
+    suspend fun upsertPrivateSetup(session: CloudSession, setup: PrivateSetup) {
+        val existing = readRow(session, "__account__")?.optJSONObject("state") ?: JSONObject()
+        existing.put(
+            "privateSetup",
+            JSONObject()
+                .put("tmdbToken", setup.tmdbToken)
+                .put("torrentioManifest", setup.torrentioManifest)
+        )
+        if (!existing.has("profiles")) existing.put("profiles", JSONArray())
+        existing.put("updatedAt", System.currentTimeMillis())
+
+        val isoNow = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }.format(java.util.Date())
+        val body = JSONObject()
+            .put("user_id", session.userId)
+            .put("profile_id", "__account__")
+            .put("state", existing)
+            .put("updated_at", isoNow)
+            .toString()
+
+        Http.text(
+            "$url/rest/v1/miflix_user_state?on_conflict=user_id,profile_id",
+            "POST",
+            headers(session) + ("Prefer" to "resolution=merge-duplicates,return=minimal"),
+            body
+        )
+    }
+
     suspend fun profileState(session: CloudSession, profileId: String): Pair<Set<String>, MutableMap<String, PlaybackProgress>> {
         val row = readRow(session, profileId) ?: return emptySet<String>() to mutableMapOf()
         val state = row.optJSONObject("state") ?: JSONObject()

@@ -30,6 +30,7 @@ fun MiFlixNativeApp() {
             Screen.SEARCH -> SearchScreen(state) { state.screen = Screen.HOME }
             Screen.MOVIES -> CatalogScreen(state, "Movies", state.movies, { state.screen = Screen.HOME })
             Screen.SERIES -> CatalogScreen(state, "Series", state.series, { state.screen = Screen.HOME })
+            Screen.COLLECTIONS -> CollectionsScreen(state) { state.screen = Screen.HOME }
             Screen.MY_LIST -> MyListScreen(state) { state.screen = Screen.HOME }
             Screen.SETTINGS -> SettingsScreen(state) { state.screen = Screen.HOME }
             Screen.PROFILES -> ProfilesScreen(state) { state.screen = Screen.HOME }
@@ -51,7 +52,7 @@ private fun SplashScreen() {
     Box(Modifier.fillMaxSize().background(Bg), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(Modifier.size(112.dp).background(Purple, RoundedCornerShape(30.dp)), contentAlignment = Alignment.Center) { Text("M", color = Color.White, fontSize = 46.sp, fontWeight = FontWeight.Black) }
-            Spacer(Modifier.height(18.dp)); Text("MiFlix", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black); Text("Native TV", color = Muted, fontSize = 14.sp)
+            Spacer(Modifier.height(18.dp)); Text("MiFlix", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black); Text("Native TV · Alpha 2", color = Muted, fontSize = 14.sp)
         }
     }
 }

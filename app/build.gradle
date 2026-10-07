@@ -16,8 +16,8 @@ android {
         applicationId 'com.miflix.native2'
         minSdk 23
         targetSdk 36
-        versionCode 20002
-        versionName '2.0.0-alpha1.1'
+        versionCode 20010
+        versionName '2.0.0-alpha2'
 
         buildConfigField 'String', 'SUPABASE_URL', '"https://iwvhigqxsvvgyzdygiqa.supabase.co"'
         buildConfigField 'String', 'SUPABASE_KEY', '"sb_publishable_TdzEQXtDadVMKhSLVe0ihw_EAQ4iNsd"'
@@ -48,6 +48,7 @@ dependencies {
     implementation 'androidx.compose.ui:ui:1.11.4'
     implementation 'androidx.compose.ui:ui-tooling-preview:1.11.4'
     implementation 'androidx.compose.foundation:foundation:1.11.4'
+    implementation 'androidx.compose.animation:animation:1.11.4'
     implementation 'androidx.tv:tv-material:1.1.0'
 
     implementation 'androidx.media3:media3-exoplayer:1.11.1'

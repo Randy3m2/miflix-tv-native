@@ -39,19 +39,30 @@ jobs:
       - name: Build native APK
         run: gradle :app:assembleDebug --stacktrace
 
-      - name: Prepare APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk MiFlix-TV-Native-v2.0.0-alpha2.apk
+      - name: Prepare APKs
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk MiFlix-TV-Native-v2.0.0-alpha-final.apk
+          cp app/build/outputs/apk/debug/app-debug.apk MiFlix-TV-Native.apk
 
-      - name: Upload artifact
+      - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MiFlix-TV-Native-v2.0.0-alpha2
-          path: MiFlix-TV-Native-v2.0.0-alpha2.apk
+          name: MiFlix-TV-Native-v2.0.0-alpha-final
+          path: MiFlix-TV-Native-v2.0.0-alpha-final.apk
 
-      - name: Publish test release
+      - name: Publish versioned release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="native-v2.0.0-alpha2"
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native 2.0 Alpha 2" --notes "Native Android TV Alpha 2: motion/focus polish, stable rails, delayed hero updates, Continue Watching, Collections, platform shelves, private setup restore and player polish."
-          gh release upload "$TAG" MiFlix-TV-Native-v2.0.0-alpha2.apk --clobber
+          TAG="native-v2.0.0-alpha-final"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native 2.0 Alpha Final" --notes "Final native alpha: fixed compact sidebar, auto Top 10 hero, focus-only collection GIFs, white/black visual system, single-press D-pad activation, richer details, cloud private setup restore and permanent latest channel."
+          gh release upload "$TAG" MiFlix-TV-Native-v2.0.0-alpha-final.apk --clobber
+
+      - name: Update permanent latest channel
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="native-latest"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native · Latest" --notes "Current version: 2.0.0-alpha-final"
+          gh release edit "$TAG" --title "MiFlix TV Native · Latest" --notes "Current version: 2.0.0-alpha-final"
+          gh release upload "$TAG" MiFlix-TV-Native.apk --clobber

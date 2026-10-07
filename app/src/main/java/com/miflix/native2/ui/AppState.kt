@@ -11,6 +11,7 @@ import com.miflix.native2.data.LocalStore
 import com.miflix.native2.data.StreamRepository
 import com.miflix.native2.data.SupabaseRepository
 import com.miflix.native2.data.TmdbRepository
+import com.miflix.native2.data.UpdateRepository
 import com.miflix.native2.model.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -20,6 +21,7 @@ import kotlinx.coroutines.supervisorScope
 class AppState(context: Context) {
     private val local = LocalStore(context)
     private val cloud = SupabaseRepository(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY)
+    private val updates = UpdateRepository()
     val tmdb = TmdbRepository(BuildConfig.MIFLIX_TMDB_TOKEN)
     val streamRepo = StreamRepository(BuildConfig.MIFLIX_TORRENTIO_MANIFEST)
 
@@ -35,14 +37,19 @@ class AppState(context: Context) {
     val series = mutableStateListOf<MediaSummary>()
     val topRated = mutableStateListOf<MediaSummary>()
 
-    // Alpha 2 shelves load after the core Home is already usable.
     val continueWatching = mutableStateListOf<MediaSummary>()
     val action = mutableStateListOf<MediaSummary>()
     val sciFi = mutableStateListOf<MediaSummary>()
     val netflix = mutableStateListOf<MediaSummary>()
     val disney = mutableStateListOf<MediaSummary>()
+    val prime = mutableStateListOf<MediaSummary>()
+    val apple = mutableStateListOf<MediaSummary>()
+    val hbo = mutableStateListOf<MediaSummary>()
     var extrasLoaded by mutableStateOf(false)
     var extrasLoading by mutableStateOf(false)
+
+    var collectionTitle by mutableStateOf("")
+    val collectionItems = mutableStateListOf<MediaSummary>()
 
     var selected by mutableStateOf<MediaSummary?>(null)
     var details by mutableStateOf<MediaDetails?>(null)
@@ -51,6 +58,9 @@ class AppState(context: Context) {
     var playerRequest by mutableStateOf<PlayerRequest?>(null)
     var busyMessage by mutableStateOf<String?>(null)
     var error by mutableStateOf<String?>(null)
+
+    var updateInfo by mutableStateOf<UpdateInfo?>(null)
+    var updateChecking by mutableStateOf(false)
 
     suspend fun bootstrap() {
         session?.let { s ->
@@ -85,8 +95,6 @@ class AppState(context: Context) {
         val s = session ?: return
         val (remoteProfiles, remoteSetup) = cloud.account(s)
 
-        // Prefer the user's private cloud setup. If it is absent, use the build bootstrap
-        // values and save them into the authenticated account row for future TV installs.
         val chosenTmdb = remoteSetup.tmdbToken.ifBlank { tmdb.token }
         val chosenTorrentio = remoteSetup.torrentioManifest.ifBlank { streamRepo.manifestUrl }
         if (chosenTmdb.isNotBlank()) tmdb.token = chosenTmdb
@@ -105,10 +113,8 @@ class AppState(context: Context) {
         local.saveProfileId(activeProfile.id)
 
         val (fav, prog) = cloud.profileState(s, activeProfile.id)
-        favorites.clear()
-        favorites.addAll(fav)
-        progress.clear()
-        progress.putAll(prog)
+        favorites.clear(); favorites.addAll(fav)
+        progress.clear(); progress.putAll(prog)
         extrasLoaded = false
     }
 
@@ -147,20 +153,43 @@ class AppState(context: Context) {
             supervisorScope {
                 val actionJob = async { runCatching { tmdb.discoverGenre(28) } }
                 val sciFiJob = async { runCatching { tmdb.discoverGenre(878) } }
-                val netflixJob = async { runCatching { tmdb.discoverProvider(8) } }
+                val netflixJob = async { runCatching { tmdb.discoverProviders(listOf(8, 175)) } }
                 val disneyJob = async { runCatching { tmdb.discoverProvider(337) } }
+                val primeJob = async { runCatching { tmdb.discoverProviders(listOf(9, 119)) } }
+                val appleJob = async { runCatching { tmdb.discoverProvider(350) } }
+                val hboJob = async { runCatching { tmdb.discoverProviders(listOf(1899, 384)) } }
                 val continueJob = async { runCatching { resolveContinueWatching() } }
 
                 actionJob.await().onSuccess { action.replaceWith(it) }
                 sciFiJob.await().onSuccess { sciFi.replaceWith(it) }
                 netflixJob.await().onSuccess { netflix.replaceWith(it) }
                 disneyJob.await().onSuccess { disney.replaceWith(it) }
+                primeJob.await().onSuccess { prime.replaceWith(it) }
+                appleJob.await().onSuccess { apple.replaceWith(it) }
+                hboJob.await().onSuccess { hbo.replaceWith(it) }
                 continueJob.await().onSuccess { continueWatching.replaceWith(it) }
             }
             extrasLoaded = true
         } finally {
             extrasLoading = false
         }
+    }
+
+    suspend fun openCollection(id: String, title: String) {
+        loadHomeExtras()
+        collectionTitle = title
+        val source = when (id) {
+            "netflix" -> netflix
+            "disney" -> disney
+            "prime" -> prime
+            "apple" -> apple
+            "hbo" -> hbo
+            "action" -> action
+            "scifi" -> sciFi
+            else -> emptyList()
+        }
+        collectionItems.clear(); collectionItems.addAll(source)
+        screen = Screen.COLLECTION_DETAIL
     }
 
     private suspend fun resolveContinueWatching(): List<MediaSummary> = coroutineScope {
@@ -225,6 +254,13 @@ class AppState(context: Context) {
         playResolved(item, imdb, season, episode)
     }
 
+    suspend fun playSeriesFromStart() {
+        val item = selected ?: return
+        val d = details ?: tmdb.details(item).also { details = it }
+        val imdb = d.imdbId ?: throw IllegalStateException("IMDb ID unavailable")
+        playResolved(item, imdb, 1, 1)
+    }
+
     private suspend fun playResolved(item: MediaSummary, imdb: String, season: Int, episode: Int) {
         busyMessage = "Finding the best source…"
         error = null
@@ -254,6 +290,15 @@ class AppState(context: Context) {
         if (ended) continueWatching.removeAll { it.cloudId == req.item.cloudId }
     }
 
+    suspend fun checkForUpdates() {
+        updateChecking = true
+        error = null
+        runCatching { updates.check(BuildConfig.VERSION_NAME) }
+            .onSuccess { updateInfo = it }
+            .onFailure { error = "Update check failed: ${it.message}" }
+        updateChecking = false
+    }
+
     fun signOut() {
         session = null
         local.saveSession(null)
@@ -268,7 +313,7 @@ class AppState(context: Context) {
 }
 
 enum class Screen {
-    SPLASH, HOME, SEARCH, MOVIES, SERIES, COLLECTIONS, MY_LIST, SETTINGS, PROFILES, DETAILS, PLAYER
+    SPLASH, HOME, SEARCH, MOVIES, SERIES, COLLECTIONS, COLLECTION_DETAIL, MY_LIST, SETTINGS, PROFILES, DETAILS, PLAYER
 }
 
 data class PlayerRequest(

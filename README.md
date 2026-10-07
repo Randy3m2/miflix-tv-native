@@ -1,55 +1,37 @@
-# MiFlix TV Native 2.0 — Alpha 2
+# MiFlix TV Native 2.0 — Alpha Final
 
-Parallel Android TV client built with Jetpack Compose UI and Media3/ExoPlayer.
+Native Android TV client built with Jetpack Compose for TV-style navigation and Media3/ExoPlayer playback.
 
-## Alpha 2 focus
+## Final-alpha focus
 
-This build deliberately prioritizes motion quality and D-pad behavior before adding every legacy feature.
-
-### Motion / focus polish
-- Media cards use a small 1.035x graphics-layer focus scale with a 100 ms non-spring tween.
-- Every card has a fixed outer footprint, so scaling does not change LazyRow/LazyColumn measurements.
-- Rails have fixed heights to avoid vertical correction while moving left/right.
-- Hero/backdrop changes are delayed 420 ms. Rapid D-pad movement updates only focus; the expensive hero image is changed only after focus settles.
-- Hero transition is a short crossfade.
-- Sidebar expansion overlays content instead of resizing the Home layout.
-- Sidebar collapses after focus leaves it and no longer shifts the full screen.
-- Episode/profile focus animations use the same no-bounce motion language.
-
-### Alpha 2 features
-- Continue Watching shelf with progress bars.
-- Resume movie / continue series actions in Details.
-- Collections screen.
-- Action and Science Fiction collections.
-- Netflix and Disney+ discovery shelves through TMDB watch-provider metadata (US discovery fallback).
-- Debounced Search.
-- Automatic authenticated private setup restore for TMDB and Torrentio/TorBox.
-- If the private setup is missing from Supabase, the GitHub build secrets bootstrap it into the authenticated account row.
-- Player controller auto-hides after 2 seconds.
-- Playback completion is written to progress and synchronized.
-
-## Architecture
-
-- UI: Jetpack Compose + TV Material
-- Images: Coil 3.5
-- Metadata: TMDB
-- Streams: Stremio-compatible Torrentio/TorBox manifest
-- Player: AndroidX Media3 / ExoPlayer
-- Sync/Auth: Supabase REST/Auth
-
-No WebView is used for the main TV UI.
+- Fixed compact left sidebar: Home, Search, Collections, My List, Settings + profile shortcut.
+- Black UI / white controls and focus states.
+- Auto-rotating Top 10 hero from TMDB weekly trending.
+- Streaming collection tiles for Netflix, Disney+, Prime Video, Apple TV+ and HBO Max.
+- Static collection art at rest; focus GIF is loaded only while the tile is focused.
+- Single-press DPAD_CENTER/OK activation on cards, buttons, episodes, trailers and profile tiles.
+- Poster-style native catalog rails plus landscape Continue Watching cards.
+- Rich movie/series details: cast, trailers, metadata, seasons and episodes.
+- Supabase account sync restores profiles, My List, progress, TMDB and private Torrentio/TorBox configuration.
+- Native Media3 player with audio/subtitle tracks and progress sync.
+- Permanent `native-latest` release channel with stable APK URL.
+- Settings → Check for Updates.
 
 ## Build secrets
 
-Repository Settings -> Secrets and variables -> Actions:
+Create these repository secrets in GitHub Actions:
 
 - `MIFLIX_TMDB_TOKEN`
 - `MIFLIX_TORRENTIO_MANIFEST`
 
-Never commit the private Torrentio/TorBox URL to a public repository.
+Supabase URL and publishable key are already compiled into this personal build.
 
-## Package
+## Permanent APK URL
 
-`com.miflix.native2`
+`https://github.com/Randy3m2/miflix-tv-native/releases/download/native-latest/MiFlix-TV-Native.apk`
 
-This intentionally stays separate from the legacy MiFlix TV package, while Alpha 2 installs over previous Native 2.0 alpha builds.
+Create one Downloader/AFTVnews code for that URL and keep reusing it. Every workflow run replaces the `MiFlix-TV-Native.apk` asset while preserving versioned releases for rollback.
+
+## Collection art
+
+Streaming/genre collection artwork references public community Nuvio collection assets. Focus GIFs are requested only when the corresponding collection tile receives focus.

@@ -13,12 +13,41 @@ data class MediaSummary(
     val cloudId: String get() = "tmdb:$type:$id"
 }
 
+data class CastMember(
+    val name: String,
+    val character: String,
+    val profile: String?
+)
+
+data class TrailerSummary(
+    val name: String,
+    val key: String,
+    val site: String,
+    val type: String,
+    val official: Boolean
+) {
+    val thumbnail: String?
+        get() = if (site.equals("YouTube", ignoreCase = true) && key.isNotBlank()) {
+            "https://img.youtube.com/vi/$key/hqdefault.jpg"
+        } else null
+
+    val watchUrl: String?
+        get() = if (site.equals("YouTube", ignoreCase = true) && key.isNotBlank()) {
+            "https://www.youtube.com/watch?v=$key"
+        } else null
+}
+
 data class MediaDetails(
     val summary: MediaSummary,
     val imdbId: String?,
     val runtimeText: String,
     val genres: List<String>,
-    val seasonCount: Int = 0
+    val seasonCount: Int = 0,
+    val releaseInfo: String = "",
+    val originCountry: String = "",
+    val originalLanguage: String = "",
+    val cast: List<CastMember> = emptyList(),
+    val trailers: List<TrailerSummary> = emptyList()
 )
 
 data class EpisodeSummary(
@@ -66,4 +95,17 @@ data class PlaybackProgress(
     val updatedAt: Long = 0L,
     val season: Int = 0,
     val episode: Int = 0
+)
+
+data class CollectionTile(
+    val id: String,
+    val title: String,
+    val coverUrl: String,
+    val focusGifUrl: String? = null
+)
+
+data class UpdateInfo(
+    val version: String,
+    val downloadUrl: String,
+    val isNewer: Boolean
 )

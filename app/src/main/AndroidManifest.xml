@@ -8,7 +8,7 @@
         android:hardwareAccelerated="true"
         android:usesCleartextTraffic="true"
         android:theme="@style/Theme.MiFlix.Native"
-        android:label="MiFlix Native"
+        android:label="MiFlix"
         android:banner="@drawable/tv_banner"
         android:icon="@drawable/app_icon">
         <activity

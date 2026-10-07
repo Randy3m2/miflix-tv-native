@@ -1,7 +1,7 @@
 package com.miflix.native2.ui
 
+import android.view.KeyEvent as AndroidKeyEvent
 import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -20,52 +20,73 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.nativeKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import com.miflix.native2.model.CollectionTile
 import com.miflix.native2.model.MediaSummary
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
-val Bg = Color(0xFF060608)
-val Panel = Color(0xFF121218)
-val Purple = Color(0xFF8B5CF6)
-val Muted = Color(0xFF9A9BA5)
+val Bg = Color(0xFF050505)
+val Panel = Color(0xFF151515)
+val Muted = Color(0xFF9A9A9F)
+val SoftWhite = Color(0xFFF3F3F3)
 
-private val MotionSpec = tween<Float>(durationMillis = 100, easing = LinearOutSlowInEasing)
+private val FastMotion = tween<Float>(durationMillis = 90, easing = LinearOutSlowInEasing)
+
+fun Modifier.tvClick(onClick: () -> Unit): Modifier = this.onPreviewKeyEvent { event ->
+    val native = event.nativeKeyEvent
+    val activate = native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_CENTER ||
+        native.keyCode == AndroidKeyEvent.KEYCODE_ENTER ||
+        native.keyCode == AndroidKeyEvent.KEYCODE_NUMPAD_ENTER
+    if (activate && native.action == AndroidKeyEvent.ACTION_UP) {
+        onClick()
+        true
+    } else false
+}
 
 @Composable
 fun FocusButton(
     text: String,
     modifier: Modifier = Modifier,
     primary: Boolean = false,
+    onFocused: ((Boolean) -> Unit)? = null,
     onClick: () -> Unit
 ) {
     var focused by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
-        targetValue = if (focused) 1.025f else 1f,
-        animationSpec = MotionSpec,
+        targetValue = if (focused) 1.018f else 1f,
+        animationSpec = FastMotion,
         label = "buttonScale"
     )
+    val white = focused || primary
     Box(
         modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .onFocusChanged { focused = it.isFocused }
+            .onFocusChanged {
+                focused = it.isFocused
+                onFocused?.invoke(it.isFocused)
+            }
             .focusable()
+            .tvClick(onClick)
             .clickable(onClick = onClick)
-            .background(if (focused || primary) Purple else Color(0xE0202028), RoundedCornerShape(12.dp))
-            .border(if (focused) 1.5.dp else 0.dp, Color(0xE6FFFFFF), RoundedCornerShape(12.dp))
-            .padding(horizontal = 22.dp, vertical = 12.dp),
+            .background(if (white) SoftWhite else Color(0xE6222222), RoundedCornerShape(24.dp))
+            .border(if (focused && !primary) 1.5.dp else 0.dp, Color.White, RoundedCornerShape(24.dp))
+            .padding(horizontal = 24.dp, vertical = 12.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text(
+            text,
+            color = if (white) Color.Black else Color.White,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
@@ -73,78 +94,114 @@ fun FocusButton(
 fun MediaCard(
     item: MediaSummary,
     modifier: Modifier = Modifier,
+    landscape: Boolean = false,
     progressPercent: Double? = null,
-    onFocused: (MediaSummary) -> Unit,
+    onFocused: (MediaSummary) -> Unit = {},
     onClick: () -> Unit
 ) {
     var focused by remember(item.cloudId) { mutableStateOf(false) }
     val scale by animateFloatAsState(
-        targetValue = if (focused) 1.035f else 1f,
-        animationSpec = MotionSpec,
+        targetValue = if (focused) 1.025f else 1f,
+        animationSpec = FastMotion,
         label = "cardScale"
     )
+    val outerW = if (landscape) 286.dp else 184.dp
+    val outerH = if (landscape) 174.dp else 274.dp
+    val innerW = if (landscape) 272.dp else 170.dp
+    val innerH = if (landscape) 154.dp else 252.dp
 
-    // The outer box never changes size. The artwork grows only inside this reserved
-    // footprint, so focus animation cannot push a LazyRow/LazyColumn by a few pixels.
-    Box(
-        modifier = modifier.width(268.dp).height(158.dp),
-        contentAlignment = Alignment.Center
-    ) {
+    Box(modifier.width(outerW).height(outerH), contentAlignment = Alignment.Center) {
         Box(
             Modifier
-                .width(252.dp)
-                .height(142.dp)
+                .width(innerW)
+                .height(innerH)
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
-                    shadowElevation = if (focused) 14f else 0f
+                    shadowElevation = if (focused) 16f else 0f
                 }
                 .onFocusChanged {
                     focused = it.isFocused
                     if (it.isFocused) onFocused(item)
                 }
                 .focusable()
+                .tvClick(onClick)
                 .clickable(onClick = onClick)
                 .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFF1A1A20))
+                .background(Color(0xFF1A1A1A))
                 .border(if (focused) 2.dp else 0.dp, Color.White, RoundedCornerShape(12.dp))
         ) {
             AsyncImage(
-                model = item.backdrop ?: item.poster,
+                model = if (landscape) item.backdrop ?: item.poster else item.poster ?: item.backdrop,
                 contentDescription = item.title,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-            Box(
-                Modifier.fillMaxSize().background(
-                    Brush.verticalGradient(
-                        listOf(Color.Transparent, Color(0xD6000000)),
-                        startY = 54f
+            if (landscape) {
+                Box(
+                    Modifier.fillMaxSize().background(
+                        Brush.verticalGradient(listOf(Color.Transparent, Color(0xD9000000)), startY = 60f)
                     )
                 )
-            )
-            Column(Modifier.align(Alignment.BottomStart).padding(12.dp)) {
-                Text(item.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                Text("${item.year}  ★ ${"%.1f".format(item.rating)}", color = Color(0xFFDFDFE6), fontSize = 11.sp)
+                Column(Modifier.align(Alignment.BottomStart).padding(12.dp)) {
+                    Text(item.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                    Text("${item.year}  ★ ${"%.1f".format(item.rating)}", color = Color(0xFFD5D5D5), fontSize = 11.sp)
+                }
             }
             progressPercent?.takeIf { it > 0.0 && it < 100.0 }?.let { p ->
                 Box(
-                    Modifier
-                        .align(Alignment.BottomStart)
-                        .fillMaxWidth()
-                        .height(3.dp)
-                        .background(Color(0x55000000))
+                    Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color(0x66000000))
                 ) {
                     Box(
-                        Modifier
-                            .fillMaxHeight()
+                        Modifier.fillMaxHeight()
                             .fillMaxWidth((p / 100.0).toFloat().coerceIn(0f, 1f))
-                            .background(Purple)
+                            .background(Color.White)
                     )
                 }
             }
-            if (focused) Box(Modifier.matchParentSize().background(Color(0x0FFFFFFF)))
+            if (focused) Box(Modifier.matchParentSize().background(Color(0x0AFFFFFF)))
         }
+    }
+}
+
+@Composable
+fun CollectionCard(
+    tile: CollectionTile,
+    onClick: () -> Unit
+) {
+    var focused by remember(tile.id) { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (focused) 1.022f else 1f,
+        animationSpec = FastMotion,
+        label = "collectionScale"
+    )
+    val model = if (focused && !tile.focusGifUrl.isNullOrBlank()) tile.focusGifUrl else tile.coverUrl
+
+    Column(Modifier.width(300.dp)) {
+        Box(Modifier.width(300.dp).height(178.dp), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier
+                    .width(286.dp)
+                    .height(162.dp)
+                    .graphicsLayer { scaleX = scale; scaleY = scale; shadowElevation = if (focused) 14f else 0f }
+                    .onFocusChanged { focused = it.isFocused }
+                    .focusable()
+                    .tvClick(onClick)
+                    .clickable(onClick = onClick)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color(0xFF191919))
+                    .border(if (focused) 2.dp else 0.dp, Color.White, RoundedCornerShape(14.dp))
+            ) {
+                AsyncImage(
+                    model = model,
+                    contentDescription = tile.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+                if (focused) Box(Modifier.fillMaxSize().background(Color(0x0DFFFFFF)))
+            }
+        }
+        Text(tile.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 8.dp, top = 2.dp))
     }
 }
 
@@ -162,11 +219,11 @@ fun NativeTextField(
         onValueChange = onValueChange,
         singleLine = true,
         textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
-        cursorBrush = SolidColor(Purple),
+        cursorBrush = SolidColor(Color.White),
         visualTransformation = if (password) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
         modifier = modifier
             .onFocusChanged { focused = it.isFocused }
-            .background(if (focused) Color(0xFF252532) else Panel, RoundedCornerShape(10.dp))
+            .background(if (focused) Color(0xFF202020) else Panel, RoundedCornerShape(10.dp))
             .border(if (focused) 1.5.dp else 0.dp, Color.White, RoundedCornerShape(10.dp))
             .padding(15.dp),
         decorationBox = { inner ->
@@ -179,80 +236,68 @@ fun NativeTextField(
 }
 
 @Composable
-fun Sidebar(screen: Screen, onNavigate: (Screen) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    var collapseJob by remember { mutableStateOf<Job?>(null) }
-    val scope = rememberCoroutineScope()
-    val width by animateDpAsState(
-        targetValue = if (expanded) 214.dp else 82.dp,
-        animationSpec = tween(120, easing = LinearOutSlowInEasing),
-        label = "sideWidth"
-    )
+fun Sidebar(screen: Screen, profileName: String, onNavigate: (Screen) -> Unit) {
     val items = listOf(
         Triple(Screen.HOME, "⌂", "Home"),
         Triple(Screen.SEARCH, "⌕", "Search"),
-        Triple(Screen.MOVIES, "▣", "Movies"),
-        Triple(Screen.SERIES, "▤", "Series"),
         Triple(Screen.COLLECTIONS, "◇", "Collections"),
         Triple(Screen.MY_LIST, "♡", "My List"),
-        Triple(Screen.PROFILES, "●", "Profiles"),
         Triple(Screen.SETTINGS, "⚙", "Settings")
     )
 
-    // This host always occupies only 82dp. The expanded menu is drawn over the content
-    // instead of resizing the Home layout, preventing a full-screen horizontal jump.
-    Box(Modifier.width(82.dp).fillMaxHeight().zIndex(20f)) {
-        Column(
-            Modifier
-                .width(width)
-                .fillMaxHeight()
-                .background(Color(0xF0101014))
-                .padding(top = 24.dp, start = 12.dp, end = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                "M",
-                color = Color.White,
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Black,
-                modifier = Modifier.padding(start = 17.dp, bottom = 20.dp)
-            )
+    Column(
+        Modifier
+            .width(154.dp)
+            .fillMaxHeight()
+            .background(Color(0xFF090909))
+            .padding(horizontal = 12.dp, vertical = 22.dp),
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 8.dp, bottom = 20.dp)) {
+                Box(Modifier.size(34.dp).background(Color.White, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+                    Text("M", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                }
+                Spacer(Modifier.width(9.dp))
+                Text("MiFlix", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
+            }
             items.forEach { (destination, icon, label) ->
                 var focused by remember(destination) { mutableStateOf(false) }
+                val active = destination == screen
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .onFocusChanged {
-                            focused = it.isFocused
-                            if (it.isFocused) {
-                                collapseJob?.cancel()
-                                expanded = true
-                            } else {
-                                collapseJob?.cancel()
-                                collapseJob = scope.launch {
-                                    delay(90)
-                                    expanded = false
-                                }
-                            }
-                        }
+                        .onFocusChanged { focused = it.isFocused }
                         .focusable()
+                        .tvClick { onNavigate(destination) }
                         .clickable { onNavigate(destination) }
-                        .background(
-                            if (focused || destination == screen) Color(0xFF252532) else Color.Transparent,
-                            RoundedCornerShape(10.dp)
-                        )
-                        .padding(horizontal = 14.dp, vertical = 13.dp),
+                        .background(if (focused || active) Color(0xFFF2F2F2) else Color.Transparent, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 11.dp, vertical = 11.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(Modifier.width(30.dp), contentAlignment = Alignment.CenterStart) {
-                        Text(icon, color = if (focused || destination == screen) Purple else Color.White, fontSize = 20.sp)
-                    }
-                    if (expanded) {
-                        Spacer(Modifier.width(8.dp))
-                        Text(label, color = Color.White, fontSize = 15.sp, maxLines = 1)
-                    }
+                    Text(icon, color = if (focused || active) Color.Black else Color.White, fontSize = 19.sp, modifier = Modifier.width(28.dp))
+                    Text(label, color = if (focused || active) Color.Black else Color(0xFFE6E6E6), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                 }
             }
+        }
+
+        var profileFocused by remember { mutableStateOf(false) }
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .onFocusChanged { profileFocused = it.isFocused }
+                .focusable()
+                .tvClick { onNavigate(Screen.PROFILES) }
+                .clickable { onNavigate(Screen.PROFILES) }
+                .background(if (profileFocused) Color.White else Color.Transparent, RoundedCornerShape(12.dp))
+                .padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(Modifier.size(32.dp).background(if (profileFocused) Color.Black else Color(0xFF292929), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+                Text(profileName.take(1).uppercase(), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.width(9.dp))
+            Text(profileName, color = if (profileFocused) Color.Black else Color.White, fontSize = 12.sp, maxLines = 1)
         }
     }
 }

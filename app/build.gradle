@@ -16,8 +16,8 @@ android {
         applicationId 'com.miflix.native2'
         minSdk 23
         targetSdk 36
-        versionCode 20010
-        versionName '2.0.0-alpha2'
+        versionCode 20099
+        versionName '2.0.0-alpha-final'
 
         buildConfigField 'String', 'SUPABASE_URL', '"https://iwvhigqxsvvgyzdygiqa.supabase.co"'
         buildConfigField 'String', 'SUPABASE_KEY', '"sb_publishable_TdzEQXtDadVMKhSLVe0ihw_EAQ4iNsd"'
@@ -58,6 +58,7 @@ dependencies {
 
     implementation 'io.coil-kt.coil3:coil-compose:3.5.0'
     implementation 'io.coil-kt.coil3:coil-network-okhttp:3.5.0'
+    implementation 'io.coil-kt.coil3:coil-gif:3.5.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
 
     debugImplementation 'androidx.compose.ui:ui-tooling:1.11.4'

@@ -29,7 +29,7 @@ jobs:
           packages: 'platform-tools'
 
       - name: Install Android platform
-        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -40,18 +40,18 @@ jobs:
         run: gradle :app:assembleDebug --stacktrace
 
       - name: Prepare APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk MiFlix-TV-Native-v2.0.0-alpha1.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk MiFlix-TV-Native-v2.0.0-alpha1.1.apk
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MiFlix-TV-Native-v2.0.0-alpha1
-          path: MiFlix-TV-Native-v2.0.0-alpha1.apk
+          name: MiFlix-TV-Native-v2.0.0-alpha1.1
+          path: MiFlix-TV-Native-v2.0.0-alpha1.1.apk
 
       - name: Publish test release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="native-v2.0.0-alpha1"
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native 2.0 Alpha 1" --notes "Parallel native Android TV build using Compose for TV + Media3."
-          gh release upload "$TAG" MiFlix-TV-Native-v2.0.0-alpha1.apk --clobber
+          TAG="native-v2.0.0-alpha1.1"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native 2.0 Alpha 1.1" --notes "Native Android TV build. Dependency compatibility fix for compileSdk 36 / AGP 8.13."
+          gh release upload "$TAG" MiFlix-TV-Native-v2.0.0-alpha1.1.apk --clobber

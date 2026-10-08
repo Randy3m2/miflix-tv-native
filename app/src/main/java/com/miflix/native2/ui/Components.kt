@@ -315,7 +315,7 @@ fun Sidebar(screen: Screen, profileName: String, onNavigate: (Screen) -> Unit) {
 
 @Composable
 fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,notificationCount: Int,
-            profile: com.miflix.native2.model.Profile? = null, backgroundAlpha: Float = 0f, onHeaderFocused: (() -> Unit)? = null) {
+            profile: com.miflix.native2.model.Profile? = null, backgroundAlpha: Float = 0f, onHeaderFocused: (() -> Unit)? = null, onMoveDown: (() -> Unit)? = null) {
     val current=when(screen) {
         Screen.WATCH_PARTY -> Screen.FRIENDS
         Screen.GENRES,Screen.GENRE_DETAIL,Screen.YEAR_DETAIL,Screen.PLATFORM_DETAIL,Screen.COLLECTION_DETAIL -> Screen.COLLECTIONS
@@ -330,7 +330,12 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
         Screen.MY_LIST to tr("Mi lista","My List"),
         Screen.SETTINGS to tr("Ajustes","Settings")
     )
-    Row(Modifier.fillMaxWidth().height(76.dp).onFocusChanged { if(it.hasFocus) onHeaderFocused?.invoke() }.focusGroup()
+    Row(Modifier.fillMaxWidth().height(76.dp).onPreviewKeyEvent { event ->
+        if(event.key==Key.DirectionDown && onMoveDown!=null) {
+            if(event.type==KeyEventType.KeyDown) onMoveDown()
+            true
+        } else false
+    }.onFocusChanged { if(it.hasFocus) onHeaderFocused?.invoke() }.focusGroup()
         .background(Color.Black.copy(alpha=backgroundAlpha.coerceIn(0f,1f))).padding(horizontal=24.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)) {
         var profileFocused by remember { mutableStateOf(false) }

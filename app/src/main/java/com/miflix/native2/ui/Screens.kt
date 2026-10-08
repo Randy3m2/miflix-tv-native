@@ -2,6 +2,7 @@ package com.miflix.native2.ui
 
 import android.content.Intent
 import android.net.Uri
+import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
@@ -29,6 +30,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -666,6 +668,8 @@ fun WatchPartyScreen(state: AppState, onBack: () -> Unit) {
 @Composable
 fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     val context = LocalContext.current
+    val playbackView = LocalView.current
+    var controlsVisible by remember(request.stream.url) { mutableStateOf(true) }
     var showEpisodes by remember(request.item.cloudId) { mutableStateOf(false) }
     val subtitles = request.stream.subtitles
     val preferredText = when {
@@ -701,8 +705,19 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }
     }
 
-    DisposableEffect(player) {
+    DisposableEffect(player, playbackView) {
+        val previousKeepScreenOn = playbackView.keepScreenOn
+        fun updateScreenAwake() {
+            playbackView.keepScreenOn = previousKeepScreenOn || (
+                player.playWhenReady &&
+                    (player.playbackState == Player.STATE_READY || player.playbackState == Player.STATE_BUFFERING)
+                )
+        }
         val listener = object : Player.Listener {
+            override fun onEvents(player: Player, events: Player.Events) {
+                updateScreenAwake()
+            }
+
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_ENDED) {
                     val duration = player.duration.coerceAtLeast(0)
@@ -712,7 +727,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
         }
         player.addListener(listener)
+        updateScreenAwake()
         onDispose {
+            playbackView.keepScreenOn = previousKeepScreenOn
             player.removeListener(listener)
             state.updateProgress(request, player.currentPosition, player.duration.coerceAtLeast(0))
             state.launch { runCatching { state.pushCloud() } }
@@ -756,6 +773,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             factory = { ctx ->
                 PlayerView(ctx).apply {
                     useController = true
+                    setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { visibility ->
+                        controlsVisible = visibility == View.VISIBLE
+                    })
                     controllerShowTimeoutMs = 2000
                     controllerAutoShow = true
                     controllerHideOnTouch = true
@@ -766,10 +786,13 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                     layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                 }
             },
+            update = { view ->
+                if (view.player !== player) view.player = player
+            },
             modifier = Modifier.fillMaxSize()
         )
 
-        if (request.item.type == "series") {
+        if (controlsVisible && !showEpisodes && request.item.type == "series") {
             Row(
                 Modifier.align(Alignment.TopEnd).padding(top = 24.dp, end = 26.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -777,7 +800,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 FocusButton("Episodes") { player.pause(); showEpisodes = true }
                 if (state.watchParty != null) FocusButton("Party ${state.watchParty?.roomCode.orEmpty()}") { state.screen = Screen.WATCH_PARTY }
             }
-        } else if (state.watchParty != null) {
+        } else if (controlsVisible && !showEpisodes && state.watchParty != null) {
             Box(Modifier.align(Alignment.TopEnd).padding(top = 24.dp, end = 26.dp)) {
                 FocusButton("Party ${state.watchParty?.roomCode.orEmpty()}") { state.screen = Screen.WATCH_PARTY }
             }
@@ -790,7 +813,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
         }
 
-        if (subtitles.isNotEmpty()) {
+        if (controlsVisible && !showEpisodes && subtitles.isNotEmpty()) {
             Text(
                 "CC ${subtitles.count { it.lang == "es" || it.lang == "en" }} EN/ES · ${subtitles.size} total",
                 color = Color(0xFFDDDDDF), fontSize = 11.sp,

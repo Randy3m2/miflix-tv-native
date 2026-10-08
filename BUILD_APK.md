@@ -1,14 +1,12 @@
-# Build MiFlix TV Native — Alpha Final
+# Build MiFlix TV Native 2.0 Beta 1
 
-1. Upload/replace this source in the `miflix-tv-native` GitHub repository.
-2. Preserve repository secrets `MIFLIX_TMDB_TOKEN` and `MIFLIX_TORRENTIO_MANIFEST`.
-3. Make sure `.github/workflows/build-native-tv-apk.yml` is replaced too.
-4. Open **Actions → Build MiFlix Native TV APK → Run workflow**.
-5. The build produces `MiFlix-TV-Native-v2.0.0-alpha-final.apk` as the versioned artifact/release.
-6. The workflow also overwrites `MiFlix-TV-Native.apk` under the fixed `native-latest` release.
+1. Upload/replace the project files in the `miflix-tv-native` repository.
+2. Keep repository secrets `MIFLIX_TMDB_TOKEN` and `MIFLIX_TORRENTIO_MANIFEST` configured.
+3. In Supabase SQL Editor, run `SUPABASE_WATCH_PARTY.sql` once before using Watch Party.
+4. GitHub -> Actions -> **Build MiFlix Native TV APK** -> **Run workflow**.
+5. Download `MiFlix-TV-Native-v2.0.0-beta1.apk` from the workflow artifact or versioned release.
 
-Permanent URL:
-
+Permanent latest URL remains:
 `https://github.com/Randy3m2/miflix-tv-native/releases/download/native-latest/MiFlix-TV-Native.apk`
 
-You can install the final alpha over the previous Native Alpha without uninstalling it because the application ID remains `com.miflix.native2`.
+The same Downloader code can continue pointing to that permanent URL.

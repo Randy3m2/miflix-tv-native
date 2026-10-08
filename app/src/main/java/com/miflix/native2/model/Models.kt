@@ -8,16 +8,13 @@ data class MediaSummary(
     val backdrop: String?,
     val poster: String?,
     val rating: Double,
-    val year: String
+    val year: String,
+    val popularity: Double = 0.0
 ) {
     val cloudId: String get() = "tmdb:$type:$id"
 }
 
-data class CastMember(
-    val name: String,
-    val character: String,
-    val profile: String?
-)
+data class CastMember(val name: String, val character: String, val profile: String?)
 
 data class TrailerSummary(
     val name: String,
@@ -27,14 +24,9 @@ data class TrailerSummary(
     val official: Boolean
 ) {
     val thumbnail: String?
-        get() = if (site.equals("YouTube", ignoreCase = true) && key.isNotBlank()) {
-            "https://img.youtube.com/vi/$key/hqdefault.jpg"
-        } else null
-
+        get() = if (site.equals("YouTube", ignoreCase = true) && key.isNotBlank()) "https://img.youtube.com/vi/$key/hqdefault.jpg" else null
     val watchUrl: String?
-        get() = if (site.equals("YouTube", ignoreCase = true) && key.isNotBlank()) {
-            "https://www.youtube.com/watch?v=$key"
-        } else null
+        get() = if (site.equals("YouTube", ignoreCase = true) && key.isNotBlank()) "https://www.youtube.com/watch?v=$key" else null
 }
 
 data class MediaDetails(
@@ -69,6 +61,12 @@ data class StreamChoice(
 
 data class SubtitleChoice(val url: String, val lang: String, val label: String)
 
+data class AddonConfig(
+    val name: String,
+    val manifestUrl: String,
+    val enabled: Boolean = true
+)
+
 data class Profile(
     val id: String,
     val name: String,
@@ -85,8 +83,12 @@ data class CloudSession(
 
 data class PrivateSetup(
     val tmdbToken: String = "",
-    val torrentioManifest: String = ""
-)
+    val torrentioManifest: String = "",
+    val addonManifests: List<String> = emptyList()
+) {
+    fun allAddons(): List<String> = (addonManifests + listOf(torrentioManifest))
+        .map { it.trim() }.filter { it.isNotBlank() }.distinct()
+}
 
 data class PlaybackProgress(
     val percent: Double = 0.0,
@@ -100,12 +102,45 @@ data class PlaybackProgress(
 data class CollectionTile(
     val id: String,
     val title: String,
+    val coverUrl: String = "",
+    val focusGifUrl: String? = null
+)
+
+data class ProviderConfig(
+    val id: String,
+    val title: String,
+    val providerIds: List<Int>,
     val coverUrl: String,
     val focusGifUrl: String? = null
 )
 
-data class UpdateInfo(
-    val version: String,
-    val downloadUrl: String,
-    val isNewer: Boolean
+data class GenreConfig(
+    val id: String,
+    val title: String,
+    val movieGenreId: Int,
+    val tvGenreId: Int = movieGenreId
 )
+
+data class WatchPartyRoom(
+    val roomCode: String,
+    val hostUserId: String,
+    val cloudId: String,
+    val mediaType: String,
+    val season: Int = 0,
+    val episode: Int = 0,
+    val positionMs: Long = 0L,
+    val isPlaying: Boolean = false,
+    val updatedAt: Long = 0L
+)
+
+data class WatchPartySession(
+    val roomCode: String,
+    val isHost: Boolean
+)
+
+data class PairingInfo(
+    val url: String,
+    val code: String
+)
+
+data class UpdateInfo(val version: String, val downloadUrl: String, val isNewer: Boolean)

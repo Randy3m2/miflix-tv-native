@@ -16,12 +16,12 @@ import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 
 @Composable
-fun MiFlixNativeApp() {
+fun MiFlixNativeApp(initialPartyCode: String? = null) {
     val context = LocalContext.current.applicationContext
     val state = remember { AppState(context) }
 
     MaterialTheme {
-        LaunchedEffect(Unit) { delay(520); state.bootstrap() }
+        LaunchedEffect(Unit) { delay(420); state.bootstrap(initialPartyCode) }
         when (state.screen) {
             Screen.SPLASH -> SplashScreen()
             Screen.HOME -> HomeScreen(state) { state.screen = it }
@@ -30,12 +30,17 @@ fun MiFlixNativeApp() {
             Screen.SERIES -> CatalogScreen(state, "Series", state.series) { state.screen = Screen.HOME }
             Screen.COLLECTIONS -> CollectionsScreen(state) { state.screen = Screen.HOME }
             Screen.COLLECTION_DETAIL -> CatalogScreen(state, state.collectionTitle, state.collectionItems) { state.screen = Screen.COLLECTIONS }
+            Screen.PROVIDER -> ProviderScreen(state) { state.screen = Screen.COLLECTIONS }
+            Screen.PROVIDER_GENRE -> ProviderGenreScreen(state) { state.screen = Screen.PROVIDER }
             Screen.MY_LIST -> MyListScreen(state) { state.screen = Screen.HOME }
             Screen.SETTINGS -> SettingsScreen(state) { state.screen = Screen.HOME }
             Screen.PROFILES -> ProfilesScreen(state) { state.screen = Screen.HOME }
             Screen.DETAILS -> DetailsScreen(state) { state.screen = Screen.HOME }
-            Screen.PLAYER -> state.playerRequest?.let { req -> PlayerScreen(state, req) { state.screen = Screen.DETAILS } }
-                ?: run { state.screen = Screen.HOME }
+            Screen.PAIRING -> PairingScreen(state) { state.stopPairing(); state.screen = Screen.SETTINGS }
+            Screen.WATCH_PARTY -> WatchPartyScreen(state) { state.screen = state.selected?.let { Screen.DETAILS } ?: Screen.HOME }
+            Screen.PLAYER -> state.playerRequest?.let { req ->
+                PlayerScreen(state, req) { state.screen = if (state.watchParty != null) Screen.WATCH_PARTY else Screen.DETAILS }
+            } ?: run { state.screen = Screen.HOME }
         }
         state.error?.let { message ->
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
@@ -44,8 +49,7 @@ fun MiFlixNativeApp() {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(message, color = Color.White, fontSize = 13.sp)
-                    Spacer(Modifier.width(12.dp))
-                    FocusButton("Dismiss") { state.error = null }
+                    Spacer(Modifier.width(12.dp)); FocusButton("Dismiss") { state.error = null }
                 }
             }
         }
@@ -59,8 +63,7 @@ private fun SplashScreen() {
             Box(Modifier.size(106.dp).background(Color.White, RoundedCornerShape(28.dp)), contentAlignment = Alignment.Center) {
                 Text("M", color = Color.Black, fontSize = 46.sp, fontWeight = FontWeight.Black)
             }
-            Spacer(Modifier.height(17.dp))
-            Text("MiFlix", color = Color.White, fontSize = 31.sp, fontWeight = FontWeight.Black)
+            Spacer(Modifier.height(17.dp)); Text("MiFlix", color = Color.White, fontSize = 31.sp, fontWeight = FontWeight.Black)
             Text("Native TV", color = Muted, fontSize = 13.sp)
         }
     }

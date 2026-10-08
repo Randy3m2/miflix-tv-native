@@ -62,6 +62,9 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 ?: run { state.screen = Screen.HOME }
         }
 
+        LaunchedEffect(bootstrapped,state.session?.userId,state.activeProfile.id) {
+            if(bootstrapped) runCatching { state.loadRatings() }.onFailure { state.error=it.message }
+        }
         LaunchedEffect(bootstrapped, state.session?.userId, state.activeProfile.id, state.favorites.toList()) {
             if(bootstrapped) while(true) {
                 runCatching { state.checkNotifications() }

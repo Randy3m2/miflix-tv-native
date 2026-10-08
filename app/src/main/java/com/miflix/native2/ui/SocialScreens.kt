@@ -2,6 +2,19 @@ package com.miflix.native2.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.miflix.native2.R
+import com.miflix.native2.data.FriendActivity
+import com.miflix.native2.model.Profile
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -21,69 +34,115 @@ import kotlinx.coroutines.delay
 val PartyEmojis = listOf("😂", "❤️", "🔥", "😱", "👏", "🍿")
 
 @Composable
+fun SocialBackdrop() {
+    Image(painterResource(R.drawable.brunio_social_background),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x33030912),Color(0xAA030712)))))
+}
+
+@Composable
 fun FriendsScreen(state: AppState) {
-    var partyTab by remember { mutableStateOf(false) }
+    var tab by remember { mutableStateOf(0) }
+    var search by remember { mutableStateOf("") }
+    var person by remember { mutableStateOf<FriendActivity?>(null) }
+    var manage by remember { mutableStateOf(false) }
+    var refreshing by remember { mutableStateOf(false) }
+    BackHandler { state.screen=Screen.HOME }
+    Row(Modifier.fillMaxSize()) {
+        Sidebar(Screen.FRIENDS,state.activeProfile.name,{ state.screen=it },state.notifications.size)
+        BoxWithConstraints(Modifier.weight(1f).fillMaxHeight()) {
+            val columns=if(maxWidth>=720.dp) 4 else 3
+            SocialBackdrop()
+            LazyColumn(Modifier.fillMaxSize().padding(horizontal=28.dp),contentPadding=PaddingValues(vertical=28.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+                item {
+                    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                        Text("Friends & Party",color=Color.White,fontSize=28.sp,modifier=Modifier.weight(1f))
+                        FocusButton(if(refreshing) "Actualizando…" else "Refresh") { if(!refreshing) state.launch {
+                            refreshing=true
+                            try { state.socialAction { state.refreshFriendsDirectory() } } finally { refreshing=false }
+                        } }
+                        FocusButton("Create Party") { state.screen=Screen.WATCH_PARTY }
+                    }
+                    Text("Actualiza cuando quieras ver la actividad reciente de tus amigos",color=Muted,fontSize=13.sp)
+                }
+                item {
+                    Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                        listOf("Friends","Parties","Requests").forEachIndexed { index,label -> FocusButton(label,primary=tab==index) { tab=index } }
+                        FocusButton("Mi nickname / frases") { manage=true }
+                    }
+                }
+                if(state.session==null) item { FocusButton("Sign in") { state.screen=Screen.SETTINGS } }
+                else {
+                    if(tab==2) {
+                        item { AccessRequests(state) }
+                        items(state.friendRows.filter { it.status=="pending" }) { row ->
+                            val me=state.session?.userId; val other=if(row.sender==me) row.receiver else row.sender
+                            val name=state.friendPeople[other] ?: "Friend"
+                            Row(Modifier.fillMaxWidth().background(Color(0x99172032),RoundedCornerShape(16.dp)).padding(18.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
+                                Text("@$name",color=Color.White,modifier=Modifier.weight(1f))
+                                if(row.receiver==me) FocusButton("Aceptar amistad") { state.launch { state.addFriend(other) } }
+                                else Text("Solicitud enviada",color=Muted)
+                            }
+                        }
+                    } else {
+                        item { NativeTextField(search,{ search=it },"Buscar amigos",modifier=Modifier.width(320.dp)) }
+                        val friends=state.friendActivity.filter { (tab==0 || it.room!=null) && it.nickname.contains(search,true) }
+                        if(friends.isEmpty()) item { Text("No hay resultados · pulsa Refresh para cargar tus amigos",color=Muted) }
+                        items(friends.chunked(columns)) { group ->
+                            Row(horizontalArrangement=Arrangement.spacedBy(16.dp)) {
+                                group.forEach { friend -> FriendTile(friend,Modifier.weight(1f)) { person=friend } }
+                                repeat(columns-group.size) { Spacer(Modifier.weight(1f)) }
+                            }
+                        }
+                    }
+                    if(state.partyStatus.isNotBlank()) item { Text(state.partyStatus,color=Muted) }
+                }
+            }
+        }
+    }
+    person?.let { friend ->
+        Dialog(onDismissRequest={ person=null }) {
+            Column(Modifier.width(430.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+                ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(100.dp))
+                Text("@${friend.nickname}",color=Color.White,fontSize=25.sp)
+                Text(if(friend.title.isBlank()) if(friend.online) "Online" else "Offline" else "Watching ${friend.title}",color=Muted)
+                friend.room?.let { code ->
+                    FocusButton(if(state.pendingPartyCode==code) "Esperando aprobación" else "Request access",primary=true) {
+                        state.launch { state.socialAction { state.joinWatchParty(code); person=null } }
+                    }
+                }
+                FocusButton("Cerrar") { person=null }
+            }
+        }
+    }
+    if(manage) SocialSettingsDialog(state) { manage=false }
+}
+
+@Composable
+private fun FriendTile(friend: FriendActivity,modifier: Modifier,onClick: () -> Unit) {
+    var focused by remember(friend.id) { mutableStateOf(false) }
+    Column(modifier.height(225.dp).onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
+        .background(if(focused) Color(0xDD27364E) else Color(0x99131C2C),RoundedCornerShape(18.dp))
+        .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else Color(0x334F6078),RoundedCornerShape(18.dp)).padding(16.dp),
+        horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(84.dp))
+        Text(friend.nickname,color=Color.White,fontSize=18.sp,maxLines=1)
+        Text(if(friend.title.isNotBlank()) "Watching ${friend.title}" else if(friend.online) "Online" else "Offline",color=if(friend.online) Color(0xFF8DE5B8) else Muted,fontSize=13.sp,maxLines=2)
+        if(friend.room!=null) Text("Party · Request access",color=Color(0xFF9DD4FF),fontSize=12.sp)
+    }
+}
+
+@Composable
+private fun SocialSettingsDialog(state: AppState,close: () -> Unit) {
     var nick by remember { mutableStateOf(state.nickname) }
     var find by remember { mutableStateOf("") }
     var phrases by remember { mutableStateOf(state.partyPhrases.joinToString("|")) }
-    LaunchedEffect(state.session?.userId) { state.refreshFriends(); nick = state.nickname }
-    BackHandler { state.screen = Screen.HOME }
-    Row(Modifier.fillMaxSize().background(Bg)) {
-        Sidebar(Screen.FRIENDS,state.activeProfile.name,{state.screen=it},state.notifications.size)
-        LazyColumn(Modifier.weight(1f).padding(28.dp), verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(bottom=50.dp)) {
-            item {
-                Text("Friends & Party",color=Color.White,fontSize=28.sp)
-                Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                    FocusButton("Friends",primary=!partyTab) { partyTab=false }
-                    FocusButton("Party",primary=partyTab) { partyTab=true }
-                    FocusButton("My room / QR") { state.screen=Screen.WATCH_PARTY }
-                }
-            }
-            item { AccessRequests(state) }
-            if(state.pendingPartyCode!=null) item {
-                Text(state.partyStatus,color=Muted)
-            }
-            items(state.friendActivity.filter { !partyTab || it.room!=null },key={"activity:${it.id}"}) { friend ->
-                Column(Modifier.fillMaxWidth().background(Panel).padding(18.dp)) {
-                    Text("${if(friend.online) "●" else "○"} @${friend.nickname}",color=if(friend.online) Color(0xFF7BE0AE) else Muted,fontSize=21.sp)
-                    Text(if(friend.title.isNotBlank()) "Watching ${friend.title}" + if(friend.season>0) " · S${friend.season} E${friend.episode}" else "" else if(friend.online) "Online · explorando BruniO" else "Offline",color=Color.White,fontSize=17.sp)
-                    friend.room?.let { code ->
-                        if(state.watchParty?.roomCode!=code) FocusButton(if(state.pendingPartyCode==code) "Esperando aprobación" else "Request access") {
-                            state.launch { state.socialAction { state.joinWatchParty(code) } }
-                        } else Text("En tu party",color=Muted)
-                    }
-                }
-            }
-            if(partyTab && state.friendActivity.none { it.room!=null }) item { Text("Tus amigos no tienen parties activos",color=Muted) }
-            if(!partyTab) {
-            if(state.session==null) item { FocusButton("Sign in") { state.screen=Screen.SETTINGS } }
-            else {
-                item {
-                    Text("Your unique nickname · 3–24 lowercase letters, numbers or _",color=Muted)
-                    NativeTextField(nick,{nick=it},"Nickname")
-                    FocusButton("Save nickname") { state.launch { state.saveNickname(nick) } }
-                }
-                item {
-                    NativeTextField(find,{find=it},"Friend's nickname")
-                    FocusButton("Add friend") { state.launch { state.findAndAddFriend(find) } }
-                }
-                items(state.friendRows) { row ->
-                    val uid=state.session?.userId
-                    val other=if(row.sender==uid)row.receiver else row.sender
-                    val name=state.friendPeople[other]?:"Friend"
-                    if(row.status=="accepted" && state.friendActivity.none { it.id==other }) Text("✓ @$name",color=Color.White,fontSize=18.sp)
-                    else if(row.status=="pending" && row.receiver==uid) FocusButton("Accept @$name") { state.launch { state.addFriend(other) } }
-                    else if(row.status=="pending") Text("Request sent to @$name",color=Muted)
-                }
-                item { FocusButton("Refresh") { state.launch { state.refreshFriends() } } }
-            }
-            item {
-                Text("Quick phrases · separate with | · up to 8 phrases",color=Color.White)
-                NativeTextField(phrases,{phrases=it},"Phrase one|Phrase two")
-                FocusButton("Save phrases") { state.savePhrases(phrases) }
-            }
-            item { FocusButton("Trakt") { state.screen=Screen.TRAKT } }
-            }
+    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+        LazyColumn(Modifier.width(640.dp).heightIn(max=460.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+            item { Text("Mi perfil social",color=Color.White,fontSize=25.sp) }
+            item { NativeTextField(nick,{ nick=it },"Nickname"); FocusButton("Guardar nickname") { state.launch { state.saveNickname(nick) } } }
+            item { NativeTextField(find,{ find=it },"Nickname de tu amigo"); FocusButton("Agregar amigo") { state.launch { state.findAndAddFriend(find) } } }
+            item { NativeTextField(phrases,{ phrases=it },"Frases separadas por |"); FocusButton("Guardar frases") { state.savePhrases(phrases) } }
+            item { FocusButton("Cerrar") { close() } }
         }
     }
 }

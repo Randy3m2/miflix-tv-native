@@ -119,6 +119,64 @@ class AppState(context: Context) {
         val s = session ?: return false; val room = watchParty?.roomCode ?: return false
         return social.takePause(s,room)
     }
+    val ratings=mutableStateMapOf<String,Int>()
+    val forYou=mutableStateListOf<MediaSummary>()
+    val comingMovies=mutableStateListOf<MediaSummary>()
+    val comingSeries=mutableStateListOf<MediaSummary>()
+    private val ratingRepo=RatingRepository(BuildConfig.SUPABASE_URL,BuildConfig.SUPABASE_KEY)
+    private fun ratingsKey()="ratings_${session?.userId ?: "local"}_${activeProfile.id}"
+    suspend fun loadRatings() {
+        val owner=ratingsKey()
+        val j=org.json.JSONObject(playbackPrefs.getString(owner,"{}").orEmpty())
+        forYou.clear()
+        ratings.clear(); j.keys().forEach { id -> j.optInt(id).takeIf { it in 1..10 }?.let { ratings[id]=it } }
+        val cached=ratings.toMap()
+        session?.let { s ->
+            val remote=runCatching { ratingRepo.load(s,activeProfile.id) }.getOrNull()
+            if(remote!=null && owner==ratingsKey() && cached==ratings.toMap()) { ratings.clear(); ratings.putAll(remote); persistRatings() }
+        }
+        if(owner==ratingsKey()) refreshForYou()
+    }
+    private fun persistRatings() {
+        val j=org.json.JSONObject(); ratings.forEach { (id,score) -> j.put(id,score) }
+        playbackPrefs.edit().putString(ratingsKey(),j.toString()).apply()
+    }
+    suspend fun rate(item: MediaSummary,score: Int) {
+        require(score in 1..10)
+        val owner=ratingsKey(); val profile=activeProfile.id
+        session?.let { ratingRepo.save(it,profile,item.cloudId,score) }
+        if(owner!=ratingsKey()) return
+        ratings[item.cloudId]=score; persistRatings(); refreshForYou()
+    }
+    suspend fun recommendationsFor(context: MediaSummary? = null): List<MediaSummary> = coroutineScope {
+        val scores=ratings.toMap()
+        val seeds=(scores.filterValues { it>=6 }.entries.sortedByDescending { it.value }.take(4)
+            +scores.filterValues { it<=4 }.entries.sortedBy { it.value }.take(2))
+        val jobs=seeds.map { (id,score) -> async {
+            val rows=runCatching { tmdb.byCloudId(id)?.let { tmdb.recommendations(it) } }.getOrNull().orEmpty()
+            (score-5).toDouble() to rows
+        } }
+        val base=context?.let { async { runCatching { tmdb.recommendations(it) }.getOrDefault(emptyList()) } }
+        val weighted=jobs.awaitAll().toMutableList()
+        base?.let { weighted.add(1.0 to it.await()) }
+        val ranking=mutableMapOf<String,Double>(); val candidates=linkedMapOf<String,MediaSummary>()
+        weighted.forEach { (weight,rows) -> rows.forEachIndexed { index,item ->
+            candidates[item.cloudId]=item
+            ranking[item.cloudId]=(ranking[item.cloudId] ?: 0.0)+weight*(1.0-index/40.0)
+        } }
+        candidates.values.filter { it.cloudId!=context?.cloudId && !scores.containsKey(it.cloudId) && (ranking[it.cloudId] ?: 0.0)>0 }
+            .sortedWith(compareByDescending<MediaSummary> { ranking[it.cloudId] ?: 0.0 }.thenByDescending { it.rating }).take(30)
+    }
+    suspend fun refreshForYou() {
+        val owner=ratingsKey(); val revision=ratings.toMap()
+        val rows=if(revision.values.any { it>=6 }) recommendationsFor() else emptyList()
+        if(owner==ratingsKey() && revision==ratings.toMap()) { forYou.clear(); forYou.addAll(rows) }
+    }
+    suspend fun loadComingSoon() = coroutineScope {
+        val movies=async { tmdb.comingSoon("movie") }; val shows=async { tmdb.comingSoon("series") }
+        comingMovies.clear(); comingMovies.addAll(movies.await())
+        comingSeries.clear(); comingSeries.addAll(shows.await())
+    }
     private val livePrefs = context.getSharedPreferences("miflix_live", Context.MODE_PRIVATE)
     private val social = SocialRepository(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY)
     val trakt = TraktRepository(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY)
@@ -127,12 +185,21 @@ class AppState(context: Context) {
     val friendActivity = mutableStateListOf<FriendActivity>()
     val accessRequests = mutableStateListOf<AccessRequest>()
     var pendingPartyCode by mutableStateOf<String?>(null)
+    suspend fun refreshFriendsDirectory() {
+        val s=session ?: return
+        refreshFriends()
+        val people=social.activity(s)
+        friendActivity.clear(); friendActivity.addAll(people)
+        accessRequests.clear(); accessRequests.addAll(social.requests(s))
+    }
     suspend fun refreshSocialActivity() {
         val s=session ?: return
         val req=playerRequest.takeIf { screen==Screen.PLAYER || watchParty!=null }
         social.presence(s,req?.item?.title.orEmpty(),req?.item?.cloudId.orEmpty(),req?.season ?: 0,req?.episode ?: 0,watchParty?.roomCode)
-        friendActivity.clear(); friendActivity.addAll(social.activity(s))
-        accessRequests.clear(); accessRequests.addAll(social.requests(s))
+        social.publishAvatar(s,activeProfile.avatarValue ?: ProfileAvatars[(activeProfile.id.hashCode() and Int.MAX_VALUE)%4].key)
+        if(screen!=Screen.FRIENDS && screen!=Screen.WATCH_PARTY) {
+            accessRequests.clear(); accessRequests.addAll(social.requests(s))
+        }
         pendingPartyCode?.let { code ->
             val decision=try { social.requestAccess(s,code) } catch(e: Exception) {
                 if(e is CancellationException) throw e
@@ -959,7 +1026,7 @@ class AppState(context: Context) {
         traktConnected=false; traktDevice=null; traktSent.clear()
         session = null
         local.saveSession(null)
-        favorites.clear(); progress.clear(); profiles.clear(); continueWatching.clear()
+        favorites.clear(); progress.clear(); profiles.clear(); continueWatching.clear(); ratings.clear(); forYou.clear()
         loadOfflineProfiles()
         extrasLoaded = false
         screen = Screen.SETTINGS

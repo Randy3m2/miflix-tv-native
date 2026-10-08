@@ -4,6 +4,13 @@ import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.res.painterResource
 import com.miflix.native2.R
 import androidx.compose.foundation.background
@@ -269,25 +276,30 @@ fun NativeTextField(
     modifier: Modifier = Modifier
 ) {
     var focused by remember { mutableStateOf(false) }
-    BasicTextField(
-        value = value,
-        onValueChange = onValueChange,
-        singleLine = true,
-        textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
-        cursorBrush = SolidColor(Color.White),
-        visualTransformation = if (password) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
-        modifier = modifier
-            .onFocusChanged { focused = it.isFocused }
-            .background(if (focused) Color(0xFF202020) else Panel, RoundedCornerShape(10.dp))
-            .border(if (focused) 1.5.dp else 0.dp, Color.White, RoundedCornerShape(10.dp))
-            .padding(15.dp),
-        decorationBox = { inner ->
-            Box {
-                if (value.isBlank()) Text(hint, color = Muted, fontSize = 15.sp)
-                inner()
+    var editing by remember { mutableStateOf(false) }
+    val keyboard=LocalSoftwareKeyboardController.current
+    Box(modifier.onFocusChanged { focused=it.isFocused }.focusable().tvClick { editing=true }
+        .clickable { editing=true }.background(if(focused) Color(0xFF263047) else Panel,RoundedCornerShape(12.dp))
+        .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else Color(0xFF343C50),RoundedCornerShape(12.dp)).padding(15.dp)) {
+        Text(if(value.isBlank()) hint else if(password) "•".repeat(value.length.coerceAtMost(24)) else value,
+            color=if(value.isBlank()) Muted else Color.White,fontSize=16.sp,maxLines=1)
+    }
+    if(editing) {
+        val editorFocus=remember { FocusRequester() }
+        DisposableEffect(Unit) { onDispose { keyboard?.hide() } }
+        fun close() { keyboard?.hide(); editing=false }
+        Dialog(onDismissRequest={ close() },properties=DialogProperties(usePlatformDefaultWidth=false)) {
+            Column(Modifier.width(560.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+                Text(hint,color=Color.White,fontSize=22.sp)
+                BasicTextField(value=value,onValueChange=onValueChange,singleLine=true,
+                    textStyle=TextStyle(color=Color.White,fontSize=19.sp),cursorBrush=SolidColor(Color.White),
+                    visualTransformation=if(password) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
+                    modifier=Modifier.fillMaxWidth().focusRequester(editorFocus).background(Color(0xFF202A3B),RoundedCornerShape(12.dp)).padding(16.dp))
+                FocusButton("Listo",primary=true) { close() }
             }
+            LaunchedEffect(Unit) { delay(150); editorFocus.requestFocus(); keyboard?.show() }
         }
-    )
+    }
 }
 
 @Composable
@@ -297,11 +309,12 @@ fun Sidebar(screen: Screen, profileName: String, onNavigate: (Screen) -> Unit) {
 
 @Composable
 fun Sidebar(screen: Screen, profileName: String, onNavigate: (Screen) -> Unit, notificationCount: Int) {
-    val items = listOf(
+    val navItems = listOf(
         Triple(Screen.HOME, "⌂", "Home"),
         Triple(Screen.SEARCH, "⌕", "Search"),
         Triple(Screen.COLLECTIONS, "◇", "Collections"),
         Triple(Screen.WATCH_PARTY, "◉", "Party"),
+        Triple(Screen.FRIENDS, "♧", "Friends"),
         Triple(Screen.LIVE_TV, "●", "Live TV"),
         Triple(Screen.GENRES, "▦", "Genres"),
         Triple(Screen.MY_LIST, "♡", "My List"),
@@ -314,29 +327,29 @@ fun Sidebar(screen: Screen, profileName: String, onNavigate: (Screen) -> Unit, n
             .width(154.dp)
             .fillMaxHeight()
             .background(Color(0xFF090909))
-            .padding(horizontal = 12.dp, vertical = 22.dp),
-        verticalArrangement = Arrangement.SpaceBetween
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 8.dp, bottom = 20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)) {
                 Box(Modifier.size(34.dp).background(Color.White, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
                     Image(painterResource(R.drawable.brunio_icon), "BruniO", Modifier.fillMaxSize())
                 }
                 Spacer(Modifier.width(9.dp))
                 Text("BruniO", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
             }
-            items.forEach { (destination, icon, label) ->
+        LazyColumn(Modifier.weight(1f).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(3.dp)) {
+            items(navItems,key={it.first}) { (destination, icon, label) ->
                 var focused by remember(destination) { mutableStateOf(false) }
                 val active = destination == screen
                 Row(
                     Modifier
-                        .fillMaxWidth()
+                        .fillMaxWidth().height(36.dp)
                         .onFocusChanged { focused = it.isFocused }
                         .focusable()
                         .tvClick { onNavigate(destination) }
                         .clickable { onNavigate(destination) }
                         .background(if (focused || active) Color(0xFFF2F2F2) else Color.Transparent, RoundedCornerShape(12.dp))
-                        .padding(horizontal = 11.dp, vertical = 9.dp),
+                        .padding(horizontal = 11.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(icon, color = if (focused || active) Color.Black else Color.White, fontSize = 19.sp, modifier = Modifier.width(28.dp))

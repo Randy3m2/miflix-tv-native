@@ -110,6 +110,7 @@ fun HomeScreen(state: AppState, onNavigate: (Screen) -> Unit) {
             contentPadding = PaddingValues(bottom = 64.dp)
         ) {
             item(key = "hero") { TopTenHero(state.trending.take(10), openItem) }
+            if(state.forYou.isNotEmpty()) item(key="for_you") { MediaRail("Para ti · tus puntuaciones",state.forYou,onClick=openItem) }
             if (state.continueWatching.isNotEmpty()) {
                 item(key = "continue") {
                     MediaRail(
@@ -277,7 +278,7 @@ fun SearchScreen(state: AppState, onBack: () -> Unit) {
 @Composable
 fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
-    LaunchedEffect(Unit) { state.loadHomeExtras() }
+    LaunchedEffect(Unit) { state.loadHomeExtras(); runCatching { state.loadComingSoon() }.onFailure { state.error=it.message } }
     val years = (2026 downTo 1990).map { year -> CollectionTile("year:$year", year.toString(), "") }
     AppShell(state, Screen.COLLECTIONS, { state.screen = it }) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = 34.dp, bottom = 60.dp)) {
@@ -289,6 +290,8 @@ fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
                     Spacer(Modifier.height(24.dp))
                 }
             }
+            if(state.comingMovies.isNotEmpty()) item { MediaRail("Coming Soon · Movies",state.comingMovies,onClick={ state.launch { state.open(it) } }) }
+            if(state.comingSeries.isNotEmpty()) item { MediaRail("Coming Soon · Series",state.comingSeries,onClick={ state.launch { state.open(it) } }) }
             item { CollectionRail("Streaming", StreamingTiles) { tile -> state.launch { state.openCollection(tile.id, tile.title) } } }
             item {
                 Text("Movies by Year", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 34.dp, top = 8.dp, bottom = 10.dp))
@@ -368,9 +371,11 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
     val item = state.selected ?: return
     val details = state.details
     val saved = state.progress[item.cloudId]
+    var showRating by remember(item.cloudId) { mutableStateOf(false) }
     val playFocus = remember(item.cloudId) { FocusRequester() }
     LaunchedEffect(item.cloudId) { delay(150); playFocus.requestFocus() }
     BackHandler(onBack = onBack)
+    if(showRating) RatingDialog(state,item) { showRating=false }
 
     Box(Modifier.fillMaxSize().background(Bg)) {
         AsyncImage(item.backdrop, null, Modifier.fillMaxWidth().height(590.dp).align(Alignment.TopCenter), contentScale = ContentScale.Crop)
@@ -410,6 +415,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                         FocusButton(if (state.favorites.contains(item.cloudId)) "✓ My List" else "+ My List") {
                             state.toggleFavorite(item); state.launch { runCatching { state.pushCloud() } }
                         }
+                        FocusButton("★ ${state.ratings[item.cloudId]?.let { "$it/10" } ?: "Rate"}") { showRating=true }
                         FocusButton("Watch Party") { state.screen = Screen.WATCH_PARTY }
                     }
                     Spacer(Modifier.height(38.dp))
@@ -613,7 +619,9 @@ fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
     var editingAvatar by remember { mutableStateOf<Profile?>(null) }
     var choosingNewAvatar by remember { mutableStateOf(false) }
     BackHandler(onBack = onBack)
-    LazyColumn(Modifier.fillMaxSize().background(Bg).padding(horizontal=50.dp),contentPadding=PaddingValues(vertical=32.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+    Box(Modifier.fillMaxSize()) {
+    SocialBackdrop()
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal=50.dp),contentPadding=PaddingValues(vertical=32.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
         item {
             Text("Who's watching?",color=Color.White,fontSize=38.sp,fontWeight=FontWeight.Black)
             Text("Los avatares se guardan con tu perfil. Favoritos y progreso siguen separados.",color=Muted,fontSize=14.sp)
@@ -647,6 +655,7 @@ fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
             FocusButton("Volver") { onBack() }
         }
     }
+    }
     if(choosingNewAvatar) AvatarPickerDialog(newAvatar,choose={ newAvatar=it; choosingNewAvatar=false },close={ choosingNewAvatar=false })
     editingAvatar?.let { profile ->
         AvatarPickerDialog(profile.avatarValue,choose={ avatar ->
@@ -656,58 +665,77 @@ fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
 }
 
 @Composable
-fun WatchPartyScreen(state: AppState, onBack: () -> Unit) {
+fun WatchPartyScreen(state: AppState,onBack: () -> Unit) {
     var joinCode by remember { mutableStateOf("") }
-    BackHandler(onBack = onBack)
-    AppShell(state, Screen.WATCH_PARTY, { state.screen=it }) {
-        LazyColumn(Modifier.fillMaxSize().padding(28.dp),verticalArrangement=Arrangement.spacedBy(16.dp),contentPadding=PaddingValues(bottom=40.dp)) {
+    BackHandler(onBack=onBack)
+    AppShell(state,Screen.WATCH_PARTY,{ state.screen=it }) {
+        SocialBackdrop()
+        LazyColumn(Modifier.fillMaxSize().padding(horizontal=28.dp),contentPadding=PaddingValues(vertical=28.dp),verticalArrangement=Arrangement.spacedBy(24.dp)) {
             item {
-                Text("Watch Party",color=Color.White,fontSize=32.sp,fontWeight=FontWeight.Bold)
-                Text("One room for all content · guests need host approval. Scan for mobile chat.",color=Muted)
-                Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Watch Party",color=Color.White,fontSize=32.sp,fontWeight=FontWeight.Bold)
+                        Text("Una sala para todas tus películas y series",color=Muted,fontSize=13.sp)
+                    }
                     FocusButton("Friends / Party") { state.screen=Screen.FRIENDS }
-                    FocusButton("Back") { onBack() }
+                    BackIconButton(onBack)
                 }
             }
-            item { AccessRequests(state) }
-            val party=state.watchParty
-            if(party==null) {
-                item {
-                    FocusButton("Create Room",primary=true) { state.launch { state.socialAction { state.createWatchParty() } } }
-                    if(state.selected!=null || state.playerRequest!=null) FocusButton("Create with current title") { state.launch { state.socialAction { state.createWatchParty(true) } } }
-                    NativeTextField(joinCode,{joinCode=it.filter(Char::isDigit).take(6)},"6-digit room code")
-                    FocusButton("Join") { state.launch { state.socialAction { state.joinWatchParty(joinCode) } } }
-                }
-            } else {
-                item {
-                    Row(horizontalArrangement=Arrangement.spacedBy(25.dp)) {
-                        QrCode("https://randy3m2.github.io/miflix-tv-native/party/?room=${party.roomCode}",210.dp)
-                        Column {
-                            Text(party.roomCode,color=Color.White,fontSize=42.sp,fontWeight=FontWeight.Bold)
-                            Text(if(state.partyRole==PartyRole.HOST) "Host · same code when changing content" else "Guest · follows the host",color=Muted)
-                            FocusButton("Choose content") { state.screen=Screen.HOME }
-                            if(state.playerRequest!=null) FocusButton("Return to playback") { state.screen=Screen.PLAYER }
-                            FocusButton("Leave / close room") { state.launch { state.leaveWatchParty(); onBack() } }
+            item {
+                Row(horizontalArrangement=Arrangement.spacedBy(18.dp)) {
+                    Column(Modifier.weight(1f).background(Color(0xAA152036),RoundedCornerShape(20.dp)).padding(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+                        Text("Tu sesión",color=Color.White,fontSize=23.sp)
+                        Text("Invita a tus amigos. Tú apruebas quién entra.",color=Muted,fontSize=14.sp)
+                        if(state.watchParty==null) {
+                            FocusButton("Create Room",primary=true,modifier=Modifier.fillMaxWidth()) { state.launch { state.socialAction { state.createWatchParty() } } }
+                            if(state.selected!=null || state.playerRequest!=null) FocusButton("Con el contenido actual",modifier=Modifier.fillMaxWidth()) { state.launch { state.socialAction { state.createWatchParty(true) } } }
+                        } else {
+                            val party=state.watchParty!!
+                            Text("Sala ${party.roomCode}",color=Color.White,fontSize=26.sp)
+                            Text(if(state.partyRole==PartyRole.HOST) "Host" else "Guest",color=Muted)
+                            if(state.playerRequest!=null) FocusButton("Volver al reproductor") { state.screen=Screen.PLAYER }
+                            FocusButton("Salir / cerrar sala") { state.launch { state.leaveWatchParty() } }
+                        }
+                    }
+                    Column(Modifier.weight(1f).background(Color(0xAA152036),RoundedCornerShape(20.dp)).padding(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+                        if(state.watchParty==null) {
+                            Text("Unirte a una sesión",color=Color.White,fontSize=23.sp)
+                            Text("Escribe el código y espera aprobación del host.",color=Muted,fontSize=14.sp)
+                            NativeTextField(joinCode,{ joinCode=it.filter(Char::isDigit).take(6) },"Código de 6 dígitos",modifier=Modifier.fillMaxWidth())
+                            FocusButton("Request access",modifier=Modifier.fillMaxWidth()) { state.launch { state.socialAction { state.joinWatchParty(joinCode) } } }
+                        } else {
+                            val party=state.watchParty!!
+                            Text("Chat desde tu celular",color=Color.White,fontSize=23.sp)
+                            QrCode("https://randy3m2.github.io/miflix-tv-native/party/?room=${party.roomCode}",150.dp)
+                            if(state.partyRole==PartyRole.HOST) FocusButton("Elegir contenido") { state.screen=Screen.HOME }
                         }
                     }
                 }
-                item { LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                    items(PartyEmojis) { emoji -> FocusButton(emoji) { state.launch { state.sendPartyEvent("emoji",emoji) } } }
-                } }
-                item { Text("Quick phrases",color=Color.White,fontSize=20.sp) }
-                items(state.partyPhrases) { phrase -> FocusButton(phrase) { state.launch { state.sendPartyEvent("phrase",phrase) } } }
-                item { Text("Participants · add as friend",color=Color.White,fontSize=20.sp) }
-                items(state.partyMembers,key={it.id}) { person ->
-                    if(person.id!=state.session?.userId) FocusButton("@${person.nickname} · Add friend") { state.launch { state.addFriend(person.id) } }
-                    else Text("@${state.nickname.ifBlank { "You" }}",color=Muted)
-                }
-                item { Text("Recent chat",color=Color.White,fontSize=20.sp) }
-                items(state.partyMessages.takeLast(10),key={it.id}) { event ->
-                    val name=state.partyMembers.firstOrNull { it.id==event.userId }?.nickname?:"Guest"
-                    Text("@$name · ${event.body}",color=Color.White,fontSize=15.sp)
-                }
             }
-            if(state.partyStatus.isNotBlank()) item { Text(state.partyStatus,color=Muted) }
+            item {
+                Row(verticalAlignment=Alignment.CenterVertically) {
+                    Text("Solicitudes de acceso",color=Color.White,fontSize=22.sp,modifier=Modifier.weight(1f))
+                    FocusButton("Refresh") { state.launch { state.socialAction { state.refreshFriendsDirectory() } } }
+                }
+                AccessRequests(state)
+                if(state.accessRequests.isEmpty()) Text("Sin solicitudes pendientes",color=Muted)
+            }
+            if(state.watchParty!=null) {
+                item {
+                    Text("Reacciones",color=Color.White,fontSize=22.sp)
+                    LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp)) { items(PartyEmojis) { emoji -> FocusButton(emoji) { state.launch { state.sendPartyEvent("emoji",emoji) } } } }
+                }
+                item { Text("Participantes",color=Color.White,fontSize=22.sp) }
+                items(state.partyMembers,key={it.id}) { person ->
+                    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                        Text("@${person.nickname}",color=Color.White,modifier=Modifier.weight(1f))
+                        if(person.id!=state.session?.userId) FocusButton("Agregar amigo") { state.launch { state.addFriend(person.id) } }
+                    }
+                }
+                item { Text("Chat reciente",color=Color.White,fontSize=22.sp) }
+                items(state.partyMessages.takeLast(8),key={it.id}) { event -> Text(event.body,color=Muted) }
+            }
+            if(state.partyStatus.isNotBlank()) item { Text(state.partyStatus,color=Color(0xFF9DD4FF)) }
         }
     }
 }
@@ -738,6 +766,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var episodeInfo by remember(request.playbackId) { mutableStateOf<EpisodeSummary?>(null) }
     var upcoming by remember(request.playbackId) { mutableStateOf<EpisodeSummary?>(null) }
     var recommendations by remember(request.playbackId) { mutableStateOf<List<MediaSummary>>(emptyList()) }
+    var rateAtEnd by remember(request.playbackId) { mutableStateOf(false) }
     var ended by remember(request.playbackId) { mutableStateOf(false) }
     var countdown by remember(request.playbackId) { mutableStateOf(10) }
     var cancelAutoplay by remember(request.playbackId) { mutableStateOf(false) }
@@ -779,7 +808,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     LaunchedEffect(request.playbackId) {
         if(!request.live) {
             state.launch { segments = state.playbackSegments(request) }
-            state.launch { recommendations = runCatching { state.tmdb.recommendations(request.item) }.getOrDefault(emptyList()) }
+            state.launch { recommendations = runCatching { state.recommendationsFor(request.item) }.getOrDefault(emptyList()) }
             if(request.item.type == "series") {
                 state.launch { episodeInfo = runCatching { state.tmdb.episodeInfo(request.item,request.season,request.episode) }.getOrNull() }
                 state.launch { upcoming = runCatching { state.nextEpisode(request) }.getOrNull() }
@@ -1008,7 +1037,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 }
             }
         }
-        if(ended && state.partyRole != PartyRole.GUEST) {
+        if(rateAtEnd) RatingDialog(state,request.item) { rateAtEnd=false; state.launch { recommendations=state.recommendationsFor(request.item) } }
+        if(ended && state.partyRole != PartyRole.GUEST && !rateAtEnd) {
             Dialog(onDismissRequest={ cancelAutoplay=true; onClose() },properties=DialogProperties(usePlatformDefaultWidth=false)) {
                 Column(Modifier.width(850.dp).heightIn(max=600.dp).background(Color(0xF00B0B0B),RoundedCornerShape(20.dp)).padding(25.dp)) {
                     Text("Terminaste ${request.item.title}",color=Color.White,fontSize=26.sp)
@@ -1025,7 +1055,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                             MediaCard(item) { cancelAutoplay=true; state.launch { state.open(item) } }
                         }
                     }
-                    FocusButton("Back to details") { cancelAutoplay=true; onClose() }
+                    Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                        FocusButton("★ Puntuar") { cancelAutoplay=true; rateAtEnd=true }
+                        FocusButton("Back to details") { cancelAutoplay=true; onClose() }
+                    }
                 }
             }
         }

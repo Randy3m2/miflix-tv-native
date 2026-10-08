@@ -20,3 +20,12 @@ SUBJECT:
 2. charming orange fox with clever warm expression
 3. friendly small teal robot with expressive glowing eyes
 4. adorable violet dragon with tiny horns
+
+## Fondo social RC5
+
+Archivo: app/src/main/res/drawable-nodpi/brunio_social_background.png
+Método: herramienta integrada de generación de imágenes.
+
+Prompt:
+
+> Use case: stylized-concept. Asset type: understated full-screen background image for a native Android TV movie app's social and profile pages. Wide landscape 16:9 abstract cinematic midnight navy atmosphere, soft diffused indigo and muted teal light in distant corners, subtle out-of-focus gradients with restrained depth. Very dark quiet central area for readable white UI text. Elegant, calming, low contrast, no bright glare, no objects, no characters, no symbols, no words or logos. Smooth clean gradients, no grain. One complete background image.

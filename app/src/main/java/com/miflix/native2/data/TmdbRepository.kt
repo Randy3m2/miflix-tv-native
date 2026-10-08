@@ -216,6 +216,15 @@ class TmdbRepository(var token: String) {
         return mapItem(j, type)
     }
 
+    suspend fun comingSoon(type: String): List<MediaSummary> {
+        val format=java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US)
+        val nextDay=java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR,1) }
+        val nextYear=java.util.Calendar.getInstance().apply { add(java.util.Calendar.MONTH,12) }
+        val start=format.format(nextDay.time)
+        val end=format.format(nextYear.time)
+        val field=if(type=="series") "first_air_date" else "primary_release_date"
+        return parseList(get("/discover/${if(type=="series") "tv" else "movie"}",mapOf("$field.gte" to start,"$field.lte" to end,"sort_by" to "popularity.desc","include_adult" to "false")),type,20)
+    }
     suspend fun recommendations(item: MediaSummary): List<MediaSummary> =
         parseList(get("/${if(item.type == "series") "tv" else "movie"}/${item.id}/recommendations"), item.type, 20)
 

@@ -34,17 +34,24 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.miflix.native2.model.CollectionTile
 import com.miflix.native2.model.MediaSummary
-import kotlinx.coroutines.delay
 
 val Bg = Color(0xFF050505)
 val Panel = Color(0xFF151515)
 val Muted = Color(0xFF9A9A9F)
 val SoftWhite = Color(0xFFF3F3F3)
+
 private val FastMotion = tween<Float>(durationMillis = 90, easing = LinearOutSlowInEasing)
 
 fun Modifier.tvClick(onClick: () -> Unit): Modifier = this.onPreviewKeyEvent { event ->
-    val activate = event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter
-    if (activate && event.type == KeyEventType.KeyUp) { onClick(); true } else false
+    val activate = event.key == Key.DirectionCenter ||
+        event.key == Key.Enter ||
+        event.key == Key.NumPadEnter
+    if (activate && event.type == KeyEventType.KeyUp) {
+        onClick()
+        true
+    } else {
+        false
+    }
 }
 
 @Composable
@@ -56,18 +63,33 @@ fun FocusButton(
     onClick: () -> Unit
 ) {
     var focused by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (focused) 1.018f else 1f, FastMotion, label = "buttonScale")
+    val scale by animateFloatAsState(
+        targetValue = if (focused) 1.018f else 1f,
+        animationSpec = FastMotion,
+        label = "buttonScale"
+    )
     val white = focused || primary
     Box(
-        modifier.graphicsLayer { scaleX = scale; scaleY = scale }
-            .onFocusChanged { focused = it.isFocused; onFocused?.invoke(it.isFocused) }
-            .focusable().tvClick(onClick).clickable(onClick = onClick)
+        modifier
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .onFocusChanged {
+                focused = it.isFocused
+                onFocused?.invoke(it.isFocused)
+            }
+            .focusable()
+            .tvClick(onClick)
+            .clickable(onClick = onClick)
             .background(if (white) SoftWhite else Color(0xE6222222), RoundedCornerShape(24.dp))
             .border(if (focused && !primary) 1.5.dp else 0.dp, Color.White, RoundedCornerShape(24.dp))
             .padding(horizontal = 24.dp, vertical = 12.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, color = if (white) Color.Black else Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        Text(
+            text,
+            color = if (white) Color.Black else Color.White,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
@@ -77,12 +99,15 @@ fun MediaCard(
     modifier: Modifier = Modifier,
     landscape: Boolean = false,
     progressPercent: Double? = null,
-    rank: Int? = null,
     onFocused: (MediaSummary) -> Unit = {},
     onClick: () -> Unit
 ) {
     var focused by remember(item.cloudId) { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (focused) 1.025f else 1f, FastMotion, label = "cardScale")
+    val scale by animateFloatAsState(
+        targetValue = if (focused) 1.025f else 1f,
+        animationSpec = FastMotion,
+        label = "cardScale"
+    )
     val outerW = if (landscape) 286.dp else 184.dp
     val outerH = if (landscape) 174.dp else 274.dp
     val innerW = if (landscape) 272.dp else 170.dp
@@ -90,33 +115,51 @@ fun MediaCard(
 
     Box(modifier.width(outerW).height(outerH), contentAlignment = Alignment.Center) {
         Box(
-            Modifier.width(innerW).height(innerH)
-                .graphicsLayer { scaleX = scale; scaleY = scale; shadowElevation = if (focused) 16f else 0f }
-                .onFocusChanged { focused = it.isFocused; if (it.isFocused) onFocused(item) }
-                .focusable().tvClick(onClick).clickable(onClick = onClick)
-                .clip(RoundedCornerShape(12.dp)).background(Color(0xFF1A1A1A))
+            Modifier
+                .width(innerW)
+                .height(innerH)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    shadowElevation = if (focused) 16f else 0f
+                }
+                .onFocusChanged {
+                    focused = it.isFocused
+                    if (it.isFocused) onFocused(item)
+                }
+                .focusable()
+                .tvClick(onClick)
+                .clickable(onClick = onClick)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFF1A1A1A))
                 .border(if (focused) 2.dp else 0.dp, Color.White, RoundedCornerShape(12.dp))
         ) {
             AsyncImage(
                 model = if (landscape) item.backdrop ?: item.poster else item.poster ?: item.backdrop,
-                contentDescription = item.title, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop
+                contentDescription = item.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
             )
             if (landscape) {
-                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xD9000000)), startY = 60f)))
+                Box(
+                    Modifier.fillMaxSize().background(
+                        Brush.verticalGradient(listOf(Color.Transparent, Color(0xD9000000)), startY = 60f)
+                    )
+                )
                 Column(Modifier.align(Alignment.BottomStart).padding(12.dp)) {
                     Text(item.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                     Text("${item.year}  ★ ${"%.1f".format(item.rating)}", color = Color(0xFFD5D5D5), fontSize = 11.sp)
                 }
             }
-            rank?.let {
-                Box(
-                    Modifier.align(Alignment.TopStart).padding(8.dp).size(36.dp)
-                        .background(Color(0xE6000000), RoundedCornerShape(18.dp)), contentAlignment = Alignment.Center
-                ) { Text(it.toString(), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black) }
-            }
             progressPercent?.takeIf { it > 0.0 && it < 100.0 }?.let { p ->
-                Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color(0x66000000))) {
-                    Box(Modifier.fillMaxHeight().fillMaxWidth((p / 100.0).toFloat().coerceIn(0f, 1f)).background(Color.White))
+                Box(
+                    Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color(0x66000000))
+                ) {
+                    Box(
+                        Modifier.fillMaxHeight()
+                            .fillMaxWidth((p / 100.0).toFloat().coerceIn(0f, 1f))
+                            .background(Color.White)
+                    )
                 }
             }
             if (focused) Box(Modifier.matchParentSize().background(Color(0x0AFFFFFF)))
@@ -125,35 +168,39 @@ fun MediaCard(
 }
 
 @Composable
-fun CollectionCard(tile: CollectionTile, onClick: () -> Unit) {
+fun CollectionCard(
+    tile: CollectionTile,
+    onClick: () -> Unit
+) {
     var focused by remember(tile.id) { mutableStateOf(false) }
-    var playGif by remember(tile.id) { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (focused) 1.022f else 1f, FastMotion, label = "collectionScale")
-    LaunchedEffect(focused, tile.id) {
-        if (focused && !tile.focusGifUrl.isNullOrBlank()) { playGif = true; delay(2200); playGif = false } else playGif = false
-    }
-    val model = if (playGif && !tile.focusGifUrl.isNullOrBlank()) tile.focusGifUrl else tile.coverUrl
+    val scale by animateFloatAsState(
+        targetValue = if (focused) 1.022f else 1f,
+        animationSpec = FastMotion,
+        label = "collectionScale"
+    )
+    val model = if (focused && !tile.focusGifUrl.isNullOrBlank()) tile.focusGifUrl else tile.coverUrl
 
     Column(Modifier.width(300.dp)) {
         Box(Modifier.width(300.dp).height(178.dp), contentAlignment = Alignment.Center) {
             Box(
-                Modifier.width(286.dp).height(162.dp)
+                Modifier
+                    .width(286.dp)
+                    .height(162.dp)
                     .graphicsLayer { scaleX = scale; scaleY = scale; shadowElevation = if (focused) 14f else 0f }
-                    .onFocusChanged { focused = it.isFocused }.focusable().tvClick(onClick).clickable(onClick = onClick)
-                    .clip(RoundedCornerShape(14.dp)).background(Color(0xFF191919))
+                    .onFocusChanged { focused = it.isFocused }
+                    .focusable()
+                    .tvClick(onClick)
+                    .clickable(onClick = onClick)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(Color(0xFF191919))
                     .border(if (focused) 2.dp else 0.dp, Color.White, RoundedCornerShape(14.dp))
             ) {
-                if (model.isNotBlank()) {
-                    AsyncImage(model = model, contentDescription = tile.title, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                } else {
-                    Box(
-                        Modifier.fillMaxSize().background(
-                            Brush.linearGradient(listOf(Color(0xFF101010), Color(0xFF282828), Color(0xFF0D0D0D)))
-                        ), contentAlignment = Alignment.Center
-                    ) {
-                        Text(tile.title.uppercase(), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                    }
-                }
+                AsyncImage(
+                    model = model,
+                    contentDescription = tile.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
                 if (focused) Box(Modifier.fillMaxSize().background(Color(0x0DFFFFFF)))
             }
         }
@@ -171,13 +218,23 @@ fun NativeTextField(
 ) {
     var focused by remember { mutableStateOf(false) }
     BasicTextField(
-        value = value, onValueChange = onValueChange, singleLine = true,
-        textStyle = TextStyle(color = Color.White, fontSize = 16.sp), cursorBrush = SolidColor(Color.White),
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
+        cursorBrush = SolidColor(Color.White),
         visualTransformation = if (password) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
-        modifier = modifier.onFocusChanged { focused = it.isFocused }
+        modifier = modifier
+            .onFocusChanged { focused = it.isFocused }
             .background(if (focused) Color(0xFF202020) else Panel, RoundedCornerShape(10.dp))
-            .border(if (focused) 1.5.dp else 0.dp, Color.White, RoundedCornerShape(10.dp)).padding(15.dp),
-        decorationBox = { inner -> Box { if (value.isBlank()) Text(hint, color = Muted, fontSize = 15.sp); inner() } }
+            .border(if (focused) 1.5.dp else 0.dp, Color.White, RoundedCornerShape(10.dp))
+            .padding(15.dp),
+        decorationBox = { inner ->
+            Box {
+                if (value.isBlank()) Text(hint, color = Muted, fontSize = 15.sp)
+                inner()
+            }
+        }
     )
 }
 
@@ -186,48 +243,65 @@ fun Sidebar(screen: Screen, profileName: String, onNavigate: (Screen) -> Unit) {
     val items = listOf(
         Triple(Screen.HOME, "⌂", "Home"),
         Triple(Screen.SEARCH, "⌕", "Search"),
-        Triple(Screen.COLLECTIONS, "◇", "Browse"),
+        Triple(Screen.COLLECTIONS, "◇", "Collections"),
+        Triple(Screen.GENRES, "▦", "Genres"),
         Triple(Screen.MY_LIST, "♡", "My List"),
         Triple(Screen.SETTINGS, "⚙", "Settings")
     )
 
     Column(
-        Modifier.width(128.dp).fillMaxHeight().background(Color(0xFF090909)).padding(horizontal = 9.dp, vertical = 18.dp),
+        Modifier
+            .width(154.dp)
+            .fillMaxHeight()
+            .background(Color(0xFF090909))
+            .padding(horizontal = 12.dp, vertical = 22.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 7.dp, bottom = 17.dp)) {
-                Box(Modifier.size(31.dp).background(Color.White, RoundedCornerShape(9.dp)), contentAlignment = Alignment.Center) {
-                    Text("M", color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.Black)
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 8.dp, bottom = 20.dp)) {
+                Box(Modifier.size(34.dp).background(Color.White, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+                    Text("M", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Black)
                 }
-                Spacer(Modifier.width(7.dp)); Text("MiFlix", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.width(9.dp))
+                Text("MiFlix", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
             }
             items.forEach { (destination, icon, label) ->
                 var focused by remember(destination) { mutableStateOf(false) }
-                val active = destination == screen || (destination == Screen.COLLECTIONS && screen in listOf(Screen.COLLECTION_DETAIL, Screen.PROVIDER, Screen.PROVIDER_GENRE))
+                val active = destination == screen
                 Row(
-                    Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused }.focusable()
-                        .tvClick { onNavigate(destination) }.clickable { onNavigate(destination) }
-                        .background(if (focused || active) Color(0xFFF2F2F2) else Color.Transparent, RoundedCornerShape(11.dp))
-                        .padding(horizontal = 9.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically
+                    Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { focused = it.isFocused }
+                        .focusable()
+                        .tvClick { onNavigate(destination) }
+                        .clickable { onNavigate(destination) }
+                        .background(if (focused || active) Color(0xFFF2F2F2) else Color.Transparent, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 11.dp, vertical = 11.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(icon, color = if (focused || active) Color.Black else Color.White, fontSize = 17.sp, modifier = Modifier.width(25.dp))
-                    Text(label, color = if (focused || active) Color.Black else Color(0xFFE6E6E6), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    Text(icon, color = if (focused || active) Color.Black else Color.White, fontSize = 19.sp, modifier = Modifier.width(28.dp))
+                    Text(label, color = if (focused || active) Color.Black else Color(0xFFE6E6E6), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                 }
             }
         }
 
         var profileFocused by remember { mutableStateOf(false) }
         Row(
-            Modifier.fillMaxWidth().onFocusChanged { profileFocused = it.isFocused }.focusable()
-                .tvClick { onNavigate(Screen.PROFILES) }.clickable { onNavigate(Screen.PROFILES) }
-                .background(if (profileFocused) Color.White else Color.Transparent, RoundedCornerShape(11.dp)).padding(8.dp),
+            Modifier
+                .fillMaxWidth()
+                .onFocusChanged { profileFocused = it.isFocused }
+                .focusable()
+                .tvClick { onNavigate(Screen.PROFILES) }
+                .clickable { onNavigate(Screen.PROFILES) }
+                .background(if (profileFocused) Color.White else Color.Transparent, RoundedCornerShape(12.dp))
+                .padding(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(Modifier.size(28.dp).background(if (profileFocused) Color.Black else Color(0xFF292929), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) {
-                Text(profileName.take(1).uppercase(), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Box(Modifier.size(32.dp).background(if (profileFocused) Color.Black else Color(0xFF292929), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+                Text(profileName.take(1).uppercase(), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
-            Spacer(Modifier.width(7.dp)); Text(profileName, color = if (profileFocused) Color.Black else Color.White, fontSize = 10.sp, maxLines = 1)
+            Spacer(Modifier.width(9.dp))
+            Text(profileName, color = if (profileFocused) Color.Black else Color.White, fontSize = 12.sp, maxLines = 1)
         }
     }
 }

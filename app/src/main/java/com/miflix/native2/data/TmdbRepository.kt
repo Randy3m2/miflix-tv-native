@@ -1,6 +1,10 @@
 package com.miflix.native2.data
 
-import com.miflix.native2.model.*
+import com.miflix.native2.model.CastMember
+import com.miflix.native2.model.EpisodeSummary
+import com.miflix.native2.model.MediaDetails
+import com.miflix.native2.model.MediaSummary
+import com.miflix.native2.model.TrailerSummary
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -12,10 +16,10 @@ class TmdbRepository(var token: String) {
     private val base = "https://api.themoviedb.org/3"
 
     private suspend fun get(path: String, params: Map<String, String> = emptyMap()): JSONObject {
+        val all = LinkedHashMap(params)
+        if (!all.containsKey("language")) all["language"] = "en-US"
         val credential = token.trim()
         if (credential.isBlank()) throw IllegalStateException("TMDB is not configured")
-        val all = linkedMapOf("language" to "en-US")
-        all.putAll(params)
         if (!credential.startsWith("eyJ")) all["api_key"] = credential
         val query = all.entries.joinToString("&") { (k, v) ->
             URLEncoder.encode(k, "UTF-8") + "=" + URLEncoder.encode(v, "UTF-8")
@@ -30,123 +34,85 @@ class TmdbRepository(var token: String) {
     suspend fun topRatedMovies(): List<MediaSummary> = parseList(get("/movie/top_rated"), "movie", 20)
     suspend fun search(query: String): List<MediaSummary> = parseList(get("/search/multi", mapOf("query" to query)), limit = 40)
 
-    suspend fun discoverGenre(genreId: Int): List<MediaSummary> = parseList(
-        get("/discover/movie", mapOf("with_genres" to genreId.toString(), "sort_by" to "popularity.desc")),
-        "movie", 20
-    )
+    suspend fun discoverGenre(genreId: Int): List<MediaSummary> = discoverMovieGenre(genreId, "popularity.desc", 1, 20)
+
+    suspend fun discoverMovieGenre(genreId: Int, sortBy: String = "popularity.desc", pages: Int = 3, limit: Int = 50): List<MediaSummary> =
+        discoverPaged(
+            path = "/discover/movie",
+            type = "movie",
+            baseParams = mapOf("with_genres" to genreId.toString(), "sort_by" to sortBy, "vote_count.gte" to if (sortBy.startsWith("vote_average")) "150" else "0"),
+            pages = pages,
+            limit = limit
+        )
+
+    suspend fun discoverTvGenre(genreId: Int, sortBy: String = "popularity.desc", pages: Int = 3, limit: Int = 50): List<MediaSummary> =
+        discoverPaged(
+            path = "/discover/tv",
+            type = "series",
+            baseParams = mapOf("with_genres" to genreId.toString(), "sort_by" to sortBy, "vote_count.gte" to if (sortBy.startsWith("vote_average")) "100" else "0"),
+            pages = pages,
+            limit = limit
+        )
+
+    suspend fun discoverGenreMixed(movieGenreId: Int, tvGenreId: Int, limit: Int = 50): List<MediaSummary> = coroutineScope {
+        val movies = async { discoverMovieGenre(movieGenreId, pages = 2, limit = 35) }
+        val tv = async { discoverTvGenre(tvGenreId, pages = 2, limit = 35) }
+        (movies.await() + tv.await())
+            .distinctBy { it.cloudId }
+            .sortedByDescending { it.popularity }
+            .take(limit)
+    }
 
     suspend fun discoverProvider(providerId: Int, region: String = "US"): List<MediaSummary> = discoverProviders(listOf(providerId), region)
 
-    suspend fun discoverProviders(providerIds: List<Int>, region: String = "US"): List<MediaSummary> = discoverProviderMedia(
-        providerIds = providerIds,
-        type = "movie",
-        region = region,
-        sortBy = "popularity.desc",
-        limit = 20
-    )
+    suspend fun discoverProviders(providerIds: List<Int>, region: String = "US"): List<MediaSummary> =
+        discoverProviderType(providerIds, "movie", region = region, sortBy = "popularity.desc", limit = 20)
 
-    suspend fun discoverProviderMedia(
+    suspend fun discoverProviderType(
         providerIds: List<Int>,
         type: String,
         region: String = "US",
         sortBy: String = "popularity.desc",
         genreId: Int? = null,
-        page: Int = 1,
-        limit: Int = 20,
-        year: Int? = null
+        pages: Int = 1,
+        limit: Int = 20
     ): List<MediaSummary> {
-        val endpointType = if (type == "series") "tv" else "movie"
+        val kind = if (type == "series") "tv" else "movie"
         val params = linkedMapOf(
             "with_watch_providers" to providerIds.joinToString("|"),
             "watch_region" to region,
-            "sort_by" to sortBy,
-            "page" to page.toString()
+            "sort_by" to sortBy
         )
         genreId?.let { params["with_genres"] = it.toString() }
-        year?.let {
-            if (endpointType == "movie") params["primary_release_year"] = it.toString()
-            else params["first_air_date_year"] = it.toString()
-        }
-        if (sortBy.startsWith("vote_average")) params["vote_count.gte"] = "40"
-        return parseList(get("/discover/$endpointType", params), if (endpointType == "tv") "series" else "movie", limit)
+        if (sortBy.startsWith("vote_average")) params["vote_count.gte"] = if (kind == "movie") "100" else "75"
+        return discoverPaged("/discover/$kind", if (kind == "tv") "series" else "movie", params, pages, limit)
     }
 
-    suspend fun providerTop(providerIds: List<Int>, region: String = "US", limit: Int = 10): List<MediaSummary> = coroutineScope {
-        val jobs = listOf(
-            async { discoverProviderMedia(providerIds, "movie", region, limit = 20) },
-            async { discoverProviderMedia(providerIds, "series", region, limit = 20) }
-        )
-        jobs.awaitAll().flatten().distinctBy { it.cloudId }
-            .sortedWith(compareByDescending<MediaSummary> { it.popularity }.thenByDescending { it.rating })
-            .take(limit)
+    suspend fun providerTop10(providerIds: List<Int>, region: String = "US"): List<MediaSummary> = coroutineScope {
+        val m = async { discoverProviderType(providerIds, "movie", region, "popularity.desc", limit = 12) }
+        val t = async { discoverProviderType(providerIds, "series", region, "popularity.desc", limit = 12) }
+        (m.await() + t.await()).distinctBy { it.cloudId }.sortedByDescending { it.popularity }.take(10)
     }
 
-    suspend fun providerGenreMixed(providerIds: List<Int>, genre: GenreConfig, region: String = "US", limit: Int = 20): List<MediaSummary> =
-        providerGenreSorted(providerIds, genre, region, "popularity.desc", "popularity.desc", limit)
+    suspend fun moviesByYear(year: Int, limit: Int = 50): List<MediaSummary> = discoverPaged(
+        "/discover/movie",
+        "movie",
+        mapOf("primary_release_year" to year.toString(), "sort_by" to "popularity.desc"),
+        pages = 3,
+        limit = limit
+    )
 
-    suspend fun providerGenreLatest(providerIds: List<Int>, genre: GenreConfig, region: String = "US", limit: Int = 20): List<MediaSummary> =
-        providerGenreSorted(providerIds, genre, region, "primary_release_date.desc", "first_air_date.desc", limit)
-
-    suspend fun providerGenreTopRated(providerIds: List<Int>, genre: GenreConfig, region: String = "US", limit: Int = 20): List<MediaSummary> =
-        providerGenreSorted(providerIds, genre, region, "vote_average.desc", "vote_average.desc", limit)
-
-    private suspend fun providerGenreSorted(
-        providerIds: List<Int>, genre: GenreConfig, region: String, movieSort: String, tvSort: String, limit: Int
+    private suspend fun discoverPaged(
+        path: String,
+        type: String,
+        baseParams: Map<String, String>,
+        pages: Int,
+        limit: Int
     ): List<MediaSummary> = coroutineScope {
-        val movie = async { discoverProviderMedia(providerIds, "movie", region, sortBy = movieSort, genreId = genre.movieGenreId, limit = 20) }
-        val tv = async { discoverProviderMedia(providerIds, "series", region, sortBy = tvSort, genreId = genre.tvGenreId, limit = 20) }
-        val rows = (movie.await() + tv.await()).distinctBy { it.cloudId }
-        when {
-            movieSort.startsWith("vote_average") -> rows.sortedByDescending { it.rating }
-            movieSort.contains("release_date") -> rows.sortedByDescending { it.year }
-            else -> rows.sortedWith(compareByDescending<MediaSummary> { it.popularity }.thenByDescending { it.rating })
-        }.take(limit)
-    }
-
-    suspend fun providerLatest(providerIds: List<Int>, region: String = "US", limit: Int = 20): List<MediaSummary> = coroutineScope {
-        val movie = async { discoverProviderMedia(providerIds, "movie", region, sortBy = "primary_release_date.desc", limit = 20) }
-        val tv = async { discoverProviderMedia(providerIds, "series", region, sortBy = "first_air_date.desc", limit = 20) }
-        (movie.await() + tv.await()).distinctBy { it.cloudId }.sortedByDescending { it.year }.take(limit)
-    }
-
-    suspend fun providerTopRated(providerIds: List<Int>, region: String = "US", limit: Int = 20): List<MediaSummary> = coroutineScope {
-        val movie = async { discoverProviderMedia(providerIds, "movie", region, sortBy = "vote_average.desc", limit = 20) }
-        val tv = async { discoverProviderMedia(providerIds, "series", region, sortBy = "vote_average.desc", limit = 20) }
-        (movie.await() + tv.await()).distinctBy { it.cloudId }.sortedByDescending { it.rating }.take(limit)
-    }
-
-    suspend fun discoverGenreMixed(genre: GenreConfig, limit: Int = 50): List<MediaSummary> = coroutineScope {
-        val pages = 1..3
-        val jobs = pages.flatMap { page ->
-            listOf(
-                async { discoverGenrePage("movie", genre.movieGenreId, page) },
-                async { discoverGenrePage("series", genre.tvGenreId, page) }
-            )
-        }
-        jobs.awaitAll().flatten().distinctBy { it.cloudId }
-            .sortedWith(compareByDescending<MediaSummary> { it.popularity }.thenByDescending { it.rating })
-            .take(limit)
-    }
-
-    private suspend fun discoverGenrePage(type: String, genreId: Int, page: Int): List<MediaSummary> {
-        val endpoint = if (type == "series") "tv" else "movie"
-        return parseList(
-            get("/discover/$endpoint", mapOf("with_genres" to genreId.toString(), "sort_by" to "popularity.desc", "page" to page.toString())),
-            type, 20
-        )
-    }
-
-    suspend fun discoverMoviesByYear(year: Int, limit: Int = 50): List<MediaSummary> = coroutineScope {
-        (1..3).map { page ->
+        (1..pages.coerceIn(1, 5)).map { page ->
             async {
-                parseList(
-                    get("/discover/movie", mapOf(
-                        "primary_release_year" to year.toString(),
-                        "sort_by" to "popularity.desc",
-                        "page" to page.toString()
-                    )),
-                    "movie", 20
-                )
+                val params = LinkedHashMap(baseParams).apply { put("page", page.toString()) }
+                parseList(get(path, params), type, 20)
             }
         }.awaitAll().flatten().distinctBy { it.cloudId }.take(limit)
     }
@@ -181,10 +147,14 @@ class TmdbRepository(var token: String) {
         val originalLanguage = j.optString("original_language").uppercase(Locale.US)
 
         val cast = j.optJSONObject("credits")?.optJSONArray("cast")?.let { a ->
-            (0 until minOf(a.length(), 12)).mapNotNull { i ->
+            (0 until minOf(a.length(), 10)).mapNotNull { i ->
                 val x = a.optJSONObject(i) ?: return@mapNotNull null
                 val name = x.optString("name").takeIf { it.isNotBlank() } ?: return@mapNotNull null
-                CastMember(name, x.optString("character"), image(x.optString("profile_path"), "w185"))
+                CastMember(
+                    name = name,
+                    character = x.optString("character"),
+                    profile = image(x.optString("profile_path"), "w185")
+                )
             }
         } ?: emptyList()
 
@@ -194,7 +164,13 @@ class TmdbRepository(var token: String) {
                 val key = x.optString("key").takeIf { it.isNotBlank() } ?: return@mapNotNull null
                 val site = x.optString("site")
                 if (!site.equals("YouTube", ignoreCase = true)) return@mapNotNull null
-                TrailerSummary(x.optString("name", "Trailer"), key, site, x.optString("type", "Trailer"), x.optBoolean("official", false))
+                TrailerSummary(
+                    name = x.optString("name", "Trailer"),
+                    key = key,
+                    site = site,
+                    type = x.optString("type", "Trailer"),
+                    official = x.optBoolean("official", false)
+                )
             }
             rows.sortedWith(compareByDescending<TrailerSummary> { it.official }.thenBy { if (it.type.equals("Trailer", true)) 0 else 1 }).take(6)
         } ?: emptyList()
@@ -235,7 +211,8 @@ class TmdbRepository(var token: String) {
         val type = m.groupValues[1]
         val id = m.groupValues[2].toIntOrNull() ?: return null
         val kind = if (type == "series") "tv" else "movie"
-        return mapItem(get("/$kind/$id"), type)
+        val j = get("/$kind/$id")
+        return mapItem(j, type)
     }
 
     private fun parseList(j: JSONObject, forceType: String? = null, limit: Int = 20): List<MediaSummary> {
@@ -256,11 +233,19 @@ class TmdbRepository(var token: String) {
         val title = if (isSeries) x.optString("name", x.optString("original_name")) else x.optString("title", x.optString("original_title"))
         val date = if (isSeries) x.optString("first_air_date") else x.optString("release_date")
         return MediaSummary(
-            id = x.optInt("id"), type = type, title = title.ifBlank { "Untitled" }, overview = x.optString("overview"),
-            backdrop = image(x.optString("backdrop_path"), "w1280"), poster = image(x.optString("poster_path"), "w500"),
-            rating = x.optDouble("vote_average", 0.0), year = date.take(4), popularity = x.optDouble("popularity", 0.0)
+            id = x.optInt("id"),
+            type = type,
+            title = title.ifBlank { "Untitled" },
+            overview = x.optString("overview"),
+            backdrop = image(x.optString("backdrop_path"), "w1280"),
+            poster = image(x.optString("poster_path"), "w500"),
+            rating = x.optDouble("vote_average", 0.0),
+            year = date.take(4),
+            popularity = x.optDouble("popularity", 0.0)
         )
     }
 
-    private fun image(path: String?, size: String): String? = path?.takeIf { it.isNotBlank() && it != "null" }?.let { "https://image.tmdb.org/t/p/$size$it" }
+    private fun image(path: String?, size: String): String? = path
+        ?.takeIf { it.isNotBlank() && it != "null" }
+        ?.let { "https://image.tmdb.org/t/p/$size$it" }
 }

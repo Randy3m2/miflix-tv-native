@@ -1,25 +1,71 @@
-# MiFlix TV Native 2.0 Beta 1
+# MiFlix TV Native 2.0 RC1
 
-Native Android TV client built with Jetpack Compose for TV and AndroidX Media3.
+Native Android TV client built with Jetpack Compose for TV + AndroidX Media3/ExoPlayer.
 
-## Beta 1 highlights
-- Smooth native D-pad UI, fixed compact sidebar, black/white visual system.
-- Home Top 10 carousel, streaming collections with focus-only GIFs.
-- Platform hubs: Top 10, Movies, Series, Latest, Best Rated and platform-specific genre rails.
-- Main genre browser with up to 50 mixed movie/series results per genre.
-- Movies by year browser (2026 back to 2000), 50 titles per year.
-- QR phone pairing over the local network for account sign-in and adding configured Torrentio/Comet/Stremio manifests.
-- Multiple profiles sharing account-level TMDB/add-ons while keeping My List/progress separate.
-- Watch Party rooms with QR/code, host play/pause/seek sync, and per-device stream resolution.
-- Media3 player, subtitles/audio tracks, progress sync, update channel and permanent APK URL.
+## RC1 highlights
 
-## Required GitHub Actions secrets
+- OpenSubtitles v3 is queried for every movie / episode before playback.
+- English and Spanish subtitle tracks are normalized and prioritized; stream-embedded subtitles are merged with OpenSubtitles v3 results.
+- Series can switch season / episode from inside the player.
+- Watch Party rooms with 6-digit code + QR. The host syncs play/pause/seek/episode through Supabase; each participant resolves the stream locally with their own add-ons.
+- Streaming service collections (Netflix, Disney+, Prime Video, Apple TV+, HBO Max) open into full platform hubs:
+  - Top 10
+  - Movies
+  - Series
+  - Action / Comedy / Horror / Drama / Sci-Fi / Thriller / Animation / Romance
+  - Latest + Best Rated rows for each major genre
+- Genres in the main sidebar. Each genre loads up to 50 mixed movie/series results.
+- Movies by Year (2026 back to 1990), up to 50 titles per year.
+- Account-level Torrentio / Comet manifests; profiles share app/add-on setup while keeping My List + playback progress separate.
+- Add Profile flow on TV.
+- Secure QR device pairing for sign-in and/or sending a Torrentio / Comet manifest from a phone.
+- Fixed catalog edge clipping by using a 5-column TV grid + larger end padding.
+- Replaced screen-owned coroutine scopes with an application-owned scope for navigation/network actions to eliminate the `rememberCoroutineScope left the composition` runtime error.
+- Permanent latest APK channel remains `native-latest / MiFlix-TV-Native.apk`.
+
+## One-time Supabase migration
+
+Run `supabase_rc1_setup.sql` in Supabase SQL Editor before using Watch Party or QR pairing.
+
+## One-time QR pairing page setup
+
+The project contains `docs/pair` and `docs/party`, plus `.github/workflows/deploy-pages.yml`.
+
+In GitHub:
+
+1. Repo -> Settings -> Pages
+2. Under **Build and deployment**, choose **GitHub Actions** as Source.
+3. Go to Actions -> **Deploy MiFlix Pairing Pages** -> Run workflow once.
+
+The TV QR uses:
+
+- `https://randy3m2.github.io/miflix-tv-native/pair/`
+- `https://randy3m2.github.io/miflix-tv-native/party/`
+
+The sign-in/add-on payload is AES-GCM encrypted in the browser using a random key stored only in the QR fragment. The Supabase pairing row stores only ciphertext + IV and expires after ~10 minutes.
+
+## Existing GitHub Actions secrets
+
+Keep these in Repository Settings -> Secrets and variables -> Actions:
+
 - `MIFLIX_TMDB_TOKEN`
 - `MIFLIX_TORRENTIO_MANIFEST`
 
-## Supabase
-The existing `miflix_user_state` table is still used for account/profile state.
-Run `SUPABASE_WATCH_PARTY.sql` once to enable Watch Party rooms.
+`MIFLIX_TORRENTIO_MANIFEST` remains the bootstrap manifest. After account sync, MiFlix can restore all saved Torrentio / Comet manifests from Supabase.
 
-## Private add-ons
-Configured add-on manifests can contain personal credentials. They are treated as account-private setup and should never be committed to the public repo. The build-time Torrentio URL comes from a GitHub Actions secret; QR-added manifests are stored in the authenticated Supabase account state.
+## Build
+
+Run **Build MiFlix Native TV APK** in GitHub Actions.
+
+Outputs:
+
+- `MiFlix-TV-Native-v2.0.0-rc1.apk`
+- permanent latest asset: `MiFlix-TV-Native.apk`
+
+Versioned release tag:
+
+- `native-v2.0.0-rc1`
+
+Permanent release tag:
+
+- `native-latest`

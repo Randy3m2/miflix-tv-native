@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MiFlix TV Pairing</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#050505;color:#fff;font-family:Arial,Helvetica,sans-serif;min-height:100vh;display:grid;place-items:center;padding:24px}.card{width:min(620px,100%);background:#121212;border:1px solid #292929;border-radius:24px;padding:28px}.logo{width:52px;height:52px;border-radius:14px;background:#fff;color:#000;display:grid;place-items:center;font-size:24px;font-weight:900;margin-bottom:20px}h1{margin:0 0 8px;font-size:30px}p{color:#aaa;line-height:1.5}.section{margin-top:24px;padding-top:20px;border-top:1px solid #292929}label{display:block;font-size:13px;margin:12px 0 6px;color:#ddd}input{width:100%;padding:14px;border-radius:12px;border:1px solid #333;background:#0a0a0a;color:#fff;font-size:16px}button{width:100%;margin-top:18px;padding:14px;border:0;border-radius:999px;background:#fff;color:#000;font-size:16px;font-weight:800}.status{margin-top:16px;padding:12px;border-radius:12px;background:#1c1c1c;color:#ddd;display:none}.small{font-size:12px;color:#777}.ok{background:#123d24;color:#b9ffd0}.bad{background:#4b1717;color:#ffd0d0}
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">M</div>
+  <h1>Pair MiFlix TV</h1>
+  <p>This secure one-time page can sign the TV into your MiFlix account and/or send a Torrentio or Comet manifest without typing it with the remote.</p>
+  <div class="section">
+    <strong>Account (optional)</strong>
+    <label>Email</label><input id="email" type="email" autocomplete="email" />
+    <label>Password</label><input id="password" type="password" autocomplete="current-password" />
+  </div>
+  <div class="section">
+    <strong>Stream add-on (optional)</strong>
+    <label>Torrentio / Comet manifest URL</label><input id="addon" type="url" placeholder="https://.../manifest.json" />
+    <div class="small">The manifest is encrypted before it is written to the pairing table.</div>
+  </div>
+  <button id="send">Send securely to TV</button>
+  <div id="status" class="status"></div>
+</div>
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const SUPABASE_URL='https://iwvhigqxsvvgyzdygiqa.supabase.co';
+const SUPABASE_KEY='sb_publishable_TdzEQXtDadVMKhSLVe0ihw_EAQ4iNsd';
+const supabase=createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
+const qs=new URLSearchParams(location.search); const code=qs.get('code')||'';
+const hash=new URLSearchParams(location.hash.replace(/^#/,'')); const keyText=hash.get('key')||'';
+const status=document.getElementById('status');
+function show(msg,ok=true){status.style.display='block';status.className='status '+(ok?'ok':'bad');status.textContent=msg}
+function b64urlToBytes(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const b=atob(s);return Uint8Array.from(b,c=>c.charCodeAt(0))}
+function bytesToB64url(a){let s='';a.forEach(b=>s+=String.fromCharCode(b));return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+async function encryptJson(obj){const raw=b64urlToBytes(keyText);const key=await crypto.subtle.importKey('raw',raw,{name:'AES-GCM'},false,['encrypt']);const iv=crypto.getRandomValues(new Uint8Array(12));const data=new TextEncoder().encode(JSON.stringify(obj));const enc=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,data));return {payload_enc:bytesToB64url(enc),iv:bytesToB64url(iv)}}
+document.getElementById('send').onclick=async()=>{
+ try{
+  if(!code||!keyText) throw new Error('Invalid or expired pairing QR. Create a new QR on the TV.');
+  const email=document.getElementById('email').value.trim(), password=document.getElementById('password').value;
+  const addonManifest=document.getElementById('addon').value.trim();
+  let payload={addonManifest};
+  if(email||password){
+    if(!email||!password) throw new Error('Enter both email and password, or leave both blank.');
+    const {data,error}=await supabase.auth.signInWithPassword({email,password}); if(error) throw error;
+    const s=data.session;if(!s)throw new Error('No session returned');
+    payload={...payload,accessToken:s.access_token,refreshToken:s.refresh_token,userId:s.user.id,email:s.user.email||email};
+  }
+  if(!payload.accessToken&&!addonManifest) throw new Error('Nothing to send. Add your account and/or an add-on manifest.');
+  const encrypted=await encryptJson(payload);
+  const {error}=await supabase.from('miflix_pairing').update({...encrypted,status:'approved'}).eq('pair_code',code).eq('status','pending');
+  if(error) throw error;
+  show('Sent. Return to the TV — MiFlix should connect automatically.');
+ }catch(e){show(e.message||String(e),false)}
+};
+</script>
+</body>
+</html>

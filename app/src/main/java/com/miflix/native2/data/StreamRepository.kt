@@ -1,88 +1,101 @@
 package com.miflix.native2.data
 
-import com.miflix.native2.model.AddonConfig
 import com.miflix.native2.model.StreamChoice
 import com.miflix.native2.model.SubtitleChoice
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import org.json.JSONObject
+import java.net.URI
 
-class StreamRepository(initialManifest: String) {
-    private var manifests: List<String> = listOf(initialManifest).map { it.trim() }.filter { it.isNotBlank() }
+class StreamRepository(initialManifestUrl: String) {
+    private val manifestUrls = linkedSetOf<String>()
+
+    init {
+        addManifest(initialManifestUrl)
+    }
 
     var manifestUrl: String
-        get() = manifests.firstOrNull().orEmpty()
-        set(value) { manifests = listOf(value.trim()).filter { it.isNotBlank() } }
-
-    fun manifestUrls(): List<String> = manifests
-
-    fun setManifests(values: List<String>) {
-        manifests = values.map { it.trim() }.filter { it.isNotBlank() }.distinct()
-    }
-
-    fun addManifest(value: String) {
-        val normalized = value.trim()
-        if (normalized.isNotBlank()) manifests = (manifests + normalized).distinct()
-    }
-
-    suspend fun inspectManifest(url: String): AddonConfig {
-        val normalized = normalizeManifest(url)
-        val j = JSONObject(Http.text(normalized, timeoutMs = 12000))
-        val name = j.optString("name").ifBlank { j.optString("id", "Stremio add-on") }
-        val resources = j.optJSONArray("resources")
-        var hasStream = false
-        if (resources != null) {
-            for (i in 0 until resources.length()) {
-                val item = resources.opt(i)
-                if (item is String && item == "stream") hasStream = true
-                if (item is JSONObject && item.optString("name") == "stream") hasStream = true
+        get() = manifestUrls.firstOrNull().orEmpty()
+        set(value) {
+            if (value.isNotBlank()) {
+                manifestUrls.remove(value.trim())
+                val copy = manifestUrls.toList()
+                manifestUrls.clear()
+                manifestUrls.add(value.trim())
+                manifestUrls.addAll(copy)
             }
         }
-        if (!hasStream) throw IllegalStateException("This add-on does not expose Stremio stream resources")
-        return AddonConfig(name = name, manifestUrl = normalized)
+
+    fun manifests(): List<String> = manifestUrls.toList()
+
+    fun setManifests(values: Collection<String>) {
+        manifestUrls.clear()
+        values.map { it.trim() }.filter { it.isNotBlank() }.forEach { addManifest(it) }
+    }
+
+    fun addManifest(value: String): Boolean {
+        val clean = value.trim()
+        if (clean.isBlank()) return false
+        val normalized = if (clean.endsWith("/manifest.json")) clean else clean.trimEnd('/') + "/manifest.json"
+        return manifestUrls.add(normalized)
+    }
+
+    fun removeManifest(value: String) {
+        manifestUrls.remove(value.trim())
     }
 
     suspend fun resolve(imdbId: String, type: String, season: Int = 0, episode: Int = 0): List<StreamChoice> = coroutineScope {
-        val urls = manifests.filter { it.isNotBlank() }.distinct()
-        if (urls.isEmpty()) throw IllegalStateException("No streaming add-on is configured")
-        val rows = urls.map { manifest ->
+        val manifests = manifestUrls.toList()
+        if (manifests.isEmpty()) throw IllegalStateException("No stream add-on is configured")
+        val rows = manifests.map { manifest ->
             async { runCatching { resolveOne(manifest, imdbId, type, season, episode) }.getOrDefault(emptyList()) }
-        }.awaitAll().flatten().distinctBy { it.url }
-        if (rows.isEmpty()) throw IllegalStateException("No playable sources found from your configured add-ons")
-        rows.sortedByDescending { score(it) }
+        }.awaitAll().flatten()
+
+        rows.distinctBy { it.url }.sortedByDescending { score(it) }
     }
 
-    private suspend fun resolveOne(manifestUrl: String, imdbId: String, type: String, season: Int, episode: Int): List<StreamChoice> {
-        val manifest = normalizeManifest(manifestUrl)
+    private suspend fun resolveOne(manifest: String, imdbId: String, type: String, season: Int, episode: Int): List<StreamChoice> {
         val base = manifest.removeSuffix("/manifest.json")
         val stremioType = if (type == "series") "series" else "movie"
         val mediaId = if (stremioType == "series") "$imdbId:$season:$episode" else imdbId
+        val addonName = runCatching { URI(manifest).host ?: "Add-on" }.getOrDefault("Add-on")
         val json = JSONObject(Http.text("$base/stream/$stremioType/$mediaId.json", timeoutMs = 18000))
         val a = json.optJSONArray("streams") ?: return emptyList()
         return (0 until a.length()).mapNotNull { i ->
             val s = a.optJSONObject(i) ?: return@mapNotNull null
             val url = s.optString("url").takeIf { it.startsWith("http") } ?: return@mapNotNull null
+            val hints = s.optJSONObject("behaviorHints")
+            val filename = hints?.optString("filename").orEmpty()
+            val videoHash = hints?.optString("videoHash").orEmpty()
+            val videoSize = hints?.optLong("videoSize", 0L) ?: 0L
             val subs = s.optJSONArray("subtitles")?.let { sa ->
                 (0 until sa.length()).mapNotNull { si ->
                     val sub = sa.optJSONObject(si) ?: return@mapNotNull null
                     val su = sub.optString("url").takeIf { it.startsWith("http") } ?: return@mapNotNull null
-                    SubtitleChoice(su, sub.optString("lang"), sub.optString("label"))
+                    SubtitleChoice(su, normalizeLang(sub.optString("lang")), sub.optString("label"), source = addonName)
                 }
             } ?: emptyList()
             StreamChoice(
-                name = s.optString("name", "Stremio add-on"),
+                name = s.optString("name", addonName),
                 title = s.optString("title", s.optString("name", "Stream")),
                 url = url,
-                subtitles = subs
+                subtitles = subs,
+                filename = filename,
+                videoHash = videoHash,
+                videoSize = videoSize,
+                addonName = addonName
             )
         }
     }
 
-    private fun normalizeManifest(value: String): String {
-        val v = value.trim()
-        if (v.isBlank()) return v
-        return if (v.endsWith("manifest.json", true)) v else v.trimEnd('/') + "/manifest.json"
+    private fun normalizeLang(raw: String): String {
+        val x = raw.trim().lowercase()
+        return when (x) {
+            "spa", "es-es", "es_419", "spanish", "español" -> "es"
+            "eng", "en-us", "en-gb", "english" -> "en"
+            else -> x.ifBlank { raw }
+        }
     }
 
     private fun score(s: StreamChoice): Int {

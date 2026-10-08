@@ -4,7 +4,7 @@ import com.miflix.native2.model.CloudSession
 import com.miflix.native2.model.PlaybackProgress
 import com.miflix.native2.model.PrivateSetup
 import com.miflix.native2.model.Profile
-import com.miflix.native2.model.WatchPartyRoom
+import com.miflix.native2.model.WatchParty
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URLEncoder
@@ -44,41 +44,64 @@ class SupabaseRepository(private val url: String, private val key: String) {
         val row = readRow(session, "__account__") ?: return emptyList<Profile>() to PrivateSetup()
         val state = row.optJSONObject("state") ?: JSONObject()
         val setupObj = state.optJSONObject("privateSetup") ?: JSONObject()
-        val addonArray = setupObj.optJSONArray("addonManifests")
-        val addons = if (addonArray != null) (0 until addonArray.length()).map { addonArray.optString(it) }.filter { it.isNotBlank() } else emptyList()
+        val addonManifests = setupObj.optJSONArray("addonManifests")?.let { a ->
+            (0 until a.length()).map { a.optString(it) }.filter { it.isNotBlank() }
+        } ?: emptyList()
+        val legacyTorrentio = setupObj.optString("torrentioManifest")
         val setup = PrivateSetup(
             tmdbToken = setupObj.optString("tmdbToken"),
-            torrentioManifest = setupObj.optString("torrentioManifest"),
-            addonManifests = addons
+            torrentioManifest = legacyTorrentio,
+            addonManifests = (addonManifests + legacyTorrentio).filter { it.isNotBlank() }.distinct()
         )
         val pa = state.optJSONArray("profiles") ?: JSONArray()
         val profiles = (0 until pa.length()).mapNotNull { i ->
             val p = pa.optJSONObject(i) ?: return@mapNotNull null
-            Profile(p.optString("id"), p.optString("name", "Profile"), p.optString("avatarValue"), p.optBoolean("primary", false))
-        }.filter { it.id.isNotBlank() }
+            val id = p.optString("id").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            Profile(id, p.optString("name", "Profile"), p.optString("avatarValue"), p.optBoolean("primary", false))
+        }
         return profiles to setup
     }
 
+    suspend fun upsertProfiles(session: CloudSession, profiles: List<Profile>) {
+        val existing = readRow(session, "__account__")?.optJSONObject("state") ?: JSONObject()
+        val arr = JSONArray()
+        profiles.forEach { p ->
+            arr.put(JSONObject().put("id", p.id).put("name", p.name).put("avatarValue", p.avatarValue).put("primary", p.primary))
+        }
+        existing.put("profiles", arr)
+        if (!existing.has("privateSetup")) existing.put("privateSetup", JSONObject())
+        existing.put("updatedAt", System.currentTimeMillis())
+        upsertAccountState(session, existing)
+    }
+
     suspend fun upsertPrivateSetup(session: CloudSession, setup: PrivateSetup) {
-        val existing = accountState(session)
+        val existing = readRow(session, "__account__")?.optJSONObject("state") ?: JSONObject()
+        val manifests = (setup.addonManifests + setup.torrentioManifest).filter { it.isNotBlank() }.distinct()
         existing.put(
             "privateSetup",
             JSONObject()
                 .put("tmdbToken", setup.tmdbToken)
-                .put("torrentioManifest", setup.torrentioManifest)
-                .put("addonManifests", JSONArray(setup.allAddons()))
+                .put("torrentioManifest", setup.torrentioManifest.ifBlank { manifests.firstOrNull().orEmpty() })
+                .put("addonManifests", JSONArray(manifests))
         )
         if (!existing.has("profiles")) existing.put("profiles", JSONArray())
-        writeAccountState(session, existing)
+        existing.put("updatedAt", System.currentTimeMillis())
+        upsertAccountState(session, existing)
     }
 
-    suspend fun upsertProfiles(session: CloudSession, profiles: List<Profile>) {
-        val existing = accountState(session)
-        existing.put("profiles", JSONArray(profiles.map { p ->
-            JSONObject().put("id", p.id).put("name", p.name).put("avatarValue", p.avatarValue ?: "").put("primary", p.primary)
-        }))
-        if (!existing.has("privateSetup")) existing.put("privateSetup", JSONObject())
-        writeAccountState(session, existing)
+    private suspend fun upsertAccountState(session: CloudSession, state: JSONObject) {
+        val body = JSONObject()
+            .put("user_id", session.userId)
+            .put("profile_id", "__account__")
+            .put("state", state)
+            .put("updated_at", isoNow())
+            .toString()
+        Http.text(
+            "$url/rest/v1/miflix_user_state?on_conflict=user_id,profile_id",
+            "POST",
+            headers(session) + ("Prefer" to "resolution=merge-duplicates,return=minimal"),
+            body
+        )
     }
 
     suspend fun profileState(session: CloudSession, profileId: String): Pair<Set<String>, MutableMap<String, PlaybackProgress>> {
@@ -109,9 +132,14 @@ class SupabaseRepository(private val url: String, private val key: String) {
         Http.text("$url/rest/v1/miflix_user_state?on_conflict=user_id,profile_id", "POST", headers(session) + ("Prefer" to "resolution=merge-duplicates,return=minimal"), body)
     }
 
-    suspend fun createParty(session: CloudSession, room: WatchPartyRoom) {
-        val expires = isoAt(System.currentTimeMillis() + 4 * 60 * 60 * 1000L)
-        val body = partyJson(room, expires).toString()
+    suspend fun createWatchParty(session: CloudSession, party: WatchParty) {
+        val body = JSONObject()
+            .put("room_code", party.roomCode)
+            .put("host_user_id", session.userId)
+            .put("state", partyStateJson(party))
+            .put("updated_at", isoNow())
+            .put("expires_at", isoFromMillis(System.currentTimeMillis() + 8 * 60 * 60 * 1000L))
+            .toString()
         Http.text(
             "$url/rest/v1/miflix_watch_parties?on_conflict=room_code",
             "POST",
@@ -120,62 +148,50 @@ class SupabaseRepository(private val url: String, private val key: String) {
         )
     }
 
-    suspend fun updateParty(session: CloudSession, room: WatchPartyRoom) {
-        val body = partyJson(room, isoAt(System.currentTimeMillis() + 4 * 60 * 60 * 1000L)).toString()
+    suspend fun updateWatchParty(session: CloudSession, party: WatchParty) {
+        val body = JSONObject().put("state", partyStateJson(party)).put("updated_at", isoNow()).toString()
+        val code = URLEncoder.encode(party.roomCode, "UTF-8")
         Http.text(
-            "$url/rest/v1/miflix_watch_parties?on_conflict=room_code",
-            "POST",
-            headers(session) + ("Prefer" to "resolution=merge-duplicates,return=minimal"),
+            "$url/rest/v1/miflix_watch_parties?room_code=eq.$code",
+            "PATCH",
+            headers(session) + ("Prefer" to "return=minimal"),
             body
         )
     }
 
-    suspend fun readParty(session: CloudSession, roomCode: String): WatchPartyRoom? {
+    suspend fun readWatchParty(session: CloudSession, roomCode: String): WatchParty? {
         val code = URLEncoder.encode(roomCode.uppercase(Locale.US), "UTF-8")
-        val raw = Http.text(
-            "$url/rest/v1/miflix_watch_parties?room_code=eq.$code&select=room_code,host_user_id,cloud_id,media_type,season,episode,position_ms,is_playing,updated_at&limit=1",
+        val text = Http.text(
+            "$url/rest/v1/miflix_watch_parties?room_code=eq.$code&select=room_code,host_user_id,state,updated_at,expires_at",
             headers = headers(session)
         )
-        val a = JSONArray(raw)
-        if (a.length() == 0) return null
-        val j = a.getJSONObject(0)
-        return WatchPartyRoom(
-            roomCode = j.optString("room_code"), hostUserId = j.optString("host_user_id"), cloudId = j.optString("cloud_id"),
-            mediaType = j.optString("media_type"), season = j.optInt("season"), episode = j.optInt("episode"),
-            positionMs = j.optLong("position_ms"), isPlaying = j.optBoolean("is_playing"), updatedAt = parseIso(j.optString("updated_at"))
+        val a = JSONArray(text)
+        val row = a.optJSONObject(0) ?: return null
+        val state = row.optJSONObject("state") ?: return null
+        return WatchParty(
+            roomCode = row.optString("room_code"),
+            hostUserId = row.optString("host_user_id"),
+            cloudId = state.optString("cloudId"),
+            season = state.optInt("season", 0),
+            episode = state.optInt("episode", 0),
+            positionMs = state.optLong("positionMs", 0L),
+            playing = state.optBoolean("playing", false),
+            updatedAt = state.optLong("updatedAt", 0L)
         )
     }
 
-    suspend fun deleteParty(session: CloudSession, roomCode: String) {
+    suspend fun deleteWatchParty(session: CloudSession, roomCode: String) {
         val code = URLEncoder.encode(roomCode.uppercase(Locale.US), "UTF-8")
-        Http.text("$url/rest/v1/miflix_watch_parties?room_code=eq.$code&host_user_id=eq.${session.userId}", "DELETE", headers(session) + ("Prefer" to "return=minimal"))
+        Http.text("$url/rest/v1/miflix_watch_parties?room_code=eq.$code", "DELETE", headers(session) + ("Prefer" to "return=minimal"))
     }
 
-    private fun partyJson(room: WatchPartyRoom, expiresAt: String) = JSONObject()
-        .put("room_code", room.roomCode.uppercase(Locale.US))
-        .put("host_user_id", room.hostUserId)
-        .put("cloud_id", room.cloudId)
-        .put("media_type", room.mediaType)
-        .put("season", room.season)
-        .put("episode", room.episode)
-        .put("position_ms", room.positionMs)
-        .put("is_playing", room.isPlaying)
-        .put("updated_at", isoNow())
-        .put("expires_at", expiresAt)
-
-    private suspend fun accountState(session: CloudSession): JSONObject = readRow(session, "__account__")?.optJSONObject("state") ?: JSONObject()
-
-    private suspend fun writeAccountState(session: CloudSession, state: JSONObject) {
-        state.put("updatedAt", System.currentTimeMillis())
-        val body = JSONObject()
-            .put("user_id", session.userId).put("profile_id", "__account__").put("state", state).put("updated_at", isoNow()).toString()
-        Http.text(
-            "$url/rest/v1/miflix_user_state?on_conflict=user_id,profile_id",
-            "POST",
-            headers(session) + ("Prefer" to "resolution=merge-duplicates,return=minimal"),
-            body
-        )
-    }
+    private fun partyStateJson(p: WatchParty) = JSONObject()
+        .put("cloudId", p.cloudId)
+        .put("season", p.season)
+        .put("episode", p.episode)
+        .put("positionMs", p.positionMs)
+        .put("playing", p.playing)
+        .put("updatedAt", p.updatedAt)
 
     private suspend fun readRow(session: CloudSession, profileId: String): JSONObject? {
         val pid = URLEncoder.encode(profileId, "UTF-8")
@@ -184,9 +200,9 @@ class SupabaseRepository(private val url: String, private val key: String) {
         return if (a.length() > 0) a.optJSONObject(0) else null
     }
 
-    private fun isoNow(): String = isoAt(System.currentTimeMillis())
-    private fun isoAt(ms: Long): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply { timeZone = TimeZone.getTimeZone("UTC") }.format(Date(ms))
-    private fun parseIso(value: String): Long = runCatching {
-        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.US).parse(value)?.time ?: 0L
-    }.getOrElse { 0L }
+    private fun isoNow(): String = isoFromMillis(System.currentTimeMillis())
+
+    private fun isoFromMillis(ms: Long): String = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }.format(Date(ms))
 }

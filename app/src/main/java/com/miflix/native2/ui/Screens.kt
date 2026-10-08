@@ -24,10 +24,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -670,6 +676,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     val context = LocalContext.current
     val playbackView = LocalView.current
     var controlsVisible by remember(request.stream.url) { mutableStateOf(true) }
+    var controlInteraction by remember { mutableStateOf(0) }
+    var nativePlayerView by remember { mutableStateOf<PlayerView?>(null) }
     var showEpisodes by remember(request.item.cloudId) { mutableStateOf(false) }
     val subtitles = request.stream.subtitles
     val preferredText = when {
@@ -766,17 +774,34 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }
     }
 
+    // Explicit timer also covers controls holding focus on TV remotes.
+    LaunchedEffect(player, controlInteraction, showEpisodes, state.sourceSelection) {
+        if (!showEpisodes && state.sourceSelection == null) {
+            delay(2000)
+            controlsVisible = false
+            nativePlayerView?.hideController()
+            nativePlayerView?.requestFocus()
+        }
+    }
+
     BackHandler {
         if (showEpisodes) showEpisodes = false else onClose()
     }
 
-    Box(Modifier.fillMaxSize().background(Color.Black).onPreviewKeyEvent { false }) {
+    Box(Modifier.fillMaxSize().background(Color.Black).onPreviewKeyEvent { event ->
+        if (event.type == KeyEventType.KeyDown && !showEpisodes && state.sourceSelection == null) {
+            controlsVisible = true
+            controlInteraction++
+        }
+        false
+    }) {
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
+                    nativePlayerView = this
                     useController = true
                     setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { visibility ->
-                        controlsVisible = visibility == View.VISIBLE
+                        if (visibility != View.VISIBLE) controlsVisible = false
                     })
                     controllerShowTimeoutMs = 2000
                     controllerAutoShow = true
@@ -952,20 +977,28 @@ private fun formatPosition(ms: Long): String {
 
 @Composable
 fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
-    BackHandler { state.sourceSelection = null }
-    Box(Modifier.fillMaxSize().background(Color(0xF5050505)).padding(40.dp)) {
-        Column {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("Playback links · ${selection.streams.size}", color = Color.White, fontSize = 26.sp,
-                    fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                FocusButton("Close") { state.sourceSelection = null }
-            }
-            Spacer(Modifier.height(18.dp))
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 30.dp)) {
-                items(selection.streams) { stream ->
-                    FocusButton(listOf(stream.addonName, stream.name, stream.title).filter { it.isNotBlank() }.joinToString(" · "),
-                        modifier = Modifier.fillMaxWidth()) {
-                        state.launch { state.playSelectedSource(selection, stream) }
+    val firstLink = remember(selection) { FocusRequester() }
+    LaunchedEffect(selection) { delay(100); firstLink.requestFocus() }
+    Dialog(
+        onDismissRequest = { state.sourceSelection = null },
+        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)
+    ) {
+        Box(Modifier.fillMaxSize().background(Color(0xFF050505)).padding(40.dp)) {
+            Column {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Playback links · ${selection.streams.size}", color = Color.White, fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    FocusButton("Close") { state.sourceSelection = null }
+                }
+                Spacer(Modifier.height(18.dp))
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 30.dp)) {
+                    items(selection.streams) { stream ->
+                        FocusButton(listOf(stream.addonName, stream.name, stream.title).filter { it.isNotBlank() }.joinToString(" · "),
+                            modifier = Modifier.fillMaxWidth().then(
+                                if (stream === selection.streams.first()) Modifier.focusRequester(firstLink) else Modifier
+                            )) {
+                            state.launch { state.playSelectedSource(selection, stream) }
+                        }
                     }
                 }
             }

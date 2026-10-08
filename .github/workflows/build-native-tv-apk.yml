@@ -41,28 +41,28 @@ jobs:
 
       - name: Prepare APKs
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk MiFlix-TV-Native-v2.0.0-beta1.apk
+          cp app/build/outputs/apk/debug/app-debug.apk MiFlix-TV-Native-v2.0.0-rc1.apk
           cp app/build/outputs/apk/debug/app-debug.apk MiFlix-TV-Native.apk
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MiFlix-TV-Native-v2.0.0-beta1
-          path: MiFlix-TV-Native-v2.0.0-beta1.apk
+          name: MiFlix-TV-Native-v2.0.0-rc1
+          path: MiFlix-TV-Native-v2.0.0-rc1.apk
 
       - name: Publish versioned release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="native-v2.0.0-beta1"
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native 2.0 Beta 1" --notes "Feature-complete native TV beta: Watch Party, platform hubs, 50-title genre catalogs, movies by year, QR phone pairing/sign-in/add-ons, multi-profile cloud setup, collection grid fix and permanent latest channel."
-          gh release upload "$TAG" MiFlix-TV-Native-v2.0.0-beta1.apk --clobber
+          TAG="native-v2.0.0-rc1"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native 2.0 RC1" --notes "Release candidate: OpenSubtitles v3, EN/ES subtitle priority, in-player episode picker, Watch Party, QR device pairing, Torrentio/Comet account sync, full platform catalogs, genres, years, multi-profile support and TV polish."
+          gh release upload "$TAG" MiFlix-TV-Native-v2.0.0-rc1.apk --clobber
 
       - name: Update permanent latest channel
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="native-latest"
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native · Latest" --notes "Current version: 2.0.0-beta1"
-          gh release edit "$TAG" --title "MiFlix TV Native · Latest" --notes "Current version: 2.0.0-beta1"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native · Latest" --notes "Current version: 2.0.0-rc1"
+          gh release edit "$TAG" --title "MiFlix TV Native · Latest" --notes "Current version: 2.0.0-rc1"
           gh release upload "$TAG" MiFlix-TV-Native.apk --clobber

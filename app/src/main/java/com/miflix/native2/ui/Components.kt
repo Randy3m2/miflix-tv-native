@@ -3,6 +3,7 @@ package com.miflix.native2.ui
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,6 +23,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.*
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -146,7 +149,7 @@ fun FocusButton(
 @Composable
 fun BackIconButton(onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    Box(Modifier.size(44.dp).onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick)
+    Box(Modifier.size(44.dp).semantics { contentDescription=tr("Buscar","Search") }.onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick)
         .clickable(onClick=onClick).background(if(focused) SoftWhite else Color(0x990C111B),RoundedCornerShape(22.dp))
         .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else Color(0x557D8AA3),RoundedCornerShape(22.dp)),
         contentAlignment=Alignment.Center) {
@@ -312,7 +315,7 @@ fun Sidebar(screen: Screen, profileName: String, onNavigate: (Screen) -> Unit) {
 
 @Composable
 fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,notificationCount: Int,
-            profile: com.miflix.native2.model.Profile? = null) {
+            profile: com.miflix.native2.model.Profile? = null, backgroundAlpha: Float = 0f, onHeaderFocused: (() -> Unit)? = null) {
     val current=when(screen) {
         Screen.WATCH_PARTY -> Screen.FRIENDS
         Screen.GENRES,Screen.GENRE_DETAIL,Screen.YEAR_DETAIL,Screen.PLATFORM_DETAIL,Screen.COLLECTION_DETAIL -> Screen.COLLECTIONS
@@ -327,7 +330,8 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
         Screen.MY_LIST to tr("Mi lista","My List"),
         Screen.SETTINGS to tr("Ajustes","Settings")
     )
-    Row(Modifier.fillMaxWidth().height(76.dp).background(Color(0xFF0D0D0F)).padding(horizontal=24.dp),
+    Row(Modifier.fillMaxWidth().height(76.dp).onFocusChanged { if(it.hasFocus) onHeaderFocused?.invoke() }.focusGroup()
+        .background(Color.Black.copy(alpha=backgroundAlpha.coerceIn(0f,1f))).padding(horizontal=24.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)) {
         var profileFocused by remember { mutableStateOf(false) }
         Row(Modifier.onFocusChanged { profileFocused=it.isFocused }.focusable()
@@ -341,7 +345,8 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
         androidx.compose.foundation.lazy.LazyRow(Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(14.dp),
             contentPadding=PaddingValues(horizontal=4.dp,vertical=6.dp)) {
             items(navItems,key={it.first}) { (destination,label) ->
-                FocusButton(label,primary=current==destination,horizontalPadding=14.dp) { onNavigate(destination) }
+                if(destination==Screen.SEARCH) SearchNavigationButton { onNavigate(destination) }
+                else FocusButton(label,primary=current==destination,horizontalPadding=14.dp) { onNavigate(destination) }
             }
         }
         NotificationButton(notificationCount) { onNavigate(Screen.NOTIFICATIONS) }
@@ -351,7 +356,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
 @Composable
 private fun NotificationButton(count: Int,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    Box(Modifier.size(46.dp).onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
+    Box(Modifier.size(46.dp).semantics { contentDescription="${tr("Avisos","Alerts")}: $count" }.onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
         .background(if(focused) Color.White else Color(0xFF242426),RoundedCornerShape(16.dp)),contentAlignment=Alignment.Center) {
         BellIcon(if(focused) Color.Black else Color.White,Modifier.size(25.dp))
         if(count>0) Text(if(count>9) "9+" else count.toString(),color=if(focused) Color.White else Color.Black,fontSize=10.sp,lineHeight=12.sp,
@@ -370,5 +375,20 @@ private fun BellIcon(color: Color,modifier: Modifier) {
         }
         drawPath(bell,color,style=androidx.compose.ui.graphics.drawscope.Stroke(width=1.5.dp.toPx()))
         drawCircle(color,1.7.dp.toPx(),androidx.compose.ui.geometry.Offset(w*.5f,h*.88f))
+    }
+}
+
+@Composable
+private fun SearchNavigationButton(onClick: () -> Unit) {
+    var focused by remember { mutableStateOf(false) }
+    Box(Modifier.size(44.dp).semantics { contentDescription=tr("Buscar","Search") }.onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
+        .background(if(focused) Color.White else Color.Transparent,RoundedCornerShape(16.dp)),contentAlignment=Alignment.Center) {
+        Canvas(Modifier.size(24.dp)) {
+            val ink=if(focused) Color.Black else Color.White
+            val center=androidx.compose.ui.geometry.Offset(size.width*.4f,size.height*.4f)
+            drawCircle(ink,size.width*.29f,center,style=androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
+            drawLine(ink,androidx.compose.ui.geometry.Offset(size.width*.62f,size.height*.62f),
+                androidx.compose.ui.geometry.Offset(size.width*.94f,size.height*.94f),2.dp.toPx(),androidx.compose.ui.graphics.StrokeCap.Round)
+        }
     }
 }

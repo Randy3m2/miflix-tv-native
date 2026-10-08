@@ -17,6 +17,22 @@ class TmdbRepository(var token: String) {
     var language: String = "en-US"
     private val base = "https://api.themoviedb.org/3"
 
+    suspend fun directorPerson(name: String): DirectorPerson? {
+        val a=get("/search/person",mapOf("query" to name,"include_adult" to "false")).optJSONArray("results") ?: return null
+        val people=(0 until a.length()).map { a.getJSONObject(it) }
+        val person=people.filter { it.optString("name").equals(name,true) && !it.optBoolean("adult") }
+            .sortedWith(compareByDescending<JSONObject> { it.optString("known_for_department")=="Directing" }.thenByDescending { it.optDouble("popularity") }).firstOrNull() ?: return null
+        return DirectorPerson(person.getInt("id"),person.getString("name"),image(person.optString("profile_path"),"w185"))
+    }
+    suspend fun directedMovies(people: List<DirectorPerson>): List<MediaSummary> = coroutineScope {
+        people.map { person -> async {
+            val crew=get("/person/${person.id}/movie_credits").optJSONArray("crew") ?: org.json.JSONArray()
+            (0 until crew.length()).map { crew.getJSONObject(it) }.filter { it.optString("job")=="Director" && !it.optBoolean("adult") }
+                .map { mapItem(it,"movie") }
+        } }.awaitAll().flatten().distinctBy { it.cloudId }.filter { it.poster!=null || it.backdrop!=null }
+            .sortedByDescending { it.popularity }
+    }
+
     private suspend fun get(path: String, params: Map<String, String> = emptyMap()): JSONObject {
         val all = LinkedHashMap(params)
         if (!all.containsKey("language")) all["language"] = language
@@ -280,3 +296,6 @@ class TmdbRepository(var token: String) {
         ?.takeIf { it.isNotBlank() && it != "null" }
         ?.let { "https://image.tmdb.org/t/p/$size$it" }
 }
+
+data class DirectorPerson(val id: Int,val name: String,val photo: String?)
+data class DirectorCollection(val key: String,val title: String,val names: List<String>,val people: List<DirectorPerson> = emptyList())

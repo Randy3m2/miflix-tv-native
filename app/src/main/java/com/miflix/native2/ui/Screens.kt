@@ -61,6 +61,7 @@ import coil3.compose.AsyncImage
 import com.miflix.native2.BuildConfig
 import com.miflix.native2.model.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 private val StreamingTiles = listOf(
@@ -99,43 +100,83 @@ private fun AppShell(state: AppState, screen: Screen, onNavigate: (Screen) -> Un
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun HomeScreen(state: AppState, onNavigate: (Screen) -> Unit) {
-    LaunchedEffect(Unit) {
-        delay(550)
-        state.loadHomeExtras()
-    }
-    val openItem: (MediaSummary) -> Unit = { item -> state.launch { state.open(item) } }
-    val openCollection: (CollectionTile) -> Unit = { tile -> state.launch { state.openCollection(tile.id, tile.title) } }
-
-    AppShell(state, Screen.HOME, onNavigate) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 64.dp)
-        ) {
-            item(key = "hero") { TopTenHero(state.trending.take(10), openItem) }
-            if(state.forYou.isNotEmpty()) item(key="for_you") { MediaRail(tr("Para ti · tus puntuaciones","For you · Your ratings"),state.forYou,onClick=openItem) }
-            if (state.continueWatching.isNotEmpty()) {
-                item(key = "continue") {
-                    MediaRail(
-                        title = tr("Seguir viendo","Continue Watching"),
-                        rows = state.continueWatching,
-                        landscape = true,
-                        progressFor = { state.progress[it.cloudId]?.percent },
-                        onClick = openItem
-                    )
-                }
+fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
+    val scroll=rememberLazyListState()
+    val scope=rememberCoroutineScope()
+    var heroBackdrop by remember { mutableStateOf(state.trending.firstOrNull()?.backdrop) }
+    val headerShade by remember { derivedStateOf { if(scroll.firstVisibleItemIndex>0) .88f else (scroll.firstVisibleItemScrollOffset/320f).coerceIn(0f,.88f) } }
+    LaunchedEffect(Unit) { delay(550); state.loadHomeExtras() }
+    LaunchedEffect(Unit) { state.loadDiscoveryArt() }
+    val openItem: (MediaSummary) -> Unit={ item -> state.launch { state.open(item) } }
+    val openCollection: (CollectionTile) -> Unit={ tile -> state.launch { state.openCollection(tile.id,tile.title) } }
+    val returnToTop: () -> Unit={ scope.launch { scroll.scrollToItem(0) }; Unit }
+    Box(Modifier.fillMaxSize().background(Bg)) {
+        AsyncImage(heroBackdrop,null,Modifier.fillMaxWidth().height(420.dp),contentScale=ContentScale.Crop)
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x44000000),Bg),endY=650f)))
+        CompositionLocalProvider(LocalBringIntoViewSpec provides object : BringIntoViewSpec {
+            override fun calculateScrollDistance(offset: Float,size: Float,containerSize: Float): Float = when {
+                offset<82 -> offset-82
+                offset+size>containerSize -> offset+size-containerSize
+                else -> 0f
             }
-            item(key = "streaming") { CollectionRail(tr("Plataformas","Streaming"), StreamingTiles, openCollection) }
-            item(key = "movies") { MediaRail(tr("Películas populares","Popular · Movies"), state.movies, onClick = openItem) }
-            item(key = "series") { MediaRail(tr("Series populares","Popular · Series"), state.series, onClick = openItem) }
-            item(key = "top") { MediaRail(tr("Mejor valorados","Top Rated"), state.topRated, onClick = openItem) }
+        }) {
+            LazyColumn(Modifier.fillMaxSize(),state=scroll,contentPadding=PaddingValues(top=76.dp,bottom=64.dp)) {
+                item(key="hero") { TopTenHero(state.trending.take(10),openItem,onFocused={ if(it) returnToTop() },onBackdrop={ heroBackdrop=it }) }
+                if(state.continueWatching.isNotEmpty()) item(key="continue") {
+                    MediaRail(tr("Seguir viendo","Continue Watching"),state.continueWatching,landscape=true,
+                        progressFor={ state.progress[it.cloudId]?.percent },onClick=openItem)
+                }
+                if(state.forYou.isNotEmpty()) item(key="for_you") { MediaRail(tr("Para ti · tus puntuaciones","For you · Your ratings"),state.forYou,onClick=openItem) }
+                item(key="genres_home") { Column {
+                    Text(tr("Explora por género","Browse by genre"),color=Color.White,fontSize=24.sp,lineHeight=29.sp,fontWeight=FontWeight.Bold,
+                        modifier=Modifier.padding(start=34.dp,top=16.dp,bottom=16.dp))
+                    LazyRow(contentPadding=PaddingValues(horizontal=34.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
+                        items(state.genres,key={it.id}) { genre -> GenreCard(genre.copy(coverUrl=state.genreCovers[genre.id] ?: genre.coverUrl)) { state.launch { state.openGenre(genre) } } }
+                    }
+                    Spacer(Modifier.height(24.dp))
+                } }
+                item(key="directors_home") { DirectorRail(state) }
+                item(key="streaming") { CollectionRail(tr("Plataformas","Streaming"),StreamingTiles,openCollection) }
+                item(key="movies") { MediaRail(tr("Películas populares","Popular · Movies"),state.movies,onClick=openItem) }
+                item(key="series") { MediaRail(tr("Series populares","Popular · Series"),state.series,onClick=openItem) }
+                item(key="top") { MediaRail(tr("Mejor valorados","Top Rated"),state.topRated,onClick=openItem) }
+            }
         }
+        Sidebar(Screen.HOME,state.activeProfile.name,onNavigate,state.notifications.size,state.activeProfile,
+            backgroundAlpha=headerShade,onHeaderFocused=returnToTop)
     }
 }
 
 @Composable
-private fun TopTenHero(rows: List<MediaSummary>, onOpen: (MediaSummary) -> Unit) {
+private fun DirectorRail(state: AppState) {
+    Column {
+    Text(tr("Directores","Directors"),color=Color.White,fontSize=24.sp,lineHeight=29.sp,fontWeight=FontWeight.Bold,
+        modifier=Modifier.padding(start=34.dp,top=12.dp,bottom=16.dp))
+    LazyRow(contentPadding=PaddingValues(horizontal=34.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
+        items(state.directors,key={it.key}) { group ->
+            var focused by remember { mutableStateOf(false) }
+            Column(Modifier.width(196.dp).onFocusChanged { focused=it.isFocused }.focusable()
+                .tvClick { state.launch { state.socialAction { state.openDirector(group) } } }
+                .clickable { state.launch { state.socialAction { state.openDirector(group) } } }
+                .background(if(focused) Color.White else Panel,RoundedCornerShape(18.dp)).padding(10.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                Row(Modifier.fillMaxWidth().height(128.dp).clip(RoundedCornerShape(12.dp))) {
+                    val photos=group.people.mapNotNull { it.photo }
+                    if(photos.isEmpty()) Box(Modifier.fillMaxSize().background(Color(0xFF343434)),contentAlignment=Alignment.Center) {
+                        Text(group.title.take(1),color=Color.White,fontSize=40.sp,lineHeight=48.sp)
+                    } else photos.forEach { photo -> AsyncImage(photo,group.title,Modifier.weight(1f).fillMaxHeight(),contentScale=ContentScale.Crop) }
+                }
+                Text(if(group.key=="russo") tr("Hermanos Russo","Russo Brothers") else group.title,color=if(focused) Color.Black else Color.White,fontSize=14.sp,lineHeight=18.sp,maxLines=2)
+            }
+        }
+    }
+    Spacer(Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun TopTenHero(rows: List<MediaSummary>, onOpen: (MediaSummary) -> Unit, onFocused: (Boolean) -> Unit = {}, onBackdrop: (String?) -> Unit = {}) {
     if (rows.isEmpty()) {
         Box(Modifier.fillMaxWidth().height(450.dp).background(Bg))
         return
@@ -143,6 +184,7 @@ private fun TopTenHero(rows: List<MediaSummary>, onOpen: (MediaSummary) -> Unit)
     var index by remember(rows.map { it.cloudId }) { mutableIntStateOf(0) }
     val safeIndex = index.coerceIn(0, rows.lastIndex)
     val hero = rows[safeIndex]
+    LaunchedEffect(hero.backdrop) { onBackdrop(hero.backdrop) }
 
     LaunchedEffect(rows.map { it.cloudId }) {
         while (true) {
@@ -166,7 +208,7 @@ private fun TopTenHero(rows: List<MediaSummary>, onOpen: (MediaSummary) -> Unit)
             Spacer(Modifier.height(12.dp))
             Text(hero.overview, color = Color(0xFFE7E7EA), fontSize = 15.sp, lineHeight=18.sp, maxLines = 3, modifier = Modifier.widthIn(max = 690.dp))
             Spacer(Modifier.height(20.dp))
-            FocusButton(tr("Ver detalles","View Details"), primary = true) { onOpen(hero) }
+            FocusButton(tr("Ver detalles","View Details"), primary = true,onFocused=onFocused) { onOpen(hero) }
         }
         Row(
             Modifier.align(Alignment.BottomEnd).padding(end = 34.dp, bottom = 24.dp),
@@ -282,7 +324,7 @@ fun SearchScreen(state: AppState, onBack: () -> Unit) {
 @Composable
 fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
-    LaunchedEffect(Unit) { state.loadHomeExtras(); runCatching { state.loadComingSoon() }.onFailure { state.error=it.message } }
+    LaunchedEffect(Unit) { state.loadDiscoveryArt(); state.loadHomeExtras(); runCatching { state.loadComingSoon() }.onFailure { state.error=it.message } }
     val years = (2026 downTo 1990).map { year -> CollectionTile("year:$year", year.toString(), "") }
     AppShell(state, Screen.COLLECTIONS, { state.screen = it }) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = 34.dp, bottom = 60.dp)) {
@@ -294,14 +336,14 @@ fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
                     Spacer(Modifier.height(24.dp))
                 }
             }
-            item {
+            item { Column {
                 Text(tr("Géneros","Genres"),color=Color.White,fontSize=24.sp,lineHeight=29.sp,fontWeight=FontWeight.Bold,
                     modifier=Modifier.padding(start=34.dp,bottom=16.dp))
                 LazyRow(contentPadding=PaddingValues(horizontal=34.dp,vertical=6.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
-                    items(state.genres,key={it.id}) { genre -> GenreCard(genre) { state.launch { state.openGenre(genre) } } }
+                    items(state.genres,key={it.id}) { genre -> GenreCard(genre.copy(coverUrl=state.genreCovers[genre.id] ?: genre.coverUrl)) { state.launch { state.openGenre(genre) } } }
                 }
                 Spacer(Modifier.height(24.dp))
-            }
+            } }
             if(state.comingMovies.isNotEmpty()) item { MediaRail(tr("Próximamente · Películas","Coming Soon · Movies"),state.comingMovies,onClick={ state.launch { state.open(it) } }) }
             if(state.comingSeries.isNotEmpty()) item { MediaRail(tr("Próximamente · Series","Coming Soon · Series"),state.comingSeries,onClick={ state.launch { state.open(it) } }) }
             item { CollectionRail(tr("Plataformas","Streaming"), StreamingTiles) { tile -> state.launch { state.openCollection(tile.id, tile.title) } } }
@@ -692,15 +734,15 @@ fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
     Box(Modifier.fillMaxSize()) {
     SocialBackdrop()
     LazyColumn(Modifier.fillMaxSize().padding(horizontal=50.dp),contentPadding=PaddingValues(vertical=32.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
-        item {
+        item { Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Text(tr("¿Quién está viendo?","Who's watching?"),color=Color.White,fontSize=38.sp, lineHeight=45.sp,fontWeight=FontWeight.Black)
             Text(tr("Los avatares se guardan con tu perfil. Favoritos y progreso siguen separados.","Avatars are saved with your profile. Favorites and progress stay separate."),color=Muted,fontSize=14.sp, lineHeight=17.sp)
-        }
+        } }
         item {
             LazyRow(horizontalArrangement=Arrangement.spacedBy(20.dp),contentPadding=PaddingValues(8.dp)) {
                 items(state.profiles,key={it.id}) { profile ->
                     var focused by remember { mutableStateOf(false) }
-                    Column(Modifier.width(150.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+                    Column(Modifier.width(180.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(14.dp)) {
                         Column(Modifier.onFocusChanged { focused=it.isFocused }.focusable()
                             .tvClick { state.launch { state.selectProfile(profile) } }
                             .clickable { state.launch { state.selectProfile(profile) } },horizontalAlignment=Alignment.CenterHorizontally) {
@@ -715,16 +757,21 @@ fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
                 }
             }
         }
-        item {
+        item { Column {
             Text(tr("Crear perfil","Create profile"),color=Color.White,fontSize=22.sp, lineHeight=26.sp,fontWeight=FontWeight.Bold)
-            FlowRow(horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-                ProfileAvatar(Profile("new",newName,avatarValue=newAvatar),Modifier.size(60.dp))
-                NativeTextField(newName,{newName=it},tr("Nombre del perfil","Profile name"),modifier=Modifier.width(300.dp))
+            Spacer(Modifier.height(18.dp))
+            Row(horizontalArrangement=Arrangement.spacedBy(22.dp),verticalAlignment=Alignment.CenterVertically) {
+                ProfileAvatar(Profile("new",newName,avatarValue=newAvatar),Modifier.size(72.dp))
+                NativeTextField(newName,{newName=it},tr("Nombre del perfil","Profile name"),modifier=Modifier.width(340.dp))
+            }
+            Spacer(Modifier.height(22.dp))
+            FlowRow(horizontalArrangement=Arrangement.spacedBy(20.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
                 FocusButton(tr("Elegir avatar","Choose avatar")) { choosingNewAvatar=true }
                 FocusButton(tr("Añadir perfil","Add Profile"),primary=true) { state.launch { state.socialAction { state.createProfile(newName,newAvatar); newName="" } } }
             }
+            Spacer(Modifier.height(26.dp))
             FocusButton(tr("Volver","Back")) { onBack() }
-        }
+        } }
     }
     }
     deletingProfile?.let { profile ->
@@ -1332,15 +1379,34 @@ fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
                 Spacer(Modifier.height(18.dp))
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 30.dp)) {
                     items(selection.streams) { stream ->
-                        FocusButton(listOf(stream.addonName, stream.name, stream.title).filter { it.isNotBlank() }.joinToString(" · "),
-                            modifier = Modifier.fillMaxWidth().then(
-                                if (stream === selection.streams.first()) Modifier.focusRequester(firstLink) else Modifier
-                            )) {
-                            state.launch { state.playSelectedSource(selection, stream) }
+                        SourceLinkCard(stream,Modifier.fillMaxWidth().then(
+                            if(stream===selection.streams.first()) Modifier.focusRequester(firstLink) else Modifier)) {
+                            state.launch { state.playSelectedSource(selection,stream) }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SourceLinkCard(stream: com.miflix.native2.model.StreamChoice,modifier: Modifier,onClick: () -> Unit) {
+    var focused by remember(stream) { mutableStateOf(false) }
+    val ink=if(focused) Color.Black else Color.White
+    Column(modifier.onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
+        .background(if(focused) Color.White else Color(0xFF252528),RoundedCornerShape(18.dp)).padding(20.dp),
+        verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        Text(listOf(stream.addonName,stream.name).filter { it.isNotBlank() }.distinct().joinToString(" · "),
+            color=ink,fontSize=15.sp,lineHeight=20.sp,fontWeight=FontWeight.Bold)
+        if(stream.title.isNotBlank()) Text(stream.title,color=ink,fontSize=14.sp,lineHeight=20.sp,maxLines=if(focused) Int.MAX_VALUE else 5,
+            overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        if(stream.videoSize>0) {
+            val gib=stream.videoSize/1073741824.0
+            val weight=if(gib>=1) "%.2f GiB".format(java.util.Locale.US,gib) else "%.1f MiB".format(java.util.Locale.US,stream.videoSize/1048576.0)
+            Text("${tr("Peso","Size")}: $weight",color=ink,fontSize=14.sp,lineHeight=19.sp)
+        }
+        if(stream.filename.isNotBlank() && !stream.title.contains(stream.filename)) Text(stream.filename,color=ink,fontSize=12.sp,lineHeight=18.sp,
+            maxLines=if(focused) Int.MAX_VALUE else 2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
     }
 }

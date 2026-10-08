@@ -1,6 +1,6 @@
-## Última versión: BruniO 2.0.0-rc8
+## Última versión: BruniO 2.0.0-rc9
 
-Consulta `RC8_SETUP.md`. Esta versión requiere ejecutar `supabase_rc6_upgrade.sql` después de RC5 para eliminar perfiles de la cuenta.
+Consulta `RC9_SETUP.md`. Esta versión requiere ejecutar `supabase_rc6_upgrade.sql` después de RC5 para eliminar perfiles de la cuenta.
 
 # MiFlix TV Native 2.0 RC1
 

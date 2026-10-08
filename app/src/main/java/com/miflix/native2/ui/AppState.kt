@@ -26,6 +26,8 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import java.util.Locale
 import java.util.UUID
 
@@ -280,6 +282,50 @@ class AppState(context: Context) {
     val profiles = mutableStateListOf<Profile>()
     val favorites = mutableStateListOf<String>()
     val progress = mutableStateMapOf<String, PlaybackProgress>()
+
+    val genreCovers=mutableStateMapOf<String,String>()
+    val directors=mutableStateListOf(
+        DirectorCollection("nolan","Christopher Nolan",listOf("Christopher Nolan")),
+        DirectorCollection("russo","Joe & Anthony Russo",listOf("Joe Russo","Anthony Russo")),
+        DirectorCollection("spielberg","Steven Spielberg",listOf("Steven Spielberg")),
+        DirectorCollection("villeneuve","Denis Villeneuve",listOf("Denis Villeneuve")),
+        DirectorCollection("scorsese","Martin Scorsese",listOf("Martin Scorsese")),
+        DirectorCollection("tarantino","Quentin Tarantino",listOf("Quentin Tarantino")),
+        DirectorCollection("gerwig","Greta Gerwig",listOf("Greta Gerwig"))
+    )
+    var directorTitle by mutableStateOf("")
+    val directorItems=mutableStateListOf<MediaSummary>()
+    private var loadingDiscovery=false
+    suspend fun loadDiscoveryArt() {
+        if(loadingDiscovery || tmdb.token.isBlank()) return
+        loadingDiscovery=true
+        val permits=Semaphore(4)
+        try { supervisorScope {
+            genres.map { genre -> async {
+                if(genre.id !in genreCovers) runCatching {
+                    val rows=permits.withPermit { tmdb.discoverMovieGenre(genre.movieGenreId,pages=1,limit=20) }
+                    rows.firstNotNullOfOrNull { it.backdrop ?: it.poster }
+                }.getOrNull()?.let { genreCovers[genre.id]=it }
+            } }.awaitAll()
+            directors.toList().map { group -> async {
+                if(group.people.isEmpty()) {
+                    val resolved=group.names.mapNotNull { runCatching { permits.withPermit { tmdb.directorPerson(it) } }.getOrNull() }
+                    val index=directors.indexOfFirst { it.key==group.key }
+                    if(index>=0 && resolved.isNotEmpty()) directors[index]=group.copy(people=resolved)
+                }
+            } }.awaitAll()
+        } } finally { loadingDiscovery=false }
+    }
+    suspend fun openDirector(group: DirectorCollection) {
+        busyMessage="${tr("Cargando","Loading")} ${group.title}…"
+        try {
+            val people=if(group.people.size==group.names.size) group.people else group.names.mapNotNull { tmdb.directorPerson(it) }
+            require(people.size==group.names.size) { tr("No se pudo encontrar este director. Intenta de nuevo.","Could not find this director. Try again.") }
+            val rows=tmdb.directedMovies(people)
+            directorTitle=if(group.key=="russo") tr("Hermanos Russo","Russo Brothers") else group.title; directorItems.clear(); directorItems.addAll(rows)
+            screen=Screen.DIRECTOR_DETAIL
+        } finally { busyMessage=null }
+    }
 
     val trending = mutableStateListOf<MediaSummary>()
     val movies = mutableStateListOf<MediaSummary>()
@@ -1089,7 +1135,7 @@ class AppState(context: Context) {
 enum class Screen {
     SPLASH, HOME, SEARCH, MOVIES, SERIES, COLLECTIONS, COLLECTION_DETAIL, PLATFORM_DETAIL,
     GENRES, GENRE_DETAIL, YEAR_DETAIL, MY_LIST, SETTINGS, PROFILES, WATCH_PARTY, PAIR_DEVICE,
-    DETAILS, PLAYER, LIVE_TV, FRIENDS, TRAKT, NOTIFICATIONS
+    DETAILS, PLAYER, LIVE_TV, FRIENDS, TRAKT, NOTIFICATIONS, DIRECTOR_DETAIL
 }
 
 data class PlayerRequest(

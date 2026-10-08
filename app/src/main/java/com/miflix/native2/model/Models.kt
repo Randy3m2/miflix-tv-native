@@ -69,6 +69,7 @@ data class StreamChoice(
     val filename: String = "",
     val videoHash: String = "",
     val videoSize: Long = 0L,
+    val requestHeaders: Map<String, String> = emptyMap(),
     val addonName: String = ""
 )
 

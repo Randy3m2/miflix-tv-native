@@ -48,6 +48,9 @@ import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
@@ -688,7 +691,13 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
 
     val player = remember(request.stream.url, request.season, request.episode) {
         val renderers = DefaultRenderersFactory(context).setEnableDecoderFallback(true)
-        ExoPlayer.Builder(context, renderers).build().apply {
+        val httpFactory = DefaultHttpDataSource.Factory()
+            .setAllowCrossProtocolRedirects(true)
+            .setDefaultRequestProperties(request.stream.requestHeaders)
+        val dataFactory = DefaultDataSource.Factory(context, httpFactory)
+        ExoPlayer.Builder(context, renderers)
+            .setMediaSourceFactory(DefaultMediaSourceFactory(dataFactory))
+            .build().apply {
             setSeekBackIncrementMs(10_000)
             setSeekForwardIncrementMs(10_000)
             val builder = MediaItem.Builder().setUri(request.stream.url)
@@ -756,7 +765,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     }
 
     LaunchedEffect(player, state.partyRole, state.watchParty?.roomCode, request.stream.url) {
-        while (state.watchParty != null) {
+        while (!request.live && state.watchParty != null) {
             delay(1000)
             when (state.partyRole) {
                 PartyRole.HOST -> state.hostPartyUpdate(request, player.currentPosition, player.isPlaying)
@@ -827,7 +836,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 FocusButton("Episodes") { player.pause(); showEpisodes = true }
                 if (state.watchParty != null) FocusButton("Party ${state.watchParty?.roomCode.orEmpty()}") { state.screen = Screen.WATCH_PARTY }
             }
-        } else if (controlsVisible && !showEpisodes && state.watchParty != null) {
+        } else if (controlsVisible && !showEpisodes && !request.live && state.watchParty != null) {
             Box(Modifier.align(Alignment.TopEnd).padding(top = 24.dp, end = 26.dp)) {
                 FocusButton("Party ${state.watchParty?.roomCode.orEmpty()}") { state.screen = Screen.WATCH_PARTY }
             }

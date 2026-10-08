@@ -35,6 +35,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         when (state.screen) {
             Screen.SPLASH -> SplashScreen()
             Screen.HOME -> HomeScreen(state) { state.screen = it }
+            Screen.LIVE_TV -> LiveScreen(state)
             Screen.SEARCH -> SearchScreen(state) { state.screen = Screen.HOME }
             Screen.MOVIES -> CatalogScreen(state, "Movies", state.movies) { state.screen = Screen.HOME }
             Screen.SERIES -> CatalogScreen(state, "Series", state.series) { state.screen = Screen.HOME }
@@ -50,7 +51,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             Screen.WATCH_PARTY -> WatchPartyScreen(state) { state.screen = if (state.selected != null) Screen.DETAILS else Screen.HOME }
             Screen.PAIR_DEVICE -> PairDeviceScreen(state) { state.screen = Screen.SETTINGS }
             Screen.DETAILS -> DetailsScreen(state) { state.screen = Screen.HOME }
-            Screen.PLAYER -> state.playerRequest?.let { req -> PlayerScreen(state, req) { state.screen = Screen.DETAILS } }
+            Screen.PLAYER -> state.playerRequest?.let { req -> PlayerScreen(state, req) { state.screen = if (req.live) Screen.LIVE_TV else Screen.DETAILS } }
                 ?: run { state.screen = Screen.HOME }
         }
 

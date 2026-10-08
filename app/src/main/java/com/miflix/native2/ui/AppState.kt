@@ -491,7 +491,7 @@ class AppState(context: Context) {
     }
 
     fun updateProgress(req: PlayerRequest, position: Long, duration: Long, ended: Boolean = false) {
-        if (duration <= 0) return
+        if (req.live || duration <= 0) return
         val key = if (req.item.type == "series") "${req.item.cloudId}:s${req.season}e${req.episode}" else req.item.cloudId
         val row = PlaybackProgress(
             percent = if (ended) 100.0 else position.toDouble() / duration * 100.0,
@@ -636,7 +636,7 @@ class AppState(context: Context) {
 enum class Screen {
     SPLASH, HOME, SEARCH, MOVIES, SERIES, COLLECTIONS, COLLECTION_DETAIL, PLATFORM_DETAIL,
     GENRES, GENRE_DETAIL, YEAR_DETAIL, MY_LIST, SETTINGS, PROFILES, WATCH_PARTY, PAIR_DEVICE,
-    DETAILS, PLAYER
+    DETAILS, PLAYER, LIVE_TV
 }
 
 data class PlayerRequest(
@@ -644,7 +644,8 @@ data class PlayerRequest(
     val stream: StreamChoice,
     val season: Int,
     val episode: Int,
-    val resumeMs: Long
+    val resumeMs: Long,
+    val live: Boolean = false
 )
 
 data class SourceSelection(

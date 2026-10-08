@@ -2,6 +2,14 @@ package com.miflix.native2.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
+import java.text.Normalizer
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -40,6 +48,16 @@ fun LiveScreen(state: AppState) {
     var loading by remember { mutableStateOf(false) }
     var sourceChannel by remember { mutableStateOf<LiveChannel?>(null) }
     var sources by remember { mutableStateOf<List<StreamChoice>>(emptyList()) }
+    var search by remember { mutableStateOf("") }
+    fun channelNumber(channel: LiveChannel): Int {
+        val key = "channel_${manifest}_${channel.id}"
+        val existing = prefs.getInt(key, 0)
+        if (existing > 0) return existing
+        val counterKey = "next_number_$manifest"
+        val next = prefs.getInt(counterKey, 1)
+        prefs.edit().putInt(key, next).putInt(counterKey, next + 1).apply()
+        return next
+    }
     var offset by remember { mutableStateOf(0) }
     var canLoadMore by remember { mutableStateOf(false) }
 
@@ -54,11 +72,13 @@ fun LiveScreen(state: AppState) {
             message = if (sports) "Sports service unavailable. Open Configure in your browser and paste its generated manifest. ${e.message}" else e.message.orEmpty()
         } finally { loading = false }
     }
-    LaunchedEffect(manifest, category) {
+    LaunchedEffect(manifest, category, search) {
         val selected = category ?: return@LaunchedEffect
         loading = true; message = ""; channels = emptyList(); offset = 0
         try {
-            channels = repo.channels(manifest, selected)
+            if (search.isNotBlank()) delay(350)
+            channels = repo.channels(manifest, selected, search = if (search.trim().toIntOrNull() == null) search else "")
+            channels.forEach { channelNumber(it) }
             offset = channels.size
             canLoadMore = selected.paginated && channels.isNotEmpty()
             if (channels.isEmpty()) message = "No channels or events in this category right now."
@@ -104,11 +124,19 @@ fun LiveScreen(state: AppState) {
                 items(categories) { c -> FocusButton(c.name, primary = c == category) { category = c } }
             }
             Spacer(Modifier.height(14.dp))
+            NativeTextField(search, { search = it }, "Search channel name or number", modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(12.dp))
             if (loading) Text("Loading live content…", color = Color.White)
             if (message.isNotBlank()) Text(message, color = Color.White, fontSize = 14.sp)
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(channels, key = { it.id }) { channel ->
-                    FocusButton("● ${channel.name}", modifier = Modifier.fillMaxWidth(), onLongClick = { open(channel, true) }) { open(channel, false) }
+                val visible = channels.filter { channel ->
+                    search.isBlank() || liveSearchKey(channel.name).contains(liveSearchKey(search)) || channelNumber(channel).toString() == search.trim()
+                }
+                items(visible, key = { it.id }) { channel ->
+                    LiveChannelRow(channel, channelNumber(channel), { open(channel, false) }, { open(channel, true) })
+                }
+                if (!loading && channels.isNotEmpty() && visible.isEmpty()) item {
+                    Text("No matching channels in this category.", color = Color.White)
                 }
                 if (canLoadMore && !loading) item {
                     FocusButton("Load more") {
@@ -116,7 +144,8 @@ fun LiveScreen(state: AppState) {
                         scope.launch {
                             loading = true
                             try {
-                                val more = repo.channels(manifest, c, offset)
+                                val more = repo.channels(manifest, c, offset, if (search.trim().toIntOrNull() == null) search else "")
+                                more.forEach { channelNumber(it) }
                                 val before = channels.size
                                 channels = (channels + more).distinctBy { it.id }
                                 offset += more.size
@@ -158,5 +187,28 @@ fun LiveScreen(state: AppState) {
                 }
             }
         }
+    }
+}
+
+private fun liveSearchKey(value: String): String = Normalizer.normalize(value.trim().lowercase(), Normalizer.Form.NFD)
+    .replace(Regex("\\p{M}+"), "")
+
+@Composable
+private fun LiveChannelRow(channel: LiveChannel, number: Int, onClick: () -> Unit, onLongClick: () -> Unit) {
+    var focused by remember(channel.id) { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth().onFocusChanged { focused = it.hasFocus }
+        .tvPlaybackClick(onClick, onLongClick).focusable().clickable(onClick = onClick)
+        .background(if (focused) Color.White else Panel, RoundedCornerShape(14.dp)).padding(12.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Text(number.toString().padStart(3, '0'), color = if (focused) Color.Black else Color.White,
+            fontSize = 18.sp, modifier = Modifier.width(58.dp))
+        Box(Modifier.size(62.dp).clip(RoundedCornerShape(9.dp)).background(Color(0xFF303030)),
+            contentAlignment = androidx.compose.ui.Alignment.Center) {
+            Text(channel.name.take(1), color = Color.White, fontSize = 24.sp)
+            channel.poster?.let { AsyncImage(it, channel.name, Modifier.fillMaxSize(), contentScale = ContentScale.Fit) }
+        }
+        Spacer(Modifier.width(18.dp))
+        Text(channel.name, color = if (focused) Color.Black else Color.White, fontSize = 16.sp, modifier = Modifier.weight(1f))
+        Text("LIVE", color = if (focused) Color.Black else Color.White, fontSize = 12.sp)
     }
 }

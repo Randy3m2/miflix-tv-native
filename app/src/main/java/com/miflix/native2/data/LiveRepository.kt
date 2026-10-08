@@ -4,7 +4,7 @@ import com.miflix.native2.model.StreamChoice
 import org.json.JSONObject
 import java.net.URLEncoder
 
-data class LiveCategory(val type: String, val id: String, val name: String, val genre: String? = null, val paginated: Boolean = false)
+data class LiveCategory(val type: String, val id: String, val name: String, val genre: String? = null, val paginated: Boolean = false, val searchable: Boolean = false)
 data class LiveChannel(val id: String, val type: String, val name: String, val poster: String?, val description: String)
 
 class LiveRepository {
@@ -19,25 +19,28 @@ class LiveRepository {
                 val c = catalogs.getJSONObject(i)
                 val extras = c.optJSONArray("extra")
                 var paginated = false
+                var searchable = false
                 var genres: org.json.JSONArray? = null
                 if (extras != null) for (k in 0 until extras.length()) {
                     val e = extras.getJSONObject(k)
+                    if (e.optString("name") == "search") searchable = true
                     if (e.optString("name") == "skip") paginated = true
                     if (e.optString("name") == "genre") genres = e.optJSONArray("options")
                 }
                 val type = c.optString("type", "tv")
                 val id = c.getString("id")
-                add(LiveCategory(type, id, c.optString("name", id), paginated = paginated))
+                add(LiveCategory(type, id, c.optString("name", id), paginated = paginated, searchable = searchable))
                 genres?.let { g -> for (k in 0 until g.length()) {
                     val genre = g.getString(k)
-                    add(LiveCategory(type, id, genre, genre, paginated))
+                    add(LiveCategory(type, id, genre, genre, paginated, searchable))
                 } }
             }
         }.distinctBy { it.name.lowercase() }
     }
 
-    suspend fun channels(manifest: String, category: LiveCategory, skip: Int = 0): List<LiveChannel> {
+    suspend fun channels(manifest: String, category: LiveCategory, skip: Int = 0, search: String = ""): List<LiveChannel> {
         val extra = buildList {
+            if (search.isNotBlank() && category.searchable) add("search=${enc(search.trim())}")
             category.genre?.let { add("genre=${enc(it)}") }
             if (skip > 0 && category.paginated) add("skip=$skip")
         }.joinToString("&")

@@ -5,6 +5,7 @@ import com.miflix.native2.model.EpisodeSummary
 import com.miflix.native2.model.MediaDetails
 import com.miflix.native2.model.MediaSummary
 import com.miflix.native2.model.TrailerSummary
+import com.miflix.native2.model.ReleaseNotice
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope

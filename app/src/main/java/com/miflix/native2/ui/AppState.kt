@@ -77,6 +77,7 @@ class AppState(context: Context) {
     var details by mutableStateOf<MediaDetails?>(null)
     val episodes = mutableStateListOf<EpisodeSummary>()
     var currentSeason by mutableStateOf(1)
+    var sourceSelection by mutableStateOf<SourceSelection?>(null)
     var playerRequest by mutableStateOf<PlayerRequest?>(null)
     var busyMessage by mutableStateOf<String?>(null)
     var error by mutableStateOf<String?>(null)
@@ -431,10 +432,42 @@ class AppState(context: Context) {
         playResolved(item, imdb, 1, 1)
     }
 
-    private suspend fun playResolved(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeOverride: Long? = null) = coroutineScope {
+    suspend fun chooseEpisodeSources(ep: EpisodeSummary) {
+        val item = selected ?: return
+        val imdb = details?.imdbId ?: return
+        chooseSources(item, imdb, ep.season, ep.episode)
+    }
+
+    suspend fun chooseCurrentSources() {
+        val item = selected ?: return
+        val imdb = details?.imdbId ?: return
+        val saved = progress[item.cloudId]
+        val resume = (saved?.season ?: 0) > 0 && (saved?.episode ?: 0) > 0 && (saved?.percent ?: 0.0) < 96.0
+        chooseSources(item, imdb, if (item.type == "series") (if (resume) saved!!.season else 1) else 0,
+            if (item.type == "series") (if (resume) saved!!.episode else 1) else 0)
+    }
+
+    private suspend fun chooseSources(item: MediaSummary, imdb: String, season: Int, episode: Int) {
+        busyMessage = "Finding all playback links…"
+        error = null
+        try {
+            val links = streamRepo.resolve(imdb, item.type, season, episode)
+            if (links.isEmpty()) error = "No playable sources found"
+            else sourceSelection = SourceSelection(item, imdb, season, episode, links)
+        } catch (e: Exception) {
+            error = e.message
+        } finally { busyMessage = null }
+    }
+
+    suspend fun playSelectedSource(selection: SourceSelection, stream: StreamChoice) {
+        sourceSelection = null
+        playResolved(selection.item, selection.imdb, selection.season, selection.episode, selectedStream = stream)
+    }
+
+    private suspend fun playResolved(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeOverride: Long? = null, selectedStream: StreamChoice? = null) = coroutineScope {
         busyMessage = "Finding the best source…"
         error = null
-        val streamsJob = async { streamRepo.resolve(imdb, item.type, season, episode) }
+        val streamsJob = async { if (selectedStream != null) listOf(selectedStream) else streamRepo.resolve(imdb, item.type, season, episode) }
         val subsJob = async { runCatching { subtitleRepo.resolve(imdb, item.type, season, episode, null) }.getOrDefault(emptyList()) }
         runCatching {
             val streams = streamsJob.await()
@@ -612,4 +645,12 @@ data class PlayerRequest(
     val season: Int,
     val episode: Int,
     val resumeMs: Long
+)
+
+data class SourceSelection(
+    val item: MediaSummary,
+    val imdb: String,
+    val season: Int,
+    val episode: Int,
+    val streams: List<StreamChoice>
 )

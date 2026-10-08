@@ -387,12 +387,12 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         if (item.type == "movie") {
                             val label = if ((saved?.percent ?: 0.0) in 1.0..95.0) "▶  Resume ${formatPosition(saved?.position ?: 0)}" else "▶  Play"
-                            FocusButton(label, primary = true, modifier = Modifier.widthIn(min = 330.dp)) {
+                            FocusButton(label, onLongClick = { state.launch { state.chooseCurrentSources() } }, primary = true, modifier = Modifier.widthIn(min = 330.dp)) {
                                 state.launch { runCatching { state.playMovie() }.onFailure { state.error = it.message } }
                             }
                         } else {
                             val canResume = (saved?.season ?: 0) > 0 && (saved?.episode ?: 0) > 0 && (saved?.percent ?: 0.0) < 96.0
-                            FocusButton(if (canResume) "▶  Continue S${saved?.season} E${saved?.episode}" else "▶  Play S1 E1", primary = true, modifier = Modifier.widthIn(min = 330.dp)) {
+                            FocusButton(if (canResume) "▶  Continue S${saved?.season} E${saved?.episode}" else "▶  Play S1 E1", onLongClick = { state.launch { state.chooseCurrentSources() } }, primary = true, modifier = Modifier.widthIn(min = 330.dp)) {
                                 state.launch { runCatching { if (canResume) state.resumeSeries() else state.playSeriesFromStart() }.onFailure { state.error = it.message } }
                             }
                         }
@@ -419,7 +419,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                     Spacer(Modifier.height(12.dp))
                     LazyRow(modifier = Modifier.fillMaxWidth().height(236.dp), contentPadding = PaddingValues(end = 54.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(state.episodes, key = { "${it.season}:${it.episode}" }) { ep ->
-                            EpisodeCard(ep) { state.launch { runCatching { state.playEpisode(ep) }.onFailure { state.error = it.message } } }
+                            EpisodeCard(ep, onLongClick = { state.launch { state.chooseEpisodeSources(ep) } }) { state.launch { runCatching { state.playEpisode(ep) }.onFailure { state.error = it.message } } }
                         }
                     }
                     Spacer(Modifier.height(28.dp))
@@ -705,6 +705,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }
     }
 
+    LaunchedEffect(player) { showEpisodes = false }
+
     DisposableEffect(player, playbackView) {
         val previousKeepScreenOn = playbackView.keepScreenOn
         fun updateScreenAwake() {
@@ -845,7 +847,7 @@ private fun EpisodePickerOverlay(state: AppState, request: PlayerRequest, onClos
             LazyColumn(contentPadding = PaddingValues(bottom = 30.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(state.episodes, key = { "${it.season}:${it.episode}" }) { ep ->
                     val active = ep.season == request.season && ep.episode == request.episode
-                    EpisodeListRow(ep, active) {
+                    EpisodeListRow(ep, active, onLongClick = { state.launch { state.chooseEpisodeSources(ep) } }) {
                         state.launch {
                             runCatching { state.playEpisode(ep) }.onFailure { state.error = it.message }
                             onClose()
@@ -858,10 +860,10 @@ private fun EpisodePickerOverlay(state: AppState, request: PlayerRequest, onClos
 }
 
 @Composable
-private fun EpisodeListRow(ep: EpisodeSummary, active: Boolean, onClick: () -> Unit) {
+private fun EpisodeListRow(ep: EpisodeSummary, active: Boolean, onLongClick: () -> Unit, onClick: () -> Unit) {
     var focused by remember(ep.season, ep.episode) { mutableStateOf(false) }
     Row(
-        Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused }.focusable().tvClick(onClick).clickable(onClick = onClick)
+        Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused }.focusable().tvPlaybackClick(onClick, onLongClick).clickable(onClick = onClick)
             .background(if (focused) Color.White else if (active) Color(0xFF242424) else Color(0xFF161616), RoundedCornerShape(12.dp))
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -913,11 +915,11 @@ private fun TrailerCard(trailer: TrailerSummary, onClick: () -> Unit) {
 }
 
 @Composable
-private fun EpisodeCard(ep: EpisodeSummary, onClick: () -> Unit) {
+private fun EpisodeCard(ep: EpisodeSummary, onLongClick: () -> Unit, onClick: () -> Unit) {
     var focused by remember(ep.season, ep.episode) { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) 1.02f else 1f, tween(90, easing = LinearOutSlowInEasing), label = "episodeScale")
     Box(Modifier.width(328.dp).height(225.dp), contentAlignment = Alignment.TopCenter) {
-        Column(Modifier.width(316.dp).graphicsLayer { scaleX = scale; scaleY = scale }.onFocusChanged { focused = it.isFocused }.focusable().tvClick(onClick).clickable(onClick = onClick)) {
+        Column(Modifier.width(316.dp).graphicsLayer { scaleX = scale; scaleY = scale }.onFocusChanged { focused = it.isFocused }.focusable().tvPlaybackClick(onClick, onLongClick).clickable(onClick = onClick)) {
             Box(Modifier.fillMaxWidth().height(176.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFF1B1B1B)).border(if (focused) 2.dp else 0.dp, Color.White, RoundedCornerShape(12.dp))) {
                 AsyncImage(ep.still, ep.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 if (focused) Box(Modifier.fillMaxSize().background(Color(0x26000000)), contentAlignment = Alignment.Center) { Text("▶", color = Color.White, fontSize = 32.sp) }
@@ -946,4 +948,27 @@ private fun subtitleMime(url: String): String {
 private fun formatPosition(ms: Long): String {
     val totalMinutes = (ms / 60_000L).coerceAtLeast(0)
     return if (totalMinutes >= 60) "${totalMinutes / 60}h ${totalMinutes % 60}m" else "${totalMinutes}m"
+}
+
+@Composable
+fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
+    BackHandler { state.sourceSelection = null }
+    Box(Modifier.fillMaxSize().background(Color(0xF5050505)).padding(40.dp)) {
+        Column {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Playback links · ${selection.streams.size}", color = Color.White, fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                FocusButton("Close") { state.sourceSelection = null }
+            }
+            Spacer(Modifier.height(18.dp))
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 30.dp)) {
+                items(selection.streams) { stream ->
+                    FocusButton(listOf(stream.addonName, stream.name, stream.title).filter { it.isNotBlank() }.joinToString(" · "),
+                        modifier = Modifier.fillMaxWidth()) {
+                        state.launch { state.playSelectedSource(selection, stream) }
+                    }
+                }
+            }
+        }
+    }
 }

@@ -54,6 +54,8 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 ?: run { state.screen = Screen.HOME }
         }
 
+        state.sourceSelection?.let { SourcePickerOverlay(state, it) }
+
         state.busyMessage?.let { LoadingOverlay(it) }
 
         state.error?.takeIf { it.isNotBlank() && !it.contains("rememberCoroutineScope", ignoreCase = true) }?.let { message ->

@@ -13,6 +13,10 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
@@ -54,12 +58,46 @@ fun Modifier.tvClick(onClick: () -> Unit): Modifier = this.onPreviewKeyEvent { e
     }
 }
 
+// Consume the full key gesture so a long press never triggers quick play on release.
+fun Modifier.tvPlaybackClick(onClick: () -> Unit, onLongClick: () -> Unit): Modifier = composed {
+    val scope = rememberCoroutineScope()
+    val shortAction by rememberUpdatedState(onClick)
+    val longAction by rememberUpdatedState(onLongClick)
+    var pending by remember { mutableStateOf<Job?>(null) }
+    var held by remember { mutableStateOf(false) }
+    var longFired by remember { mutableStateOf(false) }
+    DisposableEffect(Unit) { onDispose { pending?.cancel() } }
+    this.onFocusChanged {
+        if (!it.hasFocus) { pending?.cancel(); held = false }
+    }.onPreviewKeyEvent { event ->
+        val code = event.nativeKeyEvent.keyCode
+        val activate = code in listOf(23, 66, 160, 85, 126)
+        if (!activate) false else {
+            if (event.type == KeyEventType.KeyDown && !held) {
+                held = true
+                longFired = false
+                pending = scope.launch {
+                    delay(1000)
+                    if (held) { longFired = true; longAction() }
+                }
+            } else if (event.type == KeyEventType.KeyUp) {
+                pending?.cancel()
+                val quick = held && !longFired && !event.nativeKeyEvent.isCanceled
+                held = false
+                if (quick) shortAction()
+            }
+            true
+        }
+    }
+}
+
 @Composable
 fun FocusButton(
     text: String,
     modifier: Modifier = Modifier,
     primary: Boolean = false,
     onFocused: ((Boolean) -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit
 ) {
     var focused by remember { mutableStateOf(false) }
@@ -77,7 +115,7 @@ fun FocusButton(
                 onFocused?.invoke(it.isFocused)
             }
             .focusable()
-            .tvClick(onClick)
+            .then(if (onLongClick != null) Modifier.tvPlaybackClick(onClick, onLongClick) else Modifier.tvClick(onClick))
             .clickable(onClick = onClick)
             .background(if (white) SoftWhite else Color(0xE6222222), RoundedCornerShape(24.dp))
             .border(if (focused && !primary) 1.5.dp else 0.dp, Color.White, RoundedCornerShape(24.dp))

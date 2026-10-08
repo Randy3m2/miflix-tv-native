@@ -49,7 +49,7 @@ grant execute on function public.miflix_join_room(text) to authenticated;
 -- Room metadata is visible only after joining by code (or to the host).
 drop policy if exists "watch parties read" on public.miflix_watch_parties;
 drop policy if exists "miflix party read authenticated" on public.miflix_watch_parties;
-create policy "watch parties read" on public.miflix_watch_parties for select to authenticated using(public.miflix_in_room(room_code));
+create policy "watch parties read" on public.miflix_watch_parties for select to authenticated using(host_user_id = auth.uid() or public.miflix_in_room(room_code));
 alter table public.miflix_social_profiles enable row level security;
 alter table public.miflix_party_members enable row level security;
 alter table public.miflix_party_events enable row level security;

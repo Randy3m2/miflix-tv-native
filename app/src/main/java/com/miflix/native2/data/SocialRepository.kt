@@ -14,6 +14,10 @@ class SocialRepository(private val url: String, private val key: String) {
     private fun enc(s: String) = URLEncoder.encode(s,"UTF-8")
     private suspend fun rows(s: CloudSession, path: String) = JSONArray(Http.text("$url/rest/v1/$path", headers=headers(s)))
     private suspend fun write(s: CloudSession, path: String, body: JSONObject, method: String = "POST") = Http.text("$url/rest/v1/$path",method,headers(s)+( "Prefer" to "return=minimal"),body.toString())
+    suspend fun pause(s: CloudSession, room: String, cloud: String, season: Int, episode: Int) {
+        write(s,"rpc/miflix_request_pause",JSONObject().put("code",room).put("media",cloud).put("s",season).put("e",episode))
+    }
+    suspend fun takePause(s: CloudSession, room: String): Boolean = Http.text("$url/rest/v1/rpc/miflix_take_pause","POST",headers(s),JSONObject().put("code",room).toString()).trim() == "true"
     suspend fun nickname(s: CloudSession): String = rows(s,"miflix_social_profiles?user_id=eq.${s.userId}&select=nickname").optJSONObject(0)?.optString("nickname").orEmpty()
     suspend fun saveNickname(s: CloudSession, nick: String) {
         require(nick.matches(Regex("[a-z0-9_]{3,24}"))) { "Use 3–24 letters, numbers or underscores" }

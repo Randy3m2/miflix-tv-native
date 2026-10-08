@@ -111,7 +111,7 @@ fun LiveScreen(state: AppState) {
     }
     BackHandler { state.screen = Screen.HOME }
     Row(Modifier.fillMaxSize().background(Bg)) {
-        Sidebar(Screen.LIVE_TV, state.activeProfile.name) { state.screen = it }
+        Sidebar(Screen.LIVE_TV, state.activeProfile.name, { state.screen = it },state.notifications.size)
         Column(Modifier.weight(1f).fillMaxHeight().padding(24.dp)) {
             Text("Live TV", color = Color.White, fontSize = 28.sp)
             Spacer(Modifier.height(12.dp))

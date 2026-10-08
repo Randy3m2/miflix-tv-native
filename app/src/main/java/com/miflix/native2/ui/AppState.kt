@@ -31,6 +31,86 @@ import java.util.UUID
 
 class AppState(context: Context) {
     private val socialPrefs = context.getSharedPreferences("miflix_social", Context.MODE_PRIVATE)
+    private val playbackPrefs = context.getSharedPreferences("miflix_playback", Context.MODE_PRIVATE)
+    var audioLanguage by mutableStateOf(playbackPrefs.getString("audio", "es") ?: "es")
+    var subtitleLanguage by mutableStateOf(playbackPrefs.getString("subtitle", "es") ?: "es")
+    var autoplayNext by mutableStateOf(playbackPrefs.getBoolean("autoplay", true))
+    val notifications = mutableStateListOf<ReleaseNotice>()
+    private var checkingNotices = false
+    private val introRepo = IntroRepository()
+    fun savePlaybackPreferences(audio: String, subtitle: String, autoplay: Boolean) {
+        audioLanguage = audio; subtitleLanguage = subtitle; autoplayNext = autoplay
+        playbackPrefs.edit().putString("audio",audio).putString("subtitle",subtitle).putBoolean("autoplay",autoplay).apply()
+    }
+    private fun noticesKey() = "notices_${session?.userId ?: "local"}_${activeProfile.id}"
+    private fun knownKey() = "known_${session?.userId ?: "local"}_${activeProfile.id}"
+    private fun persistNotices() {
+        val a = org.json.JSONArray()
+        notifications.forEach { n -> a.put(org.json.JSONObject().put("id",n.id).put("cloud",n.item.cloudId).put("title",n.item.title).put("overview",n.item.overview).put("poster",n.item.poster).put("message",n.message).put("date",n.date)) }
+        playbackPrefs.edit().putString(noticesKey(),a.toString()).apply()
+    }
+    fun clearNotifications() { notifications.clear(); persistNotices() }
+    suspend fun checkNotifications() {
+        if(checkingNotices || tmdb.token.isBlank()) return
+        checkingNotices = true
+        val ownerKey = noticesKey(); val knownOwner = knownKey(); val ids = favorites.toList()
+        try {
+            val stored = org.json.JSONArray(playbackPrefs.getString(ownerKey,"[]"))
+            val existing = (0 until stored.length()).mapNotNull { i ->
+                val n = stored.getJSONObject(i); val parts = n.optString("cloud").split(":")
+                if(parts.size != 3) null else ReleaseNotice(n.getString("id"),MediaSummary(parts[2].toInt(),parts[1],n.getString("title"),n.optString("overview"),null,n.optString("poster").takeIf { it.isNotBlank() },0.0,""),n.getString("message"),n.optString("date"))
+            }.toMutableList()
+            val known = org.json.JSONObject(playbackPrefs.getString(knownOwner,"{}"))
+            for(id in ids) {
+                val item = runCatching { tmdb.byCloudId(id) }.getOrNull() ?: continue
+                val releaseResult = runCatching { tmdb.latestRelease(item) }
+                if(releaseResult.isFailure) continue
+                val release = releaseResult.getOrNull()
+                if(!known.has(id)) known.put(id, release?.id ?: "pending")
+                else if(release != null && known.optString(id) != release.id) {
+                    if(existing.none { it.id == release.id }) existing.add(0,release)
+                    known.put(id,release.id)
+                }
+            }
+            if(ownerKey != noticesKey()) return
+            notifications.clear(); notifications.addAll(existing.take(100))
+            playbackPrefs.edit().putString(knownOwner,known.toString()).apply(); persistNotices()
+        } finally { checkingNotices = false }
+    }
+    suspend fun playbackSegments(req: PlayerRequest): PlaybackSegments = runCatching {
+        val imdb = tmdb.details(req.item).imdbId ?: return@runCatching PlaybackSegments()
+        introRepo.segments(imdb,req.season,req.episode,req.item.type == "movie")
+    }.getOrDefault(PlaybackSegments())
+    suspend fun playerSources(req: PlayerRequest, position: Long) {
+        if(req.live) { error = "Live channels use their configured stream"; return }
+        val imdb = tmdb.details(req.item).imdbId ?: return
+        chooseSources(req.item,imdb,req.season,req.episode)
+        sourceSelection = sourceSelection?.copy(resumeMs = position)
+    }
+    suspend fun nextEpisode(req: PlayerRequest): EpisodeSummary? {
+        if(req.live || req.item.type != "series") return null
+        val today = java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US).format(java.util.Date())
+        val current = tmdb.season(req.item.id,req.season)
+        current.firstOrNull { it.episode > req.episode && it.airDate.isNotBlank() && it.airDate <= today }?.let { return it }
+        val count = tmdb.details(req.item).seasonCount
+        if(req.season < count) return tmdb.season(req.item.id,req.season+1).firstOrNull { it.airDate.isNotBlank() && it.airDate <= today }
+        return null
+    }
+    suspend fun playNext(req: PlayerRequest, ep: EpisodeSummary) {
+        if(partyRole == PartyRole.GUEST) return
+        val imdb = tmdb.details(req.item).imdbId ?: return
+        selected = req.item; details = tmdb.details(req.item); currentSeason = ep.season
+        episodes.clear(); episodes.addAll(tmdb.season(req.item.id,ep.season))
+        playResolved(req.item,imdb,ep.season,ep.episode,resumeOverride = 0)
+    }
+    suspend fun requestPartyPause(req: PlayerRequest) {
+        val s = session ?: return; val room = watchParty?.roomCode ?: return
+        social.pause(s,room,req.item.cloudId,req.season,req.episode)
+    }
+    suspend fun takePartyPause(): Boolean {
+        val s = session ?: return false; val room = watchParty?.roomCode ?: return false
+        return social.takePause(s,room)
+    }
     private val livePrefs = context.getSharedPreferences("miflix_live", Context.MODE_PRIVATE)
     private val social = SocialRepository(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY)
     val trakt = TraktRepository(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY)
@@ -493,7 +573,7 @@ class AppState(context: Context) {
 
     suspend fun playSelectedSource(selection: SourceSelection, stream: StreamChoice) {
         sourceSelection = null
-        playResolved(selection.item, selection.imdb, selection.season, selection.episode, selectedStream = stream)
+        playResolved(selection.item, selection.imdb, selection.season, selection.episode, resumeOverride = selection.resumeMs, selectedStream = stream)
     }
 
     private suspend fun playResolved(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeOverride: Long? = null, selectedStream: StreamChoice? = null) = coroutineScope {
@@ -829,7 +909,7 @@ class AppState(context: Context) {
 enum class Screen {
     SPLASH, HOME, SEARCH, MOVIES, SERIES, COLLECTIONS, COLLECTION_DETAIL, PLATFORM_DETAIL,
     GENRES, GENRE_DETAIL, YEAR_DETAIL, MY_LIST, SETTINGS, PROFILES, WATCH_PARTY, PAIR_DEVICE,
-    DETAILS, PLAYER, LIVE_TV, FRIENDS, TRAKT
+    DETAILS, PLAYER, LIVE_TV, FRIENDS, TRAKT, NOTIFICATIONS
 }
 
 data class PlayerRequest(
@@ -850,5 +930,6 @@ data class SourceSelection(
     val imdb: String,
     val season: Int,
     val episode: Int,
-    val streams: List<StreamChoice>
+    val streams: List<StreamChoice>,
+    val resumeMs: Long? = null
 )

@@ -28,7 +28,7 @@ fun FriendsScreen(state: AppState) {
     LaunchedEffect(state.session?.userId) { state.refreshFriends(); nick = state.nickname }
     BackHandler { state.screen = Screen.HOME }
     Row(Modifier.fillMaxSize().background(Bg)) {
-        Sidebar(Screen.FRIENDS,state.activeProfile.name) { state.screen=it }
+        Sidebar(Screen.FRIENDS,state.activeProfile.name,{state.screen=it},state.notifications.size)
         LazyColumn(Modifier.weight(1f).padding(28.dp), verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(bottom=50.dp)) {
             item { Text("Friends & Nickname",color=Color.White,fontSize=28.sp) }
             if(state.session==null) item { FocusButton("Sign in") { state.screen=Screen.SETTINGS } }
@@ -138,5 +138,31 @@ fun TraktScreen(state: AppState) {
         }
         item { Text("Watched movies and episodes sync after 80% playback. Live TV is excluded.",color=Muted) }
         items(history) { Text(it,color=Color.White,fontSize=17.sp) }
+    }
+}
+
+@Composable
+fun NotificationsScreen(state: AppState) {
+    BackHandler { state.screen = Screen.HOME }
+    Row(Modifier.fillMaxSize().background(Bg)) {
+        Sidebar(Screen.NOTIFICATIONS,state.activeProfile.name,{state.screen=it},state.notifications.size)
+        LazyColumn(Modifier.weight(1f).padding(30.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+            item {
+                Text("Notificaciones · ${state.notifications.size}",color=Color.White,fontSize=30.sp)
+                Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                    FocusButton("Revisar ahora") { state.launch { runCatching { state.checkNotifications() }.onFailure { state.error=it.message } } }
+                    FocusButton("Limpiar notificaciones") { state.clearNotifications() }
+                }
+                Text("Nuevos estrenos de tus favoritos. Se revisan al abrir MiFlix y cada 30 minutos mientras está abierta.",color=Muted)
+            }
+            if(state.notifications.isEmpty()) item { Text("No hay notificaciones nuevas",color=Color.White) }
+            items(state.notifications.toList(),key={it.id}) { notice ->
+                Column {
+                    Text(notice.item.title,color=Color.White,fontSize=22.sp)
+                    Text(notice.message,color=Muted)
+                    FocusButton("Ver contenido") { state.launch { state.open(notice.item) } }
+                }
+            }
+        }
     }
 }

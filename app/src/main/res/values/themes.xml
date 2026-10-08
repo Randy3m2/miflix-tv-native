@@ -1,10 +1,13 @@
 <resources>
-    <style name="Theme.MiFlix.Native" parent="android:style/Theme.Material.NoActionBar">
+    <style name="Theme.MiFlix.Base" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:fontFamily">sans</item>
         <item name="android:windowActionModeOverlay">true</item>
         <item name="android:colorAccent">#8B5CF6</item>
         <item name="android:navigationBarColor">#050507</item>
         <item name="android:windowLightNavigationBar">false</item>
         <item name="android:windowNoTitle">true</item>
+    </style>
+    <style name="Theme.MiFlix.Native" parent="Theme.MiFlix.Base">
+        <item name="android:windowBackground">@drawable/brunio_launch_background</item>
     </style>
 </resources>

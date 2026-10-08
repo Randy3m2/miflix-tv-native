@@ -215,6 +215,26 @@ class TmdbRepository(var token: String) {
         return mapItem(j, type)
     }
 
+    suspend fun recommendations(item: MediaSummary): List<MediaSummary> =
+        parseList(get("/${if(item.type == "series") "tv" else "movie"}/${item.id}/recommendations"), item.type, 20)
+
+    suspend fun episodeInfo(item: MediaSummary, season: Int, episode: Int): EpisodeSummary? =
+        season(item.id, season).firstOrNull { it.episode == episode }
+
+    suspend fun latestRelease(item: MediaSummary): ReleaseNotice? {
+        val j = get("/${if(item.type == "series") "tv" else "movie"}/${item.id}")
+        if(item.type == "series") {
+            val e = j.optJSONObject("last_episode_to_air") ?: return null
+            val date = e.optString("air_date")
+            if(date.isBlank() || date > java.text.SimpleDateFormat("yyyy-MM-dd", Locale.US).format(java.util.Date())) return null
+            return ReleaseNotice("${item.cloudId}:${e.optInt("id")}", item,
+                "Nuevo episodio: S${e.optInt("season_number")} E${e.optInt("episode_number")} · ${e.optString("name")}", date)
+        }
+        val date = j.optString("release_date")
+        if(date.isBlank() || date > java.text.SimpleDateFormat("yyyy-MM-dd", Locale.US).format(java.util.Date())) return null
+        return ReleaseNotice("${item.cloudId}:$date", item, "Estreno de película · $date", date)
+    }
+
     private fun parseList(j: JSONObject, forceType: String? = null, limit: Int = 20): List<MediaSummary> {
         val a = j.optJSONArray("results") ?: return emptyList()
         return (0 until a.length()).mapNotNull { i ->

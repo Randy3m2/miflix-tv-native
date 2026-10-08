@@ -9,13 +9,22 @@ await db.exec(fs.readFileSync('supabase_watch_party_repair.sql','utf8'));
 await db.exec(fs.readFileSync('supabase_social_setup.sql','utf8'));
 // Repeat migration to confirm safe reruns.
 await db.exec(fs.readFileSync('supabase_social_setup.sql','utf8'));
+await db.exec(fs.readFileSync('supabase_final_upgrade.sql','utf8'));
+await db.exec(fs.readFileSync('supabase_final_upgrade.sql','utf8'));
 const legacy=(await db.query('select state from miflix_watch_parties')).rows[0].state;assert.equal(legacy.cloudId,'tmdb:movie:99');
 async function as(uid){await db.exec(`reset role;set role authenticated;select set_config('request.jwt.claim.sub','${uid}',false);`)}
 async function denied(sql){let bad=false;try{await db.exec(sql)}catch{bad=true}assert(bad,'Expected RLS/constraint rejection: '+sql)}
-await as(A);await db.exec(`insert into miflix_social_profiles values('${A}','randy',now());select miflix_join_room('123456');insert into miflix_watch_parties(room_code,host_user_id,state)values('654321','${A}','{}');`);
+await as(A);await db.exec(`insert into miflix_social_profiles values('${A}','randy',now());select miflix_join_room('123456');insert into miflix_watch_parties(room_code,host_user_id,state)values('654321','${A}','{}') on conflict(room_code) do update set state=excluded.state returning *;`);
 await as(B);await db.exec(`insert into miflix_social_profiles values('${B}','friend_b',now());select miflix_join_room('123456');insert into miflix_party_events(room_code,user_id,kind,body)values('123456','${B}','emoji','🔥');`);
+await db.exec(`select miflix_request_pause('123456','tmdb:movie:99',0,0);`);
+await denied(`select miflix_take_pause('123456');`);
+await denied(`select miflix_request_pause('123456','tmdb:movie:999',0,0);`);
+await denied(`select * from miflix_party_pause_requests;`);
+await as(A);assert.equal((await db.query("select miflix_take_pause('123456') as paused")).rows[0].paused,true);
+assert.equal((await db.query("select miflix_take_pause('123456') as paused")).rows[0].paused,false);
+await as(B);
 await denied(`insert into miflix_party_events(room_code,user_id,kind,body)values('123456','${A}','chat','spoof');`);
-await as(C);assert.equal((await db.query('select * from miflix_party_events')).rows.length,0);assert.equal((await db.query('select * from miflix_party_members')).rows.length,0);await denied(`insert into miflix_party_events(room_code,user_id,kind,body)values('123456','${C}','chat','stranger');`);await denied(`select miflix_join_room('000000');`);
+await as(C);await denied(`select miflix_request_pause('123456','tmdb:movie:99',0,0);`);assert.equal((await db.query('select * from miflix_party_events')).rows.length,0);assert.equal((await db.query('select * from miflix_party_members')).rows.length,0);await denied(`insert into miflix_party_events(room_code,user_id,kind,body)values('123456','${C}','chat','stranger');`);await denied(`select miflix_join_room('000000');`);
 await as(A);assert.equal((await db.query('select * from miflix_party_events')).rows.length,1);await db.exec(`insert into miflix_friendships(sender_id,receiver_id)values('${A}','${B}');`);
 await db.exec(`update miflix_friendships set status='accepted' where sender_id='${A}';`);
 assert.equal((await db.query('select status from miflix_friendships')).rows[0].status,'pending');
@@ -27,6 +36,6 @@ await denied(`select * from miflix_trakt_tokens;`);
 await as(C);assert.equal((await db.query('select * from miflix_friendships')).rows.length,0);
 await db.exec('reset role');await db.exec("update miflix_watch_parties set expires_at=now()-interval '1 second' where room_code='123456';");
 await as(B);assert.equal((await db.query('select * from miflix_party_events')).rows.length,0);
-console.log('PASS: real PostgreSQL WASM: Beta migration/backfill, repeatable setup, host room insert, membership, event ownership, stranger isolation, friendship consent/identity guard, token isolation, room expiration');
+console.log('PASS: guest pause authorization, matching media, host-only consumption, RLS upsert, real PostgreSQL WASM: Beta migration/backfill, repeatable setup, host room insert, membership, event ownership, stranger isolation, friendship consent/identity guard, token isolation, room expiration');
 await db.close();
 })().catch(e=>{console.error(e);process.exitCode=1});

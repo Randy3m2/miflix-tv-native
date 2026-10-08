@@ -3,6 +3,9 @@ package com.miflix.native2.ui
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.miflix.native2.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -278,6 +281,11 @@ fun NativeTextField(
 
 @Composable
 fun Sidebar(screen: Screen, profileName: String, onNavigate: (Screen) -> Unit) {
+    Sidebar(screen, profileName, onNavigate, 0)
+}
+
+@Composable
+fun Sidebar(screen: Screen, profileName: String, onNavigate: (Screen) -> Unit, notificationCount: Int) {
     val items = listOf(
         Triple(Screen.HOME, "⌂", "Home"),
         Triple(Screen.SEARCH, "⌕", "Search"),
@@ -286,6 +294,7 @@ fun Sidebar(screen: Screen, profileName: String, onNavigate: (Screen) -> Unit) {
         Triple(Screen.LIVE_TV, "●", "Live TV"),
         Triple(Screen.GENRES, "▦", "Genres"),
         Triple(Screen.MY_LIST, "♡", "My List"),
+        Triple(Screen.NOTIFICATIONS, "🔔", if(notificationCount > 0) "Alerts ${notificationCount}+" else "Alerts"),
         Triple(Screen.SETTINGS, "⚙", "Settings")
     )
 
@@ -297,13 +306,13 @@ fun Sidebar(screen: Screen, profileName: String, onNavigate: (Screen) -> Unit) {
             .padding(horizontal = 12.dp, vertical = 22.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 8.dp, bottom = 20.dp)) {
                 Box(Modifier.size(34.dp).background(Color.White, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
-                    Text("M", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                    Image(painterResource(R.drawable.brunio_icon), "BruniO", Modifier.fillMaxSize())
                 }
                 Spacer(Modifier.width(9.dp))
-                Text("MiFlix", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                Text("BruniO", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
             }
             items.forEach { (destination, icon, label) ->
                 var focused by remember(destination) { mutableStateOf(false) }
@@ -316,7 +325,7 @@ fun Sidebar(screen: Screen, profileName: String, onNavigate: (Screen) -> Unit) {
                         .tvClick { onNavigate(destination) }
                         .clickable { onNavigate(destination) }
                         .background(if (focused || active) Color(0xFFF2F2F2) else Color.Transparent, RoundedCornerShape(12.dp))
-                        .padding(horizontal = 11.dp, vertical = 11.dp),
+                        .padding(horizontal = 11.dp, vertical = 9.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(icon, color = if (focused || active) Color.Black else Color.White, fontSize = 19.sp, modifier = Modifier.width(28.dp))

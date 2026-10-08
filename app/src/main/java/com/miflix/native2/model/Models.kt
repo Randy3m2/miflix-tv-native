@@ -167,3 +167,8 @@ data class PairingPayload(
     val email: String = "",
     val addonManifest: String = ""
 )
+
+// Release IDs remain remembered after clearing notifications, so they do not reappear.
+data class ReleaseNotice(val id: String, val item: MediaSummary, val message: String, val date: String)
+data class SkipSegment(val startMs: Long, val endMs: Long)
+data class PlaybackSegments(val intro: SkipSegment? = null, val outro: SkipSegment? = null, val postCredits: SkipSegment? = null)

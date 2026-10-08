@@ -86,6 +86,8 @@ class SubtitleRepository(
         return when (x) {
             "spa", "es-es", "es-la", "es_419", "spanish", "español" -> "es"
             "eng", "en-us", "en-gb", "english" -> "en"
+            "por", "pt-br", "pt-pt", "portuguese" -> "pt"
+            "fre", "fra", "fr-fr", "french" -> "fr"
             else -> x
         }
     }

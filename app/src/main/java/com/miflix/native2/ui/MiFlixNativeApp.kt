@@ -1,5 +1,9 @@
 package com.miflix.native2.ui
 
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
+import com.miflix.native2.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,6 +41,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             Screen.HOME -> HomeScreen(state) { state.screen = it }
             Screen.FRIENDS -> FriendsScreen(state)
             Screen.TRAKT -> TraktScreen(state)
+            Screen.NOTIFICATIONS -> NotificationsScreen(state)
             Screen.LIVE_TV -> LiveScreen(state)
             Screen.SEARCH -> SearchScreen(state) { state.screen = Screen.HOME }
             Screen.MOVIES -> CatalogScreen(state, "Movies", state.movies) { state.screen = Screen.HOME }
@@ -57,6 +62,12 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 ?: run { state.screen = Screen.HOME }
         }
 
+        LaunchedEffect(bootstrapped, state.session?.userId, state.activeProfile.id, state.favorites.toList()) {
+            if(bootstrapped) while(true) {
+                runCatching { state.checkNotifications() }
+                delay(30*60*1000L)
+            }
+        }
         LaunchedEffect(state.session?.userId) {
             if(state.session!=null) while(true) {
                 delay(30*60*1000L)
@@ -94,15 +105,9 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
 
 @Composable
 private fun SplashScreen() {
-    Box(Modifier.fillMaxSize().background(Bg), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(Modifier.size(106.dp).background(Color.White, RoundedCornerShape(28.dp)), contentAlignment = Alignment.Center) {
-                Text("M", color = Color.Black, fontSize = 46.sp, fontWeight = FontWeight.Black)
-            }
-            Spacer(Modifier.height(17.dp))
-            Text("MiFlix", color = Color.White, fontSize = 31.sp, fontWeight = FontWeight.Black)
-            Text("Native TV", color = Muted, fontSize = 13.sp)
-        }
+    Box(Modifier.fillMaxSize().background(Color(0xFF070B16))) {
+        Image(painterResource(R.drawable.brunio_splash), "BruniO",
+            modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
     }
 }
 

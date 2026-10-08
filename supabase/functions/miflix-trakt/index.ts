@@ -3,7 +3,8 @@ const cors = {"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"
 const url = Deno.env.get("SUPABASE_URL")!;
 const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const clientId = Deno.env.get("TRAKT_CLIENT_ID");
-const clientSecret = Deno.env.get("TRAKT_CLIENT_SECRET");
+const redirectUri = `${url}/functions/v1/miflix-trakt`;
+const base64url = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
 const response = (body: unknown, status=200) => new Response(JSON.stringify(body), {status,headers:{...cors,"Content-Type":"application/json"}});
 async function db(path: string, method="GET", body?: unknown) {
  const r=await fetch(`${url}/rest/v1/${path}`,{method,headers:{apikey:serviceKey,Authorization:`Bearer ${serviceKey}`,"Content-Type":"application/json",Prefer:"resolution=merge-duplicates,return=representation"},body:body===undefined?undefined:JSON.stringify(body)});
@@ -20,13 +21,34 @@ async function access(uid: string) {
  const rows=await db(`miflix_trakt_tokens?user_id=eq.${uid}`);let t=rows?.[0]?.tokens;
  if(!t)throw new Error("Connect Trakt first");
  if((t.created_at+t.expires_in)*1000 < Date.now()+60000){
-  const fresh=await trakt("/oauth/token",undefined,{refresh_token:t.refresh_token,client_id:clientId,client_secret:clientSecret,redirect_uri:"urn:ietf:wg:oauth:2.0:oob",grant_type:"refresh_token"});
+  const fresh=await trakt("/oauth/token",undefined,{refresh_token:t.refresh_token,client_id:clientId,redirect_uri:redirectUri,grant_type:"refresh_token"});
   if(fresh.status!==200)throw new Error("Reconnect Trakt: token refresh failed");t=fresh.data;await saveTokens(uid,t);
  }
  return t.access_token as string;
 }
 Deno.serve(async(req: Request)=>{
  if(req.method==="OPTIONS")return new Response("ok",{headers:cors});
+ if(req.method==="GET") {
+  const callback=new URL(req.url);
+  const state=callback.searchParams.get("state")||"";
+  if(!/^[0-9a-f-]{36}$/.test(state))return response({error:"Invalid authorization state"},400);
+  try {
+   const rows=await db(`miflix_trakt_pending?state->>oauth_state=eq.${state}`);
+   const pending=rows?.[0];
+   if(!pending||Date.now()>pending.state.started+pending.state.expires_in*1000)return response({error:"Authorization expired. Connect again from your TV."},410);
+   if(callback.searchParams.has("error")) {
+    await db(`miflix_trakt_pending?user_id=eq.${pending.user_id}&state->>oauth_state=eq.${state}`,"DELETE");
+    return response({error:"Authorization cancelled. Connect again from your TV."},400);
+   }
+   const code=callback.searchParams.get("code");
+   if(!code)return response({error:"Missing authorization code"},400);
+   const result=await trakt("/oauth/token",undefined,{code,client_id:clientId,redirect_uri:redirectUri,code_verifier:pending.state.verifier,grant_type:"authorization_code"});
+   if(result.status!==200)return response({error:"Trakt authorization failed. Connect again from your TV."},502);
+   await saveTokens(pending.user_id,result.data);
+   await db(`miflix_trakt_pending?user_id=eq.${pending.user_id}&state->>oauth_state=eq.${state}`,"DELETE");
+   return new Response("MiFlix conectado a Trakt. Puedes cerrar esta ventana y regresar a tu TV.",{headers:{"Content-Type":"text/plain; charset=utf-8","Cache-Control":"no-store"}});
+  }catch{return response({error:"Authorization failed. Connect again from your TV."},502);}
+ }
  if(req.method!=="POST")return response({error:"POST required"},405);
  try {
   const authorization=req.headers.get("Authorization")||"";
@@ -37,29 +59,28 @@ Deno.serve(async(req: Request)=>{
   const input=await req.json();const action=input.action;
   if(action==="status"){
    const rows=await db(`miflix_trakt_tokens?user_id=eq.${uid}&select=user_id`);
-   return response({connected:!!rows?.length,configured:!!clientId&&!!clientSecret});
+   return response({connected:!!rows?.length,configured:!!clientId});
   }
-  if(!clientId||!clientSecret)return response({error:"Configure TRAKT_CLIENT_ID and TRAKT_CLIENT_SECRET in Supabase Edge Function secrets"},503);
+  if(!clientId)return response({error:"Configure TRAKT_CLIENT_ID in Supabase Edge Function secrets"},503);
   if(action==="start") {
-   const r=await trakt("/oauth/device/code",undefined,{client_id:clientId});
-   if(r.status!==200)return response({error:`Trakt device code failed (${r.status})`},502);
-   await db("miflix_trakt_pending?on_conflict=user_id","POST",{user_id:uid,state:{...r.data,started:Date.now()}});
-   const {user_code,verification_url,expires_in,interval}=r.data;
-   return response({user_code,verification_url,expires_in,interval});
+   const verifier=base64url(crypto.getRandomValues(new Uint8Array(32)));
+   const challenge=base64url(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(verifier))));
+   const oauth_state=crypto.randomUUID();
+   await db("miflix_trakt_pending?on_conflict=user_id","POST",{user_id:uid,state:{verifier,oauth_state,started:Date.now(),expires_in:600}});
+   const authorize=new URL("https://auth.trakt.tv/oauth/authorize");
+   for(const [key,value] of Object.entries({response_type:"code",client_id:clientId,redirect_uri:redirectUri,state:oauth_state,code_challenge:challenge,code_challenge_method:"S256"}))authorize.searchParams.set(key,value);
+   return response({user_code:"Escanea el QR",verification_url:authorize.toString(),expires_in:600,interval:5});
   }
   if(action==="poll") {
+   const linked=await db(`miflix_trakt_tokens?user_id=eq.${uid}&select=user_id`);
    const rows=await db(`miflix_trakt_pending?user_id=eq.${uid}`);const pending=rows?.[0]?.state;
-   if(!pending||Date.now()>pending.started+pending.expires_in*1000)return response({error:"Code expired. Connect again."},410);
-   const r=await trakt("/oauth/device/token",undefined,{code:pending.device_code,client_id:clientId,client_secret:clientSecret});
-   if(r.status===400)return response({pending:true});
-   if(r.status===429)return response({pending:true,slow_down:true});
-   if(r.status!==200)return response({error:`Trakt authorization failed (${r.status})`},r.status===410?410:502);
-   await saveTokens(uid,r.data);await db(`miflix_trakt_pending?user_id=eq.${uid}`,"DELETE");
-   return response({connected:true});
+   if(!pending&&linked?.length)return response({connected:true});
+   if(!pending||Date.now()>pending.started+pending.expires_in*1000)return response({error:"Authorization expired. Connect again."},410);
+   return response({pending:true});
   }
   const token=await access(uid);
   if(action==="disconnect"){
-   await trakt("/oauth/revoke",undefined,{token,client_id:clientId,client_secret:clientSecret});
+   await trakt("/oauth/revoke",undefined,{token,client_id:clientId});
    await db(`miflix_trakt_tokens?user_id=eq.${uid}`,"DELETE");return response({connected:false});
   }
   if(action==="history"){

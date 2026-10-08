@@ -90,7 +90,7 @@ private val StreamingTiles = listOf(
 @Composable
 private fun AppShell(state: AppState, screen: Screen, onNavigate: (Screen) -> Unit, content: @Composable BoxScope.() -> Unit) {
     Row(Modifier.fillMaxSize().background(Bg)) {
-        Sidebar(screen, state.activeProfile.name, onNavigate)
+        Sidebar(screen, state.activeProfile.name, onNavigate, state.notifications.size)
         Box(Modifier.weight(1f).fillMaxHeight(), content = content)
     }
 }
@@ -521,6 +521,21 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     FocusButton("Trakt") { state.screen=Screen.TRAKT }
                 }
                 Spacer(Modifier.height(18.dp))
+                Text("Playback preferences",color=Color.White,fontSize=22.sp)
+                Text("Audio: ${state.audioLanguage.ifBlank { "Automatic" }}",color=Muted)
+                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    listOf("" to "Auto", "es" to "Español", "en" to "English", "pt" to "Português", "fr" to "Français").forEach { (code,label) ->
+                        FocusButton(label,primary=state.audioLanguage==code) { state.savePlaybackPreferences(code,state.subtitleLanguage,state.autoplayNext) }
+                    }
+                }
+                Text("Subtitles: ${state.subtitleLanguage}",color=Muted)
+                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    listOf("off" to "Off", "es" to "Español", "en" to "English", "pt" to "Português", "fr" to "Français").forEach { (code,label) ->
+                        FocusButton(label,primary=state.subtitleLanguage==code) { state.savePlaybackPreferences(state.audioLanguage,code,state.autoplayNext) }
+                    }
+                }
+                FocusButton("Autoplay next episode: ${if(state.autoplayNext) "ON" else "OFF"}") { state.savePlaybackPreferences(state.audioLanguage,state.subtitleLanguage,!state.autoplayNext) }
+                Spacer(Modifier.height(24.dp))
                 Text("Stream Add-ons", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
                 Text("Torrentio and Comet manifests are account-level, so every profile on this account shares them.", color = Muted, fontSize = 14.sp, modifier = Modifier.width(840.dp))
@@ -691,19 +706,28 @@ fun WatchPartyScreen(state: AppState, onBack: () -> Unit) {
 fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     val context = LocalContext.current
     val playbackView = LocalView.current
-    var controlsVisible by remember(request.stream.url) { mutableStateOf(true) }
+    var controlsVisible by remember(request.playbackId) { mutableStateOf(true) }
     var controlInteraction by remember { mutableStateOf(0) }
     var nativePlayerView by remember { mutableStateOf<PlayerView?>(null) }
     var showPartyActions by remember { mutableStateOf(false) }
-    var showEpisodes by remember(request.item.cloudId) { mutableStateOf(false) }
+    var showEpisodes by remember(request.playbackId) { mutableStateOf(false) }
     val subtitles = request.stream.subtitles
-    val preferredText = when {
-        subtitles.any { it.lang.equals("es", true) || it.lang.equals("spa", true) } -> "es"
-        subtitles.any { it.lang.equals("en", true) || it.lang.equals("eng", true) } -> "en"
-        else -> null
-    }
+    val preferredText = state.subtitleLanguage.takeUnless { it == "off" }
+    var paused by remember(request.playbackId) { mutableStateOf(false) }
+    var pauseSynopsis by remember(request.playbackId) { mutableStateOf(false) }
+    var clockNow by remember { mutableStateOf(System.currentTimeMillis()) }
+    var applyingRemote by remember { mutableStateOf(false) }
+    var positionMs by remember(request.playbackId) { mutableStateOf(request.resumeMs) }
+    var durationMs by remember(request.playbackId) { mutableStateOf(0L) }
+    var segments by remember(request.playbackId) { mutableStateOf(PlaybackSegments()) }
+    var episodeInfo by remember(request.playbackId) { mutableStateOf<EpisodeSummary?>(null) }
+    var upcoming by remember(request.playbackId) { mutableStateOf<EpisodeSummary?>(null) }
+    var recommendations by remember(request.playbackId) { mutableStateOf<List<MediaSummary>>(emptyList()) }
+    var ended by remember(request.playbackId) { mutableStateOf(false) }
+    var countdown by remember(request.playbackId) { mutableStateOf(10) }
+    var cancelAutoplay by remember(request.playbackId) { mutableStateOf(false) }
 
-    val player = remember(request.stream.url, request.season, request.episode) {
+    val player = remember(request.playbackId) {
         val renderers = DefaultRenderersFactory(context).setEnableDecoderFallback(true)
         val httpFactory = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
@@ -717,7 +741,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             val builder = MediaItem.Builder().setUri(request.stream.url)
             if (subtitles.isNotEmpty()) {
                 builder.setSubtitleConfigurations(
-                    subtitles.take(60).map { s ->
+                    subtitles.sortedBy { if(normalizeMediaLanguage(it.lang) == preferredText) 0 else 1 }.take(60).map { s ->
                         MediaItem.SubtitleConfiguration.Builder(Uri.parse(s.url)).apply {
                             if (s.lang.isNotBlank()) setLanguage(normalizeMediaLanguage(s.lang))
                             setLabel(s.label.ifBlank { s.lang.ifBlank { "Subtitle" } })
@@ -727,8 +751,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 )
             }
             setMediaItem(builder.build(), request.resumeMs)
-            val trackBuilder = TrackSelectionParameters.Builder(context).setPreferredAudioLanguage("es")
+            val trackBuilder = TrackSelectionParameters.Builder(context).setPreferredAudioLanguage(state.audioLanguage.takeIf { it.isNotBlank() })
             if (preferredText != null) trackBuilder.setPreferredTextLanguage(preferredText)
+            trackBuilder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT,state.subtitleLanguage == "off")
             trackSelectionParameters = trackBuilder.build()
             videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
             prepare()
@@ -736,6 +761,33 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }
     }
 
+    LaunchedEffect(request.playbackId) {
+        if(!request.live) {
+            state.launch { segments = state.playbackSegments(request) }
+            state.launch { recommendations = runCatching { state.tmdb.recommendations(request.item) }.getOrDefault(emptyList()) }
+            if(request.item.type == "series") {
+                state.launch { episodeInfo = runCatching { state.tmdb.episodeInfo(request.item,request.season,request.episode) }.getOrNull() }
+                state.launch { upcoming = runCatching { state.nextEpisode(request) }.getOrNull() }
+            }
+        }
+    }
+    LaunchedEffect(player) {
+        while(true) { positionMs = player.currentPosition; durationMs = player.duration.coerceAtLeast(0); delay(250) }
+    }
+    LaunchedEffect(paused) {
+        if(paused) while(true) { clockNow = System.currentTimeMillis(); delay(1000) }
+    }
+    LaunchedEffect(paused,request.playbackId) {
+        pauseSynopsis = false
+        if(paused) { delay(5000); pauseSynopsis = true }
+    }
+    LaunchedEffect(ended,upcoming,cancelAutoplay,state.autoplayNext) {
+        if(ended && upcoming != null && state.autoplayNext && !cancelAutoplay && state.partyRole != PartyRole.GUEST) {
+            countdown = 10
+            while(countdown > 0) { delay(1000); countdown-- }
+            state.launch { runCatching { state.playNext(request,upcoming!!) }.onFailure { state.error=it.message } }
+        }
+    }
     LaunchedEffect(player) { showEpisodes = false }
 
     DisposableEffect(player, playbackView) {
@@ -747,12 +799,22 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 )
         }
         val listener = object : Player.Listener {
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                paused = !playWhenReady && player.playbackState != Player.STATE_ENDED
+                if(state.partyRole == PartyRole.GUEST && !applyingRemote && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST) {
+                    if(!playWhenReady && state.watchParty?.playing == true) state.launch { runCatching { state.requestPartyPause(request) }.onFailure { state.error=it.message } }
+                    else if(state.watchParty?.playing == false) {
+                        applyingRemote = true; player.pause(); applyingRemote = false
+                    }
+                }
+            }
             override fun onEvents(player: Player, events: Player.Events) {
                 updateScreenAwake()
             }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_ENDED) {
+                    ended = true; paused = false
                     val duration = player.duration.coerceAtLeast(0)
                     if (duration > 0) state.updateProgress(request, duration, duration, ended = true)
                     state.launch { state.traktMarkWatched(request,duration,duration) }
@@ -761,6 +823,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
         }
         player.addListener(listener)
+        paused = !player.playWhenReady
         updateScreenAwake()
         onDispose {
             playbackView.keepScreenOn = previousKeepScreenOn
@@ -787,7 +850,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         while (state.watchParty != null) {
             delay(1000)
             when (state.partyRole) {
-                PartyRole.HOST -> state.hostPartyUpdate(request, player.currentPosition, player.isPlaying)
+                PartyRole.HOST -> {
+                    if(runCatching { state.takePartyPause() }.getOrDefault(false)) player.pause()
+                    state.hostPartyUpdate(request, player.currentPosition, player.playWhenReady && player.playbackState != Player.STATE_ENDED)
+                }
                 PartyRole.GUEST -> {
                     val remote = state.refreshParty() ?: continue
                     if (remote.cloudId != request.item.cloudId || remote.season != request.season || remote.episode != request.episode) {
@@ -795,7 +861,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                         break
                     }
                     if (!request.live && abs(remote.positionMs - player.currentPosition) > 1800) player.seekTo(remote.positionMs)
-                    if (remote.playing != player.isPlaying) player.playWhenReady = remote.playing
+                    if (remote.playing != player.playWhenReady) {
+                        applyingRemote = true; player.playWhenReady = remote.playing; applyingRemote = false
+                    }
                 }
                 null -> Unit
             }
@@ -847,6 +915,80 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             modifier = Modifier.fillMaxSize()
         )
 
+        if(controlsVisible && !pauseSynopsis) {
+            Column(Modifier.align(Alignment.TopStart).padding(26.dp).widthIn(max=600.dp).background(Color(0x99000000),RoundedCornerShape(12.dp)).padding(12.dp)) {
+                Text(request.item.title,color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold,maxLines=1)
+                if(request.item.type == "series") Text("S${request.season} E${request.episode} · ${episodeInfo?.title.orEmpty()}",color=Muted,fontSize=14.sp)
+            }
+        }
+        if(pauseSynopsis && !showEpisodes && !showPartyActions && state.sourceSelection == null && !ended) {
+            Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xC9000000),Color(0x22000000))))) {
+                Column(Modifier.align(Alignment.CenterStart).padding(60.dp).widthIn(max=680.dp)) {
+                    Text("Estás viendo",color=Muted,fontSize=18.sp)
+                    Text(request.item.title,color=Color.White,fontSize=38.sp,fontWeight=FontWeight.Bold)
+                    if(request.item.type == "series") Text("S${request.season} E${request.episode} · ${episodeInfo?.title.orEmpty()}",color=Color.White,fontSize=22.sp)
+                    Spacer(Modifier.height(14.dp))
+                    Text(episodeInfo?.overview?.takeIf { it.isNotBlank() } ?: request.item.overview,color=Color(0xFFE0E0E0),fontSize=19.sp,maxLines=5)
+                }
+
+            }
+        }
+        if(paused && !ended && !showEpisodes && !showPartyActions && state.sourceSelection == null) {
+            val clock = android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(clockNow))
+            val remaining = (durationMs - positionMs).coerceAtLeast(0L) / 1000
+            val remainingText = when {
+                request.live -> "En vivo"
+                durationMs <= 0 -> "Tiempo restante no disponible"
+                remaining >= 3600 -> "%d:%02d:%02d".format(remaining / 3600, remaining / 60 % 60, remaining % 60)
+                else -> "%d:%02d".format(remaining / 60, remaining % 60)
+            }
+            Column(Modifier.align(Alignment.BottomEnd).padding(end=35.dp,bottom=100.dp)
+                .background(Color(0xAA000000),RoundedCornerShape(12.dp)).padding(14.dp)) {
+                Text("Hora · $clock",color=Color.White,fontSize=20.sp)
+                Text(if(request.live || durationMs <= 0) remainingText else "Restante · $remainingText",color=Color.White,fontSize=17.sp)
+                Text("Pausado",color=Muted,fontSize=14.sp)
+            }
+        }
+        if(!request.live && controlsVisible && !showEpisodes && !showPartyActions) {
+            Box(Modifier.align(Alignment.BottomStart).padding(start=26.dp,bottom=110.dp)) {
+                FocusButton("Playback links") { state.launch { state.playerSources(request,player.currentPosition) } }
+            }
+        }
+        if(!ended && !showEpisodes && state.partyRole != PartyRole.GUEST && durationMs > 0) {
+            val intro = segments.intro?.takeIf { it.endMs <= durationMs && positionMs >= it.startMs && positionMs < it.endMs }
+            val credits = segments.outro?.takeIf { it.startMs < durationMs && positionMs >= it.startMs && positionMs < it.endMs }
+            if(intro != null || credits != null) Box(Modifier.align(Alignment.BottomEnd).padding(end=30.dp,bottom=100.dp)) {
+                if(intro != null) FocusButton("Skip Intro",primary=true) { player.seekTo(intro.endMs) }
+                else if(credits != null) FocusButton("Skip Credits",primary=true) {
+                    val post = segments.postCredits?.startMs?.takeIf { it > positionMs && it < durationMs }
+                    player.seekTo(post ?: credits.endMs.coerceAtMost(durationMs))
+                }
+            }
+        }
+        if(ended && state.partyRole != PartyRole.GUEST) {
+            Dialog(onDismissRequest={ cancelAutoplay=true; onClose() },properties=DialogProperties(usePlatformDefaultWidth=false)) {
+                Column(Modifier.width(850.dp).heightIn(max=600.dp).background(Color(0xF00B0B0B),RoundedCornerShape(20.dp)).padding(25.dp)) {
+                    Text("Terminaste ${request.item.title}",color=Color.White,fontSize=26.sp)
+                    upcoming?.let { next ->
+                        Text("Siguiente: S${next.season} E${next.episode} · ${next.title}",color=Muted)
+                        Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                            FocusButton(if(state.autoplayNext && !cancelAutoplay) "Next episode · ${countdown}s" else "Next episode",primary=true) { cancelAutoplay=true; state.launch { state.playNext(request,next) } }
+                            FocusButton("Cancel autoplay") { cancelAutoplay=true }
+                        }
+                    }
+                    Text("También te puede gustar",color=Color.White,fontSize=22.sp)
+                    LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.weight(1f,false)) {
+                        items(recommendations,key={it.cloudId}) { item ->
+                            Column(Modifier.width(170.dp)) {
+                                AsyncImage(item.poster,item.title,Modifier.height(190.dp).fillMaxWidth(),contentScale=ContentScale.Crop)
+                                FocusButton(item.title) { cancelAutoplay=true; state.launch { state.open(item) } }
+                            }
+                        }
+                    }
+                    FocusButton("Back to details") { cancelAutoplay=true; onClose() }
+                }
+            }
+        }
         if (controlsVisible && !showEpisodes && !showPartyActions && request.item.type == "series") {
             Row(
                 Modifier.align(Alignment.TopEnd).padding(top = 24.dp, end = 26.dp),
@@ -999,6 +1141,8 @@ private fun EpisodeCard(ep: EpisodeSummary, onLongClick: () -> Unit, onClick: ()
 private fun normalizeMediaLanguage(raw: String): String = when (raw.lowercase()) {
     "spa", "es-es", "spanish" -> "es"
     "eng", "en-us", "english" -> "en"
+    "por", "pt-br", "pt-pt", "portuguese" -> "pt"
+    "fre", "fra", "fr-fr", "french" -> "fr"
     else -> raw
 }
 

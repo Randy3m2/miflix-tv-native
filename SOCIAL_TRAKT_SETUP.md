@@ -50,17 +50,16 @@ nuevo APK. El workflow y `native-latest/MiFlix-TV-Native.apk` no cambian.
 Trakt necesita una aplicación API registrada y una Edge Function publicada.
 La integración está en el ZIP, pero no puede activarse sin tus credenciales.
 
-1. Crea tu aplicación en https://trakt.tv/oauth/applications/new (MiFlix).
-   Configura el redirect URI `urn:ietf:wg:oauth:2.0:oob` para el flujo de dispositivo.
-2. Copia Client ID y Client Secret a Supabase > Edge Functions > Secrets,
-   como `TRAKT_CLIENT_ID` y `TRAKT_CLIENT_SECRET`.
+1. Crea tu aplicación en https://developer.trakt.tv/apps (MiFlix).
+   Redirect URI exacto: `https://iwvhigqxsvvgyzdygiqa.supabase.co/functions/v1/miflix-trakt`.
+   Allowed origins puede quedar vacío. Las aplicaciones nuevas usan PKCE sin Client Secret.
+2. Guarda solo `TRAKT_CLIENT_ID` en Supabase > Edge Functions > Secrets.
 3. Publica `supabase/functions/miflix-trakt/index.ts` como función `miflix-trakt`.
-   El archivo `supabase/config.toml` ya configura `verify_jwt = false`: la función
-   verifica explícitamente el Bearer token con Supabase Auth en cada solicitud.
-   Si lo haces desde el Dashboard, aplica la misma configuración de la función.
-4. En la TV: Settings > Trakt > Connect Trakt. Escanea el QR, introduce el
-   código mostrado y autoriza en Trakt. No necesitas introducir Client Secret
-   en la TV ni incluirlo en GitHub.
+   En Settings desactiva **Verify JWT with legacy secret** y guarda.
+   Los POST validan la sesión MiFlix con Supabase Auth; el retorno GET de Trakt
+   valida un estado aleatorio con expiración y canjea el código con PKCE S256.
+4. En la TV: Settings > Trakt > Connect Trakt. Escanea el QR y autoriza.
+   No hay código que escribir manualmente ni Client Secret. La TV confirma automáticamente.
 
 Alternativa con Supabase CLI, desde la raíz del proyecto:
 
@@ -79,7 +78,7 @@ supabase secrets set --env-file supabase/.env.trakt
 
 Ese archivo privado está excluido por `.gitignore`.
 
-Trakt ofrece en esta versión: conexión por código/QR, importación de películas
+Trakt ofrece en esta versión: conexión PKCE por QR, importación de películas
  y series de Watchlist a My List (hasta 2,000 entradas), consulta de 30 entradas
 recientes del historial, desconexión y registro automático como visto al
 superar el 80% de una película o episodio. Los canales en vivo se excluyen.
@@ -90,7 +89,7 @@ Trakt se conecta por cuenta MiFlix, compartida por sus perfiles.
 
 ## Verificación realizada
 
-- 23 fuentes Kotlin analizadas sin errores de sintaxis. Esto no sustituye la
+- 24 fuentes Kotlin analizadas sin errores de sintaxis. Esto no sustituye la
   compilación Android: no hay Gradle/Android SDK en este entorno.
 - Migración ejecutada en PostgreSQL WASM desde el esquema Beta, con backfill
   y reejecución. Pruebas de membresía, propiedad de eventos, aislamiento de
@@ -114,6 +113,6 @@ Watchlist y verifica un título visto en el historial tras alcanzar el 80%.
 
 ## Referencias
 
-- Trakt Device Flow: https://developer.trakt.tv/docs/authentication-oauth
+- Trakt OAuth: https://developer.trakt.tv/docs/authentication-oauth
 - Supabase secretos: https://supabase.com/docs/guides/functions/secrets
 - Supabase deploy: https://supabase.com/docs/guides/functions/deploy

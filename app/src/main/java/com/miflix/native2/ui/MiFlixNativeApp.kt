@@ -16,12 +16,22 @@ import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
 
 @Composable
-fun MiFlixNativeApp() {
+fun MiFlixNativeApp(initialPartyCode: String? = null) {
     val context = LocalContext.current.applicationContext
     val state = remember { AppState(context) }
 
     MaterialTheme {
-        LaunchedEffect(Unit) { delay(420); state.bootstrap() }
+        var bootstrapped by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) {
+            delay(420)
+            state.bootstrap()
+            bootstrapped = true
+        }
+        LaunchedEffect(bootstrapped, initialPartyCode) {
+            if (bootstrapped && !initialPartyCode.isNullOrBlank()) {
+                state.launch { state.joinWatchParty(initialPartyCode) }
+            }
+        }
         when (state.screen) {
             Screen.SPLASH -> SplashScreen()
             Screen.HOME -> HomeScreen(state) { state.screen = it }

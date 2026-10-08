@@ -49,9 +49,14 @@ class SubtitleRepository(
             if (extra != "*") add("$baseUrl/subtitles/$stremioType/$videoId/*.json")
         }
 
-        return urls.asSequence().mapNotNull { url ->
-            runCatching { parse(Http.text(url, timeoutMs = 12000), sourceName) }.getOrNull()?.takeIf { it.isNotEmpty() }
-        }.firstOrNull().orEmpty()
+        // A Sequence callback cannot call suspend HTTP functions. Try URLs in order.
+        for (url in urls) {
+            val rows = runCatching {
+                parse(Http.text(url, timeoutMs = 12000), sourceName)
+            }.getOrNull()
+            if (!rows.isNullOrEmpty()) return rows
+        }
+        return emptyList()
     }
 
     private fun parse(text: String, sourceName: String): List<SubtitleChoice> {

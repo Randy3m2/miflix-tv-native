@@ -62,6 +62,14 @@ class SupabaseRepository(private val url: String, private val key: String) {
         return profiles to setup
     }
 
+    suspend fun deleteProfile(session: CloudSession,profileId: String): List<Profile> {
+        val body=JSONObject().put("target_profile",profileId).toString()
+        val rows=JSONArray(Http.text("$url/rest/v1/rpc/miflix_delete_profile","POST",headers(session),body))
+        return (0 until rows.length()).map { i -> rows.getJSONObject(i).let { p ->
+            Profile(p.getString("id"),p.getString("name"),p.optString("avatarValue").takeUnless { it.isBlank() || it=="null" },p.optBoolean("primary"))
+        } }
+    }
+
     suspend fun upsertProfiles(session: CloudSession, profiles: List<Profile>) {
         val existing = readRow(session, "__account__")?.optJSONObject("state") ?: JSONObject()
         val arr = JSONArray()

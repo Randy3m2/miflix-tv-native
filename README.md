@@ -1,3 +1,7 @@
+## Última versión: BruniO 2.0.0-rc8
+
+Consulta `RC8_SETUP.md`. Esta versión requiere ejecutar `supabase_rc6_upgrade.sql` después de RC5 para eliminar perfiles de la cuenta.
+
 # MiFlix TV Native 2.0 RC1
 
 Native Android TV client built with Jetpack Compose for TV + AndroidX Media3/ExoPlayer.

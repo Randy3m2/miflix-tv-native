@@ -3,6 +3,7 @@ package com.miflix.native2.ui
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -108,6 +109,7 @@ fun FocusButton(
     primary: Boolean = false,
     onFocused: ((Boolean) -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
+    horizontalPadding: androidx.compose.ui.unit.Dp = 24.dp,
     onClick: () -> Unit
 ) {
     var focused by remember { mutableStateOf(false) }
@@ -116,7 +118,7 @@ fun FocusButton(
         animationSpec = FastMotion,
         label = "buttonScale"
     )
-    val white = focused || primary
+    val white = focused
     Box(
         modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
@@ -128,15 +130,15 @@ fun FocusButton(
             .then(if (onLongClick != null) Modifier.tvPlaybackClick(onClick, onLongClick) else Modifier.tvClick(onClick))
             .clickable(onClick = onClick)
             .background(if (white) SoftWhite else Color(0xE6222222), RoundedCornerShape(24.dp))
-            .border(if (focused && !primary) 1.5.dp else 0.dp, Color.White, RoundedCornerShape(24.dp))
-            .padding(horizontal = 24.dp, vertical = 12.dp),
+            .border(if (focused) 1.5.dp else if(primary) 1.dp else 0.dp, if(focused) Color.White else Color(0xFF686868), RoundedCornerShape(24.dp))
+            .padding(horizontal = horizontalPadding, vertical = 12.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text,
             color = if (white) Color.Black else Color.White,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold
+            fontSize = 15.sp, lineHeight=18.sp,
+            fontWeight = FontWeight.Bold, maxLines=1, overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis
         )
     }
 }
@@ -148,7 +150,7 @@ fun BackIconButton(onClick: () -> Unit) {
         .clickable(onClick=onClick).background(if(focused) SoftWhite else Color(0x990C111B),RoundedCornerShape(22.dp))
         .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else Color(0x557D8AA3),RoundedCornerShape(22.dp)),
         contentAlignment=Alignment.Center) {
-        Text("‹",color=if(focused) Color.Black else Color.White,fontSize=32.sp)
+        Text("‹",color=if(focused) Color.Black else Color.White,fontSize=32.sp, lineHeight=38.sp)
     }
 }
 
@@ -206,8 +208,8 @@ fun MediaCard(
                     )
                 )
                 Column(Modifier.align(Alignment.BottomStart).padding(12.dp)) {
-                    Text(item.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                    Text("${item.year}  ★ ${"%.1f".format(item.rating)}", color = Color(0xFFD5D5D5), fontSize = 11.sp)
+                    Text(item.title, color = Color.White, fontSize = 14.sp, lineHeight=17.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                    Text("${item.year}  ★ ${"%.1f".format(item.rating)}", color = Color(0xFFD5D5D5), fontSize = 11.sp, lineHeight=13.sp)
                 }
             }
             progressPercent?.takeIf { it > 0.0 && it < 100.0 }?.let { p ->
@@ -263,7 +265,7 @@ fun CollectionCard(
                 if (focused) Box(Modifier.fillMaxSize().background(Color(0x0DFFFFFF)))
             }
         }
-        Text(tile.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 8.dp, top = 2.dp))
+        Text(tile.title, color = Color.White, fontSize = 14.sp, lineHeight=17.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 8.dp, top = 2.dp))
     }
 }
 
@@ -282,7 +284,7 @@ fun NativeTextField(
         .clickable { editing=true }.background(if(focused) Color(0xFF263047) else Panel,RoundedCornerShape(12.dp))
         .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else Color(0xFF343C50),RoundedCornerShape(12.dp)).padding(15.dp)) {
         Text(if(value.isBlank()) hint else if(password) "•".repeat(value.length.coerceAtMost(24)) else value,
-            color=if(value.isBlank()) Muted else Color.White,fontSize=16.sp,maxLines=1)
+            color=if(value.isBlank()) Muted else Color.White,fontSize=16.sp, lineHeight=19.sp,maxLines=1)
     }
     if(editing) {
         val editorFocus=remember { FocusRequester() }
@@ -290,91 +292,83 @@ fun NativeTextField(
         fun close() { keyboard?.hide(); editing=false }
         Dialog(onDismissRequest={ close() },properties=DialogProperties(usePlatformDefaultWidth=false)) {
             Column(Modifier.width(560.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
-                Text(hint,color=Color.White,fontSize=22.sp)
+                Text(hint,color=Color.White,fontSize=22.sp, lineHeight=26.sp)
                 BasicTextField(value=value,onValueChange=onValueChange,singleLine=true,
-                    textStyle=TextStyle(color=Color.White,fontSize=19.sp),cursorBrush=SolidColor(Color.White),
+                    textStyle=TextStyle(color=Color.White,fontSize=19.sp, lineHeight=23.sp),cursorBrush=SolidColor(Color.White),
                     visualTransformation=if(password) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
                     modifier=Modifier.fillMaxWidth().focusRequester(editorFocus).background(Color(0xFF202A3B),RoundedCornerShape(12.dp)).padding(16.dp))
-                FocusButton("Listo",primary=true) { close() }
+                FocusButton(tr("Listo","Done"),primary=true) { close() }
             }
             LaunchedEffect(Unit) { delay(150); editorFocus.requestFocus(); keyboard?.show() }
         }
     }
 }
 
+/** Compact top navigation. White fill belongs only to the control with remote focus. */
 @Composable
 fun Sidebar(screen: Screen, profileName: String, onNavigate: (Screen) -> Unit) {
-    Sidebar(screen, profileName, onNavigate, 0)
+    Sidebar(screen,profileName,onNavigate,0)
 }
 
 @Composable
-fun Sidebar(screen: Screen, profileName: String, onNavigate: (Screen) -> Unit, notificationCount: Int) {
-    val navItems = listOf(
-        Triple(Screen.HOME, "⌂", "Home"),
-        Triple(Screen.SEARCH, "⌕", "Search"),
-        Triple(Screen.COLLECTIONS, "◇", "Collections"),
-        Triple(Screen.WATCH_PARTY, "◉", "Party"),
-        Triple(Screen.FRIENDS, "♧", "Friends"),
-        Triple(Screen.LIVE_TV, "●", "Live TV"),
-        Triple(Screen.GENRES, "▦", "Genres"),
-        Triple(Screen.MY_LIST, "♡", "My List"),
-        Triple(Screen.NOTIFICATIONS, "🔔", if(notificationCount > 0) "Alerts ${notificationCount}+" else "Alerts"),
-        Triple(Screen.SETTINGS, "⚙", "Settings")
+fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,notificationCount: Int,
+            profile: com.miflix.native2.model.Profile? = null) {
+    val current=when(screen) {
+        Screen.WATCH_PARTY -> Screen.FRIENDS
+        Screen.GENRES,Screen.GENRE_DETAIL,Screen.YEAR_DETAIL,Screen.PLATFORM_DETAIL,Screen.COLLECTION_DETAIL -> Screen.COLLECTIONS
+        else -> screen
+    }
+    val navItems=listOf(
+        Screen.HOME to tr("Inicio","Home"),
+        Screen.SEARCH to tr("Buscar","Search"),
+        Screen.COLLECTIONS to tr("Colecciones","Collections"),
+        Screen.FRIENDS to tr("Amigos y salas","Friends & Party"),
+        Screen.LIVE_TV to tr("TV en vivo","Live TV"),
+        Screen.MY_LIST to tr("Mi lista","My List"),
+        Screen.SETTINGS to tr("Ajustes","Settings")
     )
-
-    Column(
-        Modifier
-            .width(154.dp)
-            .fillMaxHeight()
-            .background(Color(0xFF090909))
-            .padding(horizontal = 12.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)) {
-                Box(Modifier.size(34.dp).background(Color.White, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
-                    Image(painterResource(R.drawable.brunio_icon), "BruniO", Modifier.fillMaxSize())
-                }
-                Spacer(Modifier.width(9.dp))
-                Text("BruniO", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
-            }
-        LazyColumn(Modifier.weight(1f).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(3.dp)) {
-            items(navItems,key={it.first}) { (destination, icon, label) ->
-                var focused by remember(destination) { mutableStateOf(false) }
-                val active = destination == screen
-                Row(
-                    Modifier
-                        .fillMaxWidth().height(36.dp)
-                        .onFocusChanged { focused = it.isFocused }
-                        .focusable()
-                        .tvClick { onNavigate(destination) }
-                        .clickable { onNavigate(destination) }
-                        .background(if (focused || active) Color(0xFFF2F2F2) else Color.Transparent, RoundedCornerShape(12.dp))
-                        .padding(horizontal = 11.dp, vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(icon, color = if (focused || active) Color.Black else Color.White, fontSize = 19.sp, modifier = Modifier.width(28.dp))
-                    Text(label, color = if (focused || active) Color.Black else Color(0xFFE6E6E6), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                }
-            }
-        }
-
+    Row(Modifier.fillMaxWidth().height(76.dp).background(Color(0xFF0D0D0F)).padding(horizontal=24.dp),
+        verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)) {
         var profileFocused by remember { mutableStateOf(false) }
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .onFocusChanged { profileFocused = it.isFocused }
-                .focusable()
-                .tvClick { onNavigate(Screen.PROFILES) }
-                .clickable { onNavigate(Screen.PROFILES) }
-                .background(if (profileFocused) Color.White else Color.Transparent, RoundedCornerShape(12.dp))
-                .padding(10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(Modifier.size(32.dp).background(if (profileFocused) Color.Black else Color(0xFF292929), RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
-                Text(profileName.take(1).uppercase(), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            }
-            Spacer(Modifier.width(9.dp))
-            Text(profileName, color = if (profileFocused) Color.Black else Color.White, fontSize = 12.sp, maxLines = 1)
+        Row(Modifier.onFocusChanged { profileFocused=it.isFocused }.focusable()
+            .tvClick { onNavigate(Screen.PROFILES) }.clickable { onNavigate(Screen.PROFILES) }
+            .background(if(profileFocused) Color.White else Color(0xFF242426),RoundedCornerShape(14.dp)).padding(7.dp),
+            verticalAlignment=Alignment.CenterVertically) {
+            if(profile!=null) ProfileAvatar(profile,Modifier.size(34.dp))
+            else Box(Modifier.size(34.dp),contentAlignment=Alignment.Center) { Text(profileName.take(1),color=if(profileFocused) Color.Black else Color.White) }
+            Text("⌄",color=if(profileFocused) Color.Black else Color.White,modifier=Modifier.padding(start=6.dp),fontSize=16.sp)
         }
+        androidx.compose.foundation.lazy.LazyRow(Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(14.dp),
+            contentPadding=PaddingValues(horizontal=4.dp,vertical=6.dp)) {
+            items(navItems,key={it.first}) { (destination,label) ->
+                FocusButton(label,primary=current==destination,horizontalPadding=14.dp) { onNavigate(destination) }
+            }
+        }
+        NotificationButton(notificationCount) { onNavigate(Screen.NOTIFICATIONS) }
+    }
+}
+
+@Composable
+private fun NotificationButton(count: Int,onClick: () -> Unit) {
+    var focused by remember { mutableStateOf(false) }
+    Box(Modifier.size(46.dp).onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
+        .background(if(focused) Color.White else Color(0xFF242426),RoundedCornerShape(16.dp)),contentAlignment=Alignment.Center) {
+        BellIcon(if(focused) Color.Black else Color.White,Modifier.size(25.dp))
+        if(count>0) Text(if(count>9) "9+" else count.toString(),color=if(focused) Color.White else Color.Black,fontSize=10.sp,lineHeight=12.sp,
+            modifier=Modifier.align(Alignment.TopEnd).background(if(focused) Color(0xFF292929) else Color(0xFFCCCCCC),RoundedCornerShape(8.dp)).padding(horizontal=4.dp,vertical=2.dp))
+    }
+}
+
+@Composable
+private fun BellIcon(color: Color,modifier: Modifier) {
+    Canvas(modifier) {
+        val w=size.width; val h=size.height
+        val bell=androidx.compose.ui.graphics.Path().apply {
+            moveTo(w*.23f,h*.73f); lineTo(w*.3f,h*.6f); lineTo(w*.3f,h*.4f)
+            cubicTo(w*.3f,h*.08f,w*.7f,h*.08f,w*.7f,h*.4f)
+            lineTo(w*.7f,h*.6f); lineTo(w*.77f,h*.73f); close()
+        }
+        drawPath(bell,color,style=androidx.compose.ui.graphics.drawscope.Stroke(width=1.5.dp.toPx()))
+        drawCircle(color,1.7.dp.toPx(),androidx.compose.ui.geometry.Offset(w*.5f,h*.88f))
     }
 }

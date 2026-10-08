@@ -30,8 +30,44 @@ import java.util.Locale
 import java.util.UUID
 
 class AppState(context: Context) {
+    private val appContext=context.applicationContext
+    var clearingCache by mutableStateOf(false)
+    var cacheCleared by mutableStateOf(false)
+    suspend fun clearCache() {
+        if(clearingCache) return
+        clearingCache=true; cacheCleared=false
+        try {
+            kotlinx.coroutines.withContext(Dispatchers.IO) {
+                val loader=coil3.SingletonImageLoader.get(appContext)
+                loader.memoryCache?.clear()
+                loader.diskCache?.clear()
+            }
+            cacheCleared=true
+        } finally { clearingCache=false }
+    }
+
     private val socialPrefs = context.getSharedPreferences("miflix_social", Context.MODE_PRIVATE)
     private val playbackPrefs = context.getSharedPreferences("miflix_playback", Context.MODE_PRIVATE)
+    var hiddenAvatars by mutableStateOf(playbackPrefs.getStringSet("hidden_avatars",emptySet()).orEmpty().toSet())
+    fun hideAvatar(key: String) {
+        hiddenAvatars=hiddenAvatars+key
+        playbackPrefs.edit().putStringSet("hidden_avatars",hiddenAvatars).apply()
+    }
+    fun restoreAvatars() {
+        hiddenAvatars=emptySet()
+        playbackPrefs.edit().remove("hidden_avatars").apply()
+    }
+    var interfaceLanguage by mutableStateOf(playbackPrefs.getString("interface", "en") ?: "en")
+    init { UiLanguage.code=interfaceLanguage }
+    suspend fun setInterfaceLanguage(code: String) {
+        require(code in listOf("en","es"))
+        interfaceLanguage=code; UiLanguage.code=code
+        playbackPrefs.edit().putString("interface",code).apply()
+        tmdb.language=if(code=="es") "es-ES" else "en-US"
+        extrasLoaded=false
+        comingMovies.clear(); comingSeries.clear(); forYou.clear()
+        if(tmdb.token.isNotBlank()) loadHome()
+    }
     var audioLanguage by mutableStateOf(playbackPrefs.getString("audio", "es") ?: "es")
     var subtitleLanguage by mutableStateOf(playbackPrefs.getString("subtitle", "es") ?: "es")
     var autoplayNext by mutableStateOf(playbackPrefs.getBoolean("autoplay", true))
@@ -82,7 +118,7 @@ class AppState(context: Context) {
         introRepo.segments(imdb,req.season,req.episode,req.item.type == "movie")
     }.getOrDefault(PlaybackSegments())
     suspend fun playerSources(req: PlayerRequest, position: Long) {
-        if(req.live) { error = "Live channels use their configured stream"; return }
+        if(req.live) { error = tr("Los canales en vivo usan su enlace configurado","Live channels use their configured stream"); return }
         val imdb = tmdb.details(req.item).imdbId ?: return
         chooseSources(req.item,imdb,req.season,req.episode)
         sourceSelection = sourceSelection?.copy(resumeMs = position)
@@ -203,12 +239,12 @@ class AppState(context: Context) {
         pendingPartyCode?.let { code ->
             val decision=try { social.requestAccess(s,code) } catch(e: Exception) {
                 if(e is CancellationException) throw e
-                if(e.message.orEmpty().contains("closed or expired")) { pendingPartyCode=null; partyStatus="La sala cerró o expiró" }
+                if(e.message.orEmpty().contains("closed or expired")) { pendingPartyCode=null; partyStatus=tr("La sala cerró o expiró","Room closed or expired") }
                 return
             }
             when(decision) {
                 "approved" -> { pendingPartyCode=null; joinWatchParty(code) }
-                "rejected" -> { pendingPartyCode=null; partyStatus="El host rechazó la solicitud" }
+                "rejected" -> { pendingPartyCode=null; partyStatus=tr("El host rechazó la solicitud","The host rejected your request") }
             }
         }
     }
@@ -221,7 +257,7 @@ class AppState(context: Context) {
     val partyMessages = mutableStateListOf<PartyEvent>()
     val floatingEvents = mutableStateListOf<PartyEvent>()
     val partyPhrases = mutableStateListOf<String>().apply {
-        addAll(socialPrefs.getString("phrases", "¡Qué buena escena!|Un momento, por favor|¡No spoilers!").orEmpty().split("|").filter { it.isNotBlank() })
+        addAll(socialPrefs.getString("phrases", tr("¡Qué buena escena!|Un momento, por favor|¡No spoilers!","What a great scene!|One moment, please|No spoilers!")).orEmpty().split("|").filter { it.isNotBlank() })
     }
     private var lastEventId = -1L
     private val traktSent = mutableSetOf<String>()
@@ -235,7 +271,7 @@ class AppState(context: Context) {
     private val subtitleRepo = SubtitleRepository()
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-    val tmdb = TmdbRepository(BuildConfig.MIFLIX_TMDB_TOKEN)
+    val tmdb = TmdbRepository(BuildConfig.MIFLIX_TMDB_TOKEN).also { it.language=if(interfaceLanguage=="es") "es-ES" else "en-US" }
     val streamRepo = StreamRepository(BuildConfig.MIFLIX_TORRENTIO_MANIFEST)
 
     var screen by mutableStateOf(Screen.SPLASH)
@@ -293,23 +329,23 @@ class AppState(context: Context) {
     var partyRole by mutableStateOf<PartyRole?>(null)
     var partyStatus by mutableStateOf("")
 
-    val genres = listOf(
-        GenreDefinition("action", "Action", 28, 10759, "https://raw.githubusercontent.com/rrevanth/nuvio-assets/main/genres/action/action-landscape.png"),
-        GenreDefinition("adventure", "Adventure", 12, 10759),
-        GenreDefinition("animation", "Animation", 16, 16),
-        GenreDefinition("comedy", "Comedy", 35, 35),
-        GenreDefinition("crime", "Crime", 80, 80),
-        GenreDefinition("documentary", "Documentary", 99, 99),
-        GenreDefinition("drama", "Drama", 18, 18),
-        GenreDefinition("family", "Family", 10751, 10751),
-        GenreDefinition("fantasy", "Fantasy", 14, 10765),
-        GenreDefinition("history", "History", 36, 36),
-        GenreDefinition("horror", "Horror", 27, 9648),
-        GenreDefinition("mystery", "Mystery", 9648, 9648),
-        GenreDefinition("romance", "Romance", 10749, 10749),
-        GenreDefinition("scifi", "Science Fiction", 878, 10765, "https://raw.githubusercontent.com/rrevanth/nuvio-assets/main/genres/sci-fi/sci-fi-landscape.png"),
-        GenreDefinition("thriller", "Thriller", 53, 10768),
-        GenreDefinition("war", "War", 10752, 10768)
+    val genres get() = listOf(
+        GenreDefinition("action", tr("Acción","Action"), 28, 10759, "https://raw.githubusercontent.com/rrevanth/nuvio-assets/main/genres/action/action-landscape.png"),
+        GenreDefinition("adventure", tr("Aventura","Adventure"), 12, 10759),
+        GenreDefinition("animation", tr("Animación","Animation"), 16, 16),
+        GenreDefinition("comedy", tr("Comedia","Comedy"), 35, 35),
+        GenreDefinition("crime", tr("Crimen","Crime"), 80, 80),
+        GenreDefinition("documentary", tr("Documental","Documentary"), 99, 99),
+        GenreDefinition("drama", tr("Drama","Drama"), 18, 18),
+        GenreDefinition("family", tr("Familia","Family"), 10751, 10751),
+        GenreDefinition("fantasy", tr("Fantasía","Fantasy"), 14, 10765),
+        GenreDefinition("history", tr("Historia","History"), 36, 36),
+        GenreDefinition("horror", tr("Terror","Horror"), 27, 9648),
+        GenreDefinition("mystery", tr("Misterio","Mystery"), 9648, 9648),
+        GenreDefinition("romance", tr("Romance","Romance"), 10749, 10749),
+        GenreDefinition("scifi", tr("Ciencia ficción","Science Fiction"), 878, 10765, "https://raw.githubusercontent.com/rrevanth/nuvio-assets/main/genres/sci-fi/sci-fi-landscape.png"),
+        GenreDefinition("thriller", tr("Suspenso","Thriller"), 53, 10768),
+        GenreDefinition("war", tr("Guerra","War"), 10752, 10768)
     )
 
     private val providers = mapOf(
@@ -355,7 +391,7 @@ class AppState(context: Context) {
     }
 
     suspend fun login(email: String, password: String) {
-        busyMessage = "Signing in…"
+        busyMessage = tr("Iniciando sesión…","Signing in…")
         error = null
         runCatching { cloud.login(email, password) }.onSuccess {
             session = it
@@ -417,21 +453,34 @@ class AppState(context: Context) {
         val clean = name.trim().take(24)
         if (clean.isBlank()) return
         val p = Profile(UUID.randomUUID().toString(), clean, avatarValue=avatar, primary = false)
-        profiles.add(p)
+        val next=profiles.toList()+p
         session?.let {
-            cloud.upsertProfiles(it, profiles.toList())
+            cloud.upsertProfiles(it, next)
             cloud.upsertProfile(it, p.id, emptySet(), emptyMap())
         }
+        profiles.add(p)
         if(session==null) local.saveOfflineProfiles(profiles.toList())
     }
     suspend fun setProfileAvatar(profile: Profile, avatar: String) {
-        require(ProfileAvatars.any { it.key==avatar }) { "Elige un avatar disponible" }
+        require(avatar=="none" || ProfileAvatars.any { it.key==avatar }) { tr("Elige un avatar disponible","Choose an available avatar") }
         val changed=profile.copy(avatarValue=avatar)
         val next=profiles.map { if(it.id==profile.id) changed else it }
         session?.let { cloud.upsertProfiles(it,next) }
         profiles.clear(); profiles.addAll(next)
         if(activeProfile.id==profile.id) activeProfile=changed
         if(session==null) local.saveOfflineProfiles(next)
+    }
+
+    suspend fun deleteProfile(profile: Profile) {
+        require(profiles.size>1) { tr("Conserva al menos un perfil","Keep at least one profile") }
+        val owner=session
+        var next=profiles.filterNot { it.id==profile.id }
+        if(next.none { it.primary }) next=next.mapIndexed { i,p -> if(i==0) p.copy(primary=true) else p }
+        owner?.let { next=cloud.deleteProfile(it,profile.id) }
+        playbackPrefs.edit().remove("ratings_${owner?.userId ?: "local"}_${profile.id}").remove("notices_${owner?.userId ?: "local"}_${profile.id}").remove("known_${owner?.userId ?: "local"}_${profile.id}").apply()
+        profiles.clear(); profiles.addAll(next)
+        if(owner==null) local.saveOfflineProfiles(next)
+        if(activeProfile.id==profile.id) { notifications.clear(); selectProfile(next.firstOrNull { it.primary } ?: next.first()) }
     }
 
     suspend fun pushCloud() {
@@ -518,7 +567,7 @@ class AppState(context: Context) {
 
     suspend fun openPlatform(id: String, title: String) = supervisorScope {
         val providerIds = providers[id] ?: return@supervisorScope
-        busyMessage = "Loading $title…"
+        busyMessage = "${tr("Cargando","Loading")} $title…"
         platformId = id
         platformTitle = title
         platformSections.clear()
@@ -527,9 +576,9 @@ class AppState(context: Context) {
             val top = async { tmdb.providerTop10(providerIds) }
             val moviesJob = async { tmdb.discoverProviderType(providerIds, "movie", pages = 2, limit = 40) }
             val seriesJob = async { tmdb.discoverProviderType(providerIds, "series", pages = 2, limit = 40) }
-            platformSections += CatalogSection("top10", "Top 10 on $title", top.await(), landscape = true)
-            platformSections += CatalogSection("movies", "Movies", moviesJob.await())
-            platformSections += CatalogSection("series", "Series", seriesJob.await())
+            platformSections += CatalogSection("top10", "Top 10 ${tr("en","on")} $title", top.await(), landscape = true)
+            platformSections += CatalogSection("movies", tr("Películas","Movies"), moviesJob.await())
+            platformSections += CatalogSection("series", tr("Series","Series"), seriesJob.await())
             screen = Screen.PLATFORM_DETAIL
             busyMessage = null
 
@@ -543,8 +592,8 @@ class AppState(context: Context) {
                             val bestMovies = async { tmdb.discoverProviderType(providerIds, "movie", sortBy = "vote_average.desc", genreId = g.movieGenreId, limit = 20) }
                             val bestTv = async { tmdb.discoverProviderType(providerIds, "series", sortBy = "vote_average.desc", genreId = g.tvGenreId, limit = 20) }
                             listOf(
-                                CatalogSection("${g.id}-latest", "${g.title} · Latest", (latestMovies.await() + latestTv.await()).distinctBy { it.cloudId }.sortedByDescending { it.year }.take(20)),
-                                CatalogSection("${g.id}-rated", "${g.title} · Best Rated", (bestMovies.await() + bestTv.await()).distinctBy { it.cloudId }.sortedByDescending { it.rating }.take(20))
+                                CatalogSection("${g.id}-latest", "${g.title} · ${tr("Estrenos","Latest")}", (latestMovies.await() + latestTv.await()).distinctBy { it.cloudId }.sortedByDescending { it.year }.take(20)),
+                                CatalogSection("${g.id}-rated", "${g.title} · ${tr("Mejor valorados","Best Rated")}", (bestMovies.await() + bestTv.await()).distinctBy { it.cloudId }.sortedByDescending { it.rating }.take(20))
                             )
                         }
                     }.onSuccess { sections ->
@@ -559,7 +608,7 @@ class AppState(context: Context) {
     }
 
     suspend fun openGenre(g: GenreDefinition) {
-        busyMessage = "Loading ${g.title}…"
+        busyMessage = "${tr("Cargando","Loading")} ${g.title}…"
         error = null
         runCatching { tmdb.discoverGenreMixed(g.movieGenreId, g.tvGenreId, 50) }
             .onSuccess {
@@ -572,11 +621,11 @@ class AppState(context: Context) {
     }
 
     suspend fun openYear(year: Int) {
-        busyMessage = "Loading $year movies…"
+        busyMessage = "${tr("Cargando películas de","Loading movies from")} $year…"
         error = null
         runCatching { tmdb.moviesByYear(year, 50) }
             .onSuccess {
-                yearTitle = "Movies · $year"
+                yearTitle = "${tr("Películas","Movies")} · $year"
                 yearItems.replaceWith(it)
                 screen = Screen.YEAR_DETAIL
             }
@@ -625,14 +674,14 @@ class AppState(context: Context) {
     suspend fun playMovie() {
         val item = selected ?: return
         val d = details ?: tmdb.details(item).also { details = it }
-        val imdb = d.imdbId ?: throw IllegalStateException("IMDb ID unavailable")
+        val imdb = d.imdbId ?: throw IllegalStateException(tr("IMDb ID no disponible","IMDb ID unavailable"))
         playResolved(item, imdb, 0, 0)
     }
 
     suspend fun playEpisode(ep: EpisodeSummary) {
         val item = selected ?: return
         val d = details ?: tmdb.details(item).also { details = it }
-        val imdb = d.imdbId ?: throw IllegalStateException("IMDb ID unavailable")
+        val imdb = d.imdbId ?: throw IllegalStateException(tr("IMDb ID no disponible","IMDb ID unavailable"))
         playResolved(item, imdb, ep.season, ep.episode)
     }
 
@@ -645,7 +694,7 @@ class AppState(context: Context) {
     suspend fun resumeSeries() {
         val item = selected ?: return
         val d = details ?: tmdb.details(item).also { details = it }
-        val imdb = d.imdbId ?: throw IllegalStateException("IMDb ID unavailable")
+        val imdb = d.imdbId ?: throw IllegalStateException(tr("IMDb ID no disponible","IMDb ID unavailable"))
         val p = progress[item.cloudId]
         val season = p?.season?.takeIf { it > 0 } ?: 1
         val episode = p?.episode?.takeIf { it > 0 } ?: 1
@@ -655,7 +704,7 @@ class AppState(context: Context) {
     suspend fun playSeriesFromStart() {
         val item = selected ?: return
         val d = details ?: tmdb.details(item).also { details = it }
-        val imdb = d.imdbId ?: throw IllegalStateException("IMDb ID unavailable")
+        val imdb = d.imdbId ?: throw IllegalStateException(tr("IMDb ID no disponible","IMDb ID unavailable"))
         playResolved(item, imdb, 1, 1)
     }
 
@@ -675,11 +724,11 @@ class AppState(context: Context) {
     }
 
     private suspend fun chooseSources(item: MediaSummary, imdb: String, season: Int, episode: Int) {
-        busyMessage = "Finding all playback links…"
+        busyMessage = tr("Buscando todos los enlaces…","Finding all playback links…")
         error = null
         try {
             val links = streamRepo.resolve(imdb, item.type, season, episode)
-            if (links.isEmpty()) error = "No playable sources found"
+            if (links.isEmpty()) error = tr("No se encontraron enlaces reproducibles","No playable sources found")
             else sourceSelection = SourceSelection(item, imdb, season, episode, links)
         } catch (e: Exception) {
             error = e.message
@@ -691,20 +740,20 @@ class AppState(context: Context) {
         if(partyRole==PartyRole.GUEST) {
             val remote=refreshParty() ?: return
             if(remote.cloudId!=selection.item.cloudId || remote.season!=selection.season || remote.episode!=selection.episode) {
-                error="El host cambió de contenido. Abre Playback links nuevamente."; switchToPartyState(remote); return
+                error=tr("El host cambió de contenido. Abre Playback links nuevamente.","The host changed content. Open Playback links again."); switchToPartyState(remote); return
             }
         }
         playResolved(selection.item, selection.imdb, selection.season, selection.episode, resumeOverride = selection.resumeMs, selectedStream = stream)
     }
 
     private suspend fun playResolved(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeOverride: Long? = null, selectedStream: StreamChoice? = null) = coroutineScope {
-        busyMessage = "Finding the best source…"
+        busyMessage = tr("Buscando el mejor enlace…","Finding the best source…")
         error = null
         val streamsJob = async { if (selectedStream != null) listOf(selectedStream) else streamRepo.resolve(imdb, item.type, season, episode) }
         val subsJob = async { runCatching { subtitleRepo.resolve(imdb, item.type, season, episode, null) }.getOrDefault(emptyList()) }
         runCatching {
             val streams = streamsJob.await()
-            val best = streams.firstOrNull() ?: throw IllegalStateException("No playable sources found")
+            val best = streams.firstOrNull() ?: throw IllegalStateException(tr("No se encontraron enlaces reproducibles","No playable sources found"))
             var externalSubs = subsJob.await()
             if (externalSubs.isEmpty()) {
                 externalSubs = runCatching { subtitleRepo.resolve(imdb, item.type, season, episode, best) }.getOrDefault(emptyList())
@@ -740,7 +789,7 @@ class AppState(context: Context) {
     }
 
     suspend fun createWatchParty(withCurrentTitle: Boolean = false): WatchParty? {
-        val s = session ?: run { error = "Sign in before creating a Watch Party"; return null }
+        val s = session ?: run { error = tr("Inicia sesión antes de crear una sala","Sign in before creating a Watch Party"); return null }
         watchParty?.let { return it }
         val item = if (withCurrentTitle) selected ?: playerRequest?.item else null
         val req = if (withCurrentTitle && playerRequest?.item?.cloudId == item?.cloudId) playerRequest else null
@@ -760,28 +809,28 @@ class AppState(context: Context) {
             liveType = req?.liveType ?: "tv",
             liveTitle = if (req?.live == true) req.item.title else ""
         )
-        return runCatching { cloud.createWatchParty(s, party); watchParty = party; partyRole = PartyRole.HOST; partyStatus = "Room ready · choose any title"; social.join(s, room); rememberRoom(room); lastEventId = -1; party }
+        return runCatching { cloud.createWatchParty(s, party); watchParty = party; partyRole = PartyRole.HOST; partyStatus = tr("Sala lista · elige un contenido","Room ready · choose any title"); social.join(s, room); rememberRoom(room); lastEventId = -1; party }
             .onFailure { error = it.message }.getOrNull()
     }
 
     suspend fun joinWatchParty(code: String) {
-        val s = session ?: run { error = "Sign in before joining a Watch Party"; return }
-        require(code.trim().matches(Regex("[0-9]{6}"))) { "Usa el código de 6 dígitos" }
-        if(watchParty!=null && watchParty?.roomCode!=code.trim()) { error="Sal del party actual antes de solicitar otra sesión"; return }
+        val s = session ?: run { error = tr("Inicia sesión antes de unirte a una sala","Sign in before joining a Watch Party"); return }
+        require(code.trim().matches(Regex("[0-9]{6}"))) { tr("Usa el código de 6 dígitos","Use the 6-digit code") }
+        if(watchParty!=null && watchParty?.roomCode!=code.trim()) { error=tr("Sal del party actual antes de solicitar otra sesión","Leave your current party before requesting another session"); return }
         val decision=social.requestAccess(s,code.trim())
         if(decision!="approved") {
             pendingPartyCode=if(decision=="pending") code.trim() else null
-            partyStatus=if(decision=="pending") "Solicitud enviada · esperando aprobación del host" else "El host rechazó la solicitud"
+            partyStatus=if(decision=="pending") tr("Solicitud enviada · esperando aprobación del host","Request sent · Waiting for host approval") else tr("El host rechazó la solicitud","The host rejected your request")
             return
         }
         pendingPartyCode=null
         social.join(s, code.trim())
-        val party = cloud.readWatchParty(s, code.trim()) ?: run { error = "Watch Party room not found"; return }
+        val party = cloud.readWatchParty(s, code.trim()) ?: run { error = tr("No se encontró la sala","Watch Party room not found"); return }
         watchParty = party
         partyRole = if (party.hostUserId == s.userId) PartyRole.HOST else PartyRole.GUEST
         rememberRoom(party.roomCode)
         lastEventId = -1
-        partyStatus = "Joined ${party.roomCode}"
+        partyStatus = "${tr("Te uniste a","Joined")} ${party.roomCode}"
         if (party.cloudId.isBlank()) { screen = Screen.WATCH_PARTY; return }
         switchToPartyState(party)
     }
@@ -869,7 +918,7 @@ class AppState(context: Context) {
         }
     }
     suspend fun saveNickname(value: String) = socialAction {
-        val s = session ?: error("Sign in first")
+        val s = session ?: error(tr("Inicia sesión primero","Sign in first"))
         val nick = value.trim().lowercase(Locale.US)
         social.saveNickname(s, nick); nickname = nick
     }
@@ -879,8 +928,8 @@ class AppState(context: Context) {
         socialPrefs.edit().putString("phrases", values.joinToString("|")).apply()
     }
     suspend fun sendPartyEvent(kind: String, text: String) = socialAction {
-        val s = session ?: error("Sign in first")
-        val room = watchParty?.roomCode ?: error("Join a room first")
+        val s = session ?: error(tr("Inicia sesión primero","Sign in first"))
+        val room = watchParty?.roomCode ?: error(tr("Únete primero a una sala","Join a room first"))
         social.send(s, room, kind, text)
     }
     suspend fun refreshFriends() = socialAction {
@@ -891,8 +940,8 @@ class AppState(context: Context) {
         social.people(s, ids).forEach { friendPeople[it.id] = it.nickname }
     }
     suspend fun addFriend(id: String) = socialAction {
-        val s = session ?: error("Sign in first")
-        require(id != s.userId) { "This is your account" }
+        val s = session ?: error(tr("Inicia sesión primero","Sign in first"))
+        require(id != s.userId) { tr("Esta es tu cuenta","This is your account") }
         val existing = social.friends(s).firstOrNull { it.sender == id || it.receiver == id }
         if (existing?.status == "accepted") return@socialAction
         if (existing?.receiver == s.userId) social.accept(s, id)
@@ -900,15 +949,15 @@ class AppState(context: Context) {
         refreshFriends()
     }
     suspend fun findAndAddFriend(nick: String) = socialAction {
-        val s = session ?: error("Sign in first")
-        val person = social.find(s, nick.trim()) ?: error("Nickname not found")
+        val s = session ?: error(tr("Inicia sesión primero","Sign in first"))
+        val person = social.find(s, nick.trim()) ?: error(tr("No se encontró el apodo","Nickname not found"))
         addFriend(person.id)
     }
     suspend fun pollSocialRoom() {
         val s = session ?: return
         val p = watchParty ?: return
         val fresh = cloud.readWatchParty(s, p.roomCode)
-        if (fresh == null) { watchParty = null; partyRole = null; partyStatus = "Room closed or expired"; return }
+        if (fresh == null) { watchParty = null; partyRole = null; partyStatus = tr("La sala cerró o expiró","Room closed or expired"); return }
         if (partyRole == PartyRole.GUEST) {
             watchParty = fresh
             if (fresh.cloudId.isNotBlank()) switchToPartyState(fresh)
@@ -935,29 +984,29 @@ class AppState(context: Context) {
     }
 
     suspend fun traktRefresh() = socialAction {
-        val s = session ?: error("Sign in first")
+        val s = session ?: error(tr("Inicia sesión primero","Sign in first"))
         val result = trakt.call(s,"status")
         traktConnected = result.optBoolean("connected")
-        traktStatus = if (traktConnected) "Connected" else if (result.optBoolean("configured")) "Not connected" else "Trakt server setup required"
+        traktStatus = if (traktConnected) tr("Conectado","Connected") else if (result.optBoolean("configured")) tr("Sin conectar","Not connected") else tr("Configura Trakt en el servidor","Trakt server setup required")
     }
     suspend fun traktStart() = socialAction {
-        val s = session ?: error("Sign in first")
+        val s = session ?: error(tr("Inicia sesión primero","Sign in first"))
         traktDevice = trakt.call(s,"start")
-        traktStatus = "Authorize the code on your phone"
+        traktStatus = tr("Autoriza el código desde tu celular","Authorize the code on your phone")
     }
     suspend fun traktPoll(): Boolean {
         val s = session ?: return true
         val result=trakt.call(s,"poll")
         if(result.optBoolean("slow_down")) traktDevice=traktDevice?.put("interval",(traktDevice?.optLong("interval",5)?:5)+5)
-        if (result.optBoolean("connected")) { traktConnected=true; traktDevice=null; traktStatus="Connected"; return true }
+        if (result.optBoolean("connected")) { traktConnected=true; traktDevice=null; traktStatus=tr("Conectado","Connected"); return true }
         return false
     }
     suspend fun traktDisconnect() = socialAction {
         val s=session ?: return@socialAction
-        trakt.call(s,"disconnect"); traktConnected=false; traktDevice=null; traktStatus="Disconnected"
+        trakt.call(s,"disconnect"); traktConnected=false; traktDevice=null; traktStatus=tr("Desconectado","Disconnected")
     }
     suspend fun traktImport() = socialAction {
-        val s=session ?: error("Sign in first")
+        val s=session ?: error(tr("Inicia sesión primero","Sign in first"))
         val rows=trakt.call(s,"watchlist").optJSONArray("items") ?: return@socialAction
         for(i in 0 until rows.length()) {
             val row=rows.getJSONObject(i)
@@ -967,7 +1016,7 @@ class AppState(context: Context) {
             val id=media.optJSONObject("ids")?.optInt("tmdb",0) ?: 0
             if(id>0) { val key="tmdb:${if(movie!=null) "movie" else "series"}:$id"; if(!favorites.contains(key))favorites.add(key) }
         }
-        pushCloud(); traktStatus="Watchlist imported to My List"
+        pushCloud(); traktStatus=tr("Lista de Trakt importada a Mi lista","Watchlist imported to My List")
     }
     suspend fun traktMarkWatched(req: PlayerRequest, position: Long, duration: Long) {
         if(!traktConnected || req.live || duration<=0 || position.toDouble()/duration<0.8)return
@@ -978,13 +1027,13 @@ class AppState(context: Context) {
         runCatching {
             trakt.call(s,"watched",org.json.JSONObject().put("tmdb",req.item.id).put("type",req.item.type)
                 .put("season",req.season).put("episode",req.episode).put("event",event))
-        }.onFailure { traktSent.remove(event); traktStatus="Could not sync watched title: ${it.message}" }
+        }.onFailure { traktSent.remove(event); traktStatus="${tr("No se pudo sincronizar el contenido visto","Could not sync watched title")}: ${it.message}" }
     }
 
     suspend fun startPairing() {
-        pairingStatus = "Creating secure pairing QR…"
+        pairingStatus = tr("Creando el QR seguro…","Creating secure pairing QR…")
         runCatching { pairingRepo.create() }
-            .onSuccess { pairingRequest = it; pairingStatus = "Scan with your phone" }
+            .onSuccess { pairingRequest = it; pairingStatus = tr("Escanea con tu celular","Scan with your phone") }
             .onFailure { error = it.message; pairingStatus = "" }
     }
 
@@ -999,12 +1048,12 @@ class AppState(context: Context) {
         }
         if (payload.addonManifest.isNotBlank()) runCatching { addAddonManifest(payload.addonManifest) }
         pairingStatus = buildString {
-            if (payload.accessToken.isNotBlank()) append("Account connected")
+            if (payload.accessToken.isNotBlank()) append(tr("Cuenta conectada","Account connected"))
             if (payload.addonManifest.isNotBlank()) {
                 if (isNotBlank()) append(" · ")
-                append("Add-on added")
+                append(tr("Complemento añadido","Add-on added"))
             }
-        }.ifBlank { "Pairing received" }
+        }.ifBlank { tr("Vinculación recibida","Pairing received") }
         pairingRepo.finish(req)
         pairingRequest = null
         return true
@@ -1015,7 +1064,7 @@ class AppState(context: Context) {
         error = null
         runCatching { updates.check(BuildConfig.VERSION_NAME) }
             .onSuccess { updateInfo = it }
-            .onFailure { error = "Update check failed: ${it.message}" }
+            .onFailure { error = "${tr("Falló la búsqueda de actualizaciones","Update check failed")}: ${it.message}" }
         updateChecking = false
     }
 

@@ -66,7 +66,7 @@ fun LiveScreen(state: AppState) {
         try {
             categories = repo.categories(manifest)
             category = categories.firstOrNull()
-            if (categories.isEmpty()) message = "This add-on has no live catalogs."
+            if (categories.isEmpty()) message = tr("Este complemento no tiene catálogos en vivo.","This add-on has no live catalogs.")
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             message = if (sports) "Sports service unavailable. Open Configure in your browser and paste its generated manifest. ${e.message}" else e.message.orEmpty()
@@ -89,7 +89,7 @@ fun LiveScreen(state: AppState) {
     }
     fun play(channel: LiveChannel, stream: StreamChoice) {
         sources = emptyList(); sourceChannel = null
-        val item = MediaSummary(channel.id.hashCode(), "live", channel.name, channel.description, null, channel.poster, 0.0, "LIVE")
+        val item = MediaSummary(channel.id.hashCode(), "live", channel.name, channel.description, null, channel.poster, 0.0, tr("EN VIVO","LIVE"))
         state.selected=item
         state.playerRequest = PlayerRequest(item, stream, 0, 0, 0L, live = true, liveChannelId = channel.id, liveProvider = if (sports) "sports" else "nauta", liveType=channel.type)
         state.screen = Screen.PLAYER
@@ -100,7 +100,7 @@ fun LiveScreen(state: AppState) {
             loading = true; message = ""
             try {
                 val links = repo.streams(manifest, channel)
-                if (links.isEmpty()) message = "No playable HTTP links returned for this channel."
+                if (links.isEmpty()) message = tr("Este canal no devolvió enlaces HTTP reproducibles.","No playable HTTP links returned for this channel.")
                 else if (manual || links.size > 1) { sourceChannel = channel; sources = links }
                 else play(channel, links.first())
             } catch (e: Exception) {
@@ -110,25 +110,25 @@ fun LiveScreen(state: AppState) {
         }
     }
     BackHandler { state.screen = Screen.HOME }
-    Row(Modifier.fillMaxSize().background(Bg)) {
-        Sidebar(Screen.LIVE_TV, state.activeProfile.name, { state.screen = it },state.notifications.size)
+    Column(Modifier.fillMaxSize().background(Bg)) {
+        Sidebar(Screen.LIVE_TV, state.activeProfile.name, { state.screen = it },state.notifications.size,state.activeProfile)
         Column(Modifier.weight(1f).fillMaxHeight().padding(24.dp)) {
-            Text("Live TV", color = Color.White, fontSize = 28.sp)
+            Text(tr("TV en vivo","Live TV"), color = Color.White, fontSize = 28.sp, lineHeight=34.sp)
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                FocusButton("TV Channels", primary = !sports) { sports = false }
-                FocusButton("Live Sports", primary = sports) { sports = true }
-                if (sports) FocusButton("Sports manifest") { editManifest = true }
+                FocusButton(tr("Canales de TV","TV Channels"), primary = !sports) { sports = false }
+                FocusButton(tr("Deportes en vivo","Live Sports"), primary = sports) { sports = true }
+                if (sports) FocusButton(tr("Manifiesto de deportes","Sports manifest")) { editManifest = true }
             }
             Spacer(Modifier.height(12.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 items(categories) { c -> FocusButton(c.name, primary = c == category) { category = c } }
             }
             Spacer(Modifier.height(14.dp))
-            NativeTextField(search, { search = it }, "Search channel name or number", modifier = Modifier.fillMaxWidth())
+            NativeTextField(search, { search = it }, tr("Buscar nombre o número de canal","Search channel name or number"), modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp))
-            if (loading) Text("Loading live content…", color = Color.White)
-            if (message.isNotBlank()) Text(message, color = Color.White, fontSize = 14.sp)
+            if (loading) Text(tr("Cargando canales…","Loading live content…"), color = Color.White)
+            if (message.isNotBlank()) Text(message, color = Color.White, fontSize = 14.sp, lineHeight=17.sp)
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 val visible = channels.filter { channel ->
                     search.isBlank() || liveSearchKey(channel.name).contains(liveSearchKey(search)) || channelNumber(channel).toString() == search.trim()
@@ -137,10 +137,10 @@ fun LiveScreen(state: AppState) {
                     LiveChannelRow(channel, channelNumber(channel), { openChannel(channel, false) }, { openChannel(channel, true) })
                 }
                 if (!loading && channels.isNotEmpty() && visible.isEmpty()) item {
-                    Text("No matching channels in this category.", color = Color.White)
+                    Text(tr("No hay canales coincidentes en esta categoría.","No matching channels in this category."), color = Color.White)
                 }
                 if (canLoadMore && !loading) item {
-                    FocusButton("Load more") {
+                    FocusButton(tr("Cargar más","Load more")) {
                         val c = category ?: return@FocusButton
                         scope.launch {
                             loading = true
@@ -164,22 +164,22 @@ fun LiveScreen(state: AppState) {
     if (editManifest) Dialog(onDismissRequest = { editManifest = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         var draft by remember { mutableStateOf(sportsManifest) }
         Column(Modifier.fillMaxWidth().background(Panel).padding(30.dp)) {
-            Text("Paste the manifest.json URL from SportsFree Configure", color = Color.White)
+            Text(tr("Pega la URL manifest.json de SportsFree Configure","Paste the manifest.json URL from SportsFree Configure"), color = Color.White)
             NativeTextField(value = draft, onValueChange = { draft = it }, hint = "https://…/manifest.json")
-            FocusButton("Save") {
+            FocusButton(tr("Guardar","Save")) {
                 if (draft.trim().startsWith("https://") && draft.trim().endsWith("/manifest.json")) {
                     sportsManifest = draft.trim(); prefs.edit().putString("sports_manifest", sportsManifest).apply(); editManifest = false
                 }
             }
-            FocusButton("Cancel") { editManifest = false }
+            FocusButton(tr("Cancelar","Cancel")) { editManifest = false }
         }
     }
     if (sources.isNotEmpty()) Dialog(onDismissRequest = { sources = emptyList() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         val first = remember { FocusRequester() }
         LaunchedEffect(Unit) { delay(100); first.requestFocus() }
         Column(Modifier.fillMaxSize().background(Bg).padding(32.dp)) {
-            Text(sourceChannel?.name.orEmpty(), color = Color.White, fontSize = 24.sp)
-            FocusButton("Close") { sources = emptyList() }
+            Text(sourceChannel?.name.orEmpty(), color = Color.White, fontSize = 24.sp, lineHeight=29.sp)
+            FocusButton(tr("Cerrar","Close")) { sources = emptyList() }
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(sources) { stream ->
                     FocusButton("${stream.name} · ${stream.title}", modifier = Modifier.fillMaxWidth().then(if (stream === sources.first()) Modifier.focusRequester(first) else Modifier)) {
@@ -202,14 +202,14 @@ private fun LiveChannelRow(channel: LiveChannel, number: Int, onClick: () -> Uni
         .background(if (focused) Color.White else Panel, RoundedCornerShape(14.dp)).padding(12.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
         Text(number.toString().padStart(3, '0'), color = if (focused) Color.Black else Color.White,
-            fontSize = 18.sp, modifier = Modifier.width(58.dp))
+            fontSize = 18.sp, lineHeight=22.sp, modifier = Modifier.width(58.dp))
         Box(Modifier.size(62.dp).clip(RoundedCornerShape(9.dp)).background(Color(0xFF303030)),
             contentAlignment = androidx.compose.ui.Alignment.Center) {
-            Text(channel.name.take(1), color = Color.White, fontSize = 24.sp)
+            Text(channel.name.take(1), color = Color.White, fontSize = 24.sp, lineHeight=29.sp)
             channel.poster?.let { AsyncImage(it, channel.name, Modifier.fillMaxSize(), contentScale = ContentScale.Fit) }
         }
         Spacer(Modifier.width(18.dp))
-        Text(channel.name, color = if (focused) Color.Black else Color.White, fontSize = 16.sp, modifier = Modifier.weight(1f))
-        Text("LIVE", color = if (focused) Color.Black else Color.White, fontSize = 12.sp)
+        Text(channel.name, color = if (focused) Color.Black else Color.White, fontSize = 16.sp, lineHeight=19.sp, modifier = Modifier.weight(1f))
+        Text(tr("EN VIVO","LIVE"), color = if (focused) Color.Black else Color.White, fontSize = 12.sp, lineHeight=15.sp)
     }
 }

@@ -19,18 +19,18 @@ fun RatingDialog(state: AppState,item: MediaSummary,close: () -> Unit) {
     var saving by remember { mutableStateOf(false) }
     Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Column(Modifier.width(600.dp).background(Panel,RoundedCornerShape(22.dp)).padding(28.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
-            Text(item.title,color=Color.White,fontSize=26.sp,maxLines=2)
-            Text("Tu puntuación · $score / 10 estrellas",color=Color.White,fontSize=20.sp)
-            Text("Solo para tus recomendaciones en BruniO",color=Muted)
+            Text(item.title,color=Color.White,fontSize=26.sp, lineHeight=31.sp,maxLines=2)
+            Text("${tr("Tu puntuación","Your rating")} · $score / 10 ${tr("estrellas","stars")}",color=Color.White,fontSize=20.sp, lineHeight=24.sp)
+            Text(tr("Solo para tus recomendaciones en BruniO","Only for your recommendations in BruniO"),color=Muted)
             (1..10).toList().chunked(5).forEach { row ->
                 Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) { row.forEach { value -> FocusButton("★ $value",primary=score==value) { score=value } } }
             }
             Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
-                FocusButton(if(saving) "Guardando…" else "Guardar",primary=true) { if(!saving) state.launch {
+                FocusButton(if(saving) tr("Guardando…","Saving…") else tr("Guardar","Save"),primary=true) { if(!saving) state.launch {
                     saving=true
                     try { state.socialAction { state.rate(item,score); close() } } finally { saving=false }
                 } }
-                FocusButton("Cancelar") { close() }
+                FocusButton(tr("Cancelar","Cancel")) { close() }
             }
         }
     }

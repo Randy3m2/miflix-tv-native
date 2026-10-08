@@ -11,3 +11,5 @@ node verification/test_party_access.cjs
 Tests use simulated APIs/DOM and a local PostgreSQL WASM instance. They never
 contact production Supabase or Trakt. Kotlin syntax/SQL parsing checks were
 run separately during preparation. Android build still runs in GitHub Actions.
+
+RC6: `node verification/test_rc6_profiles.cjs` valida borrado atómico, aislamiento de cuentas, bloqueo del último perfil y conservación de complementos.

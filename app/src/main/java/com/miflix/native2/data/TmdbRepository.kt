@@ -14,11 +14,12 @@ import java.net.URLEncoder
 import java.util.Locale
 
 class TmdbRepository(var token: String) {
+    var language: String = "en-US"
     private val base = "https://api.themoviedb.org/3"
 
     private suspend fun get(path: String, params: Map<String, String> = emptyMap()): JSONObject {
         val all = LinkedHashMap(params)
-        if (!all.containsKey("language")) all["language"] = "en-US"
+        if (!all.containsKey("language")) all["language"] = language
         val credential = token.trim()
         if (credential.isBlank()) throw IllegalStateException("TMDB is not configured")
         if (!credential.startsWith("eyJ")) all["api_key"] = credential
@@ -129,10 +130,10 @@ class TmdbRepository(var token: String) {
 
         val runtime = if (kind == "movie") {
             val mins = j.optInt("runtime", 0)
-            if (mins > 0) "${mins / 60}h ${mins % 60}m" else "Movie"
+            if (mins > 0) "${mins / 60}h ${mins % 60}m" else if(language.startsWith("es")) "Película" else "Movie"
         } else {
             val mins = j.optJSONArray("episode_run_time")?.optInt(0, 0) ?: 0
-            if (mins > 0) "${mins}m episodes" else "${j.optInt("number_of_seasons", 0)} seasons"
+            if (mins > 0) "${mins}m ${if(language.startsWith("es")) "por episodio" else "episodes"}" else "${j.optInt("number_of_seasons", 0)} ${if(language.startsWith("es")) "temporadas" else "seasons"}"
         }
 
         val release = if (kind == "movie") j.optString("release_date") else j.optString("first_air_date")
@@ -238,11 +239,11 @@ class TmdbRepository(var token: String) {
             val date = e.optString("air_date")
             if(date.isBlank() || date > java.text.SimpleDateFormat("yyyy-MM-dd", Locale.US).format(java.util.Date())) return null
             return ReleaseNotice("${item.cloudId}:${e.optInt("id")}", item,
-                "Nuevo episodio: S${e.optInt("season_number")} E${e.optInt("episode_number")} · ${e.optString("name")}", date)
+                "${if(language.startsWith("es")) "Nuevo episodio" else "New episode"}: S${e.optInt("season_number")} E${e.optInt("episode_number")} · ${e.optString("name")}", date)
         }
         val date = j.optString("release_date")
         if(date.isBlank() || date > java.text.SimpleDateFormat("yyyy-MM-dd", Locale.US).format(java.util.Date())) return null
-        return ReleaseNotice("${item.cloudId}:$date", item, "Estreno de película · $date", date)
+        return ReleaseNotice("${item.cloudId}:$date", item, "${if(language.startsWith("es")) "Estreno de película" else "Movie release"} · $date", date)
     }
 
     private fun parseList(j: JSONObject, forceType: String? = null, limit: Int = 20): List<MediaSummary> {

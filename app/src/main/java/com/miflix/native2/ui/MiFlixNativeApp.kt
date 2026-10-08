@@ -21,9 +21,16 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun MiFlixNativeApp(initialPartyCode: String? = null) {
-    val context = LocalContext.current.applicationContext
+    val baseContext=LocalContext.current
+    val context = baseContext.applicationContext
     val state = remember { AppState(context) }
 
+    val localizedContext=remember(baseContext,state.interfaceLanguage) {
+        val config=android.content.res.Configuration(context.resources.configuration)
+        config.setLocale(java.util.Locale.forLanguageTag(state.interfaceLanguage))
+        android.view.ContextThemeWrapper(baseContext,0).apply { applyOverrideConfiguration(config) }
+    }
+    CompositionLocalProvider(LocalContext provides localizedContext) {
     MaterialTheme {
         var bootstrapped by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) {
@@ -44,18 +51,18 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             Screen.NOTIFICATIONS -> NotificationsScreen(state)
             Screen.LIVE_TV -> LiveScreen(state)
             Screen.SEARCH -> SearchScreen(state) { state.screen = Screen.HOME }
-            Screen.MOVIES -> CatalogScreen(state, "Movies", state.movies) { state.screen = Screen.HOME }
-            Screen.SERIES -> CatalogScreen(state, "Series", state.series) { state.screen = Screen.HOME }
+            Screen.MOVIES -> CatalogScreen(state, tr("Películas","Movies"), state.movies) { state.screen = Screen.HOME }
+            Screen.SERIES -> CatalogScreen(state, tr("Series","Series"), state.series) { state.screen = Screen.HOME }
             Screen.COLLECTIONS -> CollectionsScreen(state) { state.screen = Screen.HOME }
             Screen.COLLECTION_DETAIL -> CatalogScreen(state, state.collectionTitle, state.collectionItems) { state.screen = Screen.COLLECTIONS }
             Screen.PLATFORM_DETAIL -> PlatformScreen(state) { state.screen = Screen.COLLECTIONS }
-            Screen.GENRES -> GenresScreen(state) { state.screen = Screen.HOME }
-            Screen.GENRE_DETAIL -> CatalogScreen(state, state.genreTitle, state.genreItems) { state.screen = Screen.GENRES }
+            Screen.GENRES -> CollectionsScreen(state) { state.screen = Screen.HOME }
+            Screen.GENRE_DETAIL -> CatalogScreen(state, state.genreTitle, state.genreItems) { state.screen = Screen.COLLECTIONS }
             Screen.YEAR_DETAIL -> CatalogScreen(state, state.yearTitle, state.yearItems) { state.screen = Screen.COLLECTIONS }
             Screen.MY_LIST -> MyListScreen(state) { state.screen = Screen.HOME }
             Screen.SETTINGS -> SettingsScreen(state) { state.screen = Screen.HOME }
             Screen.PROFILES -> ProfilesScreen(state) { state.screen = Screen.HOME }
-            Screen.WATCH_PARTY -> WatchPartyScreen(state) { state.screen = if (state.selected != null) Screen.DETAILS else Screen.HOME }
+            Screen.WATCH_PARTY -> WatchPartyScreen(state) { state.screen = Screen.FRIENDS }
             Screen.PAIR_DEVICE -> PairDeviceScreen(state) { state.screen = Screen.SETTINGS }
             Screen.DETAILS -> DetailsScreen(state) { state.screen = Screen.HOME }
             Screen.PLAYER -> state.playerRequest?.let { req -> PlayerScreen(state, req) { state.screen = if (req.live) Screen.LIVE_TV else Screen.DETAILS } }
@@ -103,13 +110,14 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                     Modifier.padding(bottom = 28.dp).background(Color(0xEE6E202A), RoundedCornerShape(14.dp)).padding(horizontal = 20.dp, vertical = 11.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(message, color = Color.White, fontSize = 13.sp)
+                    Text(message, color = Color.White, fontSize = 13.sp, lineHeight=16.sp)
                     Spacer(Modifier.width(12.dp))
-                    FocusButton("Dismiss") { state.error = null }
+                    FocusButton(tr("Cerrar","Dismiss")) { state.error = null }
                 }
             }
         }
     }
+}
 }
 
 @Composable
@@ -126,7 +134,7 @@ private fun MyListScreen(state: AppState, onBack: () -> Unit) {
     LaunchedEffect(state.favorites.toList()) {
         catalog = state.favorites.mapNotNull { id -> runCatching { state.tmdb.byCloudId(id) }.getOrNull() }
     }
-    CatalogScreen(state, "My List", catalog, onBack)
+    CatalogScreen(state, tr("Mi lista","My List"), catalog, onBack)
 }
 
 @Composable
@@ -135,7 +143,7 @@ private fun LoadingOverlay(text: String) {
         Text(
             text,
             color = Color.Black,
-            fontSize = 17.sp,
+            fontSize = 17.sp, lineHeight=21.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.background(Color.White, RoundedCornerShape(18.dp)).padding(horizontal = 28.dp, vertical = 17.dp)
         )

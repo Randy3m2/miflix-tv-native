@@ -5,6 +5,7 @@ npm --prefix verification install
 node verification/test_trakt.cjs
 node verification/test_chat_logic.cjs
 node verification/test_social_db.cjs
+node verification/test_party_access.cjs
 ```
 
 Tests use simulated APIs/DOM and a local PostgreSQL WASM instance. They never

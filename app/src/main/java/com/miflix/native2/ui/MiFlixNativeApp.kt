@@ -74,6 +74,12 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 state.refreshAccountSession()
             }
         }
+        LaunchedEffect(bootstrapped,state.session?.userId) {
+            if(bootstrapped && state.session!=null) while(true) {
+                runCatching { state.refreshSocialActivity() }
+                delay(5000)
+            }
+        }
         LaunchedEffect(state.session?.userId, state.watchParty?.roomCode) {
             if (state.watchParty != null) {
                 var ticks = 0

@@ -135,6 +135,17 @@ fun FocusButton(
 }
 
 @Composable
+fun BackIconButton(onClick: () -> Unit) {
+    var focused by remember { mutableStateOf(false) }
+    Box(Modifier.size(44.dp).onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick)
+        .clickable(onClick=onClick).background(if(focused) SoftWhite else Color(0x990C111B),RoundedCornerShape(22.dp))
+        .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else Color(0x557D8AA3),RoundedCornerShape(22.dp)),
+        contentAlignment=Alignment.Center) {
+        Text("‹",color=if(focused) Color.Black else Color.White,fontSize=32.sp)
+    }
+}
+
+@Composable
 fun MediaCard(
     item: MediaSummary,
     modifier: Modifier = Modifier,

@@ -103,6 +103,14 @@ class AppState(context: Context) {
         episodes.clear(); episodes.addAll(tmdb.season(req.item.id,ep.season))
         playResolved(req.item,imdb,ep.season,ep.episode,resumeOverride = 0)
     }
+    suspend fun requestPartyPlayback(req: PlayerRequest, playing: Boolean) {
+        val s=session ?: return; val room=watchParty?.roomCode ?: return
+        social.playback(s,room,req.item.cloudId,req.season,req.episode,playing)
+    }
+    suspend fun takePartyPlayback(): Boolean? {
+        val s=session ?: return null; val room=watchParty?.roomCode ?: return null
+        return social.takePlayback(s,room)
+    }
     suspend fun requestPartyPause(req: PlayerRequest) {
         val s = session ?: return; val room = watchParty?.roomCode ?: return
         social.pause(s,room,req.item.cloudId,req.season,req.episode)
@@ -116,6 +124,31 @@ class AppState(context: Context) {
     val trakt = TraktRepository(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY)
     var nickname by mutableStateOf("")
     val partyMembers = mutableStateListOf<SocialPerson>()
+    val friendActivity = mutableStateListOf<FriendActivity>()
+    val accessRequests = mutableStateListOf<AccessRequest>()
+    var pendingPartyCode by mutableStateOf<String?>(null)
+    suspend fun refreshSocialActivity() {
+        val s=session ?: return
+        val req=playerRequest.takeIf { screen==Screen.PLAYER || watchParty!=null }
+        social.presence(s,req?.item?.title.orEmpty(),req?.item?.cloudId.orEmpty(),req?.season ?: 0,req?.episode ?: 0,watchParty?.roomCode)
+        friendActivity.clear(); friendActivity.addAll(social.activity(s))
+        accessRequests.clear(); accessRequests.addAll(social.requests(s))
+        pendingPartyCode?.let { code ->
+            val decision=try { social.requestAccess(s,code) } catch(e: Exception) {
+                if(e is CancellationException) throw e
+                if(e.message.orEmpty().contains("closed or expired")) { pendingPartyCode=null; partyStatus="La sala cerró o expiró" }
+                return
+            }
+            when(decision) {
+                "approved" -> { pendingPartyCode=null; joinWatchParty(code) }
+                "rejected" -> { pendingPartyCode=null; partyStatus="El host rechazó la solicitud" }
+            }
+        }
+    }
+    suspend fun decideAccess(request: AccessRequest, approve: Boolean) = socialAction {
+        val s=session ?: return@socialAction
+        social.decide(s,request,approve); accessRequests.remove(request)
+    }
     val friendRows = mutableStateListOf<Friendship>()
     val friendPeople = mutableStateMapOf<String, String>()
     val partyMessages = mutableStateListOf<PartyEvent>()
@@ -222,7 +255,12 @@ class AppState(context: Context) {
 
     fun launch(block: suspend CoroutineScope.() -> Unit) = appScope.launch(block = block)
 
+    private fun loadOfflineProfiles() {
+        profiles.clear(); profiles.addAll(local.offlineProfiles().ifEmpty { listOf(Profile("default","Main",primary=true)) })
+        activeProfile=profiles.firstOrNull { it.id==local.profileId() } ?: profiles.first()
+    }
     suspend fun bootstrap() {
+        if(session==null) loadOfflineProfiles()
         session?.let { s ->
             if (s.refreshToken.isNotBlank()) {
                 runCatching { cloud.refresh(s.refreshToken) }.onSuccess {
@@ -308,15 +346,25 @@ class AppState(context: Context) {
         screen = Screen.HOME
     }
 
-    suspend fun createProfile(name: String) {
+    suspend fun createProfile(name: String, avatar: String = "ai:astronaut") {
         val clean = name.trim().take(24)
         if (clean.isBlank()) return
-        val p = Profile(UUID.randomUUID().toString(), clean, primary = false)
+        val p = Profile(UUID.randomUUID().toString(), clean, avatarValue=avatar, primary = false)
         profiles.add(p)
         session?.let {
             cloud.upsertProfiles(it, profiles.toList())
             cloud.upsertProfile(it, p.id, emptySet(), emptyMap())
         }
+        if(session==null) local.saveOfflineProfiles(profiles.toList())
+    }
+    suspend fun setProfileAvatar(profile: Profile, avatar: String) {
+        require(ProfileAvatars.any { it.key==avatar }) { "Elige un avatar disponible" }
+        val changed=profile.copy(avatarValue=avatar)
+        val next=profiles.map { if(it.id==profile.id) changed else it }
+        session?.let { cloud.upsertProfiles(it,next) }
+        profiles.clear(); profiles.addAll(next)
+        if(activeProfile.id==profile.id) activeProfile=changed
+        if(session==null) local.saveOfflineProfiles(next)
     }
 
     suspend fun pushCloud() {
@@ -573,6 +621,12 @@ class AppState(context: Context) {
 
     suspend fun playSelectedSource(selection: SourceSelection, stream: StreamChoice) {
         sourceSelection = null
+        if(partyRole==PartyRole.GUEST) {
+            val remote=refreshParty() ?: return
+            if(remote.cloudId!=selection.item.cloudId || remote.season!=selection.season || remote.episode!=selection.episode) {
+                error="El host cambió de contenido. Abre Playback links nuevamente."; switchToPartyState(remote); return
+            }
+        }
         playResolved(selection.item, selection.imdb, selection.season, selection.episode, resumeOverride = selection.resumeMs, selectedStream = stream)
     }
 
@@ -645,6 +699,15 @@ class AppState(context: Context) {
 
     suspend fun joinWatchParty(code: String) {
         val s = session ?: run { error = "Sign in before joining a Watch Party"; return }
+        require(code.trim().matches(Regex("[0-9]{6}"))) { "Usa el código de 6 dígitos" }
+        if(watchParty!=null && watchParty?.roomCode!=code.trim()) { error="Sal del party actual antes de solicitar otra sesión"; return }
+        val decision=social.requestAccess(s,code.trim())
+        if(decision!="approved") {
+            pendingPartyCode=if(decision=="pending") code.trim() else null
+            partyStatus=if(decision=="pending") "Solicitud enviada · esperando aprobación del host" else "El host rechazó la solicitud"
+            return
+        }
+        pendingPartyCode=null
         social.join(s, code.trim())
         val party = cloud.readWatchParty(s, code.trim()) ?: run { error = "Watch Party room not found"; return }
         watchParty = party
@@ -892,11 +955,12 @@ class AppState(context: Context) {
     fun signOut() {
         watchParty=null; partyRole=null; nickname=""
         partyMessages.clear(); floatingEvents.clear(); partyMembers.clear()
-        friendRows.clear(); friendPeople.clear(); lastEventId=-1
+        friendRows.clear(); friendPeople.clear(); friendActivity.clear(); accessRequests.clear(); pendingPartyCode=null; lastEventId=-1
         traktConnected=false; traktDevice=null; traktSent.clear()
         session = null
         local.saveSession(null)
         favorites.clear(); progress.clear(); profiles.clear(); continueWatching.clear()
+        loadOfflineProfiles()
         extrasLoaded = false
         screen = Screen.SETTINGS
     }

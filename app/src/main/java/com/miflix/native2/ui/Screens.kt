@@ -368,6 +368,8 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
     val item = state.selected ?: return
     val details = state.details
     val saved = state.progress[item.cloudId]
+    val playFocus = remember(item.cloudId) { FocusRequester() }
+    LaunchedEffect(item.cloudId) { delay(150); playFocus.requestFocus() }
     BackHandler(onBack = onBack)
 
     Box(Modifier.fillMaxSize().background(Bg)) {
@@ -381,7 +383,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
         ) {
             item(key = "hero") {
                 Column(Modifier.fillMaxWidth().heightIn(min = 500.dp)) {
-                    FocusButton("←", modifier = Modifier.width(66.dp), onClick = onBack)
+                    BackIconButton(onClick = onBack)
                     Spacer(Modifier.height(58.dp))
                     Text(item.title, color = Color.White, fontSize = 46.sp, fontWeight = FontWeight.Black, maxLines = 2)
                     Spacer(Modifier.height(8.dp))
@@ -396,12 +398,12 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         if (item.type == "movie") {
                             val label = if ((saved?.percent ?: 0.0) in 1.0..95.0) "▶  Resume ${formatPosition(saved?.position ?: 0)}" else "▶  Play"
-                            FocusButton(label, onLongClick = { state.launch { state.chooseCurrentSources() } }, primary = true, modifier = Modifier.widthIn(min = 330.dp)) {
+                            FocusButton(label, onLongClick = { state.launch { state.chooseCurrentSources() } }, primary = true, modifier = Modifier.focusRequester(playFocus).widthIn(min = 330.dp)) {
                                 state.launch { runCatching { state.playMovie() }.onFailure { state.error = it.message } }
                             }
                         } else {
                             val canResume = (saved?.season ?: 0) > 0 && (saved?.episode ?: 0) > 0 && (saved?.percent ?: 0.0) < 96.0
-                            FocusButton(if (canResume) "▶  Continue S${saved?.season} E${saved?.episode}" else "▶  Play S1 E1", onLongClick = { state.launch { state.chooseCurrentSources() } }, primary = true, modifier = Modifier.widthIn(min = 330.dp)) {
+                            FocusButton(if (canResume) "▶  Continue S${saved?.season} E${saved?.episode}" else "▶  Play S1 E1", onLongClick = { state.launch { state.chooseCurrentSources() } }, primary = true, modifier = Modifier.focusRequester(playFocus).widthIn(min = 330.dp)) {
                                 state.launch { runCatching { if (canResume) state.resumeSeries() else state.playSeriesFromStart() }.onFailure { state.error = it.message } }
                             }
                         }
@@ -607,42 +609,49 @@ fun PairDeviceScreen(state: AppState, onBack: () -> Unit) {
 @Composable
 fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
     var newName by remember { mutableStateOf("") }
+    var newAvatar by remember { mutableStateOf("ai:astronaut") }
+    var editingAvatar by remember { mutableStateOf<Profile?>(null) }
+    var choosingNewAvatar by remember { mutableStateOf(false) }
     BackHandler(onBack = onBack)
-    Column(Modifier.fillMaxSize().background(Bg).padding(64.dp)) {
-        Text("Who's watching?", color = Color.White, fontSize = 38.sp, fontWeight = FontWeight.Black)
-        Spacer(Modifier.height(8.dp))
-        Text("TMDB, add-ons, collections and app settings are shared. My List and progress stay separate per profile.", color = Muted, fontSize = 14.sp)
-        Spacer(Modifier.height(30.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-            state.profiles.forEach { p ->
-                var focused by remember(p.id) { mutableStateOf(false) }
-                val scale by animateFloatAsState(if (focused) 1.025f else 1f, tween(90, easing = LinearOutSlowInEasing), label = "profileScale")
-                Column(
-                    Modifier.width(150.dp).graphicsLayer { scaleX = scale; scaleY = scale }
-                        .onFocusChanged { focused = it.isFocused }.focusable()
-                        .tvClick { state.launch { state.selectProfile(p) } }
-                        .clickable { state.launch { state.selectProfile(p) } },
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Box(
-                        Modifier.size(110.dp).clip(RoundedCornerShape(55.dp)).background(if (focused) Color.White else Color(0xFF242424))
-                            .border(if (focused) 2.dp else 0.dp, Color.White, RoundedCornerShape(55.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(p.name.take(1).uppercase(), color = if (focused) Color.Black else Color.White, fontSize = 38.sp, fontWeight = FontWeight.Black)
+    LazyColumn(Modifier.fillMaxSize().background(Bg).padding(horizontal=50.dp),contentPadding=PaddingValues(vertical=32.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+        item {
+            Text("Who's watching?",color=Color.White,fontSize=38.sp,fontWeight=FontWeight.Black)
+            Text("Los avatares se guardan con tu perfil. Favoritos y progreso siguen separados.",color=Muted,fontSize=14.sp)
+        }
+        item {
+            LazyRow(horizontalArrangement=Arrangement.spacedBy(20.dp),contentPadding=PaddingValues(8.dp)) {
+                items(state.profiles,key={it.id}) { profile ->
+                    var focused by remember { mutableStateOf(false) }
+                    Column(Modifier.width(150.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+                        Column(Modifier.onFocusChanged { focused=it.isFocused }.focusable()
+                            .tvClick { state.launch { state.selectProfile(profile) } }
+                            .clickable { state.launch { state.selectProfile(profile) } },horizontalAlignment=Alignment.CenterHorizontally) {
+                            Box(Modifier.border(if(focused) 3.dp else 0.dp,Color.White,RoundedCornerShape(22.dp)).padding(5.dp)) {
+                                ProfileAvatar(profile,Modifier.size(120.dp))
+                            }
+                            Text(profile.name,color=Color.White,fontSize=17.sp)
+                        }
+                        FocusButton("Avatar") { editingAvatar=profile }
                     }
-                    Spacer(Modifier.height(9.dp))
-                    Text(p.name, color = Color.White, fontSize = 14.sp)
                 }
             }
         }
-        Spacer(Modifier.height(36.dp))
-        Text("Create profile", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            NativeTextField(newName, { newName = it }, "Profile name", modifier = Modifier.width(360.dp))
-            FocusButton("Add Profile", primary = true) { state.launch { state.createProfile(newName); newName = "" } }
+        item {
+            Text("Create profile",color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
+            Row(horizontalArrangement=Arrangement.spacedBy(14.dp),verticalAlignment=Alignment.CenterVertically) {
+                ProfileAvatar(Profile("new",newName,avatarValue=newAvatar),Modifier.size(60.dp))
+                NativeTextField(newName,{newName=it},"Profile name",modifier=Modifier.width(300.dp))
+                FocusButton("Elegir avatar") { choosingNewAvatar=true }
+                FocusButton("Add Profile",primary=true) { state.launch { state.socialAction { state.createProfile(newName,newAvatar); newName="" } } }
+            }
+            FocusButton("Volver") { onBack() }
         }
+    }
+    if(choosingNewAvatar) AvatarPickerDialog(newAvatar,choose={ newAvatar=it; choosingNewAvatar=false },close={ choosingNewAvatar=false })
+    editingAvatar?.let { profile ->
+        AvatarPickerDialog(profile.avatarValue,choose={ avatar ->
+            state.launch { state.socialAction { state.setProfileAvatar(profile,avatar); editingAvatar=null } }
+        },close={ editingAvatar=null })
     }
 }
 
@@ -654,12 +663,13 @@ fun WatchPartyScreen(state: AppState, onBack: () -> Unit) {
         LazyColumn(Modifier.fillMaxSize().padding(28.dp),verticalArrangement=Arrangement.spacedBy(16.dp),contentPadding=PaddingValues(bottom=40.dp)) {
             item {
                 Text("Watch Party",color=Color.White,fontSize=32.sp,fontWeight=FontWeight.Bold)
-                Text("One room and QR for all content. Scan on your phone for live chat.",color=Muted)
+                Text("One room for all content · guests need host approval. Scan for mobile chat.",color=Muted)
                 Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                    FocusButton("Friends / Nickname") { state.screen=Screen.FRIENDS }
+                    FocusButton("Friends / Party") { state.screen=Screen.FRIENDS }
                     FocusButton("Back") { onBack() }
                 }
             }
+            item { AccessRequests(state) }
             val party=state.watchParty
             if(party==null) {
                 item {
@@ -710,13 +720,18 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var controlInteraction by remember { mutableStateOf(0) }
     var nativePlayerView by remember { mutableStateOf<PlayerView?>(null) }
     var showPartyActions by remember { mutableStateOf(false) }
+    var showAccessRequests by remember { mutableStateOf(false) }
     var showEpisodes by remember(request.playbackId) { mutableStateOf(false) }
     val subtitles = request.stream.subtitles
     val preferredText = state.subtitleLanguage.takeUnless { it == "off" }
     var paused by remember(request.playbackId) { mutableStateOf(false) }
     var pauseSynopsis by remember(request.playbackId) { mutableStateOf(false) }
+    var pauseInfoDismissed by remember(request.playbackId) { mutableStateOf(false) }
+    var dismissKey by remember { mutableStateOf<Int?>(null) }
     var clockNow by remember { mutableStateOf(System.currentTimeMillis()) }
     var applyingRemote by remember { mutableStateOf(false) }
+    var guestPlaybackIntent by remember(request.playbackId) { mutableStateOf<Boolean?>(null) }
+    var guestIntentUntil by remember(request.playbackId) { mutableStateOf(0L) }
     var positionMs by remember(request.playbackId) { mutableStateOf(request.resumeMs) }
     var durationMs by remember(request.playbackId) { mutableStateOf(0L) }
     var segments by remember(request.playbackId) { mutableStateOf(PlaybackSegments()) }
@@ -778,6 +793,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         if(paused) while(true) { clockNow = System.currentTimeMillis(); delay(1000) }
     }
     LaunchedEffect(paused,request.playbackId) {
+        pauseInfoDismissed = false
         pauseSynopsis = false
         if(paused) { delay(5000); pauseSynopsis = true }
     }
@@ -802,9 +818,11 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                 paused = !playWhenReady && player.playbackState != Player.STATE_ENDED
                 if(state.partyRole == PartyRole.GUEST && !applyingRemote && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST) {
-                    if(!playWhenReady && state.watchParty?.playing == true) state.launch { runCatching { state.requestPartyPause(request) }.onFailure { state.error=it.message } }
-                    else if(state.watchParty?.playing == false) {
-                        applyingRemote = true; player.pause(); applyingRemote = false
+                    if(playWhenReady != state.watchParty?.playing) {
+                        guestPlaybackIntent=playWhenReady; guestIntentUntil=System.currentTimeMillis()+5000
+                        state.launch { runCatching { state.requestPartyPlayback(request,playWhenReady) }.onFailure {
+                            guestPlaybackIntent=null; state.error=it.message
+                        } }
                     }
                 }
             }
@@ -851,7 +869,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             delay(1000)
             when (state.partyRole) {
                 PartyRole.HOST -> {
-                    if(runCatching { state.takePartyPause() }.getOrDefault(false)) player.pause()
+                    runCatching { state.takePartyPlayback() }.getOrNull()?.let { playing -> player.playWhenReady=playing }
                     state.hostPartyUpdate(request, player.currentPosition, player.playWhenReady && player.playbackState != Player.STATE_ENDED)
                 }
                 PartyRole.GUEST -> {
@@ -861,7 +879,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                         break
                     }
                     if (!request.live && abs(remote.positionMs - player.currentPosition) > 1800) player.seekTo(remote.positionMs)
-                    if (remote.playing != player.playWhenReady) {
+                    if(guestPlaybackIntent==remote.playing || System.currentTimeMillis()>=guestIntentUntil) guestPlaybackIntent=null
+                    if (guestPlaybackIntent==null && remote.playing != player.playWhenReady) {
                         applyingRemote = true; player.playWhenReady = remote.playing; applyingRemote = false
                     }
                 }
@@ -871,8 +890,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     }
 
     // Explicit timer also covers controls holding focus on TV remotes.
-    LaunchedEffect(player, controlInteraction, showEpisodes, showPartyActions, state.sourceSelection) {
-        if (!showEpisodes && !showPartyActions && state.sourceSelection == null) {
+    LaunchedEffect(player, controlInteraction, showEpisodes, showPartyActions, showAccessRequests, state.sourceSelection) {
+        if (!showEpisodes && !showPartyActions && !showAccessRequests && state.sourceSelection == null) {
             delay(2000)
             controlsVisible = false
             nativePlayerView?.hideController()
@@ -881,15 +900,26 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     }
 
     BackHandler {
-        if (showEpisodes) showEpisodes = false else onClose()
+        if (paused && !pauseInfoDismissed) {
+            pauseSynopsis = false; pauseInfoDismissed = true
+            controlsVisible = true; controlInteraction++; nativePlayerView?.showController()
+        } else if (showEpisodes) showEpisodes = false else onClose()
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black).onPreviewKeyEvent { event ->
-        if (event.type == KeyEventType.KeyDown && !showEpisodes && state.sourceSelection == null) {
+        val code = event.nativeKeyEvent.keyCode
+        if (dismissKey == code) {
+            if (event.type == KeyEventType.KeyUp) dismissKey = null
+            true
+        } else if (event.type == KeyEventType.KeyDown && !showEpisodes && !showPartyActions && state.sourceSelection == null) {
             controlsVisible = true
             controlInteraction++
-        }
-        false
+            if (paused && !pauseInfoDismissed) {
+                pauseInfoDismissed = true; pauseSynopsis = false; dismissKey = code
+                nativePlayerView?.showController(); nativePlayerView?.requestFocus()
+                true
+            } else false
+        } else false
     }) {
         AndroidView(
             factory = { ctx ->
@@ -915,13 +945,27 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             modifier = Modifier.fillMaxSize()
         )
 
+        if(showAccessRequests) {
+            Dialog(onDismissRequest={ showAccessRequests=false },properties=DialogProperties(usePlatformDefaultWidth=false)) {
+                Column(Modifier.width(650.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp)) {
+                    AccessRequests(state)
+                    if(state.accessRequests.isEmpty()) Text("No hay solicitudes pendientes",color=Muted)
+                    FocusButton("Cerrar") { showAccessRequests=false }
+                }
+            }
+        }
+        if(controlsVisible && state.accessRequests.isNotEmpty() && !showEpisodes && !showPartyActions) {
+            Box(Modifier.align(Alignment.CenterEnd).padding(26.dp)) {
+                FocusButton("${state.accessRequests.size} solicitudes · Party") { showAccessRequests=true }
+            }
+        }
         if(controlsVisible && !pauseSynopsis) {
             Column(Modifier.align(Alignment.TopStart).padding(26.dp).widthIn(max=600.dp).background(Color(0x99000000),RoundedCornerShape(12.dp)).padding(12.dp)) {
                 Text(request.item.title,color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold,maxLines=1)
                 if(request.item.type == "series") Text("S${request.season} E${request.episode} · ${episodeInfo?.title.orEmpty()}",color=Muted,fontSize=14.sp)
             }
         }
-        if(pauseSynopsis && !showEpisodes && !showPartyActions && state.sourceSelection == null && !ended) {
+        if(pauseSynopsis && !pauseInfoDismissed && !showEpisodes && !showPartyActions && state.sourceSelection == null && !ended) {
             Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xC9000000),Color(0x22000000))))) {
                 Column(Modifier.align(Alignment.CenterStart).padding(60.dp).widthIn(max=680.dp)) {
                     Text("Estás viendo",color=Muted,fontSize=18.sp)
@@ -933,7 +977,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
 
             }
         }
-        if(paused && !ended && !showEpisodes && !showPartyActions && state.sourceSelection == null) {
+        if(paused && !pauseInfoDismissed && !ended && !showEpisodes && !showPartyActions && state.sourceSelection == null) {
             val clock = android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(clockNow))
             val remaining = (durationMs - positionMs).coerceAtLeast(0L) / 1000
             val remainingText = when {
@@ -944,9 +988,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
             Column(Modifier.align(Alignment.BottomEnd).padding(end=35.dp,bottom=100.dp)
                 .background(Color(0xAA000000),RoundedCornerShape(12.dp)).padding(14.dp)) {
-                Text("Hora · $clock",color=Color.White,fontSize=20.sp)
-                Text(if(request.live || durationMs <= 0) remainingText else "Restante · $remainingText",color=Color.White,fontSize=17.sp)
-                Text("Pausado",color=Muted,fontSize=14.sp)
+                Text("Hora · $clock",color=Color(0xFFE0E0E0),fontSize=19.sp)
+                Text(if(request.live || durationMs <= 0) remainingText else "Restante · $remainingText",color=Color(0xFFE0E0E0),fontSize=19.sp)
             }
         }
         if(!request.live && controlsVisible && !showEpisodes && !showPartyActions) {
@@ -979,10 +1022,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                     Text("También te puede gustar",color=Color.White,fontSize=22.sp)
                     LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.weight(1f,false)) {
                         items(recommendations,key={it.cloudId}) { item ->
-                            Column(Modifier.width(170.dp)) {
-                                AsyncImage(item.poster,item.title,Modifier.height(190.dp).fillMaxWidth(),contentScale=ContentScale.Crop)
-                                FocusButton(item.title) { cancelAutoplay=true; state.launch { state.open(item) } }
-                            }
+                            MediaCard(item) { cancelAutoplay=true; state.launch { state.open(item) } }
                         }
                     }
                     FocusButton("Back to details") { cancelAutoplay=true; onClose() }
@@ -1174,6 +1214,7 @@ fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
                         fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     FocusButton("Close") { state.sourceSelection = null }
                 }
+                if(state.partyRole==PartyRole.GUEST) Text("Este enlace se cambia solo para ti · sigues sincronizado con el host",color=Muted)
                 Spacer(Modifier.height(18.dp))
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 30.dp)) {
                     items(selection.streams) { stream ->

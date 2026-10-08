@@ -22,6 +22,7 @@ val PartyEmojis = listOf("😂", "❤️", "🔥", "😱", "👏", "🍿")
 
 @Composable
 fun FriendsScreen(state: AppState) {
+    var partyTab by remember { mutableStateOf(false) }
     var nick by remember { mutableStateOf(state.nickname) }
     var find by remember { mutableStateOf("") }
     var phrases by remember { mutableStateOf(state.partyPhrases.joinToString("|")) }
@@ -30,7 +31,31 @@ fun FriendsScreen(state: AppState) {
     Row(Modifier.fillMaxSize().background(Bg)) {
         Sidebar(Screen.FRIENDS,state.activeProfile.name,{state.screen=it},state.notifications.size)
         LazyColumn(Modifier.weight(1f).padding(28.dp), verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(bottom=50.dp)) {
-            item { Text("Friends & Nickname",color=Color.White,fontSize=28.sp) }
+            item {
+                Text("Friends & Party",color=Color.White,fontSize=28.sp)
+                Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                    FocusButton("Friends",primary=!partyTab) { partyTab=false }
+                    FocusButton("Party",primary=partyTab) { partyTab=true }
+                    FocusButton("My room / QR") { state.screen=Screen.WATCH_PARTY }
+                }
+            }
+            item { AccessRequests(state) }
+            if(state.pendingPartyCode!=null) item {
+                Text(state.partyStatus,color=Muted)
+            }
+            items(state.friendActivity.filter { !partyTab || it.room!=null },key={"activity:${it.id}"}) { friend ->
+                Column(Modifier.fillMaxWidth().background(Panel).padding(18.dp)) {
+                    Text("${if(friend.online) "●" else "○"} @${friend.nickname}",color=if(friend.online) Color(0xFF7BE0AE) else Muted,fontSize=21.sp)
+                    Text(if(friend.title.isNotBlank()) "Watching ${friend.title}" + if(friend.season>0) " · S${friend.season} E${friend.episode}" else "" else if(friend.online) "Online · explorando BruniO" else "Offline",color=Color.White,fontSize=17.sp)
+                    friend.room?.let { code ->
+                        if(state.watchParty?.roomCode!=code) FocusButton(if(state.pendingPartyCode==code) "Esperando aprobación" else "Request access") {
+                            state.launch { state.socialAction { state.joinWatchParty(code) } }
+                        } else Text("En tu party",color=Muted)
+                    }
+                }
+            }
+            if(partyTab && state.friendActivity.none { it.room!=null }) item { Text("Tus amigos no tienen parties activos",color=Muted) }
+            if(!partyTab) {
             if(state.session==null) item { FocusButton("Sign in") { state.screen=Screen.SETTINGS } }
             else {
                 item {
@@ -46,9 +71,9 @@ fun FriendsScreen(state: AppState) {
                     val uid=state.session?.userId
                     val other=if(row.sender==uid)row.receiver else row.sender
                     val name=state.friendPeople[other]?:"Friend"
-                    if(row.status=="accepted") Text("✓ @$name",color=Color.White,fontSize=18.sp)
-                    else if(row.receiver==uid) FocusButton("Accept @$name") { state.launch { state.addFriend(other) } }
-                    else Text("Request sent to @$name",color=Muted)
+                    if(row.status=="accepted" && state.friendActivity.none { it.id==other }) Text("✓ @$name",color=Color.White,fontSize=18.sp)
+                    else if(row.status=="pending" && row.receiver==uid) FocusButton("Accept @$name") { state.launch { state.addFriend(other) } }
+                    else if(row.status=="pending") Text("Request sent to @$name",color=Muted)
                 }
                 item { FocusButton("Refresh") { state.launch { state.refreshFriends() } } }
             }
@@ -58,6 +83,21 @@ fun FriendsScreen(state: AppState) {
                 FocusButton("Save phrases") { state.savePhrases(phrases) }
             }
             item { FocusButton("Trakt") { state.screen=Screen.TRAKT } }
+            }
+        }
+    }
+}
+
+@Composable
+fun AccessRequests(state: AppState) {
+    if(state.accessRequests.isNotEmpty()) Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
+        Text("Solicitudes de acceso · ${state.accessRequests.size}",color=Color.White,fontSize=22.sp)
+        state.accessRequests.toList().forEach { request ->
+            Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                Text("@${request.nickname}",color=Color.White)
+                FocusButton("Aceptar") { state.launch { state.decideAccess(request,true) } }
+                FocusButton("Rechazar") { state.launch { state.decideAccess(request,false) } }
+            }
         }
     }
 }

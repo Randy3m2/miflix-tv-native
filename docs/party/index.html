@@ -1,1 +1,76 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MiFlix Watch Party</title><style>body{margin:0;background:#050505;color:white;font-family:Arial;display:grid;place-items:center;min-height:100vh}.c{text-align:center;padding:30px}.m{font-size:64px;font-weight:900}.code{font-size:54px;font-weight:900;letter-spacing:8px;margin:20px}.sub{color:#aaa}</style></head><body><div class="c"><div class="m">MiFlix</div><div class="sub">Watch Party room</div><div id="code" class="code"></div><div class="sub">Open MiFlix → Watch Party → Join and enter this code.</div></div><script>document.getElementById('code').textContent=new URLSearchParams(location.search).get('room')||'------'</script></body></html>
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MiFlix · Party Chat</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#080b13;color:#eef2ff;font:16px system-ui,sans-serif}main{max-width:720px;margin:auto;padding:20px}h1{margin:10px 0;font-size:30px}h2{font-size:18px}p{color:#b5bfd5;line-height:1.5}input,button{font:inherit;border:1px solid #39445e;border-radius:12px;padding:12px;background:#141c2e;color:white}input{width:100%;margin:6px 0}button{cursor:pointer;min-height:44px}button:focus-visible{outline:3px solid #7edaff}button:disabled{opacity:.5}.row{display:flex;gap:8px;flex-wrap:wrap}.box{background:#101728;border:1px solid #26324a;border-radius:18px;padding:16px;margin:16px 0}[hidden]{display:none!important}#messages{height:36vh;min-height:230px;overflow:auto;display:flex;flex-direction:column;gap:10px}.bubble{background:#1b2940;padding:12px;border-radius:14px;overflow-wrap:anywhere}.bubble small{display:block;color:#90ccff;margin-bottom:5px}.emoji{font-size:25px;flex:1}#status{color:#ffce84}#code{letter-spacing:4px}.member{display:flex;justify-content:space-between;align-items:center;margin:8px 0}.send{display:flex;gap:8px}.send input{margin:0;flex:1}.send button{background:#15648f}label{display:block;margin-top:12px}
+</style></head><body><main><h1>MiFlix · Watch Party</h1><p>Sala <strong id="code"></strong> · El mismo QR aunque cambie la película.</p><p id="status" role="status"></p>
+<section id="login" class="box"><h2>Entra con tu cuenta de MiFlix</h2><form id="loginForm"><label>Email<input id="email" type="email" autocomplete="username" required></label><label>Contraseña<input id="password" type="password" autocomplete="current-password" required></label><button>Entrar al chat</button></form></section>
+<section id="chat" hidden><div class="box"><div class="row"><button id="signout">Cerrar sesión</button><a id="joinApp"><button type="button">Abrir MiFlix</button></a></div><label>Tu nickname<input id="nick" placeholder="3–24 letras, números o _" maxlength="24"></label><button id="saveNick">Guardar nickname</button></div>
+<div class="box"><h2>Chat en vivo</h2><div id="messages" aria-live="polite"></div><form id="sendForm" class="send"><input id="text" maxlength="400" placeholder="Escribe un mensaje…" required><button>Enviar</button></form><div id="reactions" class="row" style="margin-top:12px"></div></div>
+<div class="box"><h2>Frases rápidas</h2><div id="phrases" class="row"></div><label>Personaliza tus frases (separadas con |)<input id="phraseEdit" maxlength="1000"></label><button id="savePhrases">Guardar frases</button></div>
+<div class="box"><h2>Participantes y amigos</h2><div id="members"></div><label>Agregar por nickname<input id="friendNick" placeholder="Nickname"></label><button id="addFriend">Enviar solicitud</button><div id="friends"></div></div></section></main>
+<script type="module">
+import {createClient} from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const SUPABASE_URL='https://iwvhigqxsvvgyzdygiqa.supabase.co';
+const SUPABASE_KEY='sb_publishable_TdzEQXtDadVMKhSLVe0ihw_EAQ4iNsd';
+const client=createClient(SUPABASE_URL,SUPABASE_KEY);
+const $=id=>document.getElementById(id);
+const room=new URLSearchParams(location.search).get('room')||'';
+$('code').textContent=/^\d{6}$/.test(room)?room:'Código inválido';
+$('joinApp').href=`miflix://watch-party?code=${encodeURIComponent(room)}`;
+let user=null, cursor=-1, names=new Map(), polling=false, sending=false, lastSend=0, timer=null;
+let phrases=JSON.parse(localStorage.getItem('miflix-party-phrases')||'null')||['¡Qué buena escena!','Un momento, por favor','¡No spoilers!'];
+const status=text=>{$('status').textContent=text;};
+async function checked(query){const {data,error}=await query;if(error)throw error;return data;}
+async function action(fn){try{await fn()}catch(e){status(e.message||'No se pudo completar la acción');}}
+function button(text,handler){const b=document.createElement('button');b.textContent=text;b.onclick=()=>action(handler);return b;}
+function showPhrases(){ $('phrases').replaceChildren(...phrases.map(text=>button(text,()=>send('phrase',text))));$('phraseEdit').value=phrases.join('|'); }
+$('reactions').replaceChildren(...['😂','❤️','🔥','😱','👏','🍿'].map(emoji=>{const b=button(emoji,()=>send('emoji',emoji));b.className='emoji';return b;}));showPhrases();
+$('savePhrases').onclick=()=>{phrases=[...new Set($('phraseEdit').value.split('|').map(x=>x.trim().slice(0,120)).filter(Boolean))].slice(0,8);localStorage.setItem('miflix-party-phrases',JSON.stringify(phrases));showPhrases();};
+async function send(kind,body){
+ if(!user||sending||Date.now()-lastSend<500)return;
+ const text=body.trim();if(!text)return;sending=true;
+ try{await checked(client.from('miflix_party_events').insert({room_code:room,user_id:user.id,kind,body:text.slice(0,400)}));lastSend=Date.now();await poll();}
+ finally{sending=false;}
+}
+function append(event){const atBottom=$('messages').scrollHeight-$('messages').scrollTop-$('messages').clientHeight<80;const bubble=document.createElement('div');bubble.className='bubble';const name=document.createElement('small');name.textContent='@'+(names.get(event.user_id)||'Guest');const body=document.createElement('span');body.textContent=event.body;bubble.append(name,body);$('messages').append(bubble);while($('messages').children.length>100)$('messages').firstChild.remove();if(atBottom)$('messages').scrollTop=$('messages').scrollHeight;}
+async function add(id){
+ if(id===user.id)throw new Error('Este es tu propio usuario');
+ const friendships=await checked(client.from('miflix_friendships').select('*'));
+ const row=friendships.find(x=>x.sender_id===id||x.receiver_id===id);
+ if(row?.status==='accepted'){status('Ya son amigos');return;}
+ if(row?.receiver_id===user.id)await checked(client.from('miflix_friendships').update({status:'accepted'}).eq('sender_id',id).eq('receiver_id',user.id));
+ else if(!row)await checked(client.from('miflix_friendships').insert({sender_id:user.id,receiver_id:id}));
+ status(row?.receiver_id===user.id?'Amistad aceptada':'Solicitud enviada');await friends();
+}
+async function friends(){
+ const rows=await checked(client.from('miflix_friendships').select('*'));const ids=[...new Set(rows.flatMap(x=>[x.sender_id,x.receiver_id]))];
+ if(ids.length){const profiles=await checked(client.from('miflix_social_profiles').select('user_id,nickname').in('user_id',ids));profiles.forEach(x=>names.set(x.user_id,x.nickname));}
+ $('friends').replaceChildren(...rows.map(row=>{const other=row.sender_id===user.id?row.receiver_id:row.sender_id;const text='@'+(names.get(other)||'Guest');if(row.status==='pending'&&row.receiver_id===user.id)return button('Aceptar '+text,()=>add(other));const p=document.createElement('p');p.textContent=(row.status==='accepted'?'✓ ':'Solicitud enviada · ')+text;return p;}));
+}
+async function poll(){
+ if(polling||!user)return;polling=true;
+ try{
+  const active=await checked(client.from('miflix_watch_parties').select('room_code,state').eq('room_code',room).maybeSingle());
+  if(!active){status('La sala está cerrada o expiró.');clearInterval(timer);return;}
+  const members=await checked(client.from('miflix_party_members').select('user_id').eq('room_code',room));
+  if(members.length){const profiles=await checked(client.from('miflix_social_profiles').select('user_id,nickname').in('user_id',members.map(x=>x.user_id)));profiles.forEach(x=>names.set(x.user_id,x.nickname));}
+  $('members').replaceChildren(...members.map(m=>{const row=document.createElement('div');row.className='member';const span=document.createElement('span');span.textContent='@'+(names.get(m.user_id)||'Guest');row.append(span);if(m.user_id!==user.id)row.append(button('Agregar amigo',()=>add(m.user_id)));return row;}));
+  let q=client.from('miflix_party_events').select('*').eq('room_code',room).order('id',{ascending:cursor>=0}).limit(60);if(cursor>=0)q=q.gt('id',cursor);
+  const events=await checked(q);events.sort((a,b)=>a.id-b.id);for(const event of events){append(event);cursor=event.id;}if(cursor<0)cursor=0;
+ }finally{polling=false;}
+}
+async function enter(session){
+ if(!/^\d{6}$/.test(room))throw new Error('Escanea el QR de una sala válida');
+ user=session.user;await checked(client.rpc('miflix_join_room',{code:room}));
+ $('login').hidden=true;$('chat').hidden=false;
+ const me=await checked(client.from('miflix_social_profiles').select('nickname').eq('user_id',user.id).maybeSingle());$('nick').value=me?.nickname||'';
+ cursor=-1;$('messages').replaceChildren();clearInterval(timer);await poll();await friends();timer=setInterval(()=>action(poll),2000);status('Conectado. Los mensajes y reacciones aparecen en la TV.');
+}
+$('loginForm').onsubmit=e=>{e.preventDefault();action(async()=>{const {data,error}=await client.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error)throw error;$('password').value='';await enter(data.session);});};
+$('sendForm').onsubmit=e=>{e.preventDefault();action(async()=>{await send('chat',$('text').value);$('text').value='';});};
+$('saveNick').onclick=()=>action(async()=>{const nick=$('nick').value.trim().toLowerCase();if(!/^[a-z0-9_]{3,24}$/.test(nick))throw new Error('Usa 3–24 letras, números o _');await checked(client.from('miflix_social_profiles').upsert({user_id:user.id,nickname:nick}));status('Nickname guardado');await poll();});
+$('addFriend').onclick=()=>action(async()=>{const nick=$('friendNick').value.trim().toLowerCase();const person=await checked(client.from('miflix_social_profiles').select('user_id').eq('nickname',nick).maybeSingle());if(!person)throw new Error('Nickname no encontrado');await add(person.user_id);});
+$('signout').onclick=()=>action(async()=>{clearInterval(timer);await client.auth.signOut();user=null;$('chat').hidden=true;$('login').hidden=false;status('Sesión cerrada');});
+const {data}=await client.auth.getSession();if(data.session)action(()=>enter(data.session));
+window.addEventListener('pagehide',()=>clearInterval(timer));
+</script></body></html>

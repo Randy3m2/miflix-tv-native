@@ -7,6 +7,9 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.miflix.native2.BuildConfig
+import com.miflix.native2.data.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.CancellationException
 import com.miflix.native2.data.LocalStore
 import com.miflix.native2.data.PairingRepository
 import com.miflix.native2.data.StreamRepository
@@ -27,6 +30,24 @@ import java.util.Locale
 import java.util.UUID
 
 class AppState(context: Context) {
+    private val socialPrefs = context.getSharedPreferences("miflix_social", Context.MODE_PRIVATE)
+    private val livePrefs = context.getSharedPreferences("miflix_live", Context.MODE_PRIVATE)
+    private val social = SocialRepository(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY)
+    val trakt = TraktRepository(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY)
+    var nickname by mutableStateOf("")
+    val partyMembers = mutableStateListOf<SocialPerson>()
+    val friendRows = mutableStateListOf<Friendship>()
+    val friendPeople = mutableStateMapOf<String, String>()
+    val partyMessages = mutableStateListOf<PartyEvent>()
+    val floatingEvents = mutableStateListOf<PartyEvent>()
+    val partyPhrases = mutableStateListOf<String>().apply {
+        addAll(socialPrefs.getString("phrases", "¡Qué buena escena!|Un momento, por favor|¡No spoilers!").orEmpty().split("|").filter { it.isNotBlank() })
+    }
+    private var lastEventId = -1L
+    private val traktSent = mutableSetOf<String>()
+    var traktConnected by mutableStateOf(false)
+    var traktStatus by mutableStateOf("")
+    var traktDevice by mutableStateOf<org.json.JSONObject?>(null)
     private val local = LocalStore(context)
     private val cloud = SupabaseRepository(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY)
     private val pairingRepo = PairingRepository(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY)
@@ -133,6 +154,17 @@ class AppState(context: Context) {
         }
         if (tmdb.token.isNotBlank()) {
             runCatching { loadHome() }.onFailure { error = it.message }
+        }
+        session?.let { account ->
+            runCatching { trakt.call(account,"status").optBoolean("connected") }.onSuccess { traktConnected=it }
+            runCatching { nickname = social.nickname(account) }
+            val room = socialPrefs.getString("room_${account.userId}", "").orEmpty()
+            if (room.isNotBlank()) runCatching {
+                cloud.readWatchParty(account, room)?.let { party ->
+                    watchParty = party; partyRole = if (party.hostUserId == account.userId) PartyRole.HOST else PartyRole.GUEST
+                    social.join(account, room)
+                }
+            }
         }
         screen = if (tmdb.token.isNotBlank()) Screen.HOME else Screen.SETTINGS
     }
@@ -506,38 +538,42 @@ class AppState(context: Context) {
         if (ended) continueWatching.removeAll { it.cloudId == req.item.cloudId }
     }
 
-    suspend fun createWatchParty(): WatchParty? {
+    suspend fun createWatchParty(withCurrentTitle: Boolean = false): WatchParty? {
         val s = session ?: run { error = "Sign in before creating a Watch Party"; return null }
-        val item = selected ?: playerRequest?.item ?: run { error = "Open a movie or series first"; return null }
-        val req = playerRequest
-        val saved = progress[item.cloudId]
+        watchParty?.let { return it }
+        val item = if (withCurrentTitle) selected ?: playerRequest?.item else null
+        val req = if (withCurrentTitle && playerRequest?.item?.cloudId == item?.cloudId) playerRequest else null
+        val saved = item?.let { progress[it.cloudId] }
         val room = (100000..999999).random().toString()
         val party = WatchParty(
             roomCode = room,
             hostUserId = s.userId,
-            cloudId = item.cloudId,
-            season = req?.season ?: saved?.season ?: if (item.type == "series") 1 else 0,
-            episode = req?.episode ?: saved?.episode ?: if (item.type == "series") 1 else 0,
+            cloudId = item?.cloudId.orEmpty(),
+            season = req?.season ?: saved?.season ?: if (item?.type == "series") 1 else 0,
+            episode = req?.episode ?: saved?.episode ?: if (item?.type == "series") 1 else 0,
             positionMs = req?.resumeMs ?: saved?.position ?: 0L,
             playing = false,
-            updatedAt = System.currentTimeMillis()
+            updatedAt = System.currentTimeMillis(),
+            liveChannelId = req?.liveChannelId.orEmpty(),
+            liveProvider = req?.liveProvider.orEmpty(),
+            liveType = req?.liveType ?: "tv",
+            liveTitle = if (req?.live == true) req.item.title else ""
         )
-        return runCatching { cloud.createWatchParty(s, party); watchParty = party; partyRole = PartyRole.HOST; partyStatus = "Room ready"; party }
+        return runCatching { cloud.createWatchParty(s, party); watchParty = party; partyRole = PartyRole.HOST; partyStatus = "Room ready · choose any title"; social.join(s, room); rememberRoom(room); lastEventId = -1; party }
             .onFailure { error = it.message }.getOrNull()
     }
 
     suspend fun joinWatchParty(code: String) {
         val s = session ?: run { error = "Sign in before joining a Watch Party"; return }
+        social.join(s, code.trim())
         val party = cloud.readWatchParty(s, code.trim()) ?: run { error = "Watch Party room not found"; return }
-        val item = tmdb.byCloudId(party.cloudId) ?: run { error = "This title is not available"; return }
         watchParty = party
-        partyRole = PartyRole.GUEST
+        partyRole = if (party.hostUserId == s.userId) PartyRole.HOST else PartyRole.GUEST
+        rememberRoom(party.roomCode)
+        lastEventId = -1
         partyStatus = "Joined ${party.roomCode}"
-        selected = item
-        details = tmdb.details(item)
-        if (item.type == "series") loadSeason(party.season.coerceAtLeast(1))
-        val imdb = details?.imdbId ?: run { error = "IMDb ID unavailable"; return }
-        playResolved(item, imdb, party.season, party.episode, party.positionMs)
+        if (party.cloudId.isBlank()) { screen = Screen.WATCH_PARTY; return }
+        switchToPartyState(party)
     }
 
     suspend fun hostPartyUpdate(req: PlayerRequest, positionMs: Long, playing: Boolean) {
@@ -546,6 +582,10 @@ class AppState(context: Context) {
         val current = watchParty ?: return
         val next = current.copy(
             cloudId = req.item.cloudId,
+            liveChannelId = req.liveChannelId,
+            liveProvider = req.liveProvider,
+            liveType = req.liveType,
+            liveTitle = if (req.live) req.item.title else "",
             season = req.season,
             episode = req.episode,
             positionMs = positionMs,
@@ -562,24 +602,173 @@ class AppState(context: Context) {
         return runCatching { cloud.readWatchParty(s, current.roomCode) }.getOrNull()?.also { watchParty = it }
     }
 
+    private var switchingParty = false
     suspend fun switchToPartyState(remote: WatchParty) {
+        if(switchingParty)return
+        switchingParty=true
+        try {
         val current = playerRequest
         if (current != null && current.item.cloudId == remote.cloudId && current.season == remote.season && current.episode == remote.episode) return
+        if (remote.cloudId.isBlank()) return
+        if (remote.liveChannelId.isNotBlank()) {
+            val manifest = if (remote.liveProvider == "sports") livePrefs.getString("sports_manifest", "https://sportsfree-us2.highfly.to/manifest.json").orEmpty()
+                else "https://stremio-addon-wheat.vercel.app/manifest.json"
+            val channel = LiveChannel(remote.liveChannelId, remote.liveType, remote.liveTitle, null, "")
+            val stream = LiveRepository().streams(manifest, channel).firstOrNull() ?: return
+            val item = MediaSummary(remote.cloudId.substringAfterLast(':').toIntOrNull() ?: channel.id.hashCode(), "live", channel.name, "", null, null, 0.0, "LIVE")
+            selected=item
+            playerRequest = PlayerRequest(item, stream, 0, 0, 0L, true, channel.id, remote.liveProvider, liveType=remote.liveType)
+            screen = Screen.PLAYER
+            return
+        }
         val item = tmdb.byCloudId(remote.cloudId) ?: return
         selected = item
         details = tmdb.details(item)
         if (item.type == "series") loadSeason(remote.season.coerceAtLeast(1))
         val imdb = details?.imdbId ?: return
         playResolved(item, imdb, remote.season, remote.episode, remote.positionMs)
+        } finally { switchingParty=false }
     }
 
     suspend fun leaveWatchParty() {
         val s = session
         val p = watchParty
         if (s != null && p != null && partyRole == PartyRole.HOST) runCatching { cloud.deleteWatchParty(s, p.roomCode) }
+        if (s != null && p != null) runCatching { social.leave(s, p.roomCode) }
+        s?.let { socialPrefs.edit().remove("room_${it.userId}").apply() }
+        partyMessages.clear(); floatingEvents.clear(); partyMembers.clear(); lastEventId = -1
         watchParty = null
         partyRole = null
         partyStatus = ""
+    }
+
+    private fun rememberRoom(code: String) { session?.let { socialPrefs.edit().putString("room_${it.userId}", code).apply() } }
+
+    suspend fun refreshAccountSession() {
+        val account=session ?: return
+        if(account.refreshToken.isBlank())return
+        runCatching { cloud.refresh(account.refreshToken) }.onSuccess { refreshed ->
+            if(session?.userId==account.userId) { session=refreshed; local.saveSession(refreshed) }
+        }
+    }
+
+    suspend fun socialAction(block: suspend () -> Unit) {
+        try { block() } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            error = e.message
+        }
+    }
+    suspend fun saveNickname(value: String) = socialAction {
+        val s = session ?: error("Sign in first")
+        val nick = value.trim().lowercase(Locale.US)
+        social.saveNickname(s, nick); nickname = nick
+    }
+    fun savePhrases(value: String) {
+        val values = value.split("|").map { it.trim().take(120) }.filter { it.isNotEmpty() }.distinct().take(8)
+        partyPhrases.clear(); partyPhrases.addAll(values)
+        socialPrefs.edit().putString("phrases", values.joinToString("|")).apply()
+    }
+    suspend fun sendPartyEvent(kind: String, text: String) = socialAction {
+        val s = session ?: error("Sign in first")
+        val room = watchParty?.roomCode ?: error("Join a room first")
+        social.send(s, room, kind, text)
+    }
+    suspend fun refreshFriends() = socialAction {
+        val s = session ?: return@socialAction
+        nickname = social.nickname(s)
+        friendRows.clear(); friendRows.addAll(social.friends(s))
+        val ids = friendRows.flatMap { listOf(it.sender,it.receiver) }.distinct()
+        social.people(s, ids).forEach { friendPeople[it.id] = it.nickname }
+    }
+    suspend fun addFriend(id: String) = socialAction {
+        val s = session ?: error("Sign in first")
+        require(id != s.userId) { "This is your account" }
+        val existing = social.friends(s).firstOrNull { it.sender == id || it.receiver == id }
+        if (existing?.status == "accepted") return@socialAction
+        if (existing?.receiver == s.userId) social.accept(s, id)
+        else if (existing == null) social.requestFriend(s, id)
+        refreshFriends()
+    }
+    suspend fun findAndAddFriend(nick: String) = socialAction {
+        val s = session ?: error("Sign in first")
+        val person = social.find(s, nick.trim()) ?: error("Nickname not found")
+        addFriend(person.id)
+    }
+    suspend fun pollSocialRoom() {
+        val s = session ?: return
+        val p = watchParty ?: return
+        val fresh = cloud.readWatchParty(s, p.roomCode)
+        if (fresh == null) { watchParty = null; partyRole = null; partyStatus = "Room closed or expired"; return }
+        if (partyRole == PartyRole.GUEST) {
+            watchParty = fresh
+            if (fresh.cloudId.isNotBlank()) switchToPartyState(fresh)
+        }
+        partyMembers.clear(); partyMembers.addAll(social.members(s,p.roomCode))
+        val events = social.events(s,p.roomCode,lastEventId)
+        if (lastEventId < 0) {
+            partyMessages.clear(); partyMessages.addAll(events)
+            lastEventId = events.lastOrNull()?.id ?: 0
+        } else {
+            for (event in events) {
+                lastEventId = event.id
+                partyMessages.add(event)
+                floatingEvents.add(event)
+                while (floatingEvents.size > 3) floatingEvents.removeAt(0)
+                launch { delay(4500); floatingEvents.removeAll { it.id == event.id } }
+            }
+            while (partyMessages.size > 60) partyMessages.removeAt(0)
+        }
+    }
+    suspend fun heartbeatRoom() {
+        val s=session ?: return
+        if(partyRole==PartyRole.HOST) watchParty?.let { cloud.updateWatchParty(s,it) }
+    }
+
+    suspend fun traktRefresh() = socialAction {
+        val s = session ?: error("Sign in first")
+        val result = trakt.call(s,"status")
+        traktConnected = result.optBoolean("connected")
+        traktStatus = if (traktConnected) "Connected" else if (result.optBoolean("configured")) "Not connected" else "Trakt server setup required"
+    }
+    suspend fun traktStart() = socialAction {
+        val s = session ?: error("Sign in first")
+        traktDevice = trakt.call(s,"start")
+        traktStatus = "Authorize the code on your phone"
+    }
+    suspend fun traktPoll(): Boolean {
+        val s = session ?: return true
+        val result=trakt.call(s,"poll")
+        if(result.optBoolean("slow_down")) traktDevice=traktDevice?.put("interval",(traktDevice?.optLong("interval",5)?:5)+5)
+        if (result.optBoolean("connected")) { traktConnected=true; traktDevice=null; traktStatus="Connected"; return true }
+        return false
+    }
+    suspend fun traktDisconnect() = socialAction {
+        val s=session ?: return@socialAction
+        trakt.call(s,"disconnect"); traktConnected=false; traktDevice=null; traktStatus="Disconnected"
+    }
+    suspend fun traktImport() = socialAction {
+        val s=session ?: error("Sign in first")
+        val rows=trakt.call(s,"watchlist").optJSONArray("items") ?: return@socialAction
+        for(i in 0 until rows.length()) {
+            val row=rows.getJSONObject(i)
+            val movie=row.optJSONObject("movie")
+            val show=row.optJSONObject("show")
+            val media=movie ?: show ?: continue
+            val id=media.optJSONObject("ids")?.optInt("tmdb",0) ?: 0
+            if(id>0) { val key="tmdb:${if(movie!=null) "movie" else "series"}:$id"; if(!favorites.contains(key))favorites.add(key) }
+        }
+        pushCloud(); traktStatus="Watchlist imported to My List"
+    }
+    suspend fun traktMarkWatched(req: PlayerRequest, position: Long, duration: Long) {
+        if(!traktConnected || req.live || duration<=0 || position.toDouble()/duration<0.8)return
+        val s=session ?: return
+        val event=req.playbackId
+        if(traktSent.contains(event))return
+        if(!traktSent.add(event))return
+        runCatching {
+            trakt.call(s,"watched",org.json.JSONObject().put("tmdb",req.item.id).put("type",req.item.type)
+                .put("season",req.season).put("episode",req.episode).put("event",event))
+        }.onFailure { traktSent.remove(event); traktStatus="Could not sync watched title: ${it.message}" }
     }
 
     suspend fun startPairing() {
@@ -621,6 +810,10 @@ class AppState(context: Context) {
     }
 
     fun signOut() {
+        watchParty=null; partyRole=null; nickname=""
+        partyMessages.clear(); floatingEvents.clear(); partyMembers.clear()
+        friendRows.clear(); friendPeople.clear(); lastEventId=-1
+        traktConnected=false; traktDevice=null; traktSent.clear()
         session = null
         local.saveSession(null)
         favorites.clear(); progress.clear(); profiles.clear(); continueWatching.clear()
@@ -636,7 +829,7 @@ class AppState(context: Context) {
 enum class Screen {
     SPLASH, HOME, SEARCH, MOVIES, SERIES, COLLECTIONS, COLLECTION_DETAIL, PLATFORM_DETAIL,
     GENRES, GENRE_DETAIL, YEAR_DETAIL, MY_LIST, SETTINGS, PROFILES, WATCH_PARTY, PAIR_DEVICE,
-    DETAILS, PLAYER, LIVE_TV
+    DETAILS, PLAYER, LIVE_TV, FRIENDS, TRAKT
 }
 
 data class PlayerRequest(
@@ -645,7 +838,11 @@ data class PlayerRequest(
     val season: Int,
     val episode: Int,
     val resumeMs: Long,
-    val live: Boolean = false
+    val live: Boolean = false,
+    val liveChannelId: String = "",
+    val liveProvider: String = "",
+    val playbackId: String = java.util.UUID.randomUUID().toString(),
+    val liveType: String = "tv"
 )
 
 data class SourceSelection(

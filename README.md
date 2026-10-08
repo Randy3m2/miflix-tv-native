@@ -69,3 +69,11 @@ Versioned release tag:
 Permanent release tag:
 
 - `native-latest`
+
+
+## Watch Party Social + Trakt update
+
+See `SOCIAL_TRAKT_SETUP.md` for installation and the complete feature scope.
+Execute `supabase_party_social_upgrade.sql` and deploy the updated Pages site.
+Trakt also requires the included `miflix-trakt` Edge Function and your Trakt API
+application credentials. All prior RC1 fixes and Live TV are included.

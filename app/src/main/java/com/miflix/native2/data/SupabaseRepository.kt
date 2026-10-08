@@ -149,7 +149,7 @@ class SupabaseRepository(private val url: String, private val key: String) {
     }
 
     suspend fun updateWatchParty(session: CloudSession, party: WatchParty) {
-        val body = JSONObject().put("state", partyStateJson(party)).put("updated_at", isoNow()).toString()
+        val body = JSONObject().put("state", partyStateJson(party)).put("updated_at", isoNow()).put("expires_at", isoFromMillis(System.currentTimeMillis() + 8 * 60 * 60 * 1000L)).toString()
         val code = URLEncoder.encode(party.roomCode, "UTF-8")
         Http.text(
             "$url/rest/v1/miflix_watch_parties?room_code=eq.$code",
@@ -176,7 +176,11 @@ class SupabaseRepository(private val url: String, private val key: String) {
             episode = state.optInt("episode", 0),
             positionMs = state.optLong("positionMs", 0L),
             playing = state.optBoolean("playing", false),
-            updatedAt = state.optLong("updatedAt", 0L)
+            updatedAt = state.optLong("updatedAt", 0L),
+            liveChannelId = state.optString("liveChannelId"),
+            liveProvider = state.optString("liveProvider"),
+            liveTitle = state.optString("liveTitle"),
+            liveType = state.optString("liveType","tv")
         )
     }
 
@@ -187,6 +191,10 @@ class SupabaseRepository(private val url: String, private val key: String) {
 
     private fun partyStateJson(p: WatchParty) = JSONObject()
         .put("cloudId", p.cloudId)
+        .put("liveChannelId", p.liveChannelId)
+        .put("liveProvider", p.liveProvider)
+        .put("liveTitle", p.liveTitle)
+        .put("liveType", p.liveType)
         .put("season", p.season)
         .put("episode", p.episode)
         .put("positionMs", p.positionMs)

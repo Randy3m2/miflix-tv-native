@@ -282,6 +282,7 @@ fun Sidebar(screen: Screen, profileName: String, onNavigate: (Screen) -> Unit) {
         Triple(Screen.HOME, "⌂", "Home"),
         Triple(Screen.SEARCH, "⌕", "Search"),
         Triple(Screen.COLLECTIONS, "◇", "Collections"),
+        Triple(Screen.WATCH_PARTY, "◉", "Party"),
         Triple(Screen.LIVE_TV, "●", "Live TV"),
         Triple(Screen.GENRES, "▦", "Genres"),
         Triple(Screen.MY_LIST, "♡", "My List"),

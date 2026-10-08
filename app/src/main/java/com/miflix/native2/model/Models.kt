@@ -145,7 +145,11 @@ data class WatchParty(
     val episode: Int,
     val positionMs: Long,
     val playing: Boolean,
-    val updatedAt: Long
+    val updatedAt: Long,
+    val liveChannelId: String = "",
+    val liveProvider: String = "",
+    val liveTitle: String = "",
+    val liveType: String = "tv"
 )
 
 enum class PartyRole { HOST, GUEST }

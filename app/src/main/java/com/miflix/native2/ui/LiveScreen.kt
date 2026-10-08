@@ -90,10 +90,11 @@ fun LiveScreen(state: AppState) {
     fun play(channel: LiveChannel, stream: StreamChoice) {
         sources = emptyList(); sourceChannel = null
         val item = MediaSummary(channel.id.hashCode(), "live", channel.name, channel.description, null, channel.poster, 0.0, "LIVE")
-        state.playerRequest = PlayerRequest(item, stream, 0, 0, 0L, live = true)
+        state.selected=item
+        state.playerRequest = PlayerRequest(item, stream, 0, 0, 0L, live = true, liveChannelId = channel.id, liveProvider = if (sports) "sports" else "nauta", liveType=channel.type)
         state.screen = Screen.PLAYER
     }
-    fun open(channel: LiveChannel, manual: Boolean) {
+    fun openChannel(channel: LiveChannel, manual: Boolean) {
         if (loading) return
         scope.launch {
             loading = true; message = ""
@@ -133,7 +134,7 @@ fun LiveScreen(state: AppState) {
                     search.isBlank() || liveSearchKey(channel.name).contains(liveSearchKey(search)) || channelNumber(channel).toString() == search.trim()
                 }
                 items(visible, key = { it.id }) { channel ->
-                    LiveChannelRow(channel, channelNumber(channel), { open(channel, false) }, { open(channel, true) })
+                    LiveChannelRow(channel, channelNumber(channel), { openChannel(channel, false) }, { openChannel(channel, true) })
                 }
                 if (!loading && channels.isNotEmpty() && visible.isEmpty()) item {
                     Text("No matching channels in this category.", color = Color.White)

@@ -516,6 +516,11 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 }
 
                 Spacer(Modifier.height(28.dp))
+                Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                    FocusButton("Friends / Nickname / Phrases") { state.screen=Screen.FRIENDS }
+                    FocusButton("Trakt") { state.screen=Screen.TRAKT }
+                }
+                Spacer(Modifier.height(18.dp))
                 Text("Stream Add-ons", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
                 Text("Torrentio and Comet manifests are account-level, so every profile on this account shares them.", color = Muted, fontSize = 14.sp, modifier = Modifier.width(840.dp))
@@ -630,46 +635,54 @@ fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
 fun WatchPartyScreen(state: AppState, onBack: () -> Unit) {
     var joinCode by remember { mutableStateOf("") }
     BackHandler(onBack = onBack)
-    Box(Modifier.fillMaxSize().background(Bg)) {
-        Column(Modifier.padding(58.dp).widthIn(max = 950.dp)) {
-            Text("Watch Party", color = Color.White, fontSize = 38.sp, fontWeight = FontWeight.Black)
-            Spacer(Modifier.height(8.dp))
-            Text("Every participant resolves the stream with their own add-ons. Your TorBox/Torrentio credentials are never shared.", color = Muted, fontSize = 14.sp)
-            Spacer(Modifier.height(28.dp))
-
-            val party = state.watchParty
-            if (party == null) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FocusButton("Create Room", primary = true) { state.launch { state.createWatchParty() } }
+    AppShell(state, Screen.WATCH_PARTY, { state.screen=it }) {
+        LazyColumn(Modifier.fillMaxSize().padding(28.dp),verticalArrangement=Arrangement.spacedBy(16.dp),contentPadding=PaddingValues(bottom=40.dp)) {
+            item {
+                Text("Watch Party",color=Color.White,fontSize=32.sp,fontWeight=FontWeight.Bold)
+                Text("One room and QR for all content. Scan on your phone for live chat.",color=Muted)
+                Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                    FocusButton("Friends / Nickname") { state.screen=Screen.FRIENDS }
                     FocusButton("Back") { onBack() }
                 }
-                Spacer(Modifier.height(28.dp))
-                Text("Join a room", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    NativeTextField(joinCode, { joinCode = it.filter(Char::isDigit).take(6) }, "6-digit room code", modifier = Modifier.width(300.dp))
-                    FocusButton("Join", primary = true) { state.launch { state.joinWatchParty(joinCode) } }
+            }
+            val party=state.watchParty
+            if(party==null) {
+                item {
+                    FocusButton("Create Room",primary=true) { state.launch { state.socialAction { state.createWatchParty() } } }
+                    if(state.selected!=null || state.playerRequest!=null) FocusButton("Create with current title") { state.launch { state.socialAction { state.createWatchParty(true) } } }
+                    NativeTextField(joinCode,{joinCode=it.filter(Char::isDigit).take(6)},"6-digit room code")
+                    FocusButton("Join") { state.launch { state.socialAction { state.joinWatchParty(joinCode) } } }
                 }
             } else {
-                Row(horizontalArrangement = Arrangement.spacedBy(30.dp), verticalAlignment = Alignment.CenterVertically) {
-                    QrCode("https://randy3m2.github.io/miflix-tv-native/party/?room=${party.roomCode}", 260.dp)
-                    Column {
-                        Text(if (state.partyRole == PartyRole.HOST) "Your room" else "Joined room", color = Muted, fontSize = 14.sp)
-                        Text(party.roomCode, color = Color.White, fontSize = 48.sp, fontWeight = FontWeight.Black)
-                        Spacer(Modifier.height(8.dp))
-                        Text("Scan the QR or enter the code in MiFlix.", color = Color.White, fontSize = 15.sp)
-                        Spacer(Modifier.height(18.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            if (state.selected != null) FocusButton("Open Title", primary = true) { state.screen = Screen.DETAILS }
-                            FocusButton("Leave") { state.launch { state.leaveWatchParty(); onBack() } }
+                item {
+                    Row(horizontalArrangement=Arrangement.spacedBy(25.dp)) {
+                        QrCode("https://randy3m2.github.io/miflix-tv-native/party/?room=${party.roomCode}",210.dp)
+                        Column {
+                            Text(party.roomCode,color=Color.White,fontSize=42.sp,fontWeight=FontWeight.Bold)
+                            Text(if(state.partyRole==PartyRole.HOST) "Host · same code when changing content" else "Guest · follows the host",color=Muted)
+                            FocusButton("Choose content") { state.screen=Screen.HOME }
+                            if(state.playerRequest!=null) FocusButton("Return to playback") { state.screen=Screen.PLAYER }
+                            FocusButton("Leave / close room") { state.launch { state.leaveWatchParty(); onBack() } }
                         }
                     }
                 }
+                item { LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                    items(PartyEmojis) { emoji -> FocusButton(emoji) { state.launch { state.sendPartyEvent("emoji",emoji) } } }
+                } }
+                item { Text("Quick phrases",color=Color.White,fontSize=20.sp) }
+                items(state.partyPhrases) { phrase -> FocusButton(phrase) { state.launch { state.sendPartyEvent("phrase",phrase) } } }
+                item { Text("Participants · add as friend",color=Color.White,fontSize=20.sp) }
+                items(state.partyMembers,key={it.id}) { person ->
+                    if(person.id!=state.session?.userId) FocusButton("@${person.nickname} · Add friend") { state.launch { state.addFriend(person.id) } }
+                    else Text("@${state.nickname.ifBlank { "You" }}",color=Muted)
+                }
+                item { Text("Recent chat",color=Color.White,fontSize=20.sp) }
+                items(state.partyMessages.takeLast(10),key={it.id}) { event ->
+                    val name=state.partyMembers.firstOrNull { it.id==event.userId }?.nickname?:"Guest"
+                    Text("@$name · ${event.body}",color=Color.White,fontSize=15.sp)
+                }
             }
-            if (state.partyStatus.isNotBlank()) {
-                Spacer(Modifier.height(18.dp))
-                Text(state.partyStatus, color = Color(0xFFE8E8EA), fontSize = 13.sp)
-            }
+            if(state.partyStatus.isNotBlank()) item { Text(state.partyStatus,color=Muted) }
         }
     }
 }
@@ -681,6 +694,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var controlsVisible by remember(request.stream.url) { mutableStateOf(true) }
     var controlInteraction by remember { mutableStateOf(0) }
     var nativePlayerView by remember { mutableStateOf<PlayerView?>(null) }
+    var showPartyActions by remember { mutableStateOf(false) }
     var showEpisodes by remember(request.item.cloudId) { mutableStateOf(false) }
     val subtitles = request.stream.subtitles
     val preferredText = when {
@@ -718,7 +732,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             trackSelectionParameters = trackBuilder.build()
             videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
             prepare()
-            playWhenReady = true
+            playWhenReady = if (state.partyRole == PartyRole.GUEST) state.watchParty?.playing ?: true else true
         }
     }
 
@@ -741,6 +755,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 if (playbackState == Player.STATE_ENDED) {
                     val duration = player.duration.coerceAtLeast(0)
                     if (duration > 0) state.updateProgress(request, duration, duration, ended = true)
+                    state.launch { state.traktMarkWatched(request,duration,duration) }
                     state.launch { runCatching { state.pushCloud() } }
                 }
             }
@@ -750,7 +765,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         onDispose {
             playbackView.keepScreenOn = previousKeepScreenOn
             player.removeListener(listener)
-            state.updateProgress(request, player.currentPosition, player.duration.coerceAtLeast(0))
+            val lastPosition=player.currentPosition
+            val lastDuration=player.duration.coerceAtLeast(0)
+            state.updateProgress(request, lastPosition, lastDuration)
+            state.launch { state.traktMarkWatched(request,lastPosition,lastDuration) }
             state.launch { runCatching { state.pushCloud() } }
             player.release()
         }
@@ -761,11 +779,12 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             delay(4000)
             val d = player.duration
             if (d > 0) state.updateProgress(request, player.currentPosition, d)
+            if (d > 0 && player.currentPosition.toDouble()/d>=0.8) state.launch { state.traktMarkWatched(request,player.currentPosition,d) }
         }
     }
 
     LaunchedEffect(player, state.partyRole, state.watchParty?.roomCode, request.stream.url) {
-        while (!request.live && state.watchParty != null) {
+        while (state.watchParty != null) {
             delay(1000)
             when (state.partyRole) {
                 PartyRole.HOST -> state.hostPartyUpdate(request, player.currentPosition, player.isPlaying)
@@ -775,7 +794,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                         state.switchToPartyState(remote)
                         break
                     }
-                    if (abs(remote.positionMs - player.currentPosition) > 1800) player.seekTo(remote.positionMs)
+                    if (!request.live && abs(remote.positionMs - player.currentPosition) > 1800) player.seekTo(remote.positionMs)
                     if (remote.playing != player.isPlaying) player.playWhenReady = remote.playing
                 }
                 null -> Unit
@@ -784,8 +803,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     }
 
     // Explicit timer also covers controls holding focus on TV remotes.
-    LaunchedEffect(player, controlInteraction, showEpisodes, state.sourceSelection) {
-        if (!showEpisodes && state.sourceSelection == null) {
+    LaunchedEffect(player, controlInteraction, showEpisodes, showPartyActions, state.sourceSelection) {
+        if (!showEpisodes && !showPartyActions && state.sourceSelection == null) {
             delay(2000)
             controlsVisible = false
             nativePlayerView?.hideController()
@@ -828,20 +847,32 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             modifier = Modifier.fillMaxSize()
         )
 
-        if (controlsVisible && !showEpisodes && request.item.type == "series") {
+        if (controlsVisible && !showEpisodes && !showPartyActions && request.item.type == "series") {
             Row(
                 Modifier.align(Alignment.TopEnd).padding(top = 24.dp, end = 26.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 FocusButton("Episodes") { player.pause(); showEpisodes = true }
-                if (state.watchParty != null) FocusButton("Party ${state.watchParty?.roomCode.orEmpty()}") { state.screen = Screen.WATCH_PARTY }
+                if (state.watchParty != null) FocusButton("React / Chat") { showPartyActions = true }
+                else FocusButton("Create Party") { state.screen=Screen.WATCH_PARTY }
             }
-        } else if (controlsVisible && !showEpisodes && !request.live && state.watchParty != null) {
+        } else if (controlsVisible && !showEpisodes && !showPartyActions) {
             Box(Modifier.align(Alignment.TopEnd).padding(top = 24.dp, end = 26.dp)) {
-                FocusButton("Party ${state.watchParty?.roomCode.orEmpty()}") { state.screen = Screen.WATCH_PARTY }
+                if(state.watchParty!=null) FocusButton("React / Chat") { showPartyActions = true }
+                else FocusButton("Create Party") { state.screen=Screen.WATCH_PARTY }
             }
         }
 
+        if (showPartyActions) PartyActionsDialog(state) { showPartyActions = false }
+        if (state.watchParty != null && state.floatingEvents.isNotEmpty()) {
+            Column(Modifier.align(Alignment.CenterEnd).padding(30.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                state.floatingEvents.toList().forEach { event ->
+                    val name=state.partyMembers.firstOrNull { it.id==event.userId }?.nickname ?: "Guest"
+                    Text("@$name  ${event.body}",color=Color.White,maxLines=3,fontSize=if(event.kind=="emoji") 30.sp else 18.sp,
+                        modifier=Modifier.widthIn(max=450.dp).background(Color(0xCC181818),RoundedCornerShape(16.dp)).padding(16.dp))
+                }
+            }
+        }
         if (showEpisodes) {
             EpisodePickerOverlay(state, request) {
                 showEpisodes = false

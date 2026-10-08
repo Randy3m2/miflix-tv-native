@@ -35,6 +35,8 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         when (state.screen) {
             Screen.SPLASH -> SplashScreen()
             Screen.HOME -> HomeScreen(state) { state.screen = it }
+            Screen.FRIENDS -> FriendsScreen(state)
+            Screen.TRAKT -> TraktScreen(state)
             Screen.LIVE_TV -> LiveScreen(state)
             Screen.SEARCH -> SearchScreen(state) { state.screen = Screen.HOME }
             Screen.MOVIES -> CatalogScreen(state, "Movies", state.movies) { state.screen = Screen.HOME }
@@ -55,6 +57,22 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 ?: run { state.screen = Screen.HOME }
         }
 
+        LaunchedEffect(state.session?.userId) {
+            if(state.session!=null) while(true) {
+                delay(30*60*1000L)
+                state.refreshAccountSession()
+            }
+        }
+        LaunchedEffect(state.session?.userId, state.watchParty?.roomCode) {
+            if (state.watchParty != null) {
+                var ticks = 0
+                while (state.watchParty != null) {
+                    state.socialAction { state.pollSocialRoom() }
+                    if (++ticks % 30 == 0) state.socialAction { state.heartbeatRoom() }
+                    delay(2000)
+                }
+            }
+        }
         state.sourceSelection?.let { SourcePickerOverlay(state, it) }
 
         state.busyMessage?.let { LoadingOverlay(it) }

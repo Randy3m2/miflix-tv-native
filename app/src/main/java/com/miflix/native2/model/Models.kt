@@ -119,7 +119,10 @@ data class CollectionTile(
 data class UpdateInfo(
     val version: String,
     val downloadUrl: String,
-    val isNewer: Boolean
+    val isNewer: Boolean,
+    val versionCode: Int = 0,
+    val sha256: String = "",
+    val sizeBytes: Long = 0
 )
 
 data class CatalogSection(

@@ -336,6 +336,11 @@ class AppState(context: Context) {
     val movies = mutableStateListOf<MediaSummary>()
     val series = mutableStateListOf<MediaSummary>()
     val topRated = mutableStateListOf<MediaSummary>()
+    val newMovies=mutableStateListOf<MediaSummary>()
+    val bestSeries=mutableStateListOf<MediaSummary>()
+    val comedy=mutableStateListOf<MediaSummary>()
+    val thrillers=mutableStateListOf<MediaSummary>()
+    var randomChoosing by mutableStateOf(false)
 
     val continueWatching = mutableStateListOf<MediaSummary>()
     val action = mutableStateListOf<MediaSummary>()
@@ -384,6 +389,12 @@ class AppState(context: Context) {
     var error by mutableStateOf<String?>(null)
 
     var updateInfo by mutableStateOf<UpdateInfo?>(null)
+    var updateDownloading by mutableStateOf(false)
+    var updateBytes by mutableStateOf(0L)
+    var updateTotal by mutableStateOf(0L)
+    var downloadedUpdate by mutableStateOf<java.io.File?>(null)
+    var updateStatus by mutableStateOf("")
+    private var updateDownloadJob: kotlinx.coroutines.Job?=null
     var updateChecking by mutableStateOf(false)
 
     var pairingRequest by mutableStateOf<PairingRequest?>(null)
@@ -590,6 +601,10 @@ class AppState(context: Context) {
                 val appleJob = async { runCatching { tmdb.discoverProviderType(providers.getValue("apple"), "movie") } }
                 val hboJob = async { runCatching { tmdb.discoverProviderType(providers.getValue("hbo"), "movie") } }
                 val continueJob = async { runCatching { resolveContinueWatching() } }
+                val newJob=async { runCatching { tmdb.nowPlayingMovies() } }
+                val bestTvJob=async { runCatching { tmdb.topRatedSeries() } }
+                val comedyJob=async { runCatching { tmdb.discoverMovieGenre(35,pages=1,limit=20) } }
+                val thrillerJob=async { runCatching { tmdb.discoverMovieGenre(53,pages=1,limit=20) } }
 
                 actionJob.await().onSuccess { action.replaceWith(it) }
                 sciFiJob.await().onSuccess { sciFi.replaceWith(it) }
@@ -599,6 +614,10 @@ class AppState(context: Context) {
                 appleJob.await().onSuccess { apple.replaceWith(it) }
                 hboJob.await().onSuccess { hbo.replaceWith(it) }
                 continueJob.await().onSuccess { continueWatching.replaceWith(it) }
+                newJob.await().onSuccess { newMovies.replaceWith(it) }
+                bestTvJob.await().onSuccess { bestSeries.replaceWith(it) }
+                comedyJob.await().onSuccess { comedy.replaceWith(it) }
+                thrillerJob.await().onSuccess { thrillers.replaceWith(it) }
             }
             extrasLoaded = true
         } finally {
@@ -735,6 +754,47 @@ class AppState(context: Context) {
 
     fun toggleFavorite(item: MediaSummary) {
         if (favorites.contains(item.cloudId)) favorites.remove(item.cloudId) else favorites.add(item.cloudId)
+    }
+
+    suspend fun playRandomMovie() {
+        if(randomChoosing) return
+        if(partyRole==PartyRole.GUEST) { error=tr("El host elige el contenido de la sala.","The host chooses the room's content.");return }
+        randomChoosing=true
+        val owner=ratingsKey()
+        try {
+            busyMessage=tr("Buscando una película para ti…","Choosing a movie for you…")
+            val seedIds=(ratings.filterValues { it>=6 }.entries.sortedByDescending { it.value }.map { it.key }
+                +progress.entries.filter { it.value.percent>=10 }.sortedByDescending { it.value.updatedAt }.map { it.key }
+                +favorites).filter { it.startsWith("tmdb:movie:") }.distinct().take(4)
+            val seeds=seedIds.mapNotNull { runCatching { tmdb.byCloudId(it) }.getOrNull() }
+            val recommendations=if(forYou.any { it.type=="movie" }) { forYou.filter { it.type=="movie" } } else {
+                supervisorScope { seeds.take(3).map { seed -> async { runCatching { tmdb.recommendations(seed) }.getOrDefault(emptyList()) } }.awaitAll().flatten() }
+            }
+            if(owner!=ratingsKey()) return
+            val all=(recommendations+newMovies+topRated+movies+action+sciFi+comedy+thrillers).distinctBy { it.cloudId }
+            val target=seeds.map { it.rating }.filter { it>0 }.takeIf { it.isNotEmpty() }?.average()
+            val historyKey="random_$owner"
+            val stored=org.json.JSONArray(playbackPrefs.getString(historyKey,"[]"))
+            val recent=(0 until stored.length()).map { stored.getString(it) }
+            val excluded=(progress.filterValues { it.percent>=80 }.keys+ratings.filterValues { it<=4 }.keys+seedIds).toSet()
+            val pool=RandomMovieSelector.pool(all,recommendations.map { it.cloudId }.toSet(),target,excluded,recent.toSet())
+            var chosen: Pair<MediaSummary,MediaDetails>?=null
+            val today=java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US).format(java.util.Date())
+            for(candidate in pool.shuffled().take(5)) {
+                val detail=try { tmdb.details(candidate) } catch(e: CancellationException) { throw e } catch(_: Exception) { continue }
+                if(detail.imdbId.isNullOrBlank()) continue
+                if(detail.releaseInfo.matches(Regex("\\d{4}-\\d{2}-\\d{2}")) && detail.releaseInfo>today) continue
+                chosen=candidate to detail
+                break
+            }
+            val selectedMovie=chosen ?: error(tr("No encontré una película disponible. Intenta otra vez.","No available movie found. Try again."))
+            if(owner!=ratingsKey()) return
+            val (movie,detail)=selectedMovie
+            playbackPrefs.edit().putString(historyKey,org.json.JSONArray((listOf(movie.cloudId)+recent).distinct().take(20)).toString()).apply()
+            selected=movie;details=detail
+            busyMessage=null
+            playResolved(movie,detail.imdbId!!,0,0,resumeOverride=0)
+        } catch(e: CancellationException) { throw e } catch(e: Exception) { error=e.message } finally { randomChoosing=false;busyMessage=null }
     }
 
     suspend fun playMovie() {
@@ -1157,12 +1217,34 @@ class AppState(context: Context) {
     }
 
     suspend fun checkForUpdates() {
-        updateChecking = true
-        error = null
-        runCatching { updates.check(BuildConfig.VERSION_NAME) }
-            .onSuccess { updateInfo = it }
-            .onFailure { error = "${tr("Falló la búsqueda de actualizaciones","Update check failed")}: ${it.message}" }
-        updateChecking = false
+        if(updateChecking || updateDownloading) return
+        updateChecking=true;error=null;updateStatus=""
+        try {
+            val found=updates.check(BuildConfig.VERSION_NAME,BuildConfig.VERSION_CODE)
+            if(updateInfo?.sha256!=found.sha256) { downloadedUpdate?.delete();downloadedUpdate=null }
+            updateInfo=found
+        } catch(e: CancellationException) { throw e } catch(e: Exception) { error="${tr("Falló la búsqueda de actualizaciones","Update check failed")}: ${e.message}" } finally { updateChecking=false }
+    }
+    fun downloadUpdate() {
+        val info=updateInfo?.takeIf { it.isNewer } ?: return
+        if(updateDownloading || updateChecking) return
+        updateDownloading=true;updateBytes=0;updateTotal=info.sizeBytes;downloadedUpdate=null;updateStatus="";error=null
+        updateDownloadJob=appScope.launch {
+            try {
+                val file=updates.download(appContext,info) { bytes,total ->
+                    kotlinx.coroutines.withContext(Dispatchers.Main.immediate) { updateBytes=bytes;updateTotal=total }
+                }
+                downloadedUpdate=file;updateStatus=tr("Descarga verificada. Lista para instalar.","Verified download. Ready to install.")
+            } catch(e: CancellationException) { updateStatus=tr("Descarga cancelada","Download cancelled");throw e } catch(e: Exception) { error="${tr("No se pudo descargar la actualización","Could not download the update")}: ${e.message}" } finally { updateDownloading=false }
+        }
+    }
+    fun cancelUpdateDownload() { updateDownloadJob?.cancel() }
+    fun installUpdate(context: Context) {
+        val file=downloadedUpdate ?: return;val info=updateInfo ?: return
+        runCatching { updates.install(context,file,info.versionCode) }
+            .onSuccess { launched -> updateStatus=if(launched) tr("Confirma Instalar en la ventana de Android.","Confirm Install in the Android window.")
+                else tr("Permite instalar desde BruniO, vuelve y pulsa Instalar de nuevo.","Allow installs from BruniO, return and press Install again.") }
+            .onFailure { error="${tr("No se pudo abrir el instalador","Could not open the installer")}: ${it.message}" }
     }
 
     fun signOut() {

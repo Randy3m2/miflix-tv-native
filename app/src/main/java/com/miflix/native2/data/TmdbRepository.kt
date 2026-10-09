@@ -50,6 +50,8 @@ class TmdbRepository(var token: String) {
     suspend fun popularMovies(): List<MediaSummary> = parseList(get("/movie/popular"), "movie", 20)
     suspend fun popularSeries(): List<MediaSummary> = parseList(get("/tv/popular"), "series", 20)
     suspend fun topRatedMovies(): List<MediaSummary> = parseList(get("/movie/top_rated"), "movie", 20)
+    suspend fun nowPlayingMovies(): List<MediaSummary> = parseList(get("/movie/now_playing"),"movie",20)
+    suspend fun topRatedSeries(): List<MediaSummary> = parseList(get("/tv/top_rated"),"series",20)
     suspend fun search(query: String): List<MediaSummary> = parseList(get("/search/multi", mapOf("query" to query)), limit = 40)
 
     suspend fun discoverGenre(genreId: Int): List<MediaSummary> = discoverMovieGenre(genreId, "popularity.desc", 1, 20)

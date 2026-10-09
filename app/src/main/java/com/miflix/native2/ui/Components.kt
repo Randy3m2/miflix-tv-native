@@ -161,6 +161,7 @@ fun MediaCard(
     item: MediaSummary,
     modifier: Modifier = Modifier,
     landscape: Boolean = false,
+    compact: Boolean = false,
     progressPercent: Double? = null,
     onFocused: (MediaSummary) -> Unit = {},
     onClick: () -> Unit
@@ -171,10 +172,10 @@ fun MediaCard(
         animationSpec = FastMotion,
         label = "cardScale"
     )
-    val outerW = if (landscape) 286.dp else 184.dp
-    val outerH = if (landscape) 174.dp else 274.dp
-    val innerW = if (landscape) 272.dp else 170.dp
-    val innerH = if (landscape) 154.dp else 252.dp
+    val outerW = if(compact) { if(landscape) 250.dp else 160.dp } else if (landscape) 286.dp else 184.dp
+    val outerH = if(compact) { if(landscape) 156.dp else 242.dp } else if (landscape) 174.dp else 274.dp
+    val innerW = outerW-14.dp
+    val innerH = if(compact) { if(landscape) 136.dp else 220.dp } else if (landscape) 154.dp else 252.dp
 
     Box(modifier.width(outerW).height(outerH), contentAlignment = Alignment.Center) {
         Box(

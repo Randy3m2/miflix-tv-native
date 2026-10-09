@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.FocusRequester
@@ -130,25 +131,39 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 else -> 0f
             }
         }) {
-            LazyColumn(Modifier.fillMaxSize().padding(top=76.dp,bottom=24.dp).focusRequester(contentFocus).focusGroup(),state=scroll,contentPadding=PaddingValues(bottom=64.dp)) {
+            LazyColumn(Modifier.fillMaxSize().padding(top=108.dp,bottom=32.dp).focusRequester(contentFocus).focusGroup(),state=scroll,contentPadding=PaddingValues(bottom=32.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 item(key="hero") { TopTenHero(state.trending.take(10),openItem,onFocused={ if(it) returnToTop() },onBackdrop={ heroBackdrop=it },buttonModifier=Modifier.focusRequester(heroFocus)) }
+                item(key="random") {
+                    Row(Modifier.fillMaxWidth().padding(horizontal=40.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
+                        FocusButton(if(state.randomChoosing) tr("Eligiendo…","Choosing…") else tr("Reproducir aleatorio","Play random")) {
+                            if(!state.randomChoosing) state.launch { state.playRandomMovie() }
+                        }
+                        Text(tr("Una película según tus gustos","A movie matched to your taste"),color=Muted,fontSize=14.sp,lineHeight=18.sp,maxLines=2,modifier=Modifier.weight(1f))
+                    }
+                }
                 if(state.continueWatching.isNotEmpty()) item(key="continue") {
-                    MediaRail(tr("Seguir viendo","Continue Watching"),state.continueWatching,landscape=true,
+                    MediaRail(compact=true,title=tr("Seguir viendo","Continue Watching"),rows=state.continueWatching,landscape=true,
                         progressFor={ state.progress[it.cloudId]?.percent },onClick=openItem)
                 }
-                if(state.forYou.isNotEmpty()) item(key="for_you") { MediaRail(tr("Para ti · tus puntuaciones","For you · Your ratings"),state.forYou,onClick=openItem) }
+                if(state.forYou.isNotEmpty()) item(key="for_you") { MediaRail(compact=true,title=tr("Para ti · tus puntuaciones","For you · Your ratings"),rows=state.forYou,onClick=openItem) }
                 item(key="genres_home") { Column {
                     Text(tr("Explora por género","Browse by genre"),color=Color.White,fontSize=24.sp,lineHeight=29.sp,fontWeight=FontWeight.Bold,
-                        modifier=Modifier.padding(start=34.dp,top=16.dp,bottom=16.dp))
-                    LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=26.dp),contentPadding=PaddingValues(horizontal=8.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
+                        modifier=Modifier.padding(start=40.dp,end=40.dp,top=16.dp,bottom=16.dp))
+                    LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=32.dp).clipToBounds(),contentPadding=PaddingValues(horizontal=8.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
                         items(state.genres,key={it.id}) { genre -> GenreCard(genre.copy(coverUrl=state.genreCovers[genre.id] ?: genre.coverUrl)) { state.launch { state.openGenre(genre) } } }
                     }
                     Spacer(Modifier.height(24.dp))
                 } }
                 item(key="streaming") { CollectionRail(tr("Plataformas","Streaming"),StreamingTiles,openCollection) }
-                item(key="movies") { MediaRail(tr("Películas populares","Popular · Movies"),state.movies,onClick=openItem) }
-                item(key="series") { MediaRail(tr("Series populares","Popular · Series"),state.series,onClick=openItem) }
-                item(key="top") { MediaRail(tr("Mejor valorados","Top Rated"),state.topRated,onClick=openItem) }
+                item(key="movies") { MediaRail(compact=true,title=tr("Películas populares","Popular · Movies"),rows=state.movies,onClick=openItem) }
+                item(key="series") { MediaRail(compact=true,title=tr("Series populares","Popular · Series"),rows=state.series,onClick=openItem) }
+                item(key="top") { MediaRail(compact=true,title=tr("Mejor valorados","Top Rated"),rows=state.topRated,onClick=openItem) }
+                item(key="now_playing") { MediaRail(tr("Estrenos en cartelera","Now playing"),state.newMovies,compact=true,onClick=openItem) }
+                item(key="best_series") { MediaRail(tr("Series mejor valoradas","Top rated series"),state.bestSeries,compact=true,onClick=openItem) }
+                item(key="action") { MediaRail(tr("Acción para esta noche","Action tonight"),state.action,compact=true,onClick=openItem) }
+                item(key="scifi") { MediaRail(tr("Ciencia ficción","Science fiction"),state.sciFi,compact=true,onClick=openItem) }
+                item(key="comedy") { MediaRail(tr("Algo para reír","Time for a comedy"),state.comedy,compact=true,onClick=openItem) }
+                item(key="thrillers") { MediaRail(tr("Suspenso y misterio","Thrillers & mystery"),state.thrillers,compact=true,onClick=openItem) }
             }
         }
         Sidebar(Screen.HOME,state.activeProfile.name,onNavigate,state.notifications.size,state.activeProfile,
@@ -180,7 +195,7 @@ private fun DirectorRail(state: AppState) {
 @Composable
 private fun TopTenHero(rows: List<MediaSummary>, onOpen: (MediaSummary) -> Unit, onFocused: (Boolean) -> Unit = {}, onBackdrop: (String?) -> Unit = {},buttonModifier: Modifier = Modifier) {
     if (rows.isEmpty()) {
-        Box(Modifier.fillMaxWidth().height(450.dp).background(Bg))
+        Box(Modifier.fillMaxWidth().height(320.dp).background(Bg))
         return
     }
     var index by remember(rows.map { it.cloudId }) { mutableIntStateOf(0) }
@@ -195,13 +210,13 @@ private fun TopTenHero(rows: List<MediaSummary>, onOpen: (MediaSummary) -> Unit,
         }
     }
 
-    Box(Modifier.fillMaxWidth().padding(horizontal=24.dp).height(350.dp).clip(RoundedCornerShape(22.dp))) {
+    Box(Modifier.fillMaxWidth().padding(horizontal=32.dp).height(320.dp).clip(RoundedCornerShape(22.dp))) {
         Crossfade(hero, animationSpec = tween(260, easing = LinearOutSlowInEasing), label = "topHero") { item ->
             AsyncImage(item.backdrop, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         }
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x08000000), Color(0x2C000000), Bg), startY = 120f)))
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xF8050505), Color(0xA0050505), Color.Transparent), endX = 860f)))
-        Column(Modifier.align(Alignment.CenterStart).padding(start = 32.dp, top = 18.dp).widthIn(max = 720.dp)) {
+        Column(Modifier.align(Alignment.CenterStart).padding(start = 16.dp,end=16.dp, top = 18.dp).widthIn(max = 720.dp)) {
             Text(tr("TOP 10 · TENDENCIAS DE LA SEMANA","TOP 10  ·  TRENDING THIS WEEK"), color = Color(0xFFB8B8BC), fontSize = 12.sp, lineHeight=15.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(10.dp))
             Text(hero.title, color = Color.White, fontSize = 35.sp, lineHeight=42.sp, fontWeight = FontWeight.Black, maxLines = 2)
@@ -232,20 +247,21 @@ private fun MediaRail(
     title: String,
     rows: List<MediaSummary>,
     landscape: Boolean = false,
+    compact: Boolean = false,
     progressFor: (MediaSummary) -> Double? = { null },
     onClick: (MediaSummary) -> Unit
 ) {
     if (rows.isEmpty()) return
-    val h = if (landscape) 224.dp else 326.dp
+    val h = if(compact) { if(landscape) 218.dp else 304.dp } else if (landscape) 224.dp else 326.dp
     Column(Modifier.fillMaxWidth().height(h)) {
-        Text(title, color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 34.dp, bottom = 8.dp))
+        Text(title, color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 40.dp,end=40.dp, bottom = 8.dp))
         LazyRow(
-            modifier = Modifier.fillMaxWidth().padding(horizontal=26.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal=32.dp).clipToBounds(),
             contentPadding = PaddingValues(horizontal=8.dp,vertical=8.dp),
             horizontalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             items(rows, key = { it.cloudId }, contentType = { if (landscape) "landscape" else "poster" }) { item ->
-                MediaCard(item, landscape = landscape, progressPercent = progressFor(item), onClick = { onClick(item) })
+                MediaCard(item, landscape = landscape,compact=compact, progressPercent = progressFor(item), onClick = { onClick(item) })
             }
         }
     }
@@ -254,9 +270,9 @@ private fun MediaRail(
 @Composable
 private fun CollectionRail(title: String, rows: List<CollectionTile>, onClick: (CollectionTile) -> Unit) {
     Column(Modifier.fillMaxWidth().height(258.dp)) {
-        Text(title, color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 34.dp, bottom = 8.dp))
+        Text(title, color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 40.dp,end=40.dp, bottom = 8.dp))
         LazyRow(
-            modifier=Modifier.fillMaxWidth().padding(horizontal=26.dp),
+            modifier=Modifier.fillMaxWidth().padding(horizontal=32.dp).clipToBounds(),
             contentPadding = PaddingValues(horizontal=8.dp,vertical=8.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
@@ -676,22 +692,34 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 }
             }
             item {
-                Text(tr("Actualizaciones","Updates"), color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold)
+                Text(tr("Actualizaciones","Updates"),color=Color.White,fontSize=22.sp,lineHeight=26.sp,fontWeight=FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
-                Text(tr("La URL del APK se conserva para mantener tu código de Downloader.","The latest channel keeps the same APK URL, so your Downloader code stays permanent."), color = Muted, fontSize = 14.sp, lineHeight=17.sp, modifier = Modifier.fillMaxWidth())
+                Text("${tr("Versión instalada","Installed version")}: ${BuildConfig.VERSION_NAME}",color=Muted,fontSize=14.sp,lineHeight=18.sp)
                 Spacer(Modifier.height(14.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(18.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
-                    FocusButton(if (state.updateChecking) tr("Comprobando…","Checking…") else tr("Buscar actualizaciones","Check for Updates"), primary = true) {
-                        if (!state.updateChecking) state.launch { state.checkForUpdates() }
+                FlowRow(horizontalArrangement=Arrangement.spacedBy(18.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+                    FocusButton(if(state.updateChecking) tr("Comprobando…","Checking…") else tr("Buscar actualizaciones","Check for Updates")) {
+                        if(!state.updateChecking && !state.updateDownloading) state.launch { state.checkForUpdates() }
                     }
-                    state.updateInfo?.takeIf { it.isNewer }?.let { info ->
-                        FocusButton("${tr("Abrir","Open")} ${info.version}") { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(info.downloadUrl))) } }
+                    if(state.updateDownloading) FocusButton(tr("Cancelar descarga","Cancel download")) { state.cancelUpdateDownload() }
+                    else state.updateInfo?.takeIf { it.isNewer }?.let { info ->
+                        if(state.downloadedUpdate!=null) FocusButton(tr("Instalar actualización","Install update"),primary=true) { state.installUpdate(context) }
+                        else FocusButton("${tr("Descargar","Download")} ${info.version}",primary=true) { state.downloadUpdate() }
                     }
+                }
+                if(state.updateDownloading) {
+                    Spacer(Modifier.height(12.dp))
+                    val fraction=if(state.updateTotal>0) (state.updateBytes.toFloat()/state.updateTotal).coerceIn(0f,1f) else 0f
+                    Box(Modifier.fillMaxWidth().height(6.dp).background(Color(0xFF333333),RoundedCornerShape(3.dp))) {
+                        Box(Modifier.fillMaxHeight().fillMaxWidth(fraction).background(Color.White,RoundedCornerShape(3.dp)))
+                    }
+                    Text("${tr("Descargando","Downloading")} ${(fraction*100).toInt()}% · ${state.updateBytes/1048576} / ${state.updateTotal/1048576} MB",color=Muted,fontSize=14.sp,lineHeight=18.sp)
                 }
                 state.updateInfo?.let { info ->
                     Spacer(Modifier.height(9.dp))
-                    Text(if (info.isNewer) "${tr("Actualización disponible","Update available")}: ${info.version}" else tr("Tienes la versión más reciente.","You're on the latest build."), color = Color(0xFFE7E7E9), fontSize = 13.sp, lineHeight=16.sp)
+                    Text(if(info.isNewer) "${tr("Actualización disponible","Update available")}: ${info.version}" else tr("Tienes la versión más reciente.","You're on the latest build."),color=SoftWhite,fontSize=14.sp,lineHeight=18.sp)
                 }
+                if(state.updateStatus.isNotBlank()) Text(state.updateStatus,color=Muted,fontSize=14.sp,lineHeight=18.sp,modifier=Modifier.padding(top=8.dp))
+
             }
         }
     }

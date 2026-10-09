@@ -6,6 +6,12 @@ plugins {
 
 def esc = { String s -> (s ?: '').replace('\\', '\\\\').replace('"', '\\"') }
 def tmdbToken = System.getenv('MIFLIX_TMDB_TOKEN') ?: ''
+def signingPath = System.getenv('MIFLIX_SIGNING_KEYSTORE_PATH')
+def signingPassword = System.getenv('MIFLIX_SIGNING_STORE_PASSWORD')
+def signingAlias = System.getenv('MIFLIX_SIGNING_KEY_ALIAS')
+def signingKeyPassword = System.getenv('MIFLIX_SIGNING_KEY_PASSWORD')
+def hasStableSigning = [signingPath, signingPassword, signingAlias, signingKeyPassword].every { it }
+
 
 android {
     namespace 'com.miflix.native2'
@@ -15,8 +21,8 @@ android {
         applicationId 'com.miflix.native2'
         minSdk 23
         targetSdk 36
-        versionCode 22014
-        versionName '2.0.0-rc16'
+        versionCode 22015
+        versionName '2.0.0-rc17'
 
         buildConfigField 'String', 'SUPABASE_URL', '"https://iwvhigqxsvvgyzdygiqa.supabase.co"'
         buildConfigField 'String', 'SUPABASE_KEY', '"sb_publishable_TdzEQXtDadVMKhSLVe0ihw_EAQ4iNsd"'
@@ -34,12 +40,33 @@ android {
     }
     kotlinOptions { jvmTarget = '17' }
 
+    signingConfigs {
+        stable {
+            if (hasStableSigning) {
+                storeFile file(signingPath)
+                storePassword signingPassword
+                keyAlias signingAlias
+                keyPassword signingKeyPassword
+                storeType 'PKCS12'
+            }
+        }
+    }
     buildTypes {
-        release { minifyEnabled false }
+        release {
+            minifyEnabled false
+            if (hasStableSigning) signingConfig signingConfigs.stable
+        }
+    }
+}
+
+gradle.taskGraph.whenReady { graph ->
+    if ((graph.hasTask(':app:assembleRelease') || graph.hasTask(':app:bundleRelease')) && !hasStableSigning) {
+        throw new GradleException('Stable signing is required. Configure the four MIFLIX_SIGNING secrets; see RC17_SETUP.md.')
     }
 }
 
 dependencies {
+    implementation 'androidx.core:core:1.17.0'
     // Keep the native TV alpha on the API 36 / AGP 8.13 line.
     // Compose 1.12+ and Coil 3.6+ require compileSdk 37 / AGP 9.1+.
     implementation 'androidx.activity:activity-compose:1.12.2'

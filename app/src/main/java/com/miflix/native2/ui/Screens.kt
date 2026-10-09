@@ -249,7 +249,7 @@ private fun MediaRail(
     onClick: (MediaSummary) -> Unit
 ) {
     if (rows.isEmpty()) return
-    val h = if(compact) { if(landscape) 218.dp else 304.dp } else if (landscape) 224.dp else 326.dp
+    val h = if(compact) { if(landscape) 208.dp else 282.dp } else if (landscape) 210.dp else 304.dp
     Column(Modifier.fillMaxWidth().height(h)) {
         Text(title, color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 40.dp,end=40.dp, bottom = 8.dp))
         LazyRow(
@@ -285,7 +285,7 @@ fun CatalogScreen(state: AppState, title: String, catalog: List<MediaSummary>, o
         Column(Modifier.fillMaxSize().padding(start = 34.dp, top = 30.dp, end = 34.dp)) {
             Text(title, color = Color.White, fontSize = 31.sp, lineHeight=37.sp, fontWeight = FontWeight.Black)
             Spacer(Modifier.height(18.dp))
-            LazyVerticalGrid(columns=GridCells.Adaptive(184.dp),modifier=Modifier.weight(1f).fillMaxWidth(),
+            LazyVerticalGrid(columns=GridCells.Adaptive(168.dp),modifier=Modifier.weight(1f).fillMaxWidth(),
                 horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(bottom=48.dp,top=8.dp)) {
                 gridItems(catalog,key={it.cloudId}) { item -> MediaCard(item,modifier=Modifier.fillMaxWidth(),progressPercent=state.progress[item.cloudId]?.percent) { state.launch { state.open(item) } } }
             }
@@ -317,20 +317,25 @@ fun SearchScreen(state: AppState, onBack: () -> Unit) {
             Text(tr("Buscar","Search"), color = Color.White, fontSize = 32.sp, lineHeight=38.sp, fontWeight = FontWeight.Black)
             Spacer(Modifier.height(16.dp))
             NativeTextField(query, { query = it; state.searchQuery=it }, tr("Películas, series…","Movies, series…"), modifier = Modifier.widthIn(max=620.dp).fillMaxWidth(), onSubmit={ rememberQuery() })
-            if(history.isNotEmpty()) {
-                Spacer(Modifier.height(12.dp))
-                Text(tr("Búsquedas recientes","Recent searches"),color=Muted,fontSize=14.sp,lineHeight=17.sp)
-                LazyRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(vertical=8.dp)) {
-                    items(history,key={it}) { previous -> FocusButton(previous) {
-                        query=previous; state.searchQuery=previous; rememberQuery()
-                    } }
+            Spacer(Modifier.height(12.dp))
+            // History and results share a scroll viewport so history cannot consume the poster area.
+            LazyVerticalGrid(columns=GridCells.Adaptive(168.dp),modifier=Modifier.weight(1f).fillMaxWidth(),
+                horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp),
+                contentPadding=PaddingValues(bottom=40.dp,top=8.dp)) {
+                if(history.isNotEmpty()) item(key="search_history",span={ androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                    Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                        Text(tr("Búsquedas recientes","Recent searches"),color=Muted,fontSize=14.sp,lineHeight=17.sp)
+                        LazyRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(vertical=8.dp)) {
+                            items(history,key={it}) { previous -> FocusButton(previous) {
+                                query=previous; state.searchQuery=previous; rememberQuery()
+                            } }
+                        }
+                    }
                 }
-            }
-            Spacer(Modifier.height(18.dp))
-            if (searching) Text(tr("Buscando…","Searching…"), color = Muted, fontSize = 14.sp, lineHeight=17.sp)
-            LazyVerticalGrid(columns=GridCells.Adaptive(184.dp),modifier=Modifier.weight(1f).fillMaxWidth(),
-                horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(bottom=48.dp,top=8.dp)) {
-                gridItems(results,key={it.cloudId}) { item -> MediaCard(item,modifier=Modifier.fillMaxWidth()) { state.launch { state.open(item) } } }
+                if(searching) item(key="search_loading",span={ androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                    Text(tr("Buscando…","Searching…"),color=Muted,fontSize=14.sp,lineHeight=17.sp)
+                }
+                gridItems(results,key={it.cloudId}) { item -> MediaCard(item) { state.launch { state.open(item) } } }
             }
         }
     }

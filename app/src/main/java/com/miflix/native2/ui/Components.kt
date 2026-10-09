@@ -172,10 +172,10 @@ fun MediaCard(
         animationSpec = FastMotion,
         label = "cardScale"
     )
-    val outerW = if(compact) { if(landscape) 250.dp else 160.dp } else if (landscape) 286.dp else 184.dp
-    val outerH = if(compact) { if(landscape) 156.dp else 242.dp } else if (landscape) 174.dp else 274.dp
+    val outerW = if(compact) { if(landscape) 230.dp else 144.dp } else if (landscape) 260.dp else 168.dp
+    val outerH = if(compact) { if(landscape) 146.dp else 220.dp } else if (landscape) 160.dp else 252.dp
     val innerW = outerW-14.dp
-    val innerH = if(compact) { if(landscape) 136.dp else 220.dp } else if (landscape) 154.dp else 252.dp
+    val innerH = if(compact) { if(landscape) 126.dp else 198.dp } else if (landscape) 140.dp else 230.dp
 
     Box(modifier.width(outerW).height(outerH), contentAlignment = Alignment.Center) {
         Box(

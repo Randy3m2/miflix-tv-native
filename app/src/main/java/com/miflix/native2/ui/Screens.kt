@@ -887,6 +887,11 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var maximized by remember { mutableStateOf(true) }
     var speed by remember(request.playbackId) { mutableStateOf(1f) }
     var volume by remember(request.playbackId) { mutableStateOf(1f) }
+    var playbackError by remember(request.playbackId) { mutableStateOf<String?>(null) }
+    var externalSubtitles by remember(request.playbackId) { mutableStateOf<List<SubtitleChoice>>(emptyList()) }
+    var subtitleLoading by remember(request.playbackId) { mutableStateOf(false) }
+    var pendingSubtitleLabel by remember(request.playbackId) { mutableStateOf<String?>(null) }
+    var surfaceGeneration by remember(request.playbackId) { mutableStateOf(0) }
     var tracks by remember(request.playbackId) { mutableStateOf(androidx.media3.common.Tracks.EMPTY) }
     var showPartyActions by remember { mutableStateOf(false) }
     var showAccessRequests by remember { mutableStateOf(false) }
@@ -920,6 +925,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         val dataFactory = DefaultDataSource.Factory(context, httpFactory)
         ExoPlayer.Builder(context, renderers)
             .setMediaSourceFactory(DefaultMediaSourceFactory(dataFactory))
+            .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder()
+                .setBufferDurationsMs(15000,50000,1000,1500)
+                .setPrioritizeTimeOverSizeThresholds(true).build())
             .build().apply {
             setSeekBackIncrementMs(10_000)
             setSeekForwardIncrementMs(10_000)
@@ -975,6 +983,13 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }
     }
     LaunchedEffect(player) { showEpisodes = false }
+    LaunchedEffect(playerMenu,request.playbackId) {
+        if(playerMenu=="subtitles" && externalSubtitles.isEmpty()) {
+            subtitleLoading=true
+            try { externalSubtitles=runCatching { state.playbackSubtitles(request) }.getOrDefault(emptyList()) }
+            finally { subtitleLoading=false }
+        }
+    }
 
     DisposableEffect(player, playbackView) {
         val previousKeepScreenOn = playbackView.keepScreenOn
@@ -985,7 +1000,18 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 )
         }
         val listener = object : Player.Listener {
-            override fun onTracksChanged(value: androidx.media3.common.Tracks) { tracks = value }
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) { playbackError=error.errorCodeName }
+            override fun onTracksChanged(value: androidx.media3.common.Tracks) {
+                tracks = value
+                pendingSubtitleLabel?.let { label ->
+                    val group=value.groups.firstOrNull { it.type==C.TRACK_TYPE_TEXT && (0 until it.length).any { index -> it.getTrackFormat(index).label==label && it.isTrackSupported(index) } }
+                    if(group!=null) {
+                        val index=(0 until group.length).first { group.getTrackFormat(it).label==label && group.isTrackSupported(it) }
+                        pendingSubtitleLabel=null
+                        player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT,false).setOverrideForType(androidx.media3.common.TrackSelectionOverride(group.mediaTrackGroup,index)).build()
+                    }
+                }
+            }
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                 paused = !playWhenReady && player.playbackState != Player.STATE_ENDED
                 if(state.partyRole == PartyRole.GUEST && !applyingRemote && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST) {
@@ -1067,16 +1093,16 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     }
 
     // Explicit timer also covers controls holding focus on TV remotes.
-    LaunchedEffect(player, controlInteraction, showEpisodes, showPartyActions, showAccessRequests, state.sourceSelection, playerMenu, paused, ended) {
-        if (!ended && playerMenu == null && !showEpisodes && !showPartyActions && !showAccessRequests && state.sourceSelection == null) {
+    LaunchedEffect(player, controlInteraction, showEpisodes, showPartyActions, showAccessRequests, state.sourceSelection, playerMenu, paused, ended, playbackError) {
+        if (playbackError==null && !ended && playerMenu == null && !showEpisodes && !showPartyActions && !showAccessRequests && state.sourceSelection == null) {
             delay(3000)
             controlsVisible = false
             surfaceFocus.requestFocus()
         }
     }
 
-    LaunchedEffect(controlsVisible, showEpisodes, showPartyActions, showAccessRequests, playerMenu, state.sourceSelection, pauseSynopsis, ended) {
-        if(controlsVisible && !pauseSynopsis && !ended && !showEpisodes && !showPartyActions && !showAccessRequests && playerMenu == null && state.sourceSelection == null) {
+    LaunchedEffect(controlsVisible, showEpisodes, showPartyActions, showAccessRequests, playerMenu, state.sourceSelection, pauseSynopsis, ended, playbackError) {
+        if(playbackError==null && controlsVisible && !pauseSynopsis && !ended && !showEpisodes && !showPartyActions && !showAccessRequests && playerMenu == null && state.sourceSelection == null) {
             withFrameNanos { }; playFocus.requestFocus()
         }
     }
@@ -1107,10 +1133,14 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             } else if(wasHidden) { dismissKey = code; true } else false
         } else false
     }.focusable()) {
-        AndroidView(
+        key(player,surfaceGeneration) { AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
-                    setKeepContentOnPlayerReset(true)
+                    // RC5 used a fresh SurfaceView; synchronize it with Compose, without reusing
+                    // a previous content's surface. Do not relayout it for every progress tick.
+                    setEnableComposeSurfaceSyncWorkaround(true)
+                    setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                    setKeepContentOnPlayerReset(false)
                     useController = false
                     isFocusable = false
                     setOnTouchListener { _, event ->
@@ -1125,13 +1155,40 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             },
             update = { view ->
                 if (view.player !== player) view.player = player
-                view.resizeMode = resizeMode
+                if(view.resizeMode!=resizeMode) view.resizeMode = resizeMode
             },
             modifier = if(maximized) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(horizontal=40.dp,vertical=24.dp)
-        )
+        ) }
+        if(playbackError!=null) {
+            Dialog(onDismissRequest=onClose,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+            Column(Modifier.width(600.dp).background(Color(0xEE171717),RoundedCornerShape(18.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                Text(tr("No se pudo reproducir este enlace","This link could not be played"),color=Color.White,fontSize=22.sp,lineHeight=27.sp)
+                Text(playbackError.orEmpty(),color=Muted)
+                Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                    FocusButton(tr("Reintentar","Retry")) { playbackError=null; surfaceGeneration++; player.prepare() }
+                    FocusButton(tr("Otro enlace","Another link")) { playbackError=null; state.launch { state.playerSources(request,player.currentPosition) } }
+                    FocusButton(tr("Salir","Exit")) { onClose() }
+                }
+            }
+            }
+        }
 
         if(playerMenu != null) PlayerOptionsDialog(playerMenu!!, player, tracks, speed, volume,
             onSpeed={ speed=it; player.setPlaybackSpeed(it) }, onVolume={ volume=it; player.volume=it },
+            externalSubtitles=externalSubtitles.filter { extra -> request.stream.subtitles.none { it.url==extra.url } }, subtitleLoading=subtitleLoading,
+            onExternalSubtitle={ selected ->
+                player.currentMediaItem?.let { media ->
+                    val label="BruniO · ${selected.label}"
+                    pendingSubtitleLabel=label
+                    val subtitle=MediaItem.SubtitleConfiguration.Builder(Uri.parse(selected.url)).setLabel(label)
+                        .setLanguage(normalizeMediaLanguage(selected.lang)).setMimeType(subtitleMime(selected.url)).setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build()
+                    player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_TEXT).setTrackTypeDisabled(C.TRACK_TYPE_TEXT,false).build()
+                    // Explicit external subtitle selection requires preparing its sidecar source;
+                    // it never runs automatically when a slow subtitle lookup finishes.
+                    player.setMediaItem(media.buildUpon().setSubtitleConfigurations(listOf(subtitle)).build(),player.currentPosition)
+                    player.prepare()
+                }
+            },
             series=request.item.type=="series", party=state.watchParty!=null,
             onEpisodes={ player.pause(); showEpisodes=true },
             onParty={ if(state.watchParty!=null) showPartyActions=true else state.screen=Screen.WATCH_PARTY },

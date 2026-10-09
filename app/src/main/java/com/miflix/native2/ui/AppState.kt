@@ -19,6 +19,8 @@ import com.miflix.native2.data.TmdbRepository
 import com.miflix.native2.data.UpdateRepository
 import com.miflix.native2.model.*
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
@@ -792,18 +794,31 @@ class AppState(context: Context) {
         playResolved(selection.item, selection.imdb, selection.season, selection.episode, resumeOverride = selection.resumeMs, selectedStream = stream)
     }
 
+    private val playbackSubtitleJobs = mutableMapOf<String, Deferred<List<SubtitleChoice>>>()
+    private fun subtitleKey(item: MediaSummary, season: Int, episode: Int) = "${item.cloudId}:$season:$episode"
+    suspend fun playbackSubtitles(req: PlayerRequest): List<SubtitleChoice> {
+        val rows=playbackSubtitleJobs[subtitleKey(req.item,req.season,req.episode)]?.await().orEmpty()
+        if(rows.isNotEmpty()) return rows
+        val imdb=details?.takeIf { selected?.cloudId==req.item.cloudId }?.imdbId ?: tmdb.details(req.item).imdbId ?: return emptyList()
+        return subtitleRepo.resolve(imdb,req.item.type,req.season,req.episode,req.stream)
+    }
+
     private suspend fun playResolved(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeOverride: Long? = null, selectedStream: StreamChoice? = null) = coroutineScope {
         busyMessage = tr("Buscando el mejor enlace…","Finding the best source…")
         error = null
         val streamsJob = async { if (selectedStream != null) listOf(selectedStream) else streamRepo.resolve(imdb, item.type, season, episode) }
-        val subsJob = async { runCatching { subtitleRepo.resolve(imdb, item.type, season, episode, null) }.getOrDefault(emptyList()) }
+        val subtitleKey=subtitleKey(item,season,episode)
+        if(playbackSubtitleJobs.size>=16 && subtitleKey !in playbackSubtitleJobs) {
+            val oldest=playbackSubtitleJobs.keys.first(); playbackSubtitleJobs.remove(oldest)?.cancel()
+        }
+        // Subtitle services must not gate opening the video. Keep late results for the CC menu.
+        val subsJob = playbackSubtitleJobs.getOrPut(subtitleKey) { appScope.async {
+            runCatching { subtitleRepo.resolve(imdb, item.type, season, episode, null) }.getOrDefault(emptyList())
+        } }
         runCatching {
             val streams = streamsJob.await()
             val best = streams.firstOrNull() ?: throw IllegalStateException(tr("No se encontraron enlaces reproducibles","No playable sources found"))
-            var externalSubs = subsJob.await()
-            if (externalSubs.isEmpty()) {
-                externalSubs = runCatching { subtitleRepo.resolve(imdb, item.type, season, episode, best) }.getOrDefault(emptyList())
-            }
+            val externalSubs = withTimeoutOrNull(800) { subsJob.await() }.orEmpty()
             val mergedSubs = (best.subtitles + externalSubs)
                 .distinctBy { it.url }
                 .sortedWith(compareBy<SubtitleChoice> {

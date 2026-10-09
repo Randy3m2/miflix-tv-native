@@ -37,6 +37,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.TrackSelectionOverride
 import androidx.tv.material3.Text
+import com.miflix.native2.model.SubtitleChoice
 
 private fun playbackTime(ms: Long): String {
     val seconds=ms.coerceAtLeast(0)/1000
@@ -151,7 +152,7 @@ private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seek
 
 @Composable
 internal fun PlayerOptionsDialog(menu: String, player: Player, tracks: Tracks, speed: Float, volume: Float,
-    onSpeed: (Float) -> Unit, onVolume: (Float) -> Unit, series: Boolean, party: Boolean, onEpisodes: () -> Unit, onParty: () -> Unit, onClose: () -> Unit) {
+    onSpeed: (Float) -> Unit, onVolume: (Float) -> Unit, externalSubtitles: List<SubtitleChoice>, subtitleLoading: Boolean, onExternalSubtitle: (SubtitleChoice) -> Unit, series: Boolean, party: Boolean, onEpisodes: () -> Unit, onParty: () -> Unit, onClose: () -> Unit) {
     val first=remember(menu) { FocusRequester() }
     LaunchedEffect(menu) { withFrameNanos { }; first.requestFocus() }
     val title=when(menu) { "content" -> tr("Contenido / Party","Content / Party"); "speed" -> tr("Velocidad","Speed"); "volume" -> tr("Volumen del reproductor","Player volume"); "audio" -> tr("Pista de audio","Audio track"); else -> tr("Subtítulos","Subtitles") }
@@ -186,6 +187,10 @@ internal fun PlayerOptionsDialog(menu: String, player: Player, tracks: Tracks, s
                                     player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(type,false).setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup,index)).build();onClose()
                                 } }
                             }
+                        }
+                        if(type==C.TRACK_TYPE_TEXT) {
+                            if(subtitleLoading) item { Text(tr("Buscando subtítulos externos…","Finding external subtitles…"),color=Color(0xFFBBBBBB)) }
+                            externalSubtitles.forEach { subtitle -> item { FocusButton(subtitle.label,modifier=Modifier.fillMaxWidth()) { onExternalSubtitle(subtitle);onClose() } } }
                         }
                         if(count==0) item { Text(tr("No hay pistas disponibles en este enlace todavía.","No tracks available in this link yet."),color=Color(0xFFBBBBBB)) }
                     }

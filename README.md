@@ -1,3 +1,7 @@
+# Última versión: BruniO 2.0.0-rc17
+
+**Antes de la build configura los cuatro secrets de firma: RC17_SETUP.md.** El ZIP privado de firma se conserva fuera del repositorio. Esta versión agrega actualizaciones desde la app, firma estable, Home compacto y reproducción aleatoria personalizada. No requiere SQL nuevo.
+
 # Última versión: BruniO 2.0.0-rc16
 
 Consulta **RC16_SETUP.md** para los cambios de foco, reproductor, historial y avatar. No requiere SQL nuevo.

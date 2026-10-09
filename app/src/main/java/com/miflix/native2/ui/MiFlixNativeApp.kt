@@ -117,6 +117,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 }
             }
         }
+        PartyRequestPopup(state)
     }
 }
 }

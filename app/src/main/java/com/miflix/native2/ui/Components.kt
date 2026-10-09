@@ -10,6 +10,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -347,12 +351,30 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
             else Box(Modifier.size(34.dp),contentAlignment=Alignment.Center) { Text(profileName.take(1),color=if(profileFocused) Color.Black else Color.White) }
             Text("⌄",color=if(profileFocused) Color.Black else Color.White,modifier=Modifier.padding(start=6.dp),fontSize=16.sp)
         }
-        androidx.compose.foundation.lazy.LazyRow(Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(14.dp),
-            contentPadding=PaddingValues(horizontal=4.dp,vertical=6.dp)) {
-            items(navItems,key={it.first}) { (destination,label) ->
-                if(destination==Screen.SEARCH) SearchNavigationButton { onNavigate(destination) }
-                else FocusButton(label,primary=current==destination,horizontalPadding=14.dp) { onNavigate(destination) }
+        var navOrigin by remember { mutableStateOf(0f) }
+        val bounds=remember { mutableStateMapOf<Screen,Pair<Float,Float>>() }
+        var target by remember { mutableStateOf<Screen?>(null) }
+        var navFocused by remember { mutableStateOf(false) }
+        val x by animateFloatAsState(target?.let { bounds[it] }?.first ?: 0f,tween(150),label="navFocusX")
+        val width by animateFloatAsState(target?.let { bounds[it] }?.second ?: 0f,tween(150),label="navFocusWidth")
+        val density=LocalDensity.current
+        Box(Modifier.weight(1f).height(60.dp).clipToBounds().onGloballyPositioned { navOrigin=it.positionInRoot().x }) {
+            androidx.compose.foundation.lazy.LazyRow(Modifier.fillMaxSize().onFocusChanged { navFocused=it.hasFocus },
+                verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp),
+                contentPadding=PaddingValues(horizontal=4.dp,vertical=6.dp)) {
+                items(navItems,key={it.first}) { (destination,label) ->
+                    var focused by remember { mutableStateOf(false) }
+                    val lift by animateFloatAsState(if(focused) -2f else 0f,tween(150),label="navLift")
+                    Box(Modifier.onGloballyPositioned { bounds[destination]=Pair(it.positionInRoot().x-navOrigin,it.size.width.toFloat()) }
+                        .graphicsLayer { translationY=lift }) {
+                        if(destination==Screen.SEARCH) SearchNavigationButton(onFocused={ focused=it; if(it) target=destination }) { onNavigate(destination) }
+                        else FocusButton(label,primary=current==destination,horizontalPadding=14.dp,onFocused={ focused=it; if(it) target=destination }) { onNavigate(destination) }
+                    }
+                }
             }
+            if(navFocused && width>0) Box(Modifier.align(Alignment.BottomStart)
+                .graphicsLayer { translationX=x }.width(with(density) { width.toDp() }).height(2.dp)
+                .background(Color.White,RoundedCornerShape(2.dp)))
         }
         NotificationButton(notificationCount) { onNavigate(Screen.NOTIFICATIONS) }
     }
@@ -384,9 +406,9 @@ private fun BellIcon(color: Color,modifier: Modifier) {
 }
 
 @Composable
-private fun SearchNavigationButton(onClick: () -> Unit) {
+private fun SearchNavigationButton(onFocused: (Boolean) -> Unit = {},onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    Box(Modifier.size(44.dp).semantics { contentDescription=tr("Buscar","Search") }.onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
+    Box(Modifier.size(44.dp).semantics { contentDescription=tr("Buscar","Search") }.onFocusChanged { focused=it.isFocused; onFocused(it.isFocused) }.focusable().tvClick(onClick).clickable(onClick=onClick)
         .background(if(focused) Color.White else Color.Transparent,RoundedCornerShape(16.dp)),contentAlignment=Alignment.Center) {
         Canvas(Modifier.size(24.dp)) {
             val ink=if(focused) Color.Black else Color.White

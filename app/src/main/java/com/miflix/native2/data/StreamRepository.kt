@@ -52,7 +52,7 @@ class StreamRepository(initialManifestUrl: String) {
             async { runCatching { resolveOne(manifest, imdbId, type, season, episode) }.getOrDefault(emptyList()) }
         }.awaitAll().flatten()
 
-        rows.distinctBy { it.url }.sortedByDescending { score(it) }
+        StreamOrdering.sorted(rows)
     }
 
     private suspend fun resolveOne(manifest: String, imdbId: String, type: String, season: Int, episode: Int): List<StreamChoice> {
@@ -98,17 +98,4 @@ class StreamRepository(initialManifestUrl: String) {
         }
     }
 
-    private fun score(s: StreamChoice): Int {
-        val t = (s.name + " " + s.title).lowercase()
-        var score = 0
-        if ("1080" in t) score += 60
-        if ("720" in t) score += 30
-        if ("h264" in t || "avc" in t) score += 35
-        if ("web-dl" in t || "webrip" in t) score += 15
-        if ("4k" in t || "2160" in t) score += 10
-        if ("hevc" in t || "h265" in t || "x265" in t) score -= 15
-        if ("dolby vision" in t || " dv " in " $t ") score -= 35
-        if ("av1" in t) score -= 45
-        return score
-    }
 }

@@ -51,13 +51,14 @@ internal fun CompactPlayerControls(
     request: PlayerRequest, paused: Boolean, position: Long, duration: Long, speed: Float, volume: Float,
     maximized: Boolean, playFocus: FocusRequester, onInteraction: () -> Unit, onPlay: () -> Unit,
     onResize: () -> Unit, onMenu: (String) -> Unit, onLinks: () -> Unit, onSeek: (Long) -> Unit,
-    seekable: Boolean, onClose: () -> Unit, onMaximize: () -> Unit
+    seekable: Boolean, party: Boolean, onParty: () -> Unit, onClose: () -> Unit, onMaximize: () -> Unit
 ) {
     val seekFocus=remember { FocusRequester() }
+    var focusedLabel by remember { mutableStateOf("") }
     Box(Modifier.fillMaxSize()) {
         Row(Modifier.align(Alignment.TopEnd).padding(top=20.dp,end=24.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            PlayerIconButton("close",tr("Salir","Exit"),onInteraction=onInteraction,onClick=onClose)
-            PlayerIconButton("maximize",if(maximized) tr("Restaurar tamaño","Restore size") else tr("Maximizar","Maximize"),onInteraction=onInteraction,onClick=onMaximize)
+            PlayerIconButton("close",tr("Salir","Exit"),onInteraction=onInteraction,onClick=onClose,onLabel={ focusedLabel=it })
+            PlayerIconButton("maximize",if(maximized) tr("Restaurar tamaño","Restore size") else tr("Maximizar","Maximize"),onInteraction=onInteraction,onClick=onMaximize,onLabel={ focusedLabel=it })
         }
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
             .background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xE6000000))))
@@ -70,16 +71,18 @@ internal fun CompactPlayerControls(
                     .clickable { onInteraction(); onMenu("content") }.padding(horizontal=4.dp,vertical=2.dp))
             Text(if(request.item.type=="series") "S${request.season} E${request.episode} · ${request.stream.name}" else request.stream.name,
                 color=Color(0xFFBBBBBB),fontSize=12.sp,lineHeight=15.sp,maxLines=1)
+            Text(focusedLabel,color=Color.White,fontSize=12.sp,lineHeight=16.sp,maxLines=2,modifier=Modifier.fillMaxWidth().height(32.dp))
             PlayerSeekBar(position,duration,seekable,seekFocus,playFocus,onInteraction,onSeek)
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                PlayerIconButton(if(paused) "play" else "pause",if(paused) tr("Reproducir","Play") else tr("Pausar","Pause"),Modifier.focusRequester(playFocus).focusProperties { up=seekFocus },onInteraction,onPlay)
-                PlayerIconButton("resize",tr("Agrandar / encoger","Zoom / Fit"),onInteraction=onInteraction,onClick=onResize)
-                PlayerIconButton("speed","${tr("Velocidad","Speed")} · ${speed}×",onInteraction=onInteraction,onClick={onMenu("speed")})
-                PlayerIconButton("cc",tr("Subtítulos","Subtitles"),onInteraction=onInteraction,onClick={onMenu("subtitles")})
-                PlayerIconButton("audio",tr("Pista de audio","Audio track"),onInteraction=onInteraction,onClick={onMenu("audio")})
-                PlayerIconButton("links",tr("Enlaces de reproducción","Playback links"),onInteraction=onInteraction,onClick=onLinks)
+                PlayerIconButton(if(paused) "play" else "pause",if(paused) tr("Reproducir","Play") else tr("Pausar","Pause"),Modifier.focusRequester(playFocus).focusProperties { up=seekFocus },onInteraction,onPlay,onLabel={ focusedLabel=it })
+                PlayerIconButton("resize",tr("Agrandar / encoger","Zoom / Fit"),onInteraction=onInteraction,onClick=onResize,onLabel={ focusedLabel=it })
+                PlayerIconButton("speed","${tr("Velocidad","Speed")} · ${speed}×",onInteraction=onInteraction,onClick={onMenu("speed")},onLabel={ focusedLabel=it })
+                PlayerIconButton("cc",tr("Subtítulos","Subtitles"),onInteraction=onInteraction,onClick={onMenu("subtitles")},onLabel={ focusedLabel=it })
+                PlayerIconButton("audio",tr("Pista de audio","Audio track"),onInteraction=onInteraction,onClick={onMenu("audio")},onLabel={ focusedLabel=it })
+                PlayerIconButton("links",tr("Enlaces de reproducción","Playback links"),onInteraction=onInteraction,onClick=onLinks,onLabel={ focusedLabel=it })
+                PlayerIconButton("party",if(party) tr("Mi Party","My Party") else tr("Crear Party","Create Party"),onInteraction=onInteraction,onClick=onParty,onLabel={ focusedLabel=it })
                 Spacer(Modifier.weight(1f))
-                PlayerIconButton("volume","${tr("Volumen","Volume")} · ${(volume*100).toInt()}%",onInteraction=onInteraction,onClick={onMenu("volume")})
+                PlayerIconButton("volume","${tr("Volumen","Volume")} · ${(volume*100).toInt()}%",onInteraction=onInteraction,onClick={onMenu("volume")},onLabel={ focusedLabel=it })
                 Canvas(Modifier.width(70.dp).height(4.dp)) {
                     drawRoundRect(Color(0xFF555555),cornerRadius=androidx.compose.ui.geometry.CornerRadius(size.height))
                     drawRoundRect(Color.White,size=Size(size.width*volume,size.height),cornerRadius=androidx.compose.ui.geometry.CornerRadius(size.height))
@@ -92,17 +95,14 @@ internal fun CompactPlayerControls(
 }
 
 @Composable
-private fun PlayerIconButton(icon: String, label: String, modifier: Modifier=Modifier, onInteraction: () -> Unit, onClick: () -> Unit) {
+private fun PlayerIconButton(icon: String, label: String, modifier: Modifier=Modifier, onInteraction: () -> Unit, onClick: () -> Unit, onLabel: (String) -> Unit = {}) {
     var focused by remember { mutableStateOf(false) }
-    Box(modifier.size(44.dp).onFocusChanged { focused=it.isFocused; if(it.isFocused) onInteraction() }
+    Box(modifier.size(44.dp).onFocusChanged { focused=it.isFocused; if(it.isFocused) { onInteraction(); onLabel(label) } }
         .background(if(focused) Color.White else Color.Transparent,CircleShape)
         .semantics { contentDescription=label }
         .clickable { onInteraction(); onClick() },contentAlignment=Alignment.Center) {
         PlayerGlyph(icon,if(focused) Color.Black else Color.White,Modifier.size(23.dp))
-        if(focused) Box(Modifier.align(Alignment.TopCenter).offset(y=(-34).dp).widthIn(min=80.dp,max=240.dp)
-            .background(Color(0xF0222222),RoundedCornerShape(6.dp)).padding(horizontal=8.dp,vertical=5.dp)) {
-            Text(label,color=Color.White,fontSize=11.sp,lineHeight=14.sp,maxLines=1,softWrap=false)
-        }
+
     }
 }
 
@@ -122,6 +122,7 @@ private fun PlayerGlyph(icon: String, color: Color, modifier: Modifier) {
             "cc" -> { rectangle(.04f,.2f,.92f,.6f);drawArc(color,60f,240f,false,Offset(w*.17f,h*.34f),Size(w*.26f,h*.32f),style=stroke);drawArc(color,60f,240f,false,Offset(w*.56f,h*.34f),Size(w*.26f,h*.32f),style=stroke) }
             "audio" -> { rectangle(.24f,.08f,.52f,.84f);drawCircle(color,w*.08f,Offset(w*.5f,h*.3f),style=stroke);drawCircle(color,w*.16f,Offset(w*.5f,h*.66f),style=stroke) }
             "links" -> { drawRoundRect(color,Offset(w*.04f,h*.38f),Size(w*.55f,h*.3f),cornerRadius=androidx.compose.ui.geometry.CornerRadius(w*.14f),style=stroke);drawRoundRect(color,Offset(w*.41f,h*.26f),Size(w*.55f,h*.3f),cornerRadius=androidx.compose.ui.geometry.CornerRadius(w*.14f),style=stroke);line(.35f,.55f,.65f,.4f) }
+            "party" -> { drawCircle(color,w*.14f,Offset(w*.34f,h*.3f),style=stroke);drawCircle(color,w*.11f,Offset(w*.75f,h*.35f),style=stroke);drawArc(color,180f,180f,false,Offset(w*.08f,h*.52f),Size(w*.52f,h*.38f),style=stroke);drawArc(color,180f,180f,false,Offset(w*.60f,h*.6f),Size(w*.30f,h*.25f),style=stroke) }
             "volume" -> { drawPath(Path().apply { moveTo(w*.05f,h*.38f);lineTo(w*.28f,h*.38f);lineTo(w*.52f,h*.18f);lineTo(w*.52f,h*.82f);lineTo(w*.28f,h*.62f);lineTo(w*.05f,h*.62f);close() },color);drawArc(color,-65f,130f,false,Offset(w*.32f,h*.18f),Size(w*.6f,h*.64f),style=stroke) }
         }
     }

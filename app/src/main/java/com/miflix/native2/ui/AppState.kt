@@ -237,9 +237,7 @@ class AppState(context: Context) {
         val req=playerRequest.takeIf { screen==Screen.PLAYER || watchParty!=null }
         social.presence(s,req?.item?.title.orEmpty(),req?.item?.cloudId.orEmpty(),req?.season ?: 0,req?.episode ?: 0,watchParty?.roomCode)
         social.publishAvatar(s,activeProfile.avatarValue ?: ProfileAvatars[(activeProfile.id.hashCode() and Int.MAX_VALUE)%4].key)
-        if(screen!=Screen.FRIENDS && screen!=Screen.WATCH_PARTY) {
-            accessRequests.clear(); accessRequests.addAll(social.requests(s))
-        }
+        accessRequests.clear(); accessRequests.addAll(social.requests(s))
         pendingPartyCode?.let { code ->
             val decision=try { social.requestAccess(s,code) } catch(e: Exception) {
                 if(e is CancellationException) throw e
@@ -309,13 +307,6 @@ class AppState(context: Context) {
                     rows.firstNotNullOfOrNull { it.backdrop ?: it.poster }
                 }.getOrNull()?.let { genreCovers[genre.id]=it }
             } }.awaitAll()
-            directors.toList().map { group -> async {
-                if(group.people.isEmpty()) {
-                    val resolved=group.names.mapNotNull { runCatching { permits.withPermit { tmdb.directorPerson(it) } }.getOrNull() }
-                    val index=directors.indexOfFirst { it.key==group.key }
-                    if(index>=0 && resolved.isNotEmpty()) directors[index]=group.copy(people=resolved)
-                }
-            } }.awaitAll()
         } } finally { loadingDiscovery=false }
     }
     suspend fun openDirector(group: DirectorCollection) {
@@ -363,6 +354,10 @@ class AppState(context: Context) {
     val episodes = mutableStateListOf<EpisodeSummary>()
     var currentSeason by mutableStateOf(1)
     var sourceSelection by mutableStateOf<SourceSelection?>(null)
+    var liveSearch by mutableStateOf("")
+    var liveSports by mutableStateOf(false)
+    var liveCategoryId by mutableStateOf<String?>(null)
+    var searchQuery by mutableStateOf("")
     var playerRequest by mutableStateOf<PlayerRequest?>(null)
     var busyMessage by mutableStateOf<String?>(null)
     var error by mutableStateOf<String?>(null)
@@ -792,6 +787,18 @@ class AppState(context: Context) {
             }
         }
         playResolved(selection.item, selection.imdb, selection.season, selection.episode, resumeOverride = selection.resumeMs, selectedStream = stream)
+    }
+
+    suspend fun searchFlexible(query: String): List<MediaSummary> = supervisorScope {
+        val normalized=com.miflix.native2.data.FlexibleSearch.normalize(query)
+        if(normalized.length<2) return@supervisorScope emptyList()
+        val local=(trending+movies+series+topRated+continueWatching+forYou+collectionItems+directorItems)
+            .distinctBy { it.cloudId }.filter { com.miflix.native2.data.FlexibleSearch.score(it.title,normalized)>=650 }
+        val remote=runCatching { tmdb.search(normalized) }.onFailure { if(it is CancellationException) throw it }.getOrDefault(emptyList())
+        val extra=if(remote.size<5) com.miflix.native2.data.FlexibleSearch.variants(normalized).map { variant -> async {
+            runCatching { tmdb.search(variant) }.onFailure { if(it is CancellationException) throw it }.getOrDefault(emptyList()).filter { com.miflix.native2.data.FlexibleSearch.score(it.title,normalized)>=650 }
+        } }.awaitAll().flatten() else emptyList()
+        com.miflix.native2.data.FlexibleSearch.rank(local+remote+extra,normalized).take(60)
     }
 
     private val playbackSubtitleJobs = mutableMapOf<String, Deferred<List<SubtitleChoice>>>()

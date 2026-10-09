@@ -54,7 +54,7 @@ fun FriendsScreen(state: AppState) {
         BoxWithConstraints(Modifier.weight(1f).fillMaxHeight()) {
             val columns=if(maxWidth>=720.dp) 4 else 3
             SocialBackdrop()
-            LazyColumn(Modifier.fillMaxSize().padding(horizontal=28.dp),contentPadding=PaddingValues(vertical=28.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+            LazyColumn(Modifier.fillMaxSize().padding(horizontal=34.dp),contentPadding=PaddingValues(vertical=28.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
                 item {
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                         Text(tr("Amigos y salas","Friends & Party"),color=Color.White,fontSize=28.sp, lineHeight=34.sp,modifier=Modifier.weight(1f))
@@ -165,6 +165,7 @@ fun AccessRequests(state: AppState) {
 
 @Composable
 fun PartyActionsDialog(state: AppState, close: () -> Unit) {
+    var showQr by remember { mutableStateOf(false) }
     val first=remember { FocusRequester() }
     LaunchedEffect(Unit) { delay(100); first.requestFocus() }
     Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
@@ -179,11 +180,20 @@ fun PartyActionsDialog(state: AppState, close: () -> Unit) {
             }
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                FocusButton(tr("QR de la sala / Chat móvil","Room / mobile chat QR")) { close(); state.screen=Screen.WATCH_PARTY }
+                FocusButton(tr("QR de la sala / Chat móvil","Room / mobile chat QR")) { showQr=true }
                 FocusButton(tr("Cerrar","Close")) { close() }
             }
         }
     }
+    if(showQr) Dialog(onDismissRequest={ showQr=false },properties=DialogProperties(usePlatformDefaultWidth=false)) {
+        Column(Modifier.width(440.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+            Text("Party · ${state.watchParty?.roomCode.orEmpty()}",color=Color.White,fontSize=24.sp,lineHeight=29.sp)
+            state.watchParty?.let { QrCode("https://randy3m2.github.io/miflix-tv-native/party/?room=${it.roomCode}",220.dp) }
+            Text(tr("Escanea para entrar y usar el chat móvil","Scan to join and use mobile chat"),color=Muted)
+            FocusButton(tr("Cerrar","Close")) { showQr=false }
+        }
+    }
+
 }
 
 @Composable

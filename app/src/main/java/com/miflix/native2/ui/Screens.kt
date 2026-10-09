@@ -21,6 +21,9 @@ import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
@@ -96,7 +99,7 @@ private val StreamingTiles = listOf(
 private fun AppShell(state: AppState, screen: Screen, onNavigate: (Screen) -> Unit, content: @Composable BoxScope.() -> Unit) {
     Column(Modifier.fillMaxSize().background(Bg)) {
         Sidebar(screen, state.activeProfile.name, onNavigate, state.notifications.size, state.activeProfile)
-        Box(Modifier.weight(1f).fillMaxWidth(), content = content)
+        Box(Modifier.weight(1f).fillMaxWidth().padding(bottom=24.dp), content = content)
     }
 }
 
@@ -123,7 +126,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 else -> 0f
             }
         }) {
-            LazyColumn(Modifier.fillMaxSize().padding(top=76.dp),state=scroll,contentPadding=PaddingValues(bottom=64.dp)) {
+            LazyColumn(Modifier.fillMaxSize().padding(top=76.dp,bottom=24.dp),state=scroll,contentPadding=PaddingValues(bottom=64.dp)) {
                 item(key="hero") { TopTenHero(state.trending.take(10),openItem,onFocused={ if(it) returnToTop() },onBackdrop={ heroBackdrop=it },buttonModifier=Modifier.focusRequester(heroFocus)) }
                 if(state.continueWatching.isNotEmpty()) item(key="continue") {
                     MediaRail(tr("Seguir viendo","Continue Watching"),state.continueWatching,landscape=true,
@@ -133,12 +136,11 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 item(key="genres_home") { Column {
                     Text(tr("Explora por género","Browse by genre"),color=Color.White,fontSize=24.sp,lineHeight=29.sp,fontWeight=FontWeight.Bold,
                         modifier=Modifier.padding(start=34.dp,top=16.dp,bottom=16.dp))
-                    LazyRow(contentPadding=PaddingValues(horizontal=34.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
+                    LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=26.dp),contentPadding=PaddingValues(horizontal=8.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
                         items(state.genres,key={it.id}) { genre -> GenreCard(genre.copy(coverUrl=state.genreCovers[genre.id] ?: genre.coverUrl)) { state.launch { state.openGenre(genre) } } }
                     }
                     Spacer(Modifier.height(24.dp))
                 } }
-                item(key="directors_home") { DirectorRail(state) }
                 item(key="streaming") { CollectionRail(tr("Plataformas","Streaming"),StreamingTiles,openCollection) }
                 item(key="movies") { MediaRail(tr("Películas populares","Popular · Movies"),state.movies,onClick=openItem) }
                 item(key="series") { MediaRail(tr("Series populares","Popular · Series"),state.series,onClick=openItem) }
@@ -160,20 +162,10 @@ private fun DirectorRail(state: AppState) {
     Column {
     Text(tr("Directores","Directors"),color=Color.White,fontSize=24.sp,lineHeight=29.sp,fontWeight=FontWeight.Bold,
         modifier=Modifier.padding(start=34.dp,top=12.dp,bottom=16.dp))
-    LazyRow(contentPadding=PaddingValues(horizontal=34.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
+    LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=26.dp),contentPadding=PaddingValues(horizontal=8.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
         items(state.directors,key={it.key}) { group ->
-            var focused by remember { mutableStateOf(false) }
-            Column(Modifier.width(196.dp).onFocusChanged { focused=it.isFocused }.focusable()
-                .tvClick { state.launch { state.socialAction { state.openDirector(group) } } }
-                .clickable { state.launch { state.socialAction { state.openDirector(group) } } }
-                .background(if(focused) Color.White else Panel,RoundedCornerShape(18.dp)).padding(10.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                Row(Modifier.fillMaxWidth().height(128.dp).clip(RoundedCornerShape(12.dp))) {
-                    val photos=group.people.mapNotNull { it.photo }
-                    if(photos.isEmpty()) Box(Modifier.fillMaxSize().background(Color(0xFF343434)),contentAlignment=Alignment.Center) {
-                        Text(group.title.take(1),color=Color.White,fontSize=40.sp,lineHeight=48.sp)
-                    } else photos.forEach { photo -> AsyncImage(photo,group.title,Modifier.weight(1f).fillMaxHeight(),contentScale=ContentScale.Crop) }
-                }
-                Text(if(group.key=="russo") tr("Hermanos Russo","Russo Brothers") else group.title,color=if(focused) Color.Black else Color.White,fontSize=14.sp,lineHeight=18.sp,maxLines=2)
+            FocusButton(if(group.key=="russo") tr("Hermanos Russo","Russo Brothers") else group.title) {
+                state.launch { state.socialAction { state.openDirector(group) } }
             }
         }
     }
@@ -244,8 +236,8 @@ private fun MediaRail(
     Column(Modifier.fillMaxWidth().height(h)) {
         Text(title, color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 34.dp, bottom = 8.dp))
         LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(start = 24.dp, end = 64.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal=26.dp),
+            contentPadding = PaddingValues(horizontal=8.dp,vertical=8.dp),
             horizontalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             items(rows, key = { it.cloudId }, contentType = { if (landscape) "landscape" else "poster" }) { item ->
@@ -257,10 +249,11 @@ private fun MediaRail(
 
 @Composable
 private fun CollectionRail(title: String, rows: List<CollectionTile>, onClick: (CollectionTile) -> Unit) {
-    Column(Modifier.fillMaxWidth().height(235.dp)) {
+    Column(Modifier.fillMaxWidth().height(258.dp)) {
         Text(title, color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 34.dp, bottom = 8.dp))
         LazyRow(
-            contentPadding = PaddingValues(start = 24.dp, end = 64.dp),
+            modifier=Modifier.fillMaxWidth().padding(horizontal=26.dp),
+            contentPadding = PaddingValues(horizontal=8.dp,vertical=8.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             items(rows, key = { it.id }) { tile -> CollectionCard(tile) { onClick(tile) } }
@@ -272,22 +265,12 @@ private fun CollectionRail(title: String, rows: List<CollectionTile>, onClick: (
 fun CatalogScreen(state: AppState, title: String, catalog: List<MediaSummary>, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     AppShell(state, state.screen, { state.screen = it }) {
-        Column(Modifier.fillMaxSize().padding(start = 30.dp, top = 30.dp, end = 46.dp)) {
+        Column(Modifier.fillMaxSize().padding(start = 34.dp, top = 30.dp, end = 34.dp)) {
             Text(title, color = Color.White, fontSize = 31.sp, lineHeight=37.sp, fontWeight = FontWeight.Black)
             Spacer(Modifier.height(18.dp))
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp), contentPadding = PaddingValues(bottom = 60.dp, end = 30.dp)) {
-                val chunks = catalog.chunked(5)
-                items(chunks.size, key = { it }) { idx ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        chunks[idx].forEach { item ->
-                            MediaCard(
-                                item = item,
-                                progressPercent = state.progress[item.cloudId]?.percent,
-                                onClick = { state.launch { state.open(item) } }
-                            )
-                        }
-                    }
-                }
+            LazyVerticalGrid(columns=GridCells.Adaptive(184.dp),modifier=Modifier.weight(1f).fillMaxWidth(),
+                horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(bottom=48.dp,top=8.dp)) {
+                gridItems(catalog,key={it.cloudId}) { item -> MediaCard(item,modifier=Modifier.fillMaxWidth(),progressPercent=state.progress[item.cloudId]?.percent) { state.launch { state.open(item) } } }
             }
         }
     }
@@ -295,16 +278,17 @@ fun CatalogScreen(state: AppState, title: String, catalog: List<MediaSummary>, o
 
 @Composable
 fun SearchScreen(state: AppState, onBack: () -> Unit) {
-    var query by remember { mutableStateOf("") }
+    var query by remember { mutableStateOf(state.searchQuery) }
     var results by remember { mutableStateOf<List<MediaSummary>>(emptyList()) }
     var searching by remember { mutableStateOf(false) }
     BackHandler(onBack = onBack)
     LaunchedEffect(query) {
-        if (query.trim().length < 2) results = emptyList()
+        if (query.trim().length < 2) { results = emptyList(); searching=false }
         else {
             delay(400)
             searching = true
-            results = runCatching { state.tmdb.search(query.trim()) }.getOrElse { emptyList() }
+            val found = runCatching { state.searchFlexible(query.trim()) }.onFailure { if(it is kotlinx.coroutines.CancellationException) throw it }.getOrDefault(emptyList())
+            results=found
             searching = false
         }
     }
@@ -312,16 +296,12 @@ fun SearchScreen(state: AppState, onBack: () -> Unit) {
         Column(Modifier.fillMaxSize().padding(34.dp)) {
             Text(tr("Buscar","Search"), color = Color.White, fontSize = 32.sp, lineHeight=38.sp, fontWeight = FontWeight.Black)
             Spacer(Modifier.height(16.dp))
-            NativeTextField(query, { query = it }, tr("Películas, series…","Movies, series…"), modifier = Modifier.width(620.dp))
+            NativeTextField(query, { query = it; state.searchQuery=it }, tr("Películas, series…","Movies, series…"), modifier = Modifier.width(620.dp))
             Spacer(Modifier.height(18.dp))
             if (searching) Text(tr("Buscando…","Searching…"), color = Muted, fontSize = 14.sp, lineHeight=17.sp)
-            LazyColumn(contentPadding = PaddingValues(bottom = 50.dp, end = 40.dp)) {
-                val chunks = results.chunked(5)
-                items(chunks.size, key = { it }) { idx ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        chunks[idx].forEach { item -> MediaCard(item = item, onClick = { state.launch { state.open(item) } }) }
-                    }
-                }
+            LazyVerticalGrid(columns=GridCells.Adaptive(184.dp),modifier=Modifier.weight(1f).fillMaxWidth(),
+                horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(bottom=48.dp,top=8.dp)) {
+                gridItems(results,key={it.cloudId}) { item -> MediaCard(item,modifier=Modifier.fillMaxWidth()) { state.launch { state.open(item) } } }
             }
         }
     }
@@ -345,17 +325,18 @@ fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
             item { Column {
                 Text(tr("Géneros","Genres"),color=Color.White,fontSize=24.sp,lineHeight=29.sp,fontWeight=FontWeight.Bold,
                     modifier=Modifier.padding(start=34.dp,bottom=16.dp))
-                LazyRow(contentPadding=PaddingValues(horizontal=34.dp,vertical=6.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
+                LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=26.dp),contentPadding=PaddingValues(horizontal=8.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
                     items(state.genres,key={it.id}) { genre -> GenreCard(genre.copy(coverUrl=state.genreCovers[genre.id] ?: genre.coverUrl)) { state.launch { state.openGenre(genre) } } }
                 }
                 Spacer(Modifier.height(24.dp))
             } }
             if(state.comingMovies.isNotEmpty()) item { MediaRail(tr("Próximamente · Películas","Coming Soon · Movies"),state.comingMovies,onClick={ state.launch { state.open(it) } }) }
             if(state.comingSeries.isNotEmpty()) item { MediaRail(tr("Próximamente · Series","Coming Soon · Series"),state.comingSeries,onClick={ state.launch { state.open(it) } }) }
+            item { DirectorRail(state) }
             item { CollectionRail(tr("Plataformas","Streaming"), StreamingTiles) { tile -> state.launch { state.openCollection(tile.id, tile.title) } } }
             item {
                 Text(tr("Películas por año","Movies by Year"), color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 34.dp, top = 8.dp, bottom = 10.dp))
-                LazyRow(contentPadding = PaddingValues(start = 30.dp, end = 64.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=26.dp),contentPadding = PaddingValues(horizontal=8.dp,vertical=8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(years, key = { it.id }) { tile ->
                         FocusButton(tile.title, modifier = Modifier.width(106.dp)) { state.launch { state.openCollection(tile.id, tile.title) } }
                     }
@@ -453,7 +434,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
         }) {
         LazyColumn(
             Modifier.fillMaxSize(), state=detailScroll,
-            contentPadding = PaddingValues(start = 38.dp, end = 56.dp, top = 28.dp, bottom = 70.dp)
+            contentPadding = PaddingValues(start = 34.dp, end = 34.dp, top = 28.dp, bottom = 70.dp)
         ) {
             item(key = "hero") {
                 Column(Modifier.fillMaxWidth().heightIn(min = 500.dp)) {
@@ -570,7 +551,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 else -> 0f
             }
         }) {
-        LazyColumn(Modifier.fillMaxSize().padding(horizontal=28.dp), contentPadding = PaddingValues(top=32.dp,bottom=60.dp), verticalArrangement=Arrangement.spacedBy(20.dp)) {
+        LazyColumn(Modifier.fillMaxSize().padding(horizontal=34.dp), contentPadding = PaddingValues(top=32.dp,bottom=60.dp), verticalArrangement=Arrangement.spacedBy(20.dp)) {
             item {
                 Text(tr("Ajustes","Settings"), color = Color.White, fontSize = 34.sp, lineHeight=41.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.height(8.dp))
@@ -805,7 +786,7 @@ fun WatchPartyScreen(state: AppState,onBack: () -> Unit) {
     BackHandler(onBack=onBack)
     AppShell(state,Screen.WATCH_PARTY,{ state.screen=it }) {
         SocialBackdrop()
-        LazyColumn(Modifier.fillMaxSize().padding(horizontal=28.dp),contentPadding=PaddingValues(vertical=28.dp),verticalArrangement=Arrangement.spacedBy(24.dp)) {
+        LazyColumn(Modifier.fillMaxSize().padding(horizontal=34.dp),contentPadding=PaddingValues(vertical=28.dp),verticalArrangement=Arrangement.spacedBy(24.dp)) {
             item {
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                     Column(Modifier.weight(1f)) {
@@ -894,6 +875,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var surfaceGeneration by remember(request.playbackId) { mutableStateOf(0) }
     var tracks by remember(request.playbackId) { mutableStateOf(androidx.media3.common.Tracks.EMPTY) }
     var showPartyActions by remember { mutableStateOf(false) }
+    var creatingParty by remember { mutableStateOf(false) }
     var showAccessRequests by remember { mutableStateOf(false) }
     var showEpisodes by remember(request.playbackId) { mutableStateOf(false) }
     val subtitles = request.stream.subtitles
@@ -951,6 +933,19 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
             prepare()
             playWhenReady = if (state.partyRole == PartyRole.GUEST) state.watchParty?.playing ?: true else true
+        }
+    }
+
+    fun openPlayerParty() {
+        if(state.watchParty!=null) showPartyActions=true
+        else if(!creatingParty) {
+            creatingParty=true
+            state.launch { try {
+                if(state.createWatchParty(true)!=null) {
+                    state.hostPartyUpdate(request,player.currentPosition,player.playWhenReady)
+                    showPartyActions=true
+                }
+            } finally { creatingParty=false } }
         }
     }
 
@@ -1191,7 +1186,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             },
             series=request.item.type=="series", party=state.watchParty!=null,
             onEpisodes={ player.pause(); showEpisodes=true },
-            onParty={ if(state.watchParty!=null) showPartyActions=true else state.screen=Screen.WATCH_PARTY },
+            onParty={ openPlayerParty() },
             onClose={ playerMenu=null; controlInteraction++ })
         if(controlsVisible && !pauseSynopsis && !showEpisodes && !showPartyActions && !ended) {
             CompactPlayerControls(request, paused, positionMs, durationMs, speed, volume, maximized, playFocus,
@@ -1200,7 +1195,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 onResize={ resizeMode=if(resizeMode == androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT) androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM else androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT },
                 onMenu={ playerMenu=it }, onLinks={ state.launch { state.playerSources(request,player.currentPosition) } },
                 onSeek={ if(player.isCurrentMediaItemSeekable) { positionMs=it; player.seekTo(it) } }, seekable=player.isCurrentMediaItemSeekable && durationMs>0,
-                onClose=onClose, onMaximize={ maximized=!maximized })
+                party=state.watchParty!=null,onParty={ openPlayerParty() },onClose=onClose, onMaximize={ maximized=!maximized })
         }
         if(showAccessRequests) {
             Dialog(onDismissRequest={ showAccessRequests=false },properties=DialogProperties(usePlatformDefaultWidth=false)) {

@@ -37,7 +37,7 @@ fun LiveScreen(state: AppState) {
     val prefs = remember { context.getSharedPreferences("miflix_live", Context.MODE_PRIVATE) }
     val repo = remember { LiveRepository() }
     val scope = rememberCoroutineScope()
-    var sports by remember { mutableStateOf(false) }
+    var sports by remember { mutableStateOf(state.liveSports) }
     var sportsManifest by remember { mutableStateOf(prefs.getString("sports_manifest", "https://sportsfree-us2.highfly.to/manifest.json").orEmpty()) }
     var editManifest by remember { mutableStateOf(false) }
     val manifest = if (sports) sportsManifest else "https://stremio-addon-wheat.vercel.app/manifest.json"
@@ -48,7 +48,7 @@ fun LiveScreen(state: AppState) {
     var loading by remember { mutableStateOf(false) }
     var sourceChannel by remember { mutableStateOf<LiveChannel?>(null) }
     var sources by remember { mutableStateOf<List<StreamChoice>>(emptyList()) }
-    var search by remember { mutableStateOf("") }
+    var search by remember { mutableStateOf(state.liveSearch) }
     fun channelNumber(channel: LiveChannel): Int {
         val key = "channel_${manifest}_${channel.id}"
         val existing = prefs.getInt(key, 0)
@@ -65,7 +65,7 @@ fun LiveScreen(state: AppState) {
         categories = emptyList(); category = null; channels = emptyList(); message = ""; loading = true
         try {
             categories = repo.categories(manifest)
-            category = categories.firstOrNull()
+            category = categories.firstOrNull { it.id==state.liveCategoryId } ?: categories.firstOrNull()
             if (categories.isEmpty()) message = tr("Este complemento no tiene catálogos en vivo.","This add-on has no live catalogs.")
         } catch (e: Exception) {
             if (e is CancellationException) throw e
@@ -112,24 +112,24 @@ fun LiveScreen(state: AppState) {
     BackHandler { state.screen = Screen.HOME }
     Column(Modifier.fillMaxSize().background(Bg)) {
         Sidebar(Screen.LIVE_TV, state.activeProfile.name, { state.screen = it },state.notifications.size,state.activeProfile)
-        Column(Modifier.weight(1f).fillMaxHeight().padding(24.dp)) {
+        Column(Modifier.weight(1f).fillMaxHeight().padding(horizontal=34.dp,vertical=24.dp)) {
             Text(tr("TV en vivo","Live TV"), color = Color.White, fontSize = 28.sp, lineHeight=34.sp)
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                FocusButton(tr("Canales de TV","TV Channels"), primary = !sports) { sports = false }
-                FocusButton(tr("Deportes en vivo","Live Sports"), primary = sports) { sports = true }
+                FocusButton(tr("Canales de TV","TV Channels"), primary = !sports) { sports = false; state.liveSports=false; state.liveCategoryId=null }
+                FocusButton(tr("Deportes en vivo","Live Sports"), primary = sports) { sports = true; state.liveSports=true; state.liveCategoryId=null }
                 if (sports) FocusButton(tr("Manifiesto de deportes","Sports manifest")) { editManifest = true }
             }
             Spacer(Modifier.height(12.dp))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                items(categories) { c -> FocusButton(c.name, primary = c == category) { category = c } }
+                items(categories) { c -> FocusButton(c.name, primary = c == category) { category = c; state.liveCategoryId=c.id } }
             }
             Spacer(Modifier.height(14.dp))
-            NativeTextField(search, { search = it }, tr("Buscar nombre o número de canal","Search channel name or number"), modifier = Modifier.fillMaxWidth())
+            NativeTextField(search, { search = it; state.liveSearch=it }, tr("Buscar nombre o número de canal","Search channel name or number"), modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp))
             if (loading) Text(tr("Cargando canales…","Loading live content…"), color = Color.White)
             if (message.isNotBlank()) Text(message, color = Color.White, fontSize = 14.sp, lineHeight=17.sp)
-            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            LazyColumn(Modifier.weight(1f).padding(bottom=24.dp), contentPadding=PaddingValues(bottom=24.dp,end=8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 val visible = channels.filter { channel ->
                     search.isBlank() || liveSearchKey(channel.name).contains(liveSearchKey(search)) || channelNumber(channel).toString() == search.trim()
                 }

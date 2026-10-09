@@ -1,12 +1,16 @@
-# Última versión: BruniO 2.0.0-rc17
+# Última versión: BruniO 2.0.0-rc18
+
+Consulta **RC18_SETUP.md**. Ejecuta **supabase_rc18_upgrade.sql**, publica Pages y conserva los mismos cuatro secrets de firma de RC17 antes de la build. Incluye filtros de tamaño/año, limpieza de Party, Joined y avatares por QR.
+
+# Versión anterior: BruniO 2.0.0-rc17
 
 **Antes de la build configura los cuatro secrets de firma: RC17_SETUP.md.** El ZIP privado de firma se conserva fuera del repositorio. Esta versión agrega actualizaciones desde la app, firma estable, Home compacto y reproducción aleatoria personalizada. No requiere SQL nuevo.
 
-# Última versión: BruniO 2.0.0-rc16
+# Versión anterior: BruniO 2.0.0-rc16
 
 Consulta **RC16_SETUP.md** para los cambios de foco, reproductor, historial y avatar. No requiere SQL nuevo.
 
-## Última versión: BruniO 2.0.0-rc15
+## Versión anterior: BruniO 2.0.0-rc15
 
 Consulta `RC15_SETUP.md`. RC15 incluye una limpieza dirigida de manifiestos compartidos: consulta RC15_SETUP.md. Para instalaciones anteriores a RC6, la eliminación de perfiles requiere `supabase_rc6_upgrade.sql` después de RC5.
 

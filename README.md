@@ -1,4 +1,8 @@
-# Última versión: BruniO 2.0.0-rc18
+# Última versión: BruniO 2.0.0-rc19
+
+Consulta **RC19_SETUP.md**. Búsqueda con historial y resultados en el mismo scroll; carátulas más pequeñas. Conserva la firma de RC17. No requiere SQL nuevo para este cambio.
+
+# Versión anterior: BruniO 2.0.0-rc18
 
 Consulta **RC18_SETUP.md**. Ejecuta **supabase_rc18_upgrade.sql**, publica Pages y conserva los mismos cuatro secrets de firma de RC17 antes de la build. Incluye filtros de tamaño/año, limpieza de Party, Joined y avatares por QR.
 

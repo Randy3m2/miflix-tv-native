@@ -45,14 +45,14 @@ class StreamRepository(initialManifestUrl: String) {
         manifestUrls.remove(value.trim())
     }
 
-    suspend fun resolve(imdbId: String, type: String, season: Int = 0, episode: Int = 0): List<StreamChoice> = coroutineScope {
+    suspend fun resolve(imdbId: String, type: String, season: Int = 0, episode: Int = 0, movieYear: String? = null, maxBytes: Long = 0, movieTitle: String? = null): List<StreamChoice> = coroutineScope {
         val manifests = manifestUrls.toList()
         if (manifests.isEmpty()) throw IllegalStateException("No stream add-on is configured")
         val rows = manifests.map { manifest ->
-            async { runCatching { resolveOne(manifest, imdbId, type, season, episode) }.getOrDefault(emptyList()) }
+            async { runCatching { resolveOne(manifest, imdbId, type, season, episode) }.onFailure { if(it is kotlinx.coroutines.CancellationException) throw it }.getOrDefault(emptyList()) }
         }.awaitAll().flatten()
 
-        StreamOrdering.sorted(rows)
+        StreamOrdering.sorted(rows.filter { StreamFilters.allowed(it,type,movieYear,maxBytes,movieTitle) })
     }
 
     private suspend fun resolveOne(manifest: String, imdbId: String, type: String, season: Int, episode: Int): List<StreamChoice> {

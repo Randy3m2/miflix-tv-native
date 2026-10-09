@@ -22,7 +22,7 @@ class PairingRepository(
 ) {
     private fun headers() = mapOf("apikey" to publishableKey, "Content-Type" to "application/json")
 
-    suspend fun create(): PairingRequest {
+    suspend fun create(avatar: Boolean = false): PairingRequest {
         val random = SecureRandom()
         val secret = ByteArray(32).also { random.nextBytes(it) }
         val codeBytes = ByteArray(12).also { random.nextBytes(it) }
@@ -39,7 +39,7 @@ class PairingRepository(
             headers() + ("Prefer" to "return=minimal"),
             body
         )
-        val url = "$webBaseUrl?code=${URLEncoder.encode(code, "UTF-8")}#key=$secretText"
+        val url = "$webBaseUrl?code=${URLEncoder.encode(code, "UTF-8")}${if(avatar) "&mode=avatar" else ""}#key=$secretText"
         return PairingRequest(code, secretText, url)
     }
 
@@ -61,7 +61,8 @@ class PairingRepository(
             refreshToken = j.optString("refreshToken"),
             userId = j.optString("userId"),
             email = j.optString("email"),
-            addonManifest = j.optString("addonManifest")
+            addonManifest = j.optString("addonManifest"),
+            avatarData = j.optString("avatarData")
         )
     }
 

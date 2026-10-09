@@ -13,7 +13,7 @@ internal object StreamOrdering {
     }
     fun bytes(stream: StreamChoice): Long {
         if(stream.videoSize>0) return stream.videoSize
-        val match=size.find(stream.title+" "+stream.name) ?: return 0
+        val match=size.find(stream.title+" "+stream.name+" "+stream.filename) ?: return 0
         val value=match.groupValues[1].replace(',','.').toDoubleOrNull() ?: return 0
         val factor=when(match.groupValues[2].lowercase(Locale.ROOT)) { "tib" -> 1099511627776.0; "tb" -> 1000000000000.0; "gib" -> 1073741824.0; "gb" -> 1000000000.0; "mib" -> 1048576.0; else -> 1000000.0 }
         return (value*factor).toLong().coerceAtLeast(0)

@@ -11,17 +11,23 @@
 <body>
 <div class="card">
   <div class="logo">M</div>
-  <h1>Pair MiFlix TV</h1>
-  <p>This secure one-time page can sign the TV into your MiFlix account and/or send a Torrentio or Comet manifest without typing it with the remote.</p>
-  <div class="section">
+  <h1 id="heading">Pair BruniO TV</h1>
+  <p id="intro">This secure one-time page can sign the TV into your MiFlix account and/or send a Torrentio or Comet manifest without typing it with the remote.</p>
+  <div class="section" id="accountSection">
     <strong>Account (optional)</strong>
     <label>Email</label><input id="email" type="email" autocomplete="email" />
     <label>Password</label><input id="password" type="password" autocomplete="current-password" />
   </div>
-  <div class="section">
+  <div class="section" id="addonSection">
     <strong>Stream add-on (optional)</strong>
     <label>Torrentio / Comet manifest URL</label><input id="addon" type="url" placeholder="https://.../manifest.json" />
     <div class="small">The manifest is encrypted before it is written to the pairing table.</div>
+  </div>
+  <div class="section" id="avatarSection" hidden>
+    <strong>Your profile picture</strong>
+    <label>Choose an image</label><input id="avatarFile" type="file" accept="image/*" />
+    <img id="avatarPreview" alt="Avatar preview" hidden style="width:160px;height:160px;object-fit:cover;border-radius:24px;margin-top:16px" />
+    <p class="small">The preview is cropped to a square. Your photo becomes a public profile picture when saved on the TV. This QR expires in 10 minutes.</p>
   </div>
   <button id="send">Send securely to TV</button>
   <div id="status" class="status"></div>
@@ -33,29 +39,61 @@ const SUPABASE_KEY='sb_publishable_TdzEQXtDadVMKhSLVe0ihw_EAQ4iNsd';
 const supabase=createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
 const qs=new URLSearchParams(location.search); const code=qs.get('code')||'';
 const hash=new URLSearchParams(location.hash.replace(/^#/,'')); const keyText=hash.get('key')||'';
+const avatarMode=qs.get('mode')==='avatar';
 const status=document.getElementById('status');
+let avatarData=''; let imageSequence=0;
+if(avatarMode){
+ document.getElementById('heading').textContent='Your BruniO avatar';
+ document.getElementById('intro').textContent='Choose a photo, check the preview and send it securely to the profile selected on your TV.';
+ document.getElementById('accountSection').hidden=true;document.getElementById('addonSection').hidden=true;
+ document.getElementById('avatarSection').hidden=false;
+}
+document.getElementById('avatarFile').onchange=async(event)=>{
+ const sequence=++imageSequence;avatarData='';document.getElementById('avatarPreview').hidden=true;
+ try{
+  const file=event.target.files?.[0];if(!file)return;
+  if(!file.type.startsWith('image/')||file.size>20*1024*1024)throw new Error('Choose an image smaller than 20 MB.');
+  const url=URL.createObjectURL(file);
+  try{
+   const image=new Image();image.src=url;await image.decode();
+   if(sequence!==imageSequence)return;
+   if(!image.naturalWidth||!image.naturalHeight)throw new Error('Could not read this photo. Try JPG or PNG.');
+   const canvas=document.createElement('canvas');canvas.width=canvas.height=256;
+   const ctx=canvas.getContext('2d');ctx.fillStyle='#171717';ctx.fillRect(0,0,256,256);
+   const edge=Math.min(image.naturalWidth,image.naturalHeight);
+   ctx.drawImage(image,(image.naturalWidth-edge)/2,(image.naturalHeight-edge)/2,edge,edge,0,0,256,256);
+   avatarData=canvas.toDataURL('image/jpeg',0.88);
+   if(avatarData.length>700000)throw new Error('Image too large. Choose a different photo.');
+   const preview=document.getElementById('avatarPreview');preview.src=avatarData;preview.hidden=false;
+  }finally{URL.revokeObjectURL(url)}
+ }catch(e){avatarData='';show(e.message||String(e),false)}
+};
 function show(msg,ok=true){status.style.display='block';status.className='status '+(ok?'ok':'bad');status.textContent=msg}
 function b64urlToBytes(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';const b=atob(s);return Uint8Array.from(b,c=>c.charCodeAt(0))}
 function bytesToB64url(a){let s='';a.forEach(b=>s+=String.fromCharCode(b));return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
 async function encryptJson(obj){const raw=b64urlToBytes(keyText);const key=await crypto.subtle.importKey('raw',raw,{name:'AES-GCM'},false,['encrypt']);const iv=crypto.getRandomValues(new Uint8Array(12));const data=new TextEncoder().encode(JSON.stringify(obj));const enc=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,data));return {payload_enc:bytesToB64url(enc),iv:bytesToB64url(iv)}}
 document.getElementById('send').onclick=async()=>{
+ const button=document.getElementById('send');button.disabled=true;
  try{
   if(!code||!keyText) throw new Error('Invalid or expired pairing QR. Create a new QR on the TV.');
   const email=document.getElementById('email').value.trim(), password=document.getElementById('password').value;
   const addonManifest=document.getElementById('addon').value.trim();
-  let payload={addonManifest};
-  if(email||password){
+  let payload=avatarMode?{avatarData}:{addonManifest};
+  if(avatarMode&&!avatarData)throw new Error("Choose a photo first.");
+  if(!avatarMode&&(email||password)){
     if(!email||!password) throw new Error('Enter both email and password, or leave both blank.');
     const {data,error}=await supabase.auth.signInWithPassword({email,password}); if(error) throw error;
     const s=data.session;if(!s)throw new Error('No session returned');
     payload={...payload,accessToken:s.access_token,refreshToken:s.refresh_token,userId:s.user.id,email:s.user.email||email};
   }
-  if(!payload.accessToken&&!addonManifest) throw new Error('Nothing to send. Add your account and/or an add-on manifest.');
+  if(!avatarMode&&!payload.accessToken&&!addonManifest) throw new Error('Nothing to send. Add your account and/or an add-on manifest.');
   const encrypted=await encryptJson(payload);
-  const {error}=await supabase.from('miflix_pairing').update({...encrypted,status:'approved'}).eq('pair_code',code).eq('status','pending');
+  const {data:sent,error}=await supabase.from('miflix_pairing').update({...encrypted,status:'approved'}).eq('pair_code',code).eq('status','pending').gt('expires_at',new Date().toISOString()).select('pair_code');
   if(error) throw error;
-  show('Sent. Return to the TV — MiFlix should connect automatically.');
- }catch(e){show(e.message||String(e),false)}
+  if(!sent?.length)throw new Error('QR expired or already used. Create a new QR on the TV.');
+  document.getElementById('password').value='';
+  show(avatarMode?'Photo sent. Return to the TV to finish saving your avatar.':'Sent. Return to the TV — MiFlix should connect automatically.');
+ }catch(e){show(e.message||String(e),false)}finally{button.disabled=false}
 };
 </script>
 </body>

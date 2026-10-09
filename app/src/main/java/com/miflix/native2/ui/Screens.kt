@@ -132,15 +132,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
             }
         }) {
             LazyColumn(Modifier.fillMaxSize().padding(top=108.dp,bottom=32.dp).focusRequester(contentFocus).focusGroup(),state=scroll,contentPadding=PaddingValues(bottom=32.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                item(key="hero") { TopTenHero(state.trending.take(10),openItem,onFocused={ if(it) returnToTop() },onBackdrop={ heroBackdrop=it },buttonModifier=Modifier.focusRequester(heroFocus)) }
-                item(key="random") {
-                    Row(Modifier.fillMaxWidth().padding(horizontal=40.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
-                        FocusButton(if(state.randomChoosing) tr("Eligiendo…","Choosing…") else tr("Reproducir aleatorio","Play random")) {
-                            if(!state.randomChoosing) state.launch { state.playRandomMovie() }
-                        }
-                        Text(tr("Una película según tus gustos","A movie matched to your taste"),color=Muted,fontSize=14.sp,lineHeight=18.sp,maxLines=2,modifier=Modifier.weight(1f))
-                    }
-                }
+                item(key="hero") { TopTenHero(state.trending.take(10),openItem,onFocused={ if(it) returnToTop() },onBackdrop={ heroBackdrop=it },buttonModifier=Modifier.focusRequester(heroFocus),randomChoosing=state.randomChoosing,onRandom={ if(!state.randomChoosing) state.launch { state.playRandomMovie() } }) }
                 if(state.continueWatching.isNotEmpty()) item(key="continue") {
                     MediaRail(compact=true,title=tr("Seguir viendo","Continue Watching"),rows=state.continueWatching,landscape=true,
                         progressFor={ state.progress[it.cloudId]?.percent },onClick=openItem)
@@ -193,9 +185,11 @@ private fun DirectorRail(state: AppState) {
 }
 
 @Composable
-private fun TopTenHero(rows: List<MediaSummary>, onOpen: (MediaSummary) -> Unit, onFocused: (Boolean) -> Unit = {}, onBackdrop: (String?) -> Unit = {},buttonModifier: Modifier = Modifier) {
+private fun TopTenHero(rows: List<MediaSummary>, onOpen: (MediaSummary) -> Unit, onFocused: (Boolean) -> Unit = {}, onBackdrop: (String?) -> Unit = {},buttonModifier: Modifier = Modifier,randomChoosing: Boolean=false,onRandom: (() -> Unit)?=null) {
     if (rows.isEmpty()) {
-        Box(Modifier.fillMaxWidth().height(320.dp).background(Bg))
+        Box(Modifier.fillMaxWidth().height(160.dp).padding(horizontal=40.dp),contentAlignment=Alignment.CenterStart) {
+            onRandom?.let { play -> FocusButton(tr("Reproducir aleatorio","Play random"),modifier=buttonModifier) { play() } }
+        }
         return
     }
     var index by remember(rows.map { it.cloudId }) { mutableIntStateOf(0) }
@@ -216,16 +210,19 @@ private fun TopTenHero(rows: List<MediaSummary>, onOpen: (MediaSummary) -> Unit,
         }
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x08000000), Color(0x2C000000), Bg), startY = 120f)))
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xF8050505), Color(0xA0050505), Color.Transparent), endX = 860f)))
-        Column(Modifier.align(Alignment.CenterStart).padding(start = 16.dp,end=16.dp, top = 18.dp).widthIn(max = 720.dp)) {
+        Column(Modifier.align(Alignment.CenterStart).padding(start = 16.dp,end=16.dp).widthIn(max = 720.dp)) {
             Text(tr("TOP 10 · TENDENCIAS DE LA SEMANA","TOP 10  ·  TRENDING THIS WEEK"), color = Color(0xFFB8B8BC), fontSize = 12.sp, lineHeight=15.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(10.dp))
             Text(hero.title, color = Color.White, fontSize = 35.sp, lineHeight=42.sp, fontWeight = FontWeight.Black, maxLines = 2)
             Spacer(Modifier.height(10.dp))
             Text("${hero.year}  ·  ★ ${"%.1f".format(hero.rating)}", color = Color(0xFFE0E0E0), fontSize = 14.sp, lineHeight=17.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(12.dp))
-            Text(hero.overview, color = Color(0xFFE7E7EA), fontSize = 15.sp, lineHeight=18.sp, maxLines = 3, modifier = Modifier.widthIn(max = 690.dp))
+            Text(hero.overview, color = Color(0xFFE7E7EA), fontSize = 15.sp, lineHeight=18.sp, maxLines = 2, modifier = Modifier.widthIn(max = 690.dp))
             Spacer(Modifier.height(20.dp))
-            FocusButton(tr("Ver detalles","View Details"), primary = true,onFocused=onFocused,modifier=buttonModifier) { onOpen(hero) }
+            FlowRow(horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                FocusButton(tr("Ver detalles","View Details"),primary=true,onFocused=onFocused,modifier=buttonModifier) { onOpen(hero) }
+                onRandom?.let { play -> FocusButton(if(randomChoosing) tr("Eligiendo…","Choosing…") else tr("Reproducir aleatorio","Play random"),onFocused=onFocused) { play() } }
+            }
         }
         Row(
             Modifier.align(Alignment.BottomEnd).padding(end = 34.dp, bottom = 24.dp),
@@ -643,6 +640,28 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 Spacer(Modifier.height(18.dp))
             }
             item {
+                var customLimit by remember(state.streamSizeLimitGb) { mutableStateOf(if(state.streamSizeLimitGb>0) state.streamSizeLimitGb.toString() else "") }
+                Text(tr("Límite de tamaño de enlaces","Playback link size limit"),color=Color.White,fontSize=22.sp,lineHeight=26.sp)
+                Text(if(state.streamSizeLimitGb==0.0) tr("Sin límite","Unlimited") else "${tr("Máximo","Maximum")}: ${state.streamSizeLimitGb} GB",color=Muted)
+                Spacer(Modifier.height(12.dp))
+                FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                    listOf(0.0,5.0,10.0,20.0,40.0,80.0).forEach { limit ->
+                        FocusButton(if(limit==0.0) tr("Sin límite","Unlimited") else "${limit.toInt()} GB",primary=state.streamSizeLimitGb==limit) { state.saveStreamSizeLimit(limit) }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                FlowRow(horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                    NativeTextField(customLimit,{ customLimit=it },tr("Límite personalizado en GB","Custom limit in GB"),modifier=Modifier.width(300.dp))
+                    FocusButton(tr("Aplicar límite","Apply limit")) {
+                        val number=customLimit.trim().replace(',','.').toDoubleOrNull()
+                        if(number==null || !number.isFinite() || number !in 0.0..500.0) state.error=tr("Escribe un número entre 0 y 500 GB.","Enter a number from 0 to 500 GB.")
+                        else state.saveStreamSizeLimit(number)
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                Text(tr("Con un límite activo se ocultan los enlaces sin tamaño conocido. Se aplica también a la reproducción rápida.","An active cap hides links with unknown size. It also applies to quick playback."),color=Muted,fontSize=14.sp,lineHeight=18.sp)
+            }
+            item {
                 Text("${tr("Subtítulos","Subtitles")}: ${state.subtitleLanguage}",color=Muted)
                 LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(vertical=8.dp)) { item { FlowRow(horizontalArrangement=Arrangement.spacedBy(18.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
                     listOf("off" to tr("Desactivado","Off"), "es" to "Español", "en" to "English", "pt" to "Português", "fr" to "Français").forEach { (code,label) ->
@@ -786,6 +805,7 @@ fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
                             Text(profile.name,color=Color.White,fontSize=17.sp, lineHeight=21.sp)
                         }
                         FocusButton("Avatar") { editingAvatar=profile }
+                        FocusButton(tr("Subir desde celular","Upload from phone")) { state.launch { state.socialAction { state.startAvatarUpload(profile) } } }
                         if(state.profiles.size>1) FocusButton(tr("Eliminar perfil","Delete profile")) { deletingProfile=profile }
                     }
                 }

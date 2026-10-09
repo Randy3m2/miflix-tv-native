@@ -119,6 +119,12 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 }
             }
         }
+        state.partyJoinedNotice?.let { notice ->
+            Box(Modifier.fillMaxSize(),contentAlignment=Alignment.TopEnd) {
+                Text(notice,color=Color.White,fontSize=18.sp,modifier=Modifier.padding(32.dp).background(Color(0xEE272727),RoundedCornerShape(16.dp)).padding(20.dp))
+            }
+        }
+        AvatarUploadDialog(state)
         PartyRequestPopup(state)
     }
 }

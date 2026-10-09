@@ -168,7 +168,8 @@ data class PairingPayload(
     val refreshToken: String = "",
     val userId: String = "",
     val email: String = "",
-    val addonManifest: String = ""
+    val addonManifest: String = "",
+    val avatarData: String = ""
 )
 
 // Release IDs remain remembered after clearing notifications, so they do not reappear.

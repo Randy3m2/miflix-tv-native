@@ -18,6 +18,8 @@ internal object StreamOrdering {
         val factor=when(match.groupValues[2].lowercase(Locale.ROOT)) { "tib" -> 1099511627776.0; "tb" -> 1000000000000.0; "gib" -> 1073741824.0; "gb" -> 1000000000.0; "mib" -> 1048576.0; else -> 1000000.0 }
         return (value*factor).toLong().coerceAtLeast(0)
     }
-    fun sorted(streams: List<StreamChoice>): List<StreamChoice> = streams.distinctBy { it.url }
+    fun playable(stream: StreamChoice): Boolean = !Regex("\\bTB[\\s\\p{P}\\p{S}\\p{M}]*Download\\b",RegexOption.IGNORE_CASE)
+        .containsMatchIn(stream.name+" "+stream.title)
+    fun sorted(streams: List<StreamChoice>): List<StreamChoice> = streams.filter { playable(it) }.distinctBy { it.url }
         .sortedWith(compareByDescending<StreamChoice> { quality(it) }.thenByDescending { bytes(it) })
 }

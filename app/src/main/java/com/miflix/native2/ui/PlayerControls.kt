@@ -97,7 +97,7 @@ internal fun CompactPlayerControls(
 @Composable
 private fun PlayerIconButton(icon: String, label: String, modifier: Modifier=Modifier, onInteraction: () -> Unit, onClick: () -> Unit, onLabel: (String) -> Unit = {}) {
     var focused by remember { mutableStateOf(false) }
-    Box(modifier.size(44.dp).onFocusChanged { focused=it.isFocused; if(it.isFocused) { onInteraction(); onLabel(label) } }
+    Box(modifier.size(44.dp).smoothFocusFrame(22.dp).onFocusChanged { focused=it.isFocused; if(it.isFocused) { onInteraction(); onLabel(label) } }
         .background(if(focused) Color.White else Color.Transparent,CircleShape)
         .semantics { contentDescription=label }
         .clickable { onInteraction(); onClick() },contentAlignment=Alignment.Center) {

@@ -6,7 +6,6 @@ plugins {
 
 def esc = { String s -> (s ?: '').replace('\\', '\\\\').replace('"', '\\"') }
 def tmdbToken = System.getenv('MIFLIX_TMDB_TOKEN') ?: ''
-def torrentioManifest = System.getenv('MIFLIX_TORRENTIO_MANIFEST') ?: ''
 
 android {
     namespace 'com.miflix.native2'
@@ -16,13 +15,12 @@ android {
         applicationId 'com.miflix.native2'
         minSdk 23
         targetSdk 36
-        versionCode 22012
-        versionName '2.0.0-rc14'
+        versionCode 22013
+        versionName '2.0.0-rc15'
 
         buildConfigField 'String', 'SUPABASE_URL', '"https://iwvhigqxsvvgyzdygiqa.supabase.co"'
         buildConfigField 'String', 'SUPABASE_KEY', '"sb_publishable_TdzEQXtDadVMKhSLVe0ihw_EAQ4iNsd"'
         buildConfigField 'String', 'MIFLIX_TMDB_TOKEN', '"' + esc(tmdbToken) + '"'
-        buildConfigField 'String', 'MIFLIX_TORRENTIO_MANIFEST', '"' + esc(torrentioManifest) + '"'
     }
 
     buildFeatures {

@@ -274,7 +274,12 @@ class AppState(context: Context) {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     val tmdb = TmdbRepository(BuildConfig.MIFLIX_TMDB_TOKEN).also { it.language=if(interfaceLanguage=="es") "es-ES" else "en-US" }
-    val streamRepo = StreamRepository(BuildConfig.MIFLIX_TORRENTIO_MANIFEST)
+    val streamRepo = StreamRepository("")
+    val addonManifests=mutableStateListOf<String>()
+    private fun setAccountManifests(values: List<String>) {
+        streamRepo.setManifests(values)
+        addonManifests.clear(); addonManifests.addAll(streamRepo.manifests())
+    }
 
     var screen by mutableStateOf(Screen.SPLASH)
     var session by mutableStateOf(local.loadSession())
@@ -437,6 +442,9 @@ class AppState(context: Context) {
         busyMessage = tr("Iniciando sesión…","Signing in…")
         error = null
         runCatching { cloud.login(email, password) }.onSuccess {
+            setAccountManifests(emptyList())
+            sourceSelection=null
+            playerRequest=null
             session = it
             local.saveSession(it)
             syncFromCloud()
@@ -448,22 +456,16 @@ class AppState(context: Context) {
 
     suspend fun syncFromCloud() {
         val s = session ?: return
+        setAccountManifests(emptyList())
         val (remoteProfiles, remoteSetup) = cloud.account(s)
+        if(session?.userId!=s.userId) return
 
         val chosenTmdb = remoteSetup.tmdbToken.ifBlank { tmdb.token }
-        val localManifests = streamRepo.manifests()
-        val chosenManifests = (remoteSetup.addonManifests + remoteSetup.torrentioManifest + localManifests)
+        // Account data is authoritative; never inherit an APK, device or previous user's add-on.
+        val chosenManifests = (remoteSetup.addonManifests + remoteSetup.torrentioManifest)
             .filter { it.isNotBlank() }.distinct()
         if (chosenTmdb.isNotBlank()) tmdb.token = chosenTmdb
-        if (chosenManifests.isNotEmpty()) streamRepo.setManifests(chosenManifests)
-        if (remoteSetup.tmdbToken.isBlank() || remoteSetup.addonManifests.isEmpty()) {
-            runCatching {
-                cloud.upsertPrivateSetup(
-                    s,
-                    PrivateSetup(chosenTmdb, chosenManifests.firstOrNull().orEmpty(), chosenManifests)
-                )
-            }
-        }
+        setAccountManifests(chosenManifests)
 
         profiles.clear()
         profiles.addAll(if (remoteProfiles.isEmpty()) listOf(Profile("default", "Main", primary = true)) else remoteProfiles)
@@ -531,15 +533,20 @@ class AppState(context: Context) {
     }
 
     suspend fun addAddonManifest(url: String) {
-        val clean = url.trim()
-        if (clean.isBlank()) return
-        streamRepo.addManifest(clean)
-        session?.let {
-            cloud.upsertPrivateSetup(
-                it,
-                PrivateSetup(tmdb.token, streamRepo.manifestUrl, streamRepo.manifests())
-            )
-        }
+        val owner=session ?: throw IllegalStateException(tr("Inicia sesión para guardar tus complementos","Sign in to save your add-ons"))
+        val clean=url.trim()
+        if(clean.isBlank()) return
+        require(clean.startsWith("https://") || clean.startsWith("http://")) { tr("Usa una URL HTTP válida","Use a valid HTTP URL") }
+        val normalized=if(clean.endsWith("/manifest.json")) clean else clean.trimEnd('/')+"/manifest.json"
+        val next=(streamRepo.manifests()+normalized).distinct()
+        cloud.upsertPrivateSetup(owner,PrivateSetup(tmdb.token,next.firstOrNull().orEmpty(),next))
+        if(session?.userId==owner.userId) setAccountManifests(next)
+    }
+    suspend fun removeAddonManifest(manifest: String) {
+        val owner=session ?: return
+        val next=streamRepo.manifests().filterNot { it==manifest }
+        cloud.upsertPrivateSetup(owner,PrivateSetup(tmdb.token,next.firstOrNull().orEmpty(),next))
+        if(session?.userId==owner.userId) setAccountManifests(next)
     }
 
     suspend fun loadHome() = supervisorScope {
@@ -767,10 +774,12 @@ class AppState(context: Context) {
     }
 
     private suspend fun chooseSources(item: MediaSummary, imdb: String, season: Int, episode: Int) {
+        val owner=session?.userId
         busyMessage = tr("Buscando todos los enlaces…","Finding all playback links…")
         error = null
         try {
             val links = streamRepo.resolve(imdb, item.type, season, episode)
+            if(session?.userId!=owner) return
             if (links.isEmpty()) error = tr("No se encontraron enlaces reproducibles","No playable sources found")
             else sourceSelection = SourceSelection(item, imdb, season, episode, links)
         } catch (e: Exception) {
@@ -811,6 +820,7 @@ class AppState(context: Context) {
     }
 
     private suspend fun playResolved(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeOverride: Long? = null, selectedStream: StreamChoice? = null) = coroutineScope {
+        val playbackOwner=session?.userId
         busyMessage = tr("Buscando el mejor enlace…","Finding the best source…")
         error = null
         val streamsJob = async { if (selectedStream != null) listOf(selectedStream) else streamRepo.resolve(imdb, item.type, season, episode) }
@@ -824,6 +834,7 @@ class AppState(context: Context) {
         } }
         runCatching {
             val streams = streamsJob.await()
+            if(session?.userId!=playbackOwner) { busyMessage=null; return@coroutineScope }
             val best = streams.firstOrNull() ?: throw IllegalStateException(tr("No se encontraron enlaces reproducibles","No playable sources found"))
             val externalSubs = withTimeoutOrNull(800) { subsJob.await() }.orEmpty()
             val mergedSubs = (best.subtitles + externalSubs)
@@ -831,6 +842,7 @@ class AppState(context: Context) {
                 .sortedWith(compareBy<SubtitleChoice> {
                     when (it.lang.lowercase(Locale.US)) { "es", "spa" -> 0; "en", "eng" -> 1; else -> 2 }
                 }.thenBy { it.label })
+            if(session?.userId!=playbackOwner) { busyMessage=null; return@coroutineScope }
             val enriched = best.copy(subtitles = mergedSubs)
             val key = if (item.type == "series") "${item.cloudId}:s${season}e${episode}" else item.cloudId
             val saved = progress[key] ?: progress[item.cloudId]
@@ -1110,6 +1122,7 @@ class AppState(context: Context) {
         val payload = runCatching { pairingRepo.poll(req) }.getOrNull() ?: return false
         if (payload.accessToken.isNotBlank() && payload.userId.isNotBlank()) {
             val cloudSession = CloudSession(payload.accessToken, payload.refreshToken, payload.userId, payload.email)
+            setAccountManifests(emptyList()); sourceSelection=null; playerRequest=null
             session = cloudSession
             local.saveSession(cloudSession)
             runCatching { syncFromCloud() }
@@ -1137,6 +1150,7 @@ class AppState(context: Context) {
     }
 
     fun signOut() {
+        setAccountManifests(emptyList()); sourceSelection=null; playerRequest=null
         watchParty=null; partyRole=null; nickname=""
         partyMessages.clear(); floatingEvents.clear(); partyMembers.clear()
         friendRows.clear(); friendPeople.clear(); friendActivity.clear(); accessRequests.clear(); pendingPartyCode=null; lastEventId=-1

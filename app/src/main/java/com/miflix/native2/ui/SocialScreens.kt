@@ -122,7 +122,7 @@ fun FriendsScreen(state: AppState) {
 @Composable
 private fun FriendTile(friend: FriendActivity,modifier: Modifier,onClick: () -> Unit) {
     var focused by remember(friend.id) { mutableStateOf(false) }
-    Column(modifier.height(225.dp).onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
+    Column(modifier.height(225.dp).smoothFocusFrame(16.dp).onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
         .background(if(focused) Color(0xDD27364E) else Color(0x99131C2C),RoundedCornerShape(18.dp))
         .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else Color(0x335F5F5F),RoundedCornerShape(18.dp)).padding(16.dp),
         horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)) {

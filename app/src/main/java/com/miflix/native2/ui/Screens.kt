@@ -371,9 +371,9 @@ fun GenresScreen(state: AppState, onBack: () -> Unit) {
 @Composable
 private fun GenreCard(g: GenreDefinition, onClick: () -> Unit) {
     var focused by remember(g.id) { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (focused) 1.02f else 1f, tween(90), label = "genreScale")
+    val scale by animateFloatAsState(if (focused) 1.02f else 1f, tween(150), label = "genreScale")
     Box(
-        Modifier.width(220.dp).height(104.dp).graphicsLayer { scaleX = scale; scaleY = scale }
+        Modifier.width(220.dp).height(104.dp).graphicsLayer { scaleX = scale; scaleY = scale }.smoothFocusFrame(14.dp)
             .onFocusChanged { focused = it.isFocused }.focusable().tvClick(onClick).clickable(onClick = onClick)
             .clip(RoundedCornerShape(14.dp)).background(if (focused) Color.White else Color(0xFF171717))
             .border(if (focused) 2.dp else 1.dp, if (focused) Color.White else Color(0xFF292929), RoundedCornerShape(14.dp)),
@@ -628,14 +628,17 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 Spacer(Modifier.height(8.dp))
                 Text(tr("Los manifiestos de Torrentio y Comet se comparten entre los perfiles de esta cuenta.","Torrentio and Comet manifests are account-level, so every profile on this account shares them."), color = Muted, fontSize = 14.sp, lineHeight=17.sp, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(12.dp))
-                state.streamRepo.manifests().forEach { manifest ->
-                    Text("• ${runCatching { Uri.parse(manifest).host }.getOrNull() ?: tr("Complemento configurado","Configured add-on")} · ${tr("configurado","configured")}", color = Color(0xFFE4E4E6), fontSize = 12.sp, lineHeight=15.sp, maxLines = 1)
+                state.addonManifests.toList().forEach { manifest ->
+                    Row(Modifier.fillMaxWidth().padding(vertical=6.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
+                        Text("• ${runCatching { Uri.parse(manifest).host }.getOrNull() ?: tr("Complemento configurado","Configured add-on")}",color=Color.White,fontSize=14.sp,modifier=Modifier.weight(1f))
+                        FocusButton(tr("Eliminar","Remove")) { state.launch { state.socialAction { state.removeAddonManifest(manifest) } } }
+                    }
                 }
                 Spacer(Modifier.height(12.dp))
                 NativeTextField(addonUrl, { addonUrl = it }, tr("URL del manifiesto Torrentio / Comet","Torrentio / Comet manifest URL"), modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(10.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(18.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
-                    FocusButton(tr("Añadir manifiesto","Add Manifest")) { state.launch { state.addAddonManifest(addonUrl); addonUrl = "" } }
+                    FocusButton(tr("Añadir manifiesto","Add Manifest")) { state.launch { state.socialAction { state.addAddonManifest(addonUrl); addonUrl = "" } } }
                     FocusButton(tr("Usar QR","Use QR")) { state.screen = Screen.PAIR_DEVICE }
                 }
 
@@ -730,7 +733,7 @@ fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
                 items(state.profiles,key={it.id}) { profile ->
                     var focused by remember { mutableStateOf(false) }
                     Column(Modifier.width(180.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(14.dp)) {
-                        Column(Modifier.onFocusChanged { focused=it.isFocused }.focusable()
+                        Column(Modifier.smoothFocusFrame(18.dp).onFocusChanged { focused=it.isFocused }.focusable()
                             .tvClick { state.launch { state.selectProfile(profile) } }
                             .clickable { state.launch { state.selectProfile(profile) } },horizontalAlignment=Alignment.CenterHorizontally) {
                             Box(Modifier.border(if(focused) 3.dp else 0.dp,Color.White,RoundedCornerShape(22.dp)).padding(5.dp)) {
@@ -1333,7 +1336,7 @@ private fun EpisodePickerOverlay(state: AppState, request: PlayerRequest, onClos
 private fun EpisodeListRow(ep: EpisodeSummary, active: Boolean, onLongClick: () -> Unit, onClick: () -> Unit) {
     var focused by remember(ep.season, ep.episode) { mutableStateOf(false) }
     Row(
-        Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused }.focusable().tvPlaybackClick(onClick, onLongClick).clickable(onClick = onClick)
+        Modifier.fillMaxWidth().smoothFocusFrame(16.dp).onFocusChanged { focused = it.isFocused }.focusable().tvPlaybackClick(onClick, onLongClick).clickable(onClick = onClick)
             .background(if (focused) Color.White else if (active) Color(0xFF242424) else Color(0xFF161616), RoundedCornerShape(12.dp))
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -1374,7 +1377,7 @@ private fun CastCard(person: CastMember) {
 private fun TrailerCard(trailer: TrailerSummary, onClick: () -> Unit) {
     var focused by remember(trailer.key) { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) 1.02f else 1f, tween(90, easing = LinearOutSlowInEasing), label = "trailerScale")
-    Column(Modifier.width(330.dp).graphicsLayer { scaleX = scale; scaleY = scale }.onFocusChanged { focused = it.isFocused }.focusable().tvClick(onClick).clickable(onClick = onClick)) {
+    Column(Modifier.width(330.dp).graphicsLayer { scaleX = scale; scaleY = scale }.smoothFocusFrame(14.dp).onFocusChanged { focused = it.isFocused }.focusable().tvClick(onClick).clickable(onClick = onClick)) {
         Box(Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFF1A1A1A)).border(if (focused) 2.dp else 0.dp, Color.White, RoundedCornerShape(12.dp))) {
             AsyncImage(trailer.thumbnail, trailer.name, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             Box(Modifier.fillMaxSize().background(Color(0x33000000)), contentAlignment = Alignment.Center) { Text("▶", color = Color.White, fontSize = 31.sp, lineHeight=37.sp) }
@@ -1389,7 +1392,7 @@ private fun EpisodeCard(ep: EpisodeSummary, onLongClick: () -> Unit, onClick: ()
     var focused by remember(ep.season, ep.episode) { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) 1.02f else 1f, tween(90, easing = LinearOutSlowInEasing), label = "episodeScale")
     Box(Modifier.width(328.dp).height(225.dp), contentAlignment = Alignment.TopCenter) {
-        Column(Modifier.width(316.dp).graphicsLayer { scaleX = scale; scaleY = scale }.onFocusChanged { focused = it.isFocused }.focusable().tvPlaybackClick(onClick, onLongClick).clickable(onClick = onClick)) {
+        Column(Modifier.width(316.dp).graphicsLayer { scaleX = scale; scaleY = scale }.smoothFocusFrame(14.dp).onFocusChanged { focused = it.isFocused }.focusable().tvPlaybackClick(onClick, onLongClick).clickable(onClick = onClick)) {
             Box(Modifier.fillMaxWidth().height(176.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFF1B1B1B)).border(if (focused) 2.dp else 0.dp, Color.White, RoundedCornerShape(12.dp))) {
                 AsyncImage(ep.still, ep.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 if (focused) Box(Modifier.fillMaxSize().background(Color(0x26000000)), contentAlignment = Alignment.Center) { Text("▶", color = Color.White, fontSize = 32.sp, lineHeight=38.sp) }
@@ -1456,7 +1459,7 @@ fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
 private fun SourceLinkCard(stream: com.miflix.native2.model.StreamChoice,modifier: Modifier,onClick: () -> Unit) {
     var focused by remember(stream) { mutableStateOf(false) }
     val ink=if(focused) Color.Black else Color.White
-    Column(modifier.onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
+    Column(modifier.smoothFocusFrame(18.dp).onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
         .background(if(focused) Color.White else Color(0xFF252528),RoundedCornerShape(18.dp)).padding(20.dp),
         verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Text(listOf(stream.addonName,stream.name).filter { it.isNotBlank() }.distinct().joinToString(" · "),

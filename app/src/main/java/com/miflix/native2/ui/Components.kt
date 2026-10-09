@@ -62,7 +62,7 @@ val Panel = Color(0xFF151515)
 val Muted = Color(0xFF9A9A9F)
 val SoftWhite = Color(0xFFF3F3F3)
 
-private val FastMotion = tween<Float>(durationMillis = 90, easing = LinearOutSlowInEasing)
+private val FastMotion = tween<Float>(durationMillis = 150, easing = LinearOutSlowInEasing)
 
 fun Modifier.tvClick(onClick: () -> Unit): Modifier = this.onPreviewKeyEvent { event ->
     val activate = event.key == Key.DirectionCenter ||
@@ -126,9 +126,11 @@ fun FocusButton(
         label = "buttonScale"
     )
     val white = focused
+    val sharedFocus=usesSmoothFocus()
     Box(
         modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
+            .smoothFocusFrame(24.dp)
             .onFocusChanged {
                 focused = it.isFocused
                 onFocused?.invoke(it.isFocused)
@@ -137,7 +139,7 @@ fun FocusButton(
             .then(if (onLongClick != null) Modifier.tvPlaybackClick(onClick, onLongClick) else Modifier.tvClick(onClick))
             .clickable(onClick = onClick)
             .background(if (white) SoftWhite else Color(0xE6222222), RoundedCornerShape(24.dp))
-            .border(if (focused) 1.5.dp else if(primary) 1.dp else 0.dp, if(focused) Color.White else Color(0xFF686868), RoundedCornerShape(24.dp))
+            .border(if (focused && !sharedFocus) 1.5.dp else if(primary) 1.dp else 0.dp, if(focused) Color.White else Color(0xFF686868), RoundedCornerShape(24.dp))
             .padding(horizontal = horizontalPadding, vertical = 12.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -176,6 +178,7 @@ fun MediaCard(
         animationSpec = FastMotion,
         label = "cardScale"
     )
+    val sharedFocus=usesSmoothFocus()
     val outerW = if (landscape) 286.dp else 184.dp
     val outerH = if (landscape) 174.dp else 274.dp
     val innerW = if (landscape) 272.dp else 170.dp
@@ -191,6 +194,7 @@ fun MediaCard(
                     scaleY = scale
                     shadowElevation = if (focused) 16f else 0f
                 }
+                .smoothFocusFrame(12.dp)
                 .onFocusChanged {
                     focused = it.isFocused
                     if (it.isFocused) onFocused(item)
@@ -200,7 +204,7 @@ fun MediaCard(
                 .clickable(onClick = onClick)
                 .clip(RoundedCornerShape(12.dp))
                 .background(Color(0xFF1A1A1A))
-                .border(if (focused) 2.dp else 0.dp, Color.White, RoundedCornerShape(12.dp))
+                .border(if (focused && !sharedFocus) 2.dp else 0.dp, Color.White, RoundedCornerShape(12.dp))
         ) {
             AsyncImage(
                 model = if (landscape) item.backdrop ?: item.poster else item.poster ?: item.backdrop,
@@ -246,6 +250,7 @@ fun CollectionCard(
         animationSpec = FastMotion,
         label = "collectionScale"
     )
+    val sharedFocus=usesSmoothFocus()
     val model = if (focused && !tile.focusGifUrl.isNullOrBlank()) tile.focusGifUrl else tile.coverUrl
 
     Column(Modifier.width(300.dp)) {
@@ -255,13 +260,14 @@ fun CollectionCard(
                     .width(286.dp)
                     .height(162.dp)
                     .graphicsLayer { scaleX = scale; scaleY = scale; shadowElevation = if (focused) 14f else 0f }
+                    .smoothFocusFrame(14.dp)
                     .onFocusChanged { focused = it.isFocused }
                     .focusable()
                     .tvClick(onClick)
                     .clickable(onClick = onClick)
                     .clip(RoundedCornerShape(14.dp))
                     .background(Color(0xFF191919))
-                    .border(if (focused) 2.dp else 0.dp, Color.White, RoundedCornerShape(14.dp))
+                    .border(if (focused && !sharedFocus) 2.dp else 0.dp, Color.White, RoundedCornerShape(14.dp))
             ) {
                 AsyncImage(
                     model = model,
@@ -351,6 +357,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
             else Box(Modifier.size(34.dp),contentAlignment=Alignment.Center) { Text(profileName.take(1),color=if(profileFocused) Color.Black else Color.White) }
             Text("⌄",color=if(profileFocused) Color.Black else Color.White,modifier=Modifier.padding(start=6.dp),fontSize=16.sp)
         }
+        CompositionLocalProvider(LocalSmoothFocus provides null) {
         var navOrigin by remember { mutableStateOf(0f) }
         val bounds=remember { mutableStateMapOf<Screen,Pair<Float,Float>>() }
         var target by remember { mutableStateOf<Screen?>(null) }
@@ -377,6 +384,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
                 .background(Color.White,RoundedCornerShape(2.dp)))
         }
         NotificationButton(notificationCount) { onNavigate(Screen.NOTIFICATIONS) }
+        }
     }
 }
 

@@ -1,6 +1,6 @@
-## Última versión: BruniO 2.0.0-rc14
+## Última versión: BruniO 2.0.0-rc15
 
-Consulta `RC14_SETUP.md`. RC14 no requiere SQL nuevo. Para instalaciones anteriores a RC6, la eliminación de perfiles requiere `supabase_rc6_upgrade.sql` después de RC5.
+Consulta `RC15_SETUP.md`. RC15 incluye una limpieza dirigida de manifiestos compartidos: consulta RC15_SETUP.md. Para instalaciones anteriores a RC6, la eliminación de perfiles requiere `supabase_rc6_upgrade.sql` después de RC5.
 
 # MiFlix TV Native 2.0 RC1
 

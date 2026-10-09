@@ -43,6 +43,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 state.launch { state.joinWatchParty(initialPartyCode) }
             }
         }
+        key(state.screen) { SmoothFocusHost {
         when (state.screen) {
             Screen.SPLASH -> SplashScreen()
             Screen.HOME -> HomeScreen(state) { state.screen = it }
@@ -70,6 +71,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 ?: run { state.screen = Screen.HOME }
         }
 
+        } }
         LaunchedEffect(bootstrapped,state.session?.userId,state.activeProfile.id) {
             if(bootstrapped) runCatching { state.loadRatings() }.onFailure { state.error=it.message }
         }

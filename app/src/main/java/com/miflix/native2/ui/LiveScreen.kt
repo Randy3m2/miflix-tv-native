@@ -197,7 +197,7 @@ private fun liveSearchKey(value: String): String = Normalizer.normalize(value.tr
 @Composable
 private fun LiveChannelRow(channel: LiveChannel, number: Int, onClick: () -> Unit, onLongClick: () -> Unit) {
     var focused by remember(channel.id) { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth().onFocusChanged { focused = it.hasFocus }
+    Row(Modifier.fillMaxWidth().smoothFocusFrame(16.dp).onFocusChanged { focused = it.hasFocus }
         .tvPlaybackClick(onClick, onLongClick).focusable().clickable(onClick = onClick)
         .background(if (focused) Color.White else Panel, RoundedCornerShape(14.dp)).padding(12.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {

@@ -220,7 +220,7 @@ class AppState(context: Context) {
         require(score in 1..10)
         val owner=ratingsKey(); val profile=activeProfile.id
         session?.let { ratingRepo.save(it,profile,item.cloudId,score) }
-        if(owner!=ratingsKey() || generation!=playbackWork.generation) return
+        if(owner!=ratingsKey()) return
         ratings[item.cloudId]=score; persistRatings(); refreshForYou()
     }
     suspend fun recommendationsFor(context: MediaSummary? = null): List<MediaSummary> = coroutineScope {

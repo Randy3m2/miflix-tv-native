@@ -37,32 +37,32 @@ jobs:
           gradle-version: '8.13'
 
       - name: Build native APK
-        run: gradle :app:assembleDebug --stacktrace
+        run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace
 
       - name: Prepare APKs
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk MiFlix-TV-Native-v2.0.0-rc13.apk
+          cp app/build/outputs/apk/debug/app-debug.apk MiFlix-TV-Native-v2.0.0-rc14.apk
           cp app/build/outputs/apk/debug/app-debug.apk MiFlix-TV-Native.apk
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MiFlix-TV-Native-v2.0.0-rc13
-          path: MiFlix-TV-Native-v2.0.0-rc13.apk
+          name: MiFlix-TV-Native-v2.0.0-rc14
+          path: MiFlix-TV-Native-v2.0.0-rc14.apk
 
       - name: Publish versioned release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="native-v2.0.0-rc13"
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native 2.0 RC13" --notes "RC13: stable keyed video surface, Compose SurfaceView sync workaround, bounded subtitle startup wait and faster rebuffering."
-          gh release upload "$TAG" MiFlix-TV-Native-v2.0.0-rc13.apk --clobber
+          TAG="native-v2.0.0-rc14"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native 2.0 RC14" --notes "RC14: automatic quality/size source sorting, adaptive catalog margins, flexible search, persistent Live TV search and in-player Party with modal admission requests."
+          gh release upload "$TAG" MiFlix-TV-Native-v2.0.0-rc14.apk --clobber
 
       - name: Update permanent latest channel
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="native-latest"
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native · Latest" --notes "Current version: 2.0.0-rc13"
-          gh release edit "$TAG" --title "MiFlix TV Native · Latest" --notes "Current version: 2.0.0-rc13"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native · Latest" --notes "Current version: 2.0.0-rc14"
+          gh release edit "$TAG" --title "MiFlix TV Native · Latest" --notes "Current version: 2.0.0-rc14"
           gh release upload "$TAG" MiFlix-TV-Native.apk --clobber

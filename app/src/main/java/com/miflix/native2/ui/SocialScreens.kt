@@ -1,6 +1,9 @@
 package com.miflix.native2.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
@@ -21,8 +24,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,9 +50,10 @@ fun FriendsScreen(state: AppState) {
     var manage by remember { mutableStateOf(false) }
     var refreshing by remember { mutableStateOf(false) }
     BackHandler { state.screen=Screen.HOME }
+    val contentFocus=remember { FocusRequester() }
     Column(Modifier.fillMaxSize()) {
-        Sidebar(Screen.FRIENDS,state.activeProfile.name,{ state.screen=it },state.notifications.size,state.activeProfile)
-        BoxWithConstraints(Modifier.weight(1f).fillMaxHeight()) {
+        Sidebar(Screen.FRIENDS,state.activeProfile.name,{ state.screen=it },state.notifications.size,state.activeProfile,onMoveDown={ contentFocus.requestFocus(); Unit })
+        BoxWithConstraints(Modifier.weight(1f).fillMaxHeight().focusRequester(contentFocus).focusGroup()) {
             val columns=if(maxWidth>=720.dp) 4 else 3
             SocialBackdrop()
             LazyColumn(Modifier.fillMaxSize().padding(horizontal=34.dp),contentPadding=PaddingValues(vertical=28.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
@@ -122,7 +124,7 @@ fun FriendsScreen(state: AppState) {
 @Composable
 private fun FriendTile(friend: FriendActivity,modifier: Modifier,onClick: () -> Unit) {
     var focused by remember(friend.id) { mutableStateOf(false) }
-    Column(modifier.height(225.dp).smoothFocusFrame(16.dp).onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
+    Column(modifier.height(225.dp).onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
         .background(if(focused) Color(0xDD27364E) else Color(0x99131C2C),RoundedCornerShape(18.dp))
         .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else Color(0x335F5F5F),RoundedCornerShape(18.dp)).padding(16.dp),
         horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -255,9 +257,10 @@ fun TraktScreen(state: AppState) {
 @Composable
 fun NotificationsScreen(state: AppState) {
     BackHandler { state.screen = Screen.HOME }
+    val contentFocus=remember { FocusRequester() }
     Column(Modifier.fillMaxSize().background(Bg)) {
-        Sidebar(Screen.NOTIFICATIONS,state.activeProfile.name,{state.screen=it},state.notifications.size,state.activeProfile)
-        LazyColumn(Modifier.weight(1f).padding(30.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+        Sidebar(Screen.NOTIFICATIONS,state.activeProfile.name,{state.screen=it},state.notifications.size,state.activeProfile,onMoveDown={ contentFocus.requestFocus(); Unit })
+        LazyColumn(Modifier.weight(1f).padding(30.dp).focusRequester(contentFocus).focusGroup(),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             item {
                 Text("${tr("Notificaciones","Notifications")} · ${state.notifications.size}",color=Color.White,fontSize=30.sp, lineHeight=36.sp)
                 Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {

@@ -48,7 +48,7 @@ private fun playbackTime(ms: Long): String {
 /** Compact TV controls. Only the focused action has a white background. */
 @Composable
 internal fun CompactPlayerControls(
-    request: PlayerRequest, paused: Boolean, position: Long, duration: Long, speed: Float, volume: Float,
+    request: PlayerRequest, paused: Boolean, position: Long, duration: Long, speed: Float,
     maximized: Boolean, playFocus: FocusRequester, onInteraction: () -> Unit, onPlay: () -> Unit,
     onResize: () -> Unit, onMenu: (String) -> Unit, onLinks: () -> Unit, onSeek: (Long) -> Unit,
     seekable: Boolean, party: Boolean, onParty: () -> Unit, onClose: () -> Unit, onMaximize: () -> Unit
@@ -82,11 +82,6 @@ internal fun CompactPlayerControls(
                 PlayerIconButton("links",tr("Enlaces de reproducción","Playback links"),onInteraction=onInteraction,onClick=onLinks,onLabel={ focusedLabel=it })
                 PlayerIconButton("party",if(party) tr("Mi Party","My Party") else tr("Crear Party","Create Party"),onInteraction=onInteraction,onClick=onParty,onLabel={ focusedLabel=it })
                 Spacer(Modifier.weight(1f))
-                PlayerIconButton("volume","${tr("Volumen","Volume")} · ${(volume*100).toInt()}%",onInteraction=onInteraction,onClick={onMenu("volume")},onLabel={ focusedLabel=it })
-                Canvas(Modifier.width(70.dp).height(4.dp)) {
-                    drawRoundRect(Color(0xFF555555),cornerRadius=androidx.compose.ui.geometry.CornerRadius(size.height))
-                    drawRoundRect(Color.White,size=Size(size.width*volume,size.height),cornerRadius=androidx.compose.ui.geometry.CornerRadius(size.height))
-                }
                 Text(if(duration>0) "${playbackTime(position)} / ${playbackTime(duration)}" else if(request.live) tr("EN VIVO","LIVE") else playbackTime(position),
                     color=Color.White,fontSize=14.sp,lineHeight=18.sp)
             }
@@ -97,7 +92,7 @@ internal fun CompactPlayerControls(
 @Composable
 private fun PlayerIconButton(icon: String, label: String, modifier: Modifier=Modifier, onInteraction: () -> Unit, onClick: () -> Unit, onLabel: (String) -> Unit = {}) {
     var focused by remember { mutableStateOf(false) }
-    Box(modifier.size(44.dp).smoothFocusFrame(22.dp).onFocusChanged { focused=it.isFocused; if(it.isFocused) { onInteraction(); onLabel(label) } }
+    Box(modifier.size(44.dp).onFocusChanged { focused=it.isFocused; if(it.isFocused) { onInteraction(); onLabel(label) } }
         .background(if(focused) Color.White else Color.Transparent,CircleShape)
         .semantics { contentDescription=label }
         .clickable { onInteraction(); onClick() },contentAlignment=Alignment.Center) {
@@ -123,7 +118,7 @@ private fun PlayerGlyph(icon: String, color: Color, modifier: Modifier) {
             "audio" -> { rectangle(.24f,.08f,.52f,.84f);drawCircle(color,w*.08f,Offset(w*.5f,h*.3f),style=stroke);drawCircle(color,w*.16f,Offset(w*.5f,h*.66f),style=stroke) }
             "links" -> { drawRoundRect(color,Offset(w*.04f,h*.38f),Size(w*.55f,h*.3f),cornerRadius=androidx.compose.ui.geometry.CornerRadius(w*.14f),style=stroke);drawRoundRect(color,Offset(w*.41f,h*.26f),Size(w*.55f,h*.3f),cornerRadius=androidx.compose.ui.geometry.CornerRadius(w*.14f),style=stroke);line(.35f,.55f,.65f,.4f) }
             "party" -> { drawCircle(color,w*.14f,Offset(w*.34f,h*.3f),style=stroke);drawCircle(color,w*.11f,Offset(w*.75f,h*.35f),style=stroke);drawArc(color,180f,180f,false,Offset(w*.08f,h*.52f),Size(w*.52f,h*.38f),style=stroke);drawArc(color,180f,180f,false,Offset(w*.60f,h*.6f),Size(w*.30f,h*.25f),style=stroke) }
-            "volume" -> { drawPath(Path().apply { moveTo(w*.05f,h*.38f);lineTo(w*.28f,h*.38f);lineTo(w*.52f,h*.18f);lineTo(w*.52f,h*.82f);lineTo(w*.28f,h*.62f);lineTo(w*.05f,h*.62f);close() },color);drawArc(color,-65f,130f,false,Offset(w*.32f,h*.18f),Size(w*.6f,h*.64f),style=stroke) }
+
         }
     }
 }
@@ -152,11 +147,11 @@ private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seek
 }
 
 @Composable
-internal fun PlayerOptionsDialog(menu: String, player: Player, tracks: Tracks, speed: Float, volume: Float,
-    onSpeed: (Float) -> Unit, onVolume: (Float) -> Unit, externalSubtitles: List<SubtitleChoice>, subtitleLoading: Boolean, onExternalSubtitle: (SubtitleChoice) -> Unit, series: Boolean, party: Boolean, onEpisodes: () -> Unit, onParty: () -> Unit, onClose: () -> Unit) {
+internal fun PlayerOptionsDialog(menu: String, player: Player, tracks: Tracks, speed: Float,
+    onSpeed: (Float) -> Unit, externalSubtitles: List<SubtitleChoice>, subtitleLoading: Boolean, onExternalSubtitle: (SubtitleChoice) -> Unit, series: Boolean, party: Boolean, onEpisodes: () -> Unit, onParty: () -> Unit, onClose: () -> Unit) {
     val first=remember(menu) { FocusRequester() }
     LaunchedEffect(menu) { withFrameNanos { }; first.requestFocus() }
-    val title=when(menu) { "content" -> tr("Contenido / Party","Content / Party"); "speed" -> tr("Velocidad","Speed"); "volume" -> tr("Volumen del reproductor","Player volume"); "audio" -> tr("Pista de audio","Audio track"); else -> tr("Subtítulos","Subtitles") }
+    val title=when(menu) { "content" -> tr("Contenido / Party","Content / Party"); "speed" -> tr("Velocidad","Speed"); "audio" -> tr("Pista de audio","Audio track"); else -> tr("Subtítulos","Subtitles") }
     Dialog(onDismissRequest=onClose,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Column(Modifier.width(550.dp).heightIn(max=460.dp).background(Color(0xF0181818),RoundedCornerShape(18.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             Text(title,color=Color.White,fontSize=24.sp,lineHeight=29.sp)
@@ -167,12 +162,6 @@ internal fun PlayerOptionsDialog(menu: String, player: Player, tracks: Tracks, s
                         item { FocusButton(if(party) tr("Reacciones / Chat","React / Chat") else tr("Crear sala","Create Party"),modifier=if(series) Modifier else Modifier.focusRequester(first)) { onClose();onParty() } }
                     }
                     "speed" -> listOf(.5f,.75f,1f,1.25f,1.5f,1.75f,2f).forEachIndexed { index,value -> item { FocusButton("${if(speed==value) "✓ " else ""}${value}×",modifier=if(index==0) Modifier.focusRequester(first) else Modifier) { onSpeed(value);onClose() } } }
-                    "volume" -> {
-                        item { Text("${(volume*100).toInt()}%",color=Color.White) }
-                        item { FocusButton(tr("Subir +10%","Increase +10%"),modifier=Modifier.focusRequester(first)) { onVolume((volume+.1f).coerceAtMost(1f)) } }
-                        item { FocusButton(tr("Bajar −10%","Decrease −10%")) { onVolume((volume-.1f).coerceAtLeast(0f)) } }
-                        item { FocusButton(if(volume==0f) tr("Activar sonido","Unmute") else tr("Silenciar","Mute")) { onVolume(if(volume==0f) 1f else 0f) } }
-                    }
                     else -> {
                         val type=if(menu=="audio") C.TRACK_TYPE_AUDIO else C.TRACK_TYPE_TEXT
                         item { FocusButton(if(type==C.TRACK_TYPE_TEXT) tr("Desactivados","Off") else tr("Automático","Automatic"),modifier=Modifier.focusRequester(first)) {

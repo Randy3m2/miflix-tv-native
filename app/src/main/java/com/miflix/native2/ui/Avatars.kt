@@ -34,7 +34,8 @@ val ProfileAvatars = listOf(
     AvatarOption("ai:robot","Robot",R.drawable.brunio_avatar_robot),
     AvatarOption("ai:dragon","Dragón",R.drawable.brunio_avatar_dragon),
     AvatarOption("special:photo","Especial",R.drawable.brunio_avatar_special),
-    AvatarOption("special:extra","Especial 2",R.drawable.brunio_avatar_extra)
+    AvatarOption("special:extra","Especial 2",R.drawable.brunio_avatar_extra),
+    AvatarOption("special:extra3","Especial 3",R.drawable.brunio_avatar_special3)
 )
 
 @Composable
@@ -94,5 +95,6 @@ fun avatarLabel(key: String): String = when(key) {
     "ai:dragon" -> tr("Dragón","Dragon")
     "special:photo" -> tr("Especial","Special")
     "special:extra" -> tr("Especial 2","Special 2")
+    "special:extra3" -> tr("Especial 3","Special 3")
     else -> "Robot"
 }

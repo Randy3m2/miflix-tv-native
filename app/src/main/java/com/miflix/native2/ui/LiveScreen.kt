@@ -1,6 +1,9 @@
 package com.miflix.native2.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -26,8 +29,6 @@ import com.miflix.native2.data.*
 import com.miflix.native2.model.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import kotlinx.coroutines.delay
 import android.content.Context
 
@@ -110,9 +111,10 @@ fun LiveScreen(state: AppState) {
         }
     }
     BackHandler { state.screen = Screen.HOME }
+    val contentFocus=remember { FocusRequester() }
     Column(Modifier.fillMaxSize().background(Bg)) {
-        Sidebar(Screen.LIVE_TV, state.activeProfile.name, { state.screen = it },state.notifications.size,state.activeProfile)
-        Column(Modifier.weight(1f).fillMaxHeight().padding(horizontal=34.dp,vertical=24.dp)) {
+        Sidebar(Screen.LIVE_TV, state.activeProfile.name, { state.screen = it },state.notifications.size,state.activeProfile,onMoveDown={ contentFocus.requestFocus(); Unit })
+        Column(Modifier.weight(1f).fillMaxHeight().padding(horizontal=34.dp,vertical=24.dp).focusRequester(contentFocus).focusGroup()) {
             Text(tr("TV en vivo","Live TV"), color = Color.White, fontSize = 28.sp, lineHeight=34.sp)
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -197,7 +199,7 @@ private fun liveSearchKey(value: String): String = Normalizer.normalize(value.tr
 @Composable
 private fun LiveChannelRow(channel: LiveChannel, number: Int, onClick: () -> Unit, onLongClick: () -> Unit) {
     var focused by remember(channel.id) { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth().smoothFocusFrame(16.dp).onFocusChanged { focused = it.hasFocus }
+    Row(Modifier.fillMaxWidth().onFocusChanged { focused = it.hasFocus }
         .tvPlaybackClick(onClick, onLongClick).focusable().clickable(onClick = onClick)
         .background(if (focused) Color.White else Panel, RoundedCornerShape(14.dp)).padding(12.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {

@@ -28,6 +28,8 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import java.util.Locale
@@ -143,9 +145,14 @@ class AppState(context: Context) {
         episodes.clear(); episodes.addAll(tmdb.season(req.item.id,ep.season))
         playResolved(req.item,imdb,ep.season,ep.episode,resumeOverride = 0)
     }
+    private val partyPlaybackMutex=Mutex()
     suspend fun requestPartyPlayback(req: PlayerRequest, playing: Boolean) {
         val s=session ?: return; val room=watchParty?.roomCode ?: return
-        social.playback(s,room,req.item.cloudId,req.season,req.episode,playing)
+        partyPlaybackMutex.withLock {
+            if(session?.userId==s.userId && watchParty?.roomCode==room) {
+                social.playback(s,room,req.item.cloudId,req.season,req.episode,playing)
+            }
+        }
     }
     suspend fun takePartyPlayback(): Boolean? {
         val s=session ?: return null; val room=watchParty?.roomCode ?: return null
@@ -362,6 +369,15 @@ class AppState(context: Context) {
     var liveSearch by mutableStateOf("")
     var liveSports by mutableStateOf(false)
     var liveCategoryId by mutableStateOf<String?>(null)
+    fun searchHistoryOwner()="search_history_${session?.userId ?: "local"}_${activeProfile.id}"
+    fun searchHistory(): List<String> = runCatching {
+        val a=org.json.JSONArray(playbackPrefs.getString(searchHistoryOwner(),"[]"))
+        (0 until a.length()).map { a.getString(it) }.take(10)
+    }.getOrDefault(emptyList())
+    fun rememberSearch(query: String) {
+        val next=com.miflix.native2.data.SearchHistory.remember(searchHistory(),query)
+        playbackPrefs.edit().putString(searchHistoryOwner(),org.json.JSONArray(next).toString()).apply()
+    }
     var searchQuery by mutableStateOf("")
     var playerRequest by mutableStateOf<PlayerRequest?>(null)
     var busyMessage by mutableStateOf<String?>(null)

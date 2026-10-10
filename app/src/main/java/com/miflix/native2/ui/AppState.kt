@@ -102,6 +102,12 @@ class AppState(context: Context) {
     }
     var audioLanguage by mutableStateOf(playbackPrefs.getString("audio", "es") ?: "es")
     var subtitleLanguage by mutableStateOf(playbackPrefs.getString("subtitle", "es") ?: "es")
+    var subtitleColor by mutableStateOf(playbackPrefs.getInt("subtitleColor",android.graphics.Color.WHITE))
+    var subtitleScale by mutableStateOf(playbackPrefs.getFloat("subtitleScale",1f).coerceIn(0.8f,1.4f))
+    fun saveSubtitleStyle(color: Int, scale: Float) {
+        subtitleColor=color; subtitleScale=scale.coerceIn(0.8f,1.4f)
+        playbackPrefs.edit().putInt("subtitleColor",subtitleColor).putFloat("subtitleScale",subtitleScale).apply()
+    }
     var autoplayNext by mutableStateOf(playbackPrefs.getBoolean("autoplay", true))
     val notifications = mutableStateListOf<ReleaseNotice>()
     private var checkingNotices = false
@@ -618,6 +624,19 @@ class AppState(context: Context) {
         if(activeProfile.id==profile.id) activeProfile=changed
         if(session==null) local.saveOfflineProfiles(next)
         if(owner!=null && profile.avatarValue!=avatar) profile.avatarValue?.let { old -> runCatching { avatarRepo.remove(owner,old) } }
+    }
+
+    suspend fun renameProfile(profile: Profile, name: String) {
+        val clean=name.trim().replace(Regex("\\s+")," ")
+        require(clean.isNotBlank() && clean.length<=40) { tr("Escribe un nombre de 1 a 40 caracteres","Enter a name of 1–40 characters") }
+        val owner=session
+        val next=profiles.map { if(it.id==profile.id) it.copy(name=clean) else it }
+        require(next.any { it.id==profile.id }) { tr("El perfil ya no existe","This profile no longer exists") }
+        owner?.let { cloud.upsertProfiles(it,next) }
+        if(session?.userId!=owner?.userId || profiles.none { it.id==profile.id }) return
+        profiles.clear(); profiles.addAll(next)
+        if(activeProfile.id==profile.id) activeProfile=next.first { it.id==profile.id }
+        if(owner==null) local.saveOfflineProfiles(next)
     }
 
     suspend fun deleteProfile(profile: Profile) {

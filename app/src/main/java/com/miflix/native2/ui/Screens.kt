@@ -676,6 +676,29 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 Spacer(Modifier.height(18.dp))
             }
             item {
+                Text(tr("Estilo de subtítulos","Subtitle style"),color=Color.White,fontSize=22.sp,lineHeight=26.sp,fontWeight=FontWeight.Bold)
+                Spacer(Modifier.height(10.dp))
+                Text(tr("Sin fondo negro. El contorno mantiene el texto legible.","No black background. An outline keeps text readable."),color=Muted)
+                Spacer(Modifier.height(14.dp))
+                Text(tr("Color","Color"),color=Muted)
+                FlowRow(horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                    listOf(android.graphics.Color.WHITE to tr("Blanco","White"),android.graphics.Color.YELLOW to tr("Amarillo","Yellow"),android.graphics.Color.CYAN to tr("Cian","Cyan"),0xFFFFDAB9.toInt() to tr("Crema","Cream"),0xFF90EE90.toInt() to tr("Verde","Green")).forEach { (color,name) ->
+                        FocusButton(name,primary=state.subtitleColor==color) { state.saveSubtitleStyle(color,state.subtitleScale) }
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                Text(tr("Tamaño","Size"),color=Muted)
+                FlowRow(horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                    listOf(0.8f to tr("Pequeño","Small"),1f to tr("Normal","Normal"),1.2f to tr("Grande","Large"),1.4f to tr("Muy grande","Extra large")).forEach { (scale,name) ->
+                        FocusButton(name,primary=state.subtitleScale==scale) { state.saveSubtitleStyle(state.subtitleColor,scale) }
+                    }
+                }
+                Spacer(Modifier.height(14.dp))
+                Text(tr("Así se verán tus subtítulos","Your subtitles will look like this"),color=Color(state.subtitleColor),fontSize=(24*state.subtitleScale).sp,lineHeight=(30*state.subtitleScale).sp)
+                Spacer(Modifier.height(20.dp))
+                FocusButton(tr("Restaurar estilo","Reset style")) { state.saveSubtitleStyle(android.graphics.Color.WHITE,1f) }
+            }
+            item {
                 FocusButton("${tr("Siguiente episodio automático","Autoplay next episode")}: ${if(state.autoplayNext) tr("Activado","ON") else tr("Desactivado","OFF")}") { state.savePlaybackPreferences(state.audioLanguage,state.subtitleLanguage,!state.autoplayNext) }
                 Spacer(Modifier.height(24.dp))
             }
@@ -788,6 +811,8 @@ fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
     var editingAvatar by remember { mutableStateOf<Profile?>(null) }
     var deletingProfile by remember { mutableStateOf<Profile?>(null) }
     var choosingNewAvatar by remember { mutableStateOf(false) }
+    var renamingProfile by remember { mutableStateOf<Profile?>(null) }
+    var profileName by remember { mutableStateOf("") }
     BackHandler(onBack = onBack)
     Box(Modifier.fillMaxSize()) {
     SocialBackdrop()
@@ -809,6 +834,7 @@ fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
                             }
                             Text(profile.name,color=Color.White,fontSize=17.sp, lineHeight=21.sp)
                         }
+                        FocusButton(tr("Cambiar nombre","Rename")) { profileName=profile.name; renamingProfile=profile }
                         FocusButton("Avatar") { editingAvatar=profile }
                         FocusButton(tr("Subir desde celular","Upload from phone")) { state.launch { state.socialAction { state.startAvatarUpload(profile) } } }
                         if(state.profiles.size>1) FocusButton(tr("Eliminar perfil","Delete profile")) { deletingProfile=profile }
@@ -832,6 +858,18 @@ fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
             FocusButton(tr("Volver","Back")) { onBack() }
         } }
     }
+    }
+    renamingProfile?.let { profile ->
+        Dialog(onDismissRequest={ renamingProfile=null }) {
+            Column(Modifier.width(460.dp).background(Panel,RoundedCornerShape(24.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+                Text(tr("Nombre del perfil","Profile name"),color=Color.White,fontSize=26.sp,lineHeight=31.sp)
+                NativeTextField(profileName,{profileName=it},tr("Nombre","Name"),modifier=Modifier.fillMaxWidth())
+                Row(horizontalArrangement=Arrangement.spacedBy(16.dp)) {
+                    FocusButton(tr("Guardar","Save")) { state.launch { state.socialAction { state.renameProfile(profile,profileName); renamingProfile=null } } }
+                    FocusButton(tr("Cancelar","Cancel")) { renamingProfile=null }
+                }
+            }
+        }
     }
     deletingProfile?.let { profile ->
         Dialog(onDismissRequest={ deletingProfile=null }) {
@@ -949,6 +987,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var creatingParty by remember { mutableStateOf(false) }
     var showAccessRequests by remember { mutableStateOf(false) }
     var showEpisodes by remember(request.playbackId) { mutableStateOf(false) }
+    var episodesResumeAfterClose by remember(request.playbackId) { mutableStateOf(false) }
     val subtitles = request.stream.subtitles
     val preferredText = state.subtitleLanguage.takeUnless { it == "off" }
     var paused by remember(request.playbackId) { mutableStateOf(false) }
@@ -1179,7 +1218,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     }
     BackHandler {
         if (playerMenu != null) playerMenu = null
-        else if (showEpisodes) { showEpisodes=false; player.play() }
+        else if (showEpisodes) { showEpisodes=false; if(episodesResumeAfterClose) player.play() }
         else if (paused && !pauseInfoDismissed) {
             pauseSynopsis = false; pauseInfoDismissed = true
             controlsVisible = true; controlInteraction++
@@ -1233,6 +1272,16 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             update = { view ->
                 if (view.player !== player) view.player = player
                 if(view.resizeMode!=resizeMode) view.resizeMode = resizeMode
+                view.subtitleView?.apply {
+                    val styleKey=state.subtitleColor to state.subtitleScale
+                    if(tag!=styleKey) {
+                        setApplyEmbeddedStyles(false)
+                        setApplyEmbeddedFontSizes(false)
+                        setStyle(androidx.media3.ui.CaptionStyleCompat(state.subtitleColor,android.graphics.Color.TRANSPARENT,android.graphics.Color.TRANSPARENT,androidx.media3.ui.CaptionStyleCompat.EDGE_TYPE_OUTLINE,android.graphics.Color.BLACK,null))
+                        setFractionalTextSize(0.0533f*state.subtitleScale)
+                        tag=styleKey
+                    }
+                }
             },
             modifier = if(maximized) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(horizontal=40.dp,vertical=24.dp)
         ) }
@@ -1267,7 +1316,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 }
             },
             series=request.item.type=="series", party=state.watchParty!=null,
-            onEpisodes={ player.pause(); showEpisodes=true },
+            onEpisodes={ episodesResumeAfterClose=player.playWhenReady; player.pause(); showEpisodes=true },
             onParty={ openPlayerParty() },
             onClose={ playerMenu=null; controlInteraction++ })
         if(controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !showEpisodes && !showPartyActions && !ended) {
@@ -1277,7 +1326,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 onResize={ resizeMode=if(resizeMode == androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT) androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM else androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT },
                 onMenu={ playerMenu=it }, onLinks={ state.launch { state.playerSources(request,player.currentPosition) } },
                 onSeek={ if(player.isCurrentMediaItemSeekable) { positionMs=it; player.seekTo(it) } }, seekable=player.isCurrentMediaItemSeekable && durationMs>0,
-                party=state.watchParty!=null,onParty={ openPlayerParty() },onClose=onClose, onMaximize={ maximized=!maximized })
+                party=state.watchParty!=null,onParty={ openPlayerParty() },onClose=onClose, onMaximize={ maximized=!maximized },
+                nextAvailable=upcoming!=null && state.partyRole!=PartyRole.GUEST,
+                onNext={ upcoming?.let { next -> cancelAutoplay=true; state.launch { runCatching { state.playNext(request,next) }.onFailure { state.error=it.message } } } },
+                onEpisodes={ episodesResumeAfterClose=false; showEpisodes=true })
         }
         if(showAccessRequests) {
             Dialog(onDismissRequest={ showAccessRequests=false },properties=DialogProperties(usePlatformDefaultWidth=false)) {
@@ -1369,7 +1421,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         if (showEpisodes) {
             EpisodePickerOverlay(state, request) {
                 showEpisodes = false
-                player.play()
+                if(episodesResumeAfterClose) player.play()
             }
         }
 

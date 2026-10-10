@@ -51,7 +51,8 @@ internal fun CompactPlayerControls(
     request: PlayerRequest, paused: Boolean, position: Long, duration: Long, speed: Float,
     maximized: Boolean, playFocus: FocusRequester, onInteraction: () -> Unit, onPlay: () -> Unit,
     onResize: () -> Unit, onMenu: (String) -> Unit, onLinks: () -> Unit, onSeek: (Long) -> Unit,
-    seekable: Boolean, party: Boolean, onParty: () -> Unit, onClose: () -> Unit, onMaximize: () -> Unit
+    seekable: Boolean, party: Boolean, onParty: () -> Unit, onClose: () -> Unit, onMaximize: () -> Unit,
+    nextAvailable: Boolean, onNext: () -> Unit, onEpisodes: () -> Unit
 ) {
     val seekFocus=remember { FocusRequester() }
     var focusedLabel by remember { mutableStateOf("") }
@@ -75,6 +76,10 @@ internal fun CompactPlayerControls(
             PlayerSeekBar(position,duration,seekable,seekFocus,playFocus,onInteraction,onSeek)
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 PlayerIconButton(if(paused) "play" else "pause",if(paused) tr("Reproducir","Play") else tr("Pausar","Pause"),Modifier.focusRequester(playFocus).focusProperties { up=seekFocus },onInteraction,onPlay,onLabel={ focusedLabel=it })
+                if(request.item.type=="series" && !request.live) {
+                    PlayerIconButton("next",tr("Siguiente episodio","Next episode"),onInteraction=onInteraction,onClick=onNext,onLabel={ focusedLabel=it },enabled=nextAvailable)
+                    PlayerIconButton("episodes",tr("Episodios","Episodes"),onInteraction=onInteraction,onClick=onEpisodes,onLabel={ focusedLabel=it })
+                }
                 PlayerIconButton("resize",tr("Agrandar / encoger","Zoom / Fit"),onInteraction=onInteraction,onClick=onResize,onLabel={ focusedLabel=it })
                 PlayerIconButton("speed","${tr("Velocidad","Speed")} · ${speed}×",onInteraction=onInteraction,onClick={onMenu("speed")},onLabel={ focusedLabel=it })
                 PlayerIconButton("cc",tr("Subtítulos","Subtitles"),onInteraction=onInteraction,onClick={onMenu("subtitles")},onLabel={ focusedLabel=it })
@@ -90,13 +95,13 @@ internal fun CompactPlayerControls(
 }
 
 @Composable
-private fun PlayerIconButton(icon: String, label: String, modifier: Modifier=Modifier, onInteraction: () -> Unit, onClick: () -> Unit, onLabel: (String) -> Unit = {}) {
+private fun PlayerIconButton(icon: String, label: String, modifier: Modifier=Modifier, onInteraction: () -> Unit, onClick: () -> Unit, onLabel: (String) -> Unit = {}, enabled: Boolean=true) {
     var focused by remember { mutableStateOf(false) }
     Box(modifier.size(44.dp).onFocusChanged { focused=it.isFocused; if(it.isFocused) { onInteraction(); onLabel(label) } }
         .background(if(focused) Color.White else Color.Transparent,CircleShape)
         .semantics { contentDescription=label }
-        .clickable { onInteraction(); onClick() },contentAlignment=Alignment.Center) {
-        PlayerGlyph(icon,if(focused) Color.Black else Color.White,Modifier.size(23.dp))
+        .clickable(enabled=enabled) { onInteraction(); onClick() },contentAlignment=Alignment.Center) {
+        PlayerGlyph(icon,if(!enabled) Color(0xFF666666) else if(focused) Color.Black else Color.White,Modifier.size(23.dp))
 
     }
 }
@@ -110,6 +115,8 @@ private fun PlayerGlyph(icon: String, color: Color, modifier: Modifier) {
         when(icon) {
             "play" -> drawPath(Path().apply { moveTo(w*.28f,h*.15f); lineTo(w*.85f,h*.5f); lineTo(w*.28f,h*.85f); close() },color)
             "pause" -> { drawRect(color,Offset(w*.22f,h*.17f),Size(w*.18f,h*.66f)); drawRect(color,Offset(w*.60f,h*.17f),Size(w*.18f,h*.66f)) }
+            "next" -> { drawPath(Path().apply { moveTo(w*.16f,h*.15f);lineTo(w*.70f,h*.5f);lineTo(w*.16f,h*.85f);close() },color);drawRect(color,Offset(w*.76f,h*.15f),Size(w*.10f,h*.70f)) }
+            "episodes" -> { rectangle(.08f,.12f,.24f,.20f);rectangle(.08f,.42f,.24f,.20f);rectangle(.08f,.72f,.24f,.20f);line(.46f,.22f,.92f,.22f);line(.46f,.52f,.92f,.52f);line(.46f,.82f,.92f,.82f) }
             "close" -> { line(.2f,.2f,.8f,.8f); line(.8f,.2f,.2f,.8f) }
             "maximize" -> { line(.1f,.35f,.1f,.1f);line(.1f,.1f,.35f,.1f);line(.65f,.1f,.9f,.1f);line(.9f,.1f,.9f,.35f);line(.9f,.65f,.9f,.9f);line(.9f,.9f,.65f,.9f);line(.35f,.9f,.1f,.9f);line(.1f,.9f,.1f,.65f) }
             "resize" -> { rectangle(.1f,.2f,.8f,.6f);line(.22f,.65f,.42f,.45f);line(.22f,.65f,.22f,.46f);line(.22f,.65f,.41f,.65f);line(.78f,.35f,.58f,.55f);line(.78f,.35f,.78f,.54f);line(.78f,.35f,.59f,.35f) }

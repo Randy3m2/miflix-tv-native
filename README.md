@@ -1,3 +1,7 @@
+# Última versión: BruniO 2.0.0-rc21
+
+Consulta **RC21_SETUP.md** para la corrección del selector de episodios.
+
 # Última versión: BruniO 2.0.0-rc20
 
 Consulta **RC20_SETUP.md**. No requiere SQL nuevo.

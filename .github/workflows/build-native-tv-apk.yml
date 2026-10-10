@@ -67,27 +67,27 @@ jobs:
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MiFlix-TV-Native-v2.0.0-rc19
+          name: MiFlix-TV-Native-v2.0.0-rc20
           path: |
-            MiFlix-TV-Native-v2.0.0-rc19.apk
+            MiFlix-TV-Native-v2.0.0-rc20.apk
             update.json
 
       - name: Publish versioned release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="native-v2.0.0-rc19"
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native 2.0 RC19" --notes "RC19: visible random playback, size/year source filters, party lifecycle fixes and Joined notice, extra avatars and QR photo upload."
-          gh release upload "$TAG" MiFlix-TV-Native-v2.0.0-rc19.apk update.json --clobber
+          TAG="native-v2.0.0-rc20"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native 2.0 RC20" --notes "RC20: direct next/episodes player controls, transparent styled subtitles and profile renaming."
+          gh release upload "$TAG" MiFlix-TV-Native-v2.0.0-rc20.apk update.json --clobber
 
       - name: Update permanent latest channel
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="native-latest"
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native · Latest" --notes "Current version: 2.0.0-rc19"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native · Latest" --notes "Current version: 2.0.0-rc20"
           gh release upload "$TAG" MiFlix-TV-Native.apk update.json --clobber
-          gh release edit "$TAG" --title "MiFlix TV Native · Latest" --notes "Current version: 2.0.0-rc19"
+          gh release edit "$TAG" --title "MiFlix TV Native · Latest" --notes "Current version: 2.0.0-rc20"
 
       - name: Remove runner copy of private signing key
         if: always()

@@ -32,20 +32,22 @@ jobs:
         run: ./scripts/build_windows.ps1
       - uses: actions/upload-artifact@v4
         with:
-          name: BruniO-PC-Windows-RC1
+          name: BruniO-PC-Windows-RC2
           path: desktop/brunio-pc/installer/*
       - name: Publish PC channel
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = 'pc-v1.0.0-rc1'
+          $tag = 'pc-v1.0.0-rc2'
           gh release view $tag *> $null
-          if ($LASTEXITCODE -ne 0) { gh release create $tag --target $env:GITHUB_SHA --title 'BruniO PC 1.0 RC1' --notes 'Windows x64 client; TV-compatible Watch Party, profiles, catalogs and VLC playback.' }
+          if ($LASTEXITCODE -ne 0) { gh release create $tag --target $env:GITHUB_SHA --title 'BruniO PC 1.0 RC2' --notes 'Windows x64 client; TV-compatible Watch Party, profiles, catalogs and VLC playback.' }
           if ($LASTEXITCODE -ne 0) { throw 'PC release failed' }
-          gh release upload $tag installer/BruniO-PC-Setup-1.0.0-rc1.exe installer/pc-update.json --clobber
+          gh release upload $tag installer/BruniO-PC-Setup-1.0.0-rc2.exe installer/pc-update.json --clobber
           if ($LASTEXITCODE -ne 0) { throw 'PC version upload failed' }
           gh release view pc-latest *> $null
-          if ($LASTEXITCODE -ne 0) { gh release create pc-latest --target $env:GITHUB_SHA --title 'BruniO PC · Latest' --notes 'Windows x64 current version: 1.0.0-rc1' }
+          if ($LASTEXITCODE -ne 0) { gh release create pc-latest --target $env:GITHUB_SHA --title 'BruniO PC · Latest' --notes 'Windows x64 current version: 1.0.0-rc2' }
           if ($LASTEXITCODE -ne 0) { throw 'PC latest release failed' }
+          gh release edit pc-latest --notes 'Windows x64 current version: 1.0.0-rc2'
+          if ($LASTEXITCODE -ne 0) { throw 'PC latest description failed' }
           gh release upload pc-latest installer/pc-update.json --clobber
           if ($LASTEXITCODE -ne 0) { throw 'PC metadata upload failed' }

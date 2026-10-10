@@ -49,6 +49,29 @@ class ProtocolTests(unittest.TestCase):
         c.save_state(state);self.assertEqual(calls[-1][3]['state'],state);self.assertEqual(calls[-1][3]['profile_id'],'default')
     def test_private_provider_is_not_bundled(self):
         c=Client();self.assertEqual(c.manifests,[]);self.assertEqual(c.token,'')
+    def test_account_addons_shared_across_profiles_and_scoped_to_owner(self):
+        setup={'tmdbToken':'fixture-token','addonManifests':['https://example.test/tv/manifest.json'],'torrentioManifest':'https://example.test/legacy/manifest.json'}
+        c,calls=self.make(lambda u,m,b:[{'state':{'profiles':[{'id':'child','name':'Child'}],'privateSetup':setup}}])
+        c.profile='child';c.load_account()
+        self.assertEqual(c.manifests,[setup['addonManifests'][0],setup['torrentioManifest']])
+        query=parse_qs(urlsplit(calls[-1][0]).query)
+        self.assertEqual(query['user_id'],['eq.owner']);self.assertEqual(query['profile_id'],['eq.__account__'])
+    def test_edit_addon_merges_latest_tv_setup_preserving_other_fields(self):
+        remote={'profiles':[{'id':'default','name':'Main'}],'privateSetup':{'tmdbToken':'tv-token','addonManifests':['https://example.test/tv/manifest.json'],'futureField':True},'unrelated':42}
+        c,calls=self.make(lambda u,m,b:[{'state':remote}] if m=='GET' else None)
+        c.manifests=['https://example.test/stale/manifest.json'];c.edit_setup(add='https://example.test/pc/manifest.json')
+        saved=calls[-1][3]['state'];self.assertEqual(saved['unrelated'],42);self.assertTrue(saved['privateSetup']['futureField'])
+        self.assertEqual(c.token,'tv-token');self.assertEqual(c.manifests,['https://example.test/tv/manifest.json','https://example.test/pc/manifest.json'])
+        c.edit_setup(remove='https://example.test/pc/manifest.json');self.assertEqual(c.manifests,['https://example.test/tv/manifest.json'])
+    def test_stream_lookup_refreshes_addons_changed_on_tv(self):
+        def response(u,m,b):
+            if 'miflix_user_state?' in u:return [{'state':{'profiles':[{'id':'default'}],'privateSetup':{'tmdbToken':'fixture','addonManifests':['https://example.test/new/manifest.json']}}}]
+            if '/movie/1?' in u:return {'imdb_id':'tt123'}
+            if '/stream/movie/tt123.json' in u:return {'streams':[{'url':'https://example.test/video.mp4','title':'1080p'}]}
+        c,calls=self.make(response);c.manifests=['https://example.test/old/manifest.json']
+        rows,imdb=c.streams({'id':1,'type':'movie'})
+        self.assertEqual(imdb,'tt123');self.assertEqual(len(rows),1)
+        self.assertTrue(any('/new/stream/' in x[0] for x in calls));self.assertFalse(any('/old/stream/' in x[0] for x in calls))
     def test_refreshes_expired_token_then_retries_same_request(self):
         c,calls=self.make();count=0
         def http(url,method='GET',headers=None,body=None,**kwargs):
@@ -74,7 +97,7 @@ class StreamTests(unittest.TestCase):
 
 class UpdateTests(unittest.TestCase):
     def test_versions_numeric_and_stable_order(self):
-        self.assertGreater(version('1.0.0-rc10'),version('1.0.0-rc2'));self.assertGreater(version('1.0.0'),version('1.0.0-rc999'))
+        self.assertGreater(version('1.0.0-rc20'),version('1.0.0-rc2'));self.assertGreater(version('1.0.0'),version('1.0.0-rc999'))
     def test_rejects_tv_and_off_repository_installers(self):
         from brunio.core import REPO
         info={'channel':'pc-windows-x64','version':'1.0.0-rc2','sizeBytes':500,'sha256':'a'*64,'downloadUrl':f'https://github.com/{REPO}/releases/download/pc-v1.0.0-rc2/BruniO-PC-Setup-1.0.0-rc2.exe'}

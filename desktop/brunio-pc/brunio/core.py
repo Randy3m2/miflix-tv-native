@@ -119,7 +119,16 @@ class Client:
         # Re-read first to preserve remote settings changed on TV.
         return self.rest('miflix_user_state?on_conflict=user_id,profile_id','POST',{'user_id':self.session['userId'],'profile_id':'__account__','state':self.account,'updated_at':iso()},'resolution=merge-duplicates,return=minimal')
     def setup(self,token,manifests):
-        self.load_account();self.account['privateSetup']={'tmdbToken':token,'addonManifests':manifests,'torrentioManifest':next(iter(manifests),'')};self.save_account();self.token=token;self.manifests=manifests
+        self.load_account();self.account.setdefault('privateSetup',{}).update(tmdbToken=token,addonManifests=manifests,torrentioManifest=next(iter(manifests),''));self.save_account();self.token=token;self.manifests=list(manifests)
+    def edit_setup(self,token=None,add=None,remove=None):
+        # Merge against the latest account row, so edits from another platform survive.
+        self.load_account();manifests=list(self.manifests)
+        if add and add not in manifests:manifests.append(add)
+        if remove:manifests=[m for m in manifests if m!=remove]
+        setup=self.account.setdefault('privateSetup',{})
+        setup.update(tmdbToken=self.token if token is None else token,addonManifests=manifests,torrentioManifest=next(iter(manifests),''))
+        self.save_account();self.token=setup['tmdbToken'];self.manifests=manifests
+        return self.account
     def profiles(self,profiles):
         self.load_account();self.account['profiles']=profiles;self.save_account();return profiles
     def state(self):
@@ -155,6 +164,7 @@ class Client:
     def details(self,item):return self.tmdb('/'+('tv' if item['type']=='series' else 'movie')+'/'+str(item['id']),{'append_to_response':'external_ids,credits,videos'})
     def episodes(self,item,season):return self.tmdb(f"/tv/{item['id']}/season/{season}").get('episodes',[])
     def streams(self,item,season=0,episode=0,limit=0):
+        context=self.context();self.load_account();self.check(context)
         d=self.details(item);imdb=d.get('imdb_id') or d.get('external_ids',{}).get('imdb_id')
         if not imdb:raise ValueError('IMDb ID unavailable')
         if not self.manifests:raise ValueError('Add your own Torrentio or Comet in Settings')
@@ -163,6 +173,7 @@ class Client:
             try:return self.transport(manifest.removesuffix('/manifest.json')+f"/stream/{item['type']}/{vid}.json").get('streams',[])
             except Exception:return []
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:rows=sum(list(pool.map(fetch,list(self.manifests))),[])
+        self.check(context)
         return filter_streams(rows,item,limit),imdb
     def rpc(self,name,body):return self.rest('rpc/'+name,'POST',body)
     def party_read(self,room):

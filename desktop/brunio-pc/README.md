@@ -1,19 +1,19 @@
-# BruniO PC · Windows 10/11 x64 · 1.0.0-rc1
+# BruniO PC · Windows 10/11 x64 · 1.0.0-rc2
 
 Cliente de escritorio real en Python + Qt (PySide6) con LibVLC integrado en la ventana. Comparte el backend y el protocolo de la versión TV. Este ZIP contiene el proyecto para generar el instalador, no un instalador ya compilado.
 
 ## Generar el .exe con GitHub
 
-1. Descomprime BruniO_PC_Windows_RC1.zip.
+1. Descomprime BruniO_PC_Windows_RC2.zip.
 2. En el mismo repositorio **randy3m2/miflix-tv-native**, añade la carpeta **desktop/brunio-pc** completa y el archivo **.github/workflows/build-pc.yml**. No sustituyas los archivos de Android ni sus workflows. El ZIP ya tiene esa estructura.
 3. Actions → **Build BruniO PC Windows** → Run workflow.
 4. El workflow instala dependencias fijadas, ejecuta tests, prueba Qt, descarga VLC x64 de VideoLAN verificando SHA-256, prueba su decodificador, genera la app y su instalador con Inno Setup. Si falla cualquier check, no publica.
-5. Al terminar descarga **BruniO-PC-Setup-1.0.0-rc1.exe** del artifact **BruniO-PC-Windows-RC1** o de la release **pc-v1.0.0-rc1**.
+5. Al terminar descarga **BruniO-PC-Setup-1.0.0-rc2.exe** del artifact **BruniO-PC-Windows-RC2** o de la release **pc-v1.0.0-rc2**.
 6. Ejecuta el instalador. Se instala para tu usuario, con acceso directo. No necesitas instalar Python ni VLC por separado. Es x64; no incluye build ARM64 ni 32 bits. El instalador inicial no está firmado con certificado comercial de Windows y el sistema puede pedir confirmación.
 
-No requiere secrets nuevos, SQL nuevo ni cambiar la TV. Para subir avatares se usa el bucket/SQL de RC18 que ya utiliza TV. QR de acceso y chat móvil reutilizan las páginas de pairing/party existentes.
+No requiere secrets nuevos, SQL nuevo ni cambiar la TV. Para subir avatares se usa el bucket/SQL de RC28 que ya utiliza TV. QR de acceso y chat móvil reutilizan las páginas de pairing/party existentes.
 
-**Los cuatro secrets de firma Android no se usan ni se alteran.** El workflow PC publica solo `pc-v1.0.0-rc1` y `pc-latest`; no toca `native-latest` ni el enlace del Downloader de TV.
+**Los cuatro secrets de firma Android no se usan ni se alteran.** El workflow PC publica solo `pc-v1.0.0-rc2` y `pc-latest`; no toca `native-latest` ni el enlace del Downloader de TV.
 
 ## Primer acceso
 
@@ -73,3 +73,22 @@ python -m unittest discover -s tests -v
 Para ejecutar desde el código instala VLC x64 o usa la carpeta `vendor/vlc-3.0.23` descargada por el script de build. Para generar el instalador local ejecuta `./scripts/build_windows.ps1` desde esa carpeta (Inno Setup 6 debe estar instalado, o Chocolatey para instalarlo).
 
 El proyecto se separa en core.py (API/Party), pairing.py (QR cifrado), vault.py (DPAPI), updater.py (updates PC), ui.py (Qt/reproductor), scripts (build/installer) y tests (contrato/GUI). `VERSION`, workflow, build_windows.ps1 e installer.iss deben cambiar juntos en nuevas versiones; conserva AppId del instalador.
+
+
+## RC2: interfaz y complementos compartidos
+
+Navegación lateral con iconos, perfil y campana; fondo casi negro; banner con
+imagen y acciones compactas; tarjetas de plataformas; carátulas redondeadas,
+títulos truncados con tooltip, año y flechas para desplazar filas. Los logos
+de plataformas se obtienen de TMDB; si no están disponibles se muestra el nombre.
+
+Los complementos y el token TMDB pertenecen a la cuenta, en la fila
+`__account__` de `miflix_user_state`, tal como en TV. PC sincroniza al iniciar
+sesión, al abrir Ajustes y antes de buscar enlaces. Al agregar o eliminar un
+complemento vuelve a leer la configuración remota para preservar otros cambios.
+Una cuenta diferente conserva sus propios complementos. No hace falta SQL nuevo.
+Si agregas un complemento en PC mientras TV está abierta, reinicia la app TV
+para que su sincronización existente recupere el cambio. No es necesario reinstalar.
+
+Para actualizar RC1 reemplaza la carpeta PC y su workflow y ejecuta la build.
+Instala encima de RC1 o usa Check for updates cuando se publique RC2.

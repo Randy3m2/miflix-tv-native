@@ -1,3 +1,7 @@
+# Última versión: BruniO 2.0.0-rc20
+
+Consulta **RC20_SETUP.md**. No requiere SQL nuevo.
+
 # Última versión: BruniO 2.0.0-rc19
 
 Consulta **RC19_SETUP.md**. Búsqueda con historial y resultados en el mismo scroll; carátulas más pequeñas. Conserva la firma de RC17. No requiere SQL nuevo para este cambio.

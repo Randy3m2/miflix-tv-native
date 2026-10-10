@@ -1421,6 +1421,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         if (showEpisodes) {
             EpisodePickerOverlay(state, request) {
                 showEpisodes = false
+                controlsVisible=true; controlInteraction++
                 if(episodesResumeAfterClose) player.play()
             }
         }
@@ -1432,6 +1433,18 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
 @Composable
 private fun EpisodePickerOverlay(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     val details = state.details
+    val closeFocus=remember { FocusRequester() }
+    val episodeFocus=remember { FocusRequester() }
+    val listState=rememberLazyListState()
+    val focusIndex=state.episodes.indexOfFirst { it.season==request.season && it.episode==request.episode }.coerceAtLeast(0)
+    LaunchedEffect(state.currentSeason,state.episodes.map { it.season to it.episode }) {
+        if(state.episodes.isNotEmpty()) {
+            listState.scrollToItem(focusIndex)
+            withFrameNanos { }
+            episodeFocus.requestFocus()
+        } else { withFrameNanos { }; closeFocus.requestFocus() }
+    }
+    Dialog(onDismissRequest=onClose,properties=DialogProperties(usePlatformDefaultWidth=false)) {
     Box(Modifier.fillMaxSize().background(Color(0xB8000000))) {
         Column(
             Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(620.dp).background(Color(0xFF0B0B0B)).padding(26.dp)
@@ -1439,7 +1452,7 @@ private fun EpisodePickerOverlay(state: AppState, request: PlayerRequest, onClos
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(tr("Episodios","Episodes"), color = Color.White, fontSize = 29.sp, lineHeight=35.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.weight(1f))
-                FocusButton(tr("Cerrar","Close")) { onClose() }
+                FocusButton(tr("Cerrar","Close"),modifier=Modifier.focusRequester(closeFocus)) { onClose() }
             }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1448,10 +1461,10 @@ private fun EpisodePickerOverlay(state: AppState, request: PlayerRequest, onClos
                 FocusButton("›") { if (state.currentSeason < (details?.seasonCount ?: 1)) state.launch { state.loadSeason(state.currentSeason + 1) } }
             }
             Spacer(Modifier.height(16.dp))
-            LazyColumn(contentPadding = PaddingValues(bottom = 30.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            LazyColumn(state=listState,modifier=Modifier.weight(1f),contentPadding = PaddingValues(bottom = 30.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(state.episodes, key = { "${it.season}:${it.episode}" }) { ep ->
                     val active = ep.season == request.season && ep.episode == request.episode
-                    EpisodeListRow(ep, active, onLongClick = { state.launch { state.chooseEpisodeSources(ep) } }) {
+                    EpisodeListRow(ep, active, modifier=if(state.episodes.indexOf(ep)==focusIndex) Modifier.focusRequester(episodeFocus) else Modifier, onLongClick = { state.launch { state.chooseEpisodeSources(ep) } }) {
                         state.launch {
                             runCatching { state.playEpisode(ep) }.onFailure { state.error = it.message }
                             onClose()
@@ -1461,13 +1474,14 @@ private fun EpisodePickerOverlay(state: AppState, request: PlayerRequest, onClos
             }
         }
     }
+    }
 }
 
 @Composable
-private fun EpisodeListRow(ep: EpisodeSummary, active: Boolean, onLongClick: () -> Unit, onClick: () -> Unit) {
+private fun EpisodeListRow(ep: EpisodeSummary, active: Boolean, modifier: Modifier=Modifier, onLongClick: () -> Unit, onClick: () -> Unit) {
     var focused by remember(ep.season, ep.episode) { mutableStateOf(false) }
     Row(
-        Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused }.focusable().tvPlaybackClick(onClick, onLongClick).clickable(onClick = onClick)
+        modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused }.tvPlaybackClick(onClick, onLongClick).clickable(onClick = onClick)
             .background(if (focused) Color.White else if (active) Color(0xFF242424) else Color(0xFF161616), RoundedCornerShape(12.dp))
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically

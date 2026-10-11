@@ -1,3 +1,7 @@
+# Última versión: BruniO 2.0.0-rc22
+
+Lee **RC22_SETUP.md** y ejecuta **SUPABASE_RC22_CALENDAR.sql** para habilitar el calendario.
+
 # Última versión: BruniO 2.0.0-rc21
 
 Consulta **RC21_SETUP.md** para la corrección del selector de episodios.

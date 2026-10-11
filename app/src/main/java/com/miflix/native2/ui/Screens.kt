@@ -1101,7 +1101,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     val queueNext=state.queueEntries.firstOrNull()
     var queueSynopsis by remember(queueNext?.id) { mutableStateOf("") }
     LaunchedEffect(queueNext?.id) {
-        queueNext?.let { entry -> queueSynopsis=runCatching { val nextItem=state.tmdb.byCloudId(entry.cloud);if(entry.season>0) state.tmdb.episodeInfo(nextItem,entry.season,entry.episode)?.overview.orEmpty() else nextItem.overview }.getOrDefault("") }
+        queueNext?.let { entry -> queueSynopsis=runCatching {
+            val nextItem=state.tmdb.byCloudId(entry.cloud) ?: return@runCatching ""
+            if(entry.season>0) state.tmdb.episodeInfo(nextItem,entry.season,entry.episode)?.overview.orEmpty() else nextItem.overview
+        }.getOrDefault("") }
     }
     LaunchedEffect(ended,upcoming,queueNext?.id,cancelAutoplay,state.autoplayNext,rateAtEnd) {
         if(ended && !rateAtEnd && !cancelAutoplay && state.partyRole!=PartyRole.GUEST && (queueNext!=null || upcoming!=null && state.autoplayNext)) {

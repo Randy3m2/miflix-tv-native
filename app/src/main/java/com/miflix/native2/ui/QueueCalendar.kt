@@ -181,7 +181,11 @@ fun CalendarDialog(state: AppState, close: () -> Unit) {
                         Text(eventLocal(event.starts)+" · "+event.kind+if(event.season>0) " · S${event.season} E${event.episode}" else "",color=Muted)
                         Text(if(event.owner==state.session?.userId) tr("Organizado por ti","Organized by you")+" · ${event.guests.size} "+tr("invitados","guests") else tr("Te han invitado","You're invited"),color=Muted)
                         Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
-                            event.cloud?.let { cloud -> FocusButton(tr("Ver contenido","View title")) { state.launch { state.socialAction { state.open(state.tmdb.byCloudId(cloud));close() } } } }
+                            event.cloud?.let { cloud -> FocusButton(tr("Ver contenido","View title")) { state.launch { state.socialAction {
+                                val media=state.tmdb.byCloudId(cloud)
+                                    ?: throw IllegalStateException(tr("Contenido no disponible","Title unavailable"))
+                                state.open(media);close()
+                            } } } }
                             if(event.owner==state.session?.userId) FocusButton(tr("Eliminar evento","Delete event")) { state.launch { state.socialAction { state.deleteCalendarEvent(event.id) } } }
                         }
                     }

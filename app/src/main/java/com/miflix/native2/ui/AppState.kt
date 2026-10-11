@@ -139,7 +139,10 @@ class AppState(context: Context) {
     }
     suspend fun playQueued(req: PlayerRequest, entry: QueueEntry) {
         if(partyRole==PartyRole.GUEST || playerRequest?.playbackId!=req.playbackId) return
-        val owner=queueKey();val item=tmdb.byCloudId(entry.cloud);val d=tmdb.details(item)
+        val owner=queueKey()
+        val item=tmdb.byCloudId(entry.cloud)
+            ?: throw IllegalStateException(tr("Contenido no disponible; permanece en la cola","Title unavailable; it remains in the queue"))
+        val d=tmdb.details(item)
         if(partyRole==PartyRole.GUEST || owner!=queueKey() || playerRequest?.playbackId!=req.playbackId || queueEntries.none { it.id==entry.id }) return
         val imdb=d.imdbId ?: throw IllegalStateException(tr("IMDb no disponible","IMDb unavailable"))
         var started: PlayerRequest?=null

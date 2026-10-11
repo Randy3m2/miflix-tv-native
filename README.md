@@ -1,3 +1,7 @@
+# RC23 update
+
+Current TV version: **2.0.0-rc23 (22021)**. See **RC23_SETUP.md**. Run **SUPABASE_RC23_CALENDAR.sql** after RC22 before using live calendar events.
+
 # Última versión: BruniO 2.0.0-rc22
 
 Lee **RC22_SETUP.md** y ejecuta **SUPABASE_RC22_CALENDAR.sql** para habilitar el calendario.

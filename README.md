@@ -1,3 +1,7 @@
+# RC28 — RC25 player restored; updater layout
+
+2.0.0-rc28 (22026). See RC28_SETUP.md. This supersedes the RC26 recovery changes.
+
 # RC27 Party closure notification
 
 2.0.0-rc27 (22025). See RC27_SETUP.md.

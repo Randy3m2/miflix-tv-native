@@ -67,27 +67,27 @@ jobs:
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MiFlix-TV-Native-v2.0.0-rc23
+          name: MiFlix-TV-Native-v2.0.0-rc27
           path: |
-            MiFlix-TV-Native-v2.0.0-rc23.apk
+            MiFlix-TV-Native-v2.0.0-rc27.apk
             update.json
 
       - name: Publish versioned release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="native-v2.0.0-rc23"
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native 2.0 RC23" --notes "RC23: safer Party queue transitions, Play from queue, full detected track list, live calendar events, friend avatars, NatGeo and year collections."
-          gh release upload "$TAG" MiFlix-TV-Native-v2.0.0-rc23.apk update.json --clobber
+          TAG="native-v2.0.0-rc27"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native 2.0 RC27" --notes "RC27: safer Party queue transitions, Play from queue, full detected track list, live calendar events, friend avatars, NatGeo and year collections."
+          gh release upload "$TAG" MiFlix-TV-Native-v2.0.0-rc27.apk update.json --clobber
 
       - name: Update permanent latest channel
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="native-latest"
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native · Latest" --notes "Current version: 2.0.0-rc23"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native · Latest" --notes "Current version: 2.0.0-rc27"
           gh release upload "$TAG" MiFlix-TV-Native.apk update.json --clobber
-          gh release edit "$TAG" --title "MiFlix TV Native · Latest" --notes "Current version: 2.0.0-rc23"
+          gh release edit "$TAG" --title "MiFlix TV Native · Latest" --notes "Current version: 2.0.0-rc27"
 
       - name: Remove runner copy of private signing key
         if: always()

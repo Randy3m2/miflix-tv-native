@@ -1,3 +1,19 @@
+# RC27 Party closure notification
+
+2.0.0-rc27 (22025). See RC27_SETUP.md.
+
+# RC26 playback recovery
+
+2.0.0-rc26 (22024). See RC26_SETUP.md.
+
+# RC25 player Friends navigation
+
+2.0.0-rc25 (22023). See RC25_SETUP.md. Includes RC24 audio changes.
+
+# RC24 audio selection fix
+
+2.0.0-rc24 (22022). See RC24_SETUP.md.
+
 # RC23 update
 
 Current TV version: **2.0.0-rc23 (22021)**. See **RC23_SETUP.md**. Run **SUPABASE_RC23_CALENDAR.sql** after RC22 before using live calendar events.

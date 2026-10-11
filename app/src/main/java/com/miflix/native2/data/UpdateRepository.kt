@@ -1,5 +1,6 @@
 package com.miflix.native2.data
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInfo
@@ -66,8 +67,8 @@ class UpdateRepository {
     suspend fun download(context: Context,info: UpdateInfo,onProgress: suspend (Long,Long)->Unit): File = withContext(Dispatchers.IO) {
         require(info.isNewer && info.versionCode>0 && info.sha256.isNotBlank()) { "This release has no verified update metadata" }
         val dir=File(context.cacheDir,"updates").apply { mkdirs() }
-        val partial=File(dir,"update.part");val complete=File(dir,"update.apk")
-        partial.delete();complete.delete()
+        val unique="update-${info.versionCode}-${java.util.UUID.randomUUID()}"
+        val partial=File(dir,"$unique.part.apk");val complete=File(dir,"$unique.apk")
         var c: HttpURLConnection?=null
         try {
             val downloadConnection=connection(info.downloadUrl)
@@ -114,10 +115,17 @@ class UpdateRepository {
         val flags=if(Build.VERSION.SDK_INT>=28) PackageManager.GET_SIGNING_CERTIFICATES else PackageManager.GET_SIGNATURES
         val apk=pm.getPackageArchiveInfo(file.absolutePath,flags) ?: error("Invalid APK")
         val installed=pm.getPackageInfo(context.packageName,flags)
-        require(apk.packageName==context.packageName) { "This APK belongs to another app" }
-        require(code(apk)==expectedCode.toLong() && code(apk)>code(installed)) { "This APK is not a newer build" }
+        require(apk.packageName==context.packageName) { "Package mismatch: installed=${context.packageName}; APK=${apk.packageName}. Keep the installed app and use its matching package." }
+        require(code(apk)==expectedCode.toLong() && code(apk)>code(installed)) { "Version mismatch: installed=${code(installed)}; APK=${code(apk)}; expected=$expectedCode. Download a newer release." }
         val current=signatures(installed);val incoming=signatures(apk)
-        require(current.isNotEmpty() && current==incoming) { "Update signature differs from this installation. Use the stable signed build." }
+        require(current.isNotEmpty() && current==incoming) { "Signing certificate mismatch. Updating without uninstalling requires the original signing key. Installed SHA-256: ${current.joinToString()}. APK SHA-256: ${incoming.joinToString()}." }
+    }
+
+    @Suppress("DEPRECATION")
+    fun installationDetails(context: Context): String {
+        val flags=if(Build.VERSION.SDK_INT>=28) PackageManager.GET_SIGNING_CERTIFICATES else PackageManager.GET_SIGNATURES
+        val installed=context.packageManager.getPackageInfo(context.packageName,flags)
+        return "Package: ${context.packageName}\nInstalled: ${installed.versionName} (${code(installed)})\nAndroid API: ${Build.VERSION.SDK_INT}\nSigning SHA-256:\n${signatures(installed).joinToString("\n")}"
     }
 
     /** Returns false when the user must grant install permission and press Install again. */
@@ -129,8 +137,15 @@ class UpdateRepository {
             return false
         }
         val uri=FileProvider.getUriForFile(context,context.packageName+".updates",file)
-        context.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri,"application/vnd.android.package-archive")
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
+        val intent=Intent(Intent.ACTION_INSTALL_PACKAGE).setDataAndType(uri,"application/vnd.android.package-archive")
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+        intent.clipData=ClipData.newRawUri("BruniO update APK",uri)
+        try { context.startActivity(intent) }
+        catch(e: android.content.ActivityNotFoundException) {
+            context.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri,"application/vnd.android.package-archive")
+                .apply { clipData=ClipData.newRawUri("BruniO update APK",uri) }
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
         return true
     }
 }

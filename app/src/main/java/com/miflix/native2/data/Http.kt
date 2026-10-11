@@ -15,10 +15,6 @@ internal object Http {
         timeoutMs: Int = 12000
     ): String = withContext(Dispatchers.IO) {
         val c = URL(url).openConnection() as HttpURLConnection
-        kotlinx.coroutines.suspendCancellableCoroutine<String> { continuation ->
-        continuation.invokeOnCancellation { c.disconnect() }
-        try {
-        if(!continuation.isActive) return@suspendCancellableCoroutine
         c.requestMethod = method
         c.connectTimeout = timeoutMs
         c.readTimeout = timeoutMs
@@ -33,6 +29,7 @@ internal object Http {
         val code = c.responseCode
         val stream = if (code in 200..299) c.inputStream else c.errorStream
         val result = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+        c.disconnect()
         if (code !in 200..299) {
             val message = runCatching {
                 val j = JSONObject(result)
@@ -40,10 +37,6 @@ internal object Http {
             }.getOrDefault(result)
             throw IllegalStateException("HTTP $code: $message")
         }
-        if(continuation.isActive) continuation.resumeWith(Result.success(result))
-        } catch(e: Exception) {
-            if(continuation.isActive) continuation.resumeWith(Result.failure(e))
-        } finally { c.disconnect() }
-        }
+        result
     }
 }

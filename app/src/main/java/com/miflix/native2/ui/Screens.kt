@@ -604,6 +604,8 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var addonUrl by remember { mutableStateOf("") }
+    var showUpdates by remember { mutableStateOf(false) }
+    if(showUpdates) AppUpdateDialog(state) { showUpdates=false }
     val context = LocalContext.current
     BackHandler(onBack = onBack)
 
@@ -770,34 +772,11 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 }
             }
             item {
-                Text(tr("Actualizaciones","Updates"),color=Color.White,fontSize=22.sp,lineHeight=26.sp,fontWeight=FontWeight.Bold)
-                Spacer(Modifier.height(8.dp))
-                Text("${tr("Versión instalada","Installed version")}: ${BuildConfig.VERSION_NAME}",color=Muted,fontSize=14.sp,lineHeight=18.sp)
-                Spacer(Modifier.height(14.dp))
-                FlowRow(horizontalArrangement=Arrangement.spacedBy(18.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
-                    FocusButton(if(state.updateChecking) tr("Comprobando…","Checking…") else tr("Buscar actualizaciones","Check for Updates")) {
-                        if(!state.updateChecking && !state.updateDownloading) state.launch { state.checkForUpdates() }
-                    }
-                    if(state.updateDownloading) FocusButton(tr("Cancelar descarga","Cancel download")) { state.cancelUpdateDownload() }
-                    else state.updateInfo?.takeIf { it.isNewer }?.let { info ->
-                        if(state.downloadedUpdate!=null) FocusButton(tr("Instalar actualización","Install update"),primary=true) { state.installUpdate(context) }
-                        else FocusButton("${tr("Descargar","Download")} ${info.version}",primary=true) { state.downloadUpdate() }
-                    }
-                }
-                if(state.updateDownloading) {
-                    Spacer(Modifier.height(12.dp))
-                    val fraction=if(state.updateTotal>0) (state.updateBytes.toFloat()/state.updateTotal).coerceIn(0f,1f) else 0f
-                    Box(Modifier.fillMaxWidth().height(6.dp).background(Color(0xFF333333),RoundedCornerShape(3.dp))) {
-                        Box(Modifier.fillMaxHeight().fillMaxWidth(fraction).background(Color.White,RoundedCornerShape(3.dp)))
-                    }
-                    Text("${tr("Descargando","Downloading")} ${(fraction*100).toInt()}% · ${state.updateBytes/1048576} / ${state.updateTotal/1048576} MB",color=Muted,fontSize=14.sp,lineHeight=18.sp)
-                }
-                state.updateInfo?.let { info ->
-                    Spacer(Modifier.height(9.dp))
-                    Text(if(info.isNewer) "${tr("Actualización disponible","Update available")}: ${info.version}" else tr("Tienes la versión más reciente.","You're on the latest build."),color=SoftWhite,fontSize=14.sp,lineHeight=18.sp)
-                }
-                if(state.updateStatus.isNotBlank()) Text(state.updateStatus,color=Muted,fontSize=14.sp,lineHeight=18.sp,modifier=Modifier.padding(top=8.dp))
-
+                Text(tr("Actualizaciones","Updates"),color=Color.White,fontSize=22.sp)
+                Spacer(Modifier.height(12.dp))
+                Text("BruniO ${BuildConfig.VERSION_NAME}",color=Muted)
+                Spacer(Modifier.height(12.dp))
+                FocusButton(tr("Buscar actualizaciones","Check for Updates")) { showUpdates=true }
             }
         }
     }
@@ -1076,25 +1055,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             trackSelectionParameters = trackBuilder.build()
             videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
             prepare()
-            playWhenReady = if (state.partyRole == PartyRole.GUEST) state.watchParty?.playing ?: request.resumePlaying else request.resumePlaying
-        }
-    }
-
-    LaunchedEffect(player,request.playbackId) {
-        val monitor=com.miflix.native2.data.PlaybackStallMonitor()
-        while(true) {
-            delay(1000)
-            if(state.playerRequest?.playbackId!=request.playbackId || state.screen!=Screen.PLAYER) break
-            val expected=player.playWhenReady && player.playbackState!=Player.STATE_ENDED &&
-                player.playbackSuppressionReason==Player.PLAYBACK_SUPPRESSION_REASON_NONE && playbackError==null &&
-                state.busyMessage==null && state.sourceSelection==null && !state.queueStarting
-            if(monitor.stalled(android.os.SystemClock.elapsedRealtime(),player.currentPosition,expected,player.playbackState==Player.STATE_BUFFERING)) {
-                if(!state.recoverPlayback(request,player.currentPosition,player.playWhenReady,true)) {
-                    playbackError=tr("La reproducción dejó de avanzar. Prueba otro enlace o reinicia el reproductor.","Playback stopped advancing. Try another source or restart the player.")
-                    controlsVisible=true
-                }
-                break
-            }
+            playWhenReady = if (state.partyRole == PartyRole.GUEST) state.watchParty?.playing ?: true else true
         }
     }
 
@@ -1352,7 +1313,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 Text(tr("No se pudo reproducir este enlace","This link could not be played"),color=Color.White,fontSize=22.sp,lineHeight=27.sp)
                 Text(playbackError.orEmpty(),color=Muted)
                 Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                    FocusButton(tr("Reiniciar reproductor","Restart player")) { state.recoverPlayback(request,player.currentPosition,player.playWhenReady,false) }
+                    FocusButton(tr("Reintentar","Retry")) { playbackError=null; surfaceGeneration++; player.prepare() }
                     FocusButton(tr("Otro enlace","Another link")) { playbackError=null; state.launch { state.playerSources(request,player.currentPosition) } }
                     FocusButton(tr("Salir","Exit")) { onClose() }
                 }

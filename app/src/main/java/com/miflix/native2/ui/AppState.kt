@@ -75,25 +75,6 @@ class AppState(context: Context) {
         if(tmdb.token.isNotBlank()) loadHome()
     }
     private val playbackWork = PlaybackWorkGate()
-    private var activeSourceJob: kotlinx.coroutines.Job? = null
-    private suspend fun beginSourceWork(): PlaybackWorkGate.Ticket {
-        val current=kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]
-        if(activeSourceJob!==current) activeSourceJob?.cancel()
-        activeSourceJob=current
-        val pending=playbackSubtitleJobs.filterValues { !it.isCompleted || it.isCancelled }.keys.toList()
-        pending.forEach { playbackSubtitleJobs.remove(it)?.cancel() }
-        return playbackWork.begin()
-    }
-    fun recoverPlayback(req: PlayerRequest, position: Long, playing: Boolean, automatic: Boolean): Boolean {
-        if(screen!=Screen.PLAYER || playerRequest?.playbackId!=req.playbackId) return false
-        if(automatic && req.recoveryAttempt>=2) return false
-        invalidatePlaybackWork()
-        error=null
-        playerRequest=req.copy(resumeMs=if(req.live) 0L else position.coerceAtLeast(0),
-            playbackId=UUID.randomUUID().toString(),recoveryAttempt=if(automatic) req.recoveryAttempt+1 else 0,
-            resumePlaying=playing)
-        return true
-    }
     private var partyEpoch = 0L
     private var switchingPartyEpoch: Long? = null
     var streamSizeLimitGb by mutableStateOf((playbackPrefs.getString("stream_size_gb","0")?.toDoubleOrNull() ?: 0.0))
@@ -106,7 +87,6 @@ class AppState(context: Context) {
         invalidatePlaybackWork()
     }
     private fun invalidatePlaybackWork() {
-        activeSourceJob?.cancel();activeSourceJob=null
         playbackWork.invalidate(); sourceSelection=null; busyMessage=null
         playbackSubtitleJobs.values.forEach { it.cancel() }; playbackSubtitleJobs.clear()
     }
@@ -1065,16 +1045,16 @@ class AppState(context: Context) {
             if (item.type == "series") (if (resume) saved!!.episode else 1) else 0)
     }
 
-    private suspend fun chooseSources(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeMs: Long? = null) = coroutineScope {
-        val ticket=beginSourceWork(); val owner=session?.userId; val profile=activeProfile.id
+    private suspend fun chooseSources(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeMs: Long? = null) {
+        val ticket=playbackWork.begin(); val owner=session?.userId; val profile=activeProfile.id
         fun valid()=playbackWork.current(ticket) && session?.userId==owner && activeProfile.id==profile
         sourceSelection=null; busyMessage=tr("Buscando todos los enlaces…","Finding all playback links…"); error=null
         try {
-            val links=kotlinx.coroutines.withTimeout(25000) { streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title) }
-            if(!valid()) return@coroutineScope
+            val links=streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title)
+            if(!valid()) return
             if(links.isEmpty()) error=tr("No hay enlaces que cumplan los filtros. Revisa Size Limit en Settings.","No links match your filters. Check Size Limit in Settings.")
             else sourceSelection=SourceSelection(item,imdb,season,episode,links,resumeMs,ticket.generation,ticket.sequence)
-        } catch(e: kotlinx.coroutines.TimeoutCancellationException) { if(valid()) error=tr("La búsqueda tardó demasiado. Intenta otro enlace.","Source search timed out. Try another link.") } catch(e: CancellationException) { throw e } catch(e: Exception) { if(valid()) error=e.message } finally { if(valid()) busyMessage=null }
+        } catch(e: CancellationException) { throw e } catch(e: Exception) { if(valid()) error=e.message } finally { if(valid()) busyMessage=null }
     }
 
     suspend fun playSelectedSource(selection: SourceSelection, stream: StreamChoice) {
@@ -1114,13 +1094,12 @@ class AppState(context: Context) {
     }
 
     private suspend fun playResolved(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeOverride: Long? = null, selectedStream: StreamChoice? = null, onStarted: ((PlayerRequest) -> Unit)? = null) = coroutineScope {
-        val ticket=beginSourceWork()
+        val ticket=playbackWork.begin()
         val playbackOwner=session?.userId; val playbackProfile=activeProfile.id
         fun valid()=playbackWork.current(ticket) && session?.userId==playbackOwner && activeProfile.id==playbackProfile
         busyMessage = tr("Buscando el mejor enlace…","Finding the best source…")
         error = null
-        try {
-        val streamsJob = async { kotlinx.coroutines.withTimeout(25000) { if (selectedStream != null) listOf(selectedStream).filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) } else streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title) } }
+        val streamsJob = async { if (selectedStream != null) listOf(selectedStream).filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) } else streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title) }
         val subtitleKey=subtitleKey(item,season,episode)
         if(playbackSubtitleJobs.size>=16 && subtitleKey !in playbackSubtitleJobs) {
             val oldest=playbackSubtitleJobs.keys.first(); playbackSubtitleJobs.remove(oldest)?.cancel()
@@ -1147,7 +1126,7 @@ class AppState(context: Context) {
             screen = Screen.PLAYER
             playerRequest?.let { onStarted?.invoke(it) }
         }.onFailure { if(it is CancellationException) throw it; if(valid()) error=it.message }
-        } catch(e: kotlinx.coroutines.TimeoutCancellationException) { if(valid()) error=tr("La búsqueda tardó demasiado. Vuelve a intentarlo.","Source search timed out. Please retry.") } finally { if(valid()) busyMessage=null }
+        if(valid()) busyMessage=null
     }
 
     fun updateProgress(req: PlayerRequest, position: Long, duration: Long, ended: Boolean = false) {
@@ -1477,7 +1456,7 @@ class AppState(context: Context) {
         updateChecking=true;error=null;updateStatus=""
         try {
             val found=updates.check(BuildConfig.VERSION_NAME,BuildConfig.VERSION_CODE)
-            if(updateInfo?.sha256!=found.sha256) { downloadedUpdate?.delete();downloadedUpdate=null }
+            if(updateInfo?.sha256!=found.sha256) downloadedUpdate=null
             updateInfo=found
         } catch(e: CancellationException) { throw e } catch(e: Exception) { error="${tr("Falló la búsqueda de actualizaciones","Update check failed")}: ${e.message}" } finally { updateChecking=false }
     }
@@ -1540,9 +1519,7 @@ data class PlayerRequest(
     val liveChannelId: String = "",
     val liveProvider: String = "",
     val playbackId: String = java.util.UUID.randomUUID().toString(),
-    val liveType: String = "tv",
-    val recoveryAttempt: Int = 0,
-    val resumePlaying: Boolean = true
+    val liveType: String = "tv"
 )
 
 data class SourceSelection(

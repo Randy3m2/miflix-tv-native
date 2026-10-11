@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun MiFlixNativeApp(initialPartyCode: String? = null) {
@@ -37,9 +38,14 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
     MaterialTheme {
         var bootstrapped by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) {
-            delay(420)
+            val animation = launch { delay(2400) }
             state.bootstrap()
+            animation.join()
             bootstrapped = true
+        }
+        if (!bootstrapped) {
+            BruniOSplashScreen()
+            return@MaterialTheme
         }
         LaunchedEffect(bootstrapped, initialPartyCode) {
             if (bootstrapped && !initialPartyCode.isNullOrBlank()) {
@@ -48,7 +54,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         }
         key(state.screen) {
         when (state.screen) {
-            Screen.SPLASH -> SplashScreen()
+            Screen.SPLASH -> BruniOSplashScreen()
             Screen.HOME -> HomeScreen(state) { state.screen = it }
             Screen.FRIENDS -> FriendsScreen(state)
             Screen.TRAKT -> TraktScreen(state)
@@ -142,14 +148,6 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         }
     }
 }
-}
-
-@Composable
-private fun SplashScreen() {
-    Box(Modifier.fillMaxSize().background(Color(0xFF070B16))) {
-        Image(painterResource(R.drawable.brunio_splash), "BruniO",
-            modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-    }
 }
 
 @Composable

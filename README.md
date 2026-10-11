@@ -1,3 +1,7 @@
+# RC29 — Animated BruniO startup
+
+2.0.0-rc29 (22027). See RC29_SETUP.md. Original logo animation; RC25 player preserved.
+
 # RC28 — RC25 player restored; updater layout
 
 2.0.0-rc28 (22026). See RC28_SETUP.md. This supersedes the RC26 recovery changes.

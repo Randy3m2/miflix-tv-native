@@ -261,12 +261,17 @@ fun CollectionCard(
                     .clip(RoundedCornerShape(14.dp))
                     .background(Color(0xFF191919))
             ) {
+                if(tile.id=="natgeo") Row(Modifier.fillMaxSize().padding(28.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
+                    Box(Modifier.width(44.dp).height(66.dp).border(5.dp,Color(0xFFFFCC00)))
+                    Text("NATIONAL\nGEOGRAPHIC",color=Color.White,fontSize=19.sp,lineHeight=23.sp,fontWeight=FontWeight.Bold)
+                } else {
                 AsyncImage(
                     model = model,
                     contentDescription = tile.title,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
+                }
                 if (focused) Box(Modifier.fillMaxSize().background(Color(0x0DFFFFFF)))
             }
         }

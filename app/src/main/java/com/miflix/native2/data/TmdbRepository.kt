@@ -122,6 +122,22 @@ class TmdbRepository(var token: String) {
         limit = limit
     )
 
+    suspend fun catalogByYear(year: Int, category: String): List<MediaSummary> {
+        val tv=category=="series"
+        val params=mutableMapOf((if(tv) "first_air_date_year" else "primary_release_year") to year.toString(),"sort_by" to "popularity.desc")
+        if(category=="documentary") params["with_genres"]="99"
+        return discoverPaged(if(tv) "/discover/tv" else "/discover/movie",if(tv) "series" else "movie",params,3,50)
+    }
+
+    suspend fun nationalGeographic(): List<MediaSummary> = coroutineScope {
+        val tv=async { discoverPaged("/discover/tv","series",mapOf("with_networks" to "43|6750","sort_by" to "popularity.desc"),3,50) }
+        val companies=get("/search/company",mapOf("query" to "National Geographic")).optJSONArray("results")
+        val ids=if(companies==null) emptyList() else (0 until companies.length()).map { companies.getJSONObject(it) }
+            .filter { it.optString("name").contains("National Geographic",ignoreCase=true) }.map { it.getInt("id") }
+        val movies=if(ids.isEmpty()) emptyList() else discoverPaged("/discover/movie","movie",mapOf("with_companies" to ids.joinToString("|"),"sort_by" to "popularity.desc"),3,50)
+        (tv.await()+movies).distinctBy { it.cloudId }
+    }
+
     private suspend fun discoverPaged(
         path: String,
         type: String,

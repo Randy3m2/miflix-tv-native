@@ -137,23 +137,30 @@ class AppState(context: Context) {
         val rows=queueEntries.toMutableList();val i=rows.indexOfFirst { it.id==id };val target=i+delta
         if(i>=0 && target in rows.indices) { java.util.Collections.swap(rows,i,target);saveQueue(rows) }
     }
-    suspend fun playQueued(req: PlayerRequest, entry: QueueEntry) {
-        if(partyRole==PartyRole.GUEST || playerRequest?.playbackId!=req.playbackId) return
+    var queueStarting by mutableStateOf(false)
+        private set
+    suspend fun playQueued(req: PlayerRequest?, entry: QueueEntry) {
+        if(queueStarting) return
+        queueStarting=true
+        try {
+        if(partyRole==PartyRole.GUEST || playerRequest?.playbackId!=req?.playbackId) return
         val owner=queueKey()
         val item=tmdb.byCloudId(entry.cloud)
             ?: throw IllegalStateException(tr("Contenido no disponible; permanece en la cola","Title unavailable; it remains in the queue"))
         val d=tmdb.details(item)
-        if(partyRole==PartyRole.GUEST || owner!=queueKey() || playerRequest?.playbackId!=req.playbackId || queueEntries.none { it.id==entry.id }) return
+        if(partyRole==PartyRole.GUEST || owner!=queueKey() || playerRequest?.playbackId!=req?.playbackId || queueEntries.none { it.id==entry.id }) return
         val imdb=d.imdbId ?: throw IllegalStateException(tr("IMDb no disponible","IMDb unavailable"))
         var started: PlayerRequest?=null
         playResolved(item,imdb,entry.season,entry.episode,resumeOverride=0,onStarted={ newRequest ->
             if(owner==queueKey()) { started=newRequest;selected=item;details=d;currentSeason=entry.season;removeQueued(entry.id) }
         })
         val active=started ?: return
+        if(partyRole==PartyRole.HOST) hostPartyUpdate(active,0L,true)
         if(item.type=="series") {
             val rows=runCatching { tmdb.season(item.id,entry.season) }.getOrDefault(emptyList())
             if(owner==queueKey() && playerRequest?.playbackId==active.playbackId) { episodes.clear();episodes.addAll(rows) }
         }
+        } finally { queueStarting=false }
     }
 
     val calendarEvents=mutableStateListOf<CalendarEvent>()
@@ -162,15 +169,32 @@ class AppState(context: Context) {
         val events=social.calendar(owner)
         if(session?.userId==owner.userId) { calendarEvents.clear();calendarEvents.addAll(events) }
     }
-    suspend fun createCalendarEvent(title: String, kind: String, date: String, cloud: String?, season: Int, episode: Int, guests: List<String>) {
+    suspend fun createCalendarEvent(title: String, kind: String, date: String, cloud: String?, season: Int, episode: Int, guests: List<String>, channel: LiveChannel?=null) {
         val owner=session ?: throw IllegalStateException(tr("Inicia sesión","Sign in first"))
         require(title.trim().isNotEmpty() && title.length<=160) { tr("Escribe un título","Enter a title") }
         val parser=java.text.SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.US).apply { isLenient=false }
         val value=parser.parse(date) ?: throw IllegalArgumentException(tr("Fecha inválida","Invalid date"))
         require(parser.format(value)==date) { tr("Usa YYYY-MM-DD HH:mm","Use YYYY-MM-DD HH:mm") }
         val utc=java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'",Locale.US).apply { timeZone=java.util.TimeZone.getTimeZone("UTC") }
-        social.createCalendar(owner,title.trim(),kind,utc.format(value),cloud,season,episode,guests)
+        social.createCalendar(owner,title.trim(),kind,utc.format(value),cloud,season,episode,guests,channel)
         refreshCalendar()
+    }
+    fun calendarLiveManifest(kind: String): String = if(kind=="sports") livePrefs.getString("sports_manifest","https://sportsfree-us2.highfly.to/manifest.json").orEmpty() else "https://stremio-addon-wheat.vercel.app/manifest.json"
+    suspend fun openCalendarEvent(event: CalendarEvent) {
+        if(event.kind=="live" || event.kind=="sports") {
+            require(partyRole!=PartyRole.GUEST) { tr("El anfitrión elige el contenido de la sala","The host chooses the room content") }
+            val owner=session?.userId;val epoch=partyEpoch
+            val channel=LiveChannel(event.channelId,event.channelType,event.title,null,"")
+            val stream=LiveRepository().streams(calendarLiveManifest(event.kind),channel).firstOrNull()
+                ?: throw IllegalStateException(tr("Este evento no tiene enlaces disponibles ahora","No streams are available for this event right now"))
+            if(session?.userId!=owner || partyEpoch!=epoch) return
+            invalidatePlaybackWork()
+            val media=MediaSummary(channel.id.hashCode(),"live",channel.name,"",null,null,0.0,"LIVE")
+            selected=media;playerRequest=PlayerRequest(media,stream,0,0,0L,true,channel.id,if(event.kind=="sports") "sports" else "nauta",liveType=channel.type);screen=Screen.PLAYER
+        } else {
+            val media=event.cloud?.let { tmdb.byCloudId(it) } ?: throw IllegalStateException(tr("Contenido no disponible","Title unavailable"))
+            this.open(media)
+        }
     }
     suspend fun deleteCalendarEvent(id: String) { session?.let { social.deleteCalendar(it,id);refreshCalendar() } }
     private fun noticesKey() = "notices_${session?.userId ?: "local"}_${activeProfile.id}"
@@ -528,7 +552,9 @@ class AppState(context: Context) {
         "hbo" to listOf(1899, 384)
     )
 
-    fun launch(block: suspend CoroutineScope.() -> Unit) = appScope.launch(block = block)
+    fun launch(block: suspend CoroutineScope.() -> Unit) = appScope.launch {
+        try { block() } catch(e: CancellationException) { throw e } catch(e: Exception) { error=e.message ?: tr("No se pudo completar la operación","Could not complete the operation") }
+    }
 
     private fun loadOfflineProfiles() {
         profiles.clear(); profiles.addAll(local.offlineProfiles().ifEmpty { listOf(Profile("default","Main",primary=true)) })
@@ -782,6 +808,16 @@ class AppState(context: Context) {
     }
 
     suspend fun openCollection(id: String, title: String) {
+        if(id=="natgeo") {
+            busyMessage=tr("Cargando National Geographic…","Loading National Geographic…")
+            try { collectionItems.replaceWith(tmdb.nationalGeographic());collectionTitle="National Geographic";screen=Screen.COLLECTION_DETAIL }
+            finally { busyMessage=null }
+            return
+        }
+        if(id.startsWith("series-year:") || id.startsWith("documentary-year:")) {
+            openYear(id.substringAfter(':').toIntOrNull() ?: return,if(id.startsWith("series")) "series" else "documentary")
+            return
+        }
         if (providers.containsKey(id)) {
             openPlatform(id, title)
             return
@@ -861,12 +897,12 @@ class AppState(context: Context) {
         busyMessage = null
     }
 
-    suspend fun openYear(year: Int) {
+    suspend fun openYear(year: Int, category: String="movie") {
         busyMessage = "${tr("Cargando películas de","Loading movies from")} $year…"
         error = null
-        runCatching { tmdb.moviesByYear(year, 50) }
+        runCatching { tmdb.catalogByYear(year,category) }
             .onSuccess {
-                yearTitle = "${tr("Películas","Movies")} · $year"
+                yearTitle = (when(category) { "series" -> tr("Series","Series"); "documentary" -> tr("Documentales","Documentaries"); else -> tr("Películas","Movies") })+" · $year"
                 yearItems.replaceWith(it)
                 screen = Screen.YEAR_DETAIL
             }
@@ -888,7 +924,10 @@ class AppState(context: Context) {
             .filterNotNull()
     }
 
+    var detailsReturnScreen by mutableStateOf(Screen.HOME)
+        private set
     suspend fun open(item: MediaSummary) {
+        if(screen!=Screen.DETAILS && screen!=Screen.PLAYER) detailsReturnScreen=screen
         selected = item
         details = null
         episodes.clear()
@@ -1164,10 +1203,11 @@ class AppState(context: Context) {
         switchToPartyState(party)
     }
 
-    suspend fun hostPartyUpdate(req: PlayerRequest, positionMs: Long, playing: Boolean) {
-        val s = session ?: return
-        if (partyRole != PartyRole.HOST || playerRequest?.playbackId!=req.playbackId) return
-        val current = watchParty ?: return
+    private val partyPublishMutex=Mutex()
+    suspend fun hostPartyUpdate(req: PlayerRequest, positionMs: Long, playing: Boolean) = partyPublishMutex.withLock {
+        val s = session ?: return@withLock
+        if (partyRole != PartyRole.HOST || playerRequest?.playbackId!=req.playbackId) return@withLock
+        val current = watchParty ?: return@withLock
         val next = current.copy(
             cloudId = req.item.cloudId,
             liveChannelId = req.liveChannelId,
@@ -1181,7 +1221,7 @@ class AppState(context: Context) {
             updatedAt = System.currentTimeMillis()
         )
         watchParty = next
-        runCatching { cloud.updateWatchParty(s, next) }
+        try { cloud.updateWatchParty(s,next) } catch(e: CancellationException) { throw e } catch(e: Exception) { error=e.message }
     }
 
     suspend fun refreshParty(): WatchParty? {
@@ -1321,8 +1361,8 @@ class AppState(context: Context) {
         }
     }
 
-    suspend fun heartbeatRoom() {
-        val s=session ?: return
+    suspend fun heartbeatRoom() = partyPublishMutex.withLock {
+        val s=session ?: return@withLock
         if(partyRole==PartyRole.HOST) watchParty?.let { cloud.updateWatchParty(s,it) }
     }
 

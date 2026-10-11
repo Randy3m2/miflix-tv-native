@@ -12,7 +12,7 @@ data class AccessRequest(val room: String, val id: String, val nickname: String)
 data class Friendship(val sender: String, val receiver: String, val status: String)
 
 data class QueueEntry(val id: String, val cloud: String, val title: String, val season: Int, val episode: Int)
-data class CalendarEvent(val id: String, val owner: String, val title: String, val kind: String, val starts: String, val cloud: String?, val season: Int, val episode: Int, val guests: List<String>)
+data class CalendarEvent(val id: String, val owner: String, val title: String, val kind: String, val starts: String, val cloud: String?, val season: Int, val episode: Int, val guests: List<String>, val channelId: String="", val channelType: String="tv")
 
 class SocialRepository(private val url: String, private val key: String) {
     private fun headers(s: CloudSession) = mapOf("apikey" to key, "Authorization" to "Bearer ${s.accessToken}", "Content-Type" to "application/json")
@@ -22,10 +22,10 @@ class SocialRepository(private val url: String, private val key: String) {
     suspend fun calendar(s: CloudSession): List<CalendarEvent> {
         val a=rows(s,"miflix_calendar_events?select=*&order=starts_at.asc&limit=500")
         return (0 until a.length()).map { i -> val x=a.getJSONObject(i);val guests=x.optJSONArray("guests") ?: JSONArray()
-            CalendarEvent(x.getString("id"),x.getString("owner_id"),x.getString("title"),x.getString("kind"),x.getString("starts_at"),x.optString("cloud_id").takeUnless { it.isBlank() || it=="null" },x.optInt("season"),x.optInt("episode"),(0 until guests.length()).map { guests.getString(it) }) }
+            CalendarEvent(x.getString("id"),x.getString("owner_id"),x.getString("title"),x.getString("kind"),x.getString("starts_at"),x.optString("cloud_id").takeUnless { it.isBlank() || it=="null" },x.optInt("season"),x.optInt("episode"),(0 until guests.length()).map { guests.getString(it) },x.optString("channel_id"),x.optString("channel_type","tv")) }
     }
-    suspend fun createCalendar(s: CloudSession,title: String,kind: String,starts: String,cloud: String?,season: Int,episode: Int,guests: List<String>) {
-        write(s,"miflix_calendar_events",JSONObject().put("owner_id",s.userId).put("title",title).put("kind",kind).put("starts_at",starts).put("cloud_id",cloud ?: JSONObject.NULL).put("season",season).put("episode",episode).put("guests",JSONArray(guests)))
+    suspend fun createCalendar(s: CloudSession,title: String,kind: String,starts: String,cloud: String?,season: Int,episode: Int,guests: List<String>,channel: LiveChannel?=null) {
+        write(s,"miflix_calendar_events",JSONObject().put("owner_id",s.userId).put("title",title).put("kind",kind).put("starts_at",starts).put("cloud_id",cloud ?: JSONObject.NULL).put("season",season).put("episode",episode).put("guests",JSONArray(guests)).put("channel_id",channel?.id.orEmpty()).put("channel_type",channel?.type ?: "tv"))
     }
     suspend fun deleteCalendar(s: CloudSession,id: String) { Http.text("$url/rest/v1/miflix_calendar_events?id=eq.$id","DELETE",headers(s)) }
     suspend fun publishAvatar(s: CloudSession,avatar: String) {

@@ -68,8 +68,10 @@ import com.miflix.native2.model.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlinx.coroutines.ensureActive
 
 private val StreamingTiles = listOf(
+    CollectionTile("natgeo", "National Geographic", ""),
     CollectionTile(
         "netflix", "Netflix",
         "https://cdn.jsdelivr.net/gh/luckynumb3rs/stremio-perfect-setup/collections/streaming/cover/netflix.png",
@@ -345,7 +347,7 @@ fun SearchScreen(state: AppState, onBack: () -> Unit) {
 fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     LaunchedEffect(Unit) { state.loadDiscoveryArt(); state.loadHomeExtras(); runCatching { state.loadComingSoon() }.onFailure { state.error=it.message } }
-    val years = (2026 downTo 1990).map { year -> CollectionTile("year:$year", year.toString(), "") }
+    val years = (java.util.Calendar.getInstance().get(java.util.Calendar.YEAR) downTo 1990).map { year -> CollectionTile("year:$year", year.toString(), "") }
     AppShell(state, Screen.COLLECTIONS, { state.screen = it }) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = 34.dp, bottom = 60.dp)) {
             item {
@@ -368,6 +370,15 @@ fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
             if(state.comingSeries.isNotEmpty()) item { MediaRail(tr("Próximamente · Series","Coming Soon · Series"),state.comingSeries,onClick={ state.launch { state.open(it) } }) }
             item { DirectorRail(state) }
             item { CollectionRail(tr("Plataformas","Streaming"), StreamingTiles) { tile -> state.launch { state.openCollection(tile.id, tile.title) } } }
+            listOf("series" to tr("Series por año","Series by Year"),"documentary" to tr("Documentales por año","Documentaries by Year")).forEach { (category,label) ->
+                item {
+                    Text(label,color=Color.White,fontSize=22.sp,modifier=Modifier.padding(start=34.dp,top=8.dp,bottom=10.dp))
+                    LazyRow(Modifier.fillMaxWidth().padding(horizontal=26.dp),contentPadding=PaddingValues(horizontal=8.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                        items(years,key={it.id}) { tile -> FocusButton(tile.title,modifier=Modifier.width(106.dp)) { state.launch { state.openYear(tile.title.toInt(),category) } } }
+                    }
+                    Spacer(Modifier.height(28.dp))
+                }
+            }
             item {
                 Text(tr("Películas por año","Movies by Year"), color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 34.dp, top = 8.dp, bottom = 10.dp))
                 LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=26.dp),contentPadding = PaddingValues(horizontal=8.dp,vertical=8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1200,15 +1211,21 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             delay(1000)
             when (state.partyRole) {
                 PartyRole.HOST -> {
-                    runCatching { state.takePartyPlayback() }.getOrNull()?.let { playing -> player.playWhenReady=playing }
+                    val command=try { state.takePartyPlayback() } catch(e: kotlinx.coroutines.CancellationException) { throw e } catch(e: Exception) { state.error=e.message;null }
+                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                    if(state.playerRequest?.playbackId!=request.playbackId) break
+                    command?.let { player.playWhenReady=it }
                     runCatching { state.hostPartyUpdate(request, player.currentPosition, player.playWhenReady && player.playbackState != Player.STATE_ENDED) }
                 }
                 PartyRole.GUEST -> {
                     val remote = try { state.refreshParty() } catch(e: kotlinx.coroutines.CancellationException) { throw e } catch(_: Exception) { null } ?: continue
                     if (remote.cloudId != request.item.cloudId || remote.season != request.season || remote.episode != request.episode) {
-                        state.switchToPartyState(remote)
-                        break
+                        try { state.switchToPartyState(remote) } catch(e: kotlinx.coroutines.CancellationException) { throw e } catch(e: Exception) { state.error=e.message }
+                        if(state.playerRequest?.playbackId!=request.playbackId) break
+                        continue
                     }
+                    kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                    if(state.playerRequest?.playbackId!=request.playbackId) break
                     if(guestPlaybackIntent==remote.playing || System.currentTimeMillis()>=guestIntentUntil) guestPlaybackIntent=null
                     // Preserve the paused decoder frame. Do not seek to stale host snapshots while
                     // a guest pause/resume request is awaiting acknowledgement, or while paused.
@@ -1226,21 +1243,21 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     }
 
     // Explicit timer also covers controls holding focus on TV remotes.
-    LaunchedEffect(player, controlInteraction, showEpisodes, showPartyActions, showAccessRequests, state.sourceSelection, playerMenu, paused, ended, playbackError) {
+    LaunchedEffect(player, controlInteraction, showEpisodes, showQueue, showPartyActions, showAccessRequests, state.sourceSelection, playerMenu, paused, ended, playbackError) {
         if (playbackError==null && !paused && !ended && playerMenu == null && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && state.sourceSelection == null) {
             delay(3000)
             controlsVisible = false
-            surfaceFocus.requestFocus()
+            runCatching { surfaceFocus.requestFocus() }
         }
     }
 
-    LaunchedEffect(controlsVisible, showEpisodes, showPartyActions, showAccessRequests, playerMenu, state.sourceSelection, pauseSynopsis, pauseInfoDismissed, ended, playbackError) {
+    LaunchedEffect(controlsVisible, showEpisodes, showQueue, showPartyActions, showAccessRequests, playerMenu, state.sourceSelection, pauseSynopsis, pauseInfoDismissed, ended, playbackError) {
         if(playbackError==null && controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !ended && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu == null && state.sourceSelection == null) {
-            withFrameNanos { }; playFocus.requestFocus()
+            withFrameNanos { }; runCatching { playFocus.requestFocus() }
         }
     }
     LaunchedEffect(pauseSynopsis, pauseInfoDismissed) {
-        if(pauseSynopsis && !pauseInfoDismissed) { withFrameNanos { }; surfaceFocus.requestFocus() }
+        if(pauseSynopsis && !pauseInfoDismissed) { withFrameNanos { }; runCatching { surfaceFocus.requestFocus() } }
     }
     BackHandler {
         if (playerMenu != null) playerMenu = null

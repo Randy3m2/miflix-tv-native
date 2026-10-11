@@ -66,8 +66,8 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             Screen.PROFILES -> ProfilesScreen(state) { state.screen = Screen.HOME }
             Screen.WATCH_PARTY -> WatchPartyScreen(state) { state.screen = Screen.FRIENDS }
             Screen.PAIR_DEVICE -> PairDeviceScreen(state) { state.screen = Screen.SETTINGS }
-            Screen.DETAILS -> DetailsScreen(state) { state.screen = Screen.HOME }
-            Screen.PLAYER -> state.playerRequest?.let { req -> PlayerScreen(state, req) { state.screen = if (req.live) Screen.LIVE_TV else Screen.DETAILS } }
+            Screen.DETAILS -> DetailsScreen(state) { state.screen = state.detailsReturnScreen }
+            Screen.PLAYER -> state.playerRequest?.let { req -> androidx.compose.runtime.key(req.playbackId) { PlayerScreen(state, req) { state.screen = if (req.live) Screen.LIVE_TV else Screen.DETAILS } } }
                 ?: run { state.screen = Screen.HOME }
         }
 

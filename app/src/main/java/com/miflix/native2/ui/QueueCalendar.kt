@@ -19,6 +19,13 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.tv.material3.Text
 import com.miflix.native2.model.MediaSummary
+import com.miflix.native2.model.Profile
+import com.miflix.native2.model.PartyRole
+import com.miflix.native2.data.LiveChannel
+import com.miflix.native2.data.LiveCategory
+import com.miflix.native2.data.LiveRepository
+import coil3.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -89,13 +96,19 @@ fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,close: () -> Unit) {
                 if(friends.isEmpty()) item { Text(tr("Pulsa Actualizar para ver la actividad","Select Refresh to see activity"),color=Muted) }
                 items(friends,key={it.id}) { friend ->
                     Column(Modifier.fillMaxWidth().background(Color(0xFF252525),RoundedCornerShape(14.dp)).padding(14.dp)) {
-                        Text("@${friend.nickname}",color=Color.White,fontSize=20.sp)
-                        Text(friend.title.ifBlank { if(friend.online) tr("En línea","Online") else tr("Desconectado","Offline") },color=Muted)
+                        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
+                            ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(76.dp))
+                            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                                Text("@${friend.nickname}",color=Color.White,fontSize=20.sp)
+                                Text(if(friend.title.isNotBlank()) tr("Viendo ","Watching ")+friend.title+(if(friend.season>0) " · S${friend.season} E${friend.episode}" else "") else if(friend.online) tr("En línea","Online") else tr("Desconectado","Offline"),color=Muted,maxLines=3)
+                            }
+                        }
                         friend.room?.let { code -> FocusButton(tr("Solicitar acceso","Request access")) { state.launch { state.socialAction { state.joinWatchParty(code) } } } }
                     }
                 }
             }
             Text(state.partyStatus,color=Muted)
+            state.error?.let { Text(it,color=Color.White,maxLines=3) }
             FocusButton(tr("Cerrar","Close")) { close() }
         }
     }
@@ -117,6 +130,10 @@ fun QueueDialog(state: AppState, close: () -> Unit) {
                     Column(Modifier.fillMaxWidth().background(Color(0xFF232323),RoundedCornerShape(12.dp)).padding(12.dp)) {
                         Text(entry.title+if(entry.season>0) " · S${entry.season} E${entry.episode}" else "",color=Color.White,maxLines=2)
                         Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                            if(state.partyRole!=PartyRole.GUEST) FocusButton(if(state.queueStarting) tr("Cargando…","Loading…") else tr("Reproducir","Play")) {
+                                val req=state.playerRequest
+                                state.launch { state.socialAction { state.playQueued(req,entry);if(state.queueEntries.none { it.id==entry.id }) close() } }
+                            }
                             FocusButton("↑") { state.moveQueued(entry.id,-1) }
                             FocusButton("↓") { state.moveQueued(entry.id,1) }
                             FocusButton(tr("Eliminar","Remove")) { state.removeQueued(entry.id) }
@@ -124,6 +141,7 @@ fun QueueDialog(state: AppState, close: () -> Unit) {
                     }
                 }
             }
+            state.error?.let { Text(it,color=Color.White,maxLines=3) }
             Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
                 FocusButton(tr("Vaciar cola","Clear queue")) { state.clearQueue() }
                 FocusButton(tr("Cerrar","Close"),modifier=Modifier.focusRequester(first)) { close() }
@@ -159,6 +177,7 @@ fun CalendarDialog(state: AppState, close: () -> Unit) {
                 FocusButton(tr("Actualizar","Refresh")) { state.launch { state.socialAction { state.refreshCalendar() } } }
                 FocusButton(tr("Cerrar","Close")) { close() }
             }
+            state.error?.let { Text(it,color=Color.White,maxLines=3) }
             val days=List((month.get(Calendar.DAY_OF_WEEK)+5)%7) { 0 }+(1..month.getActualMaximum(Calendar.DAY_OF_MONTH)).toList()
             LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                 item { Text(tr("Selecciona un día para ver sus eventos","Select a day to see its events"),color=Muted) }
@@ -168,7 +187,7 @@ fun CalendarDialog(state: AppState, close: () -> Unit) {
                         group.forEach { n ->
                             val date="$prefix-${n.toString().padStart(2,'0')}"
                             val count=state.calendarEvents.count { eventLocal(it.starts).startsWith(date) }
-                            if(n==0) Spacer(Modifier.weight(1f)) else FocusButton("$n"+if(count>0) " •" else "",modifier=Modifier.weight(1f),primary=day==date) { day=if(day==date) null else date }
+                            if(n==0) Spacer(Modifier.weight(1f)) else FocusButton("$n"+if(count>0) " ⭐" else "",modifier=Modifier.weight(1f),primary=day==date) { day=if(day==date) null else date }
                         }
                         repeat(7-group.size) { Spacer(Modifier.weight(1f)) }
                     }
@@ -181,11 +200,7 @@ fun CalendarDialog(state: AppState, close: () -> Unit) {
                         Text(eventLocal(event.starts)+" · "+event.kind+if(event.season>0) " · S${event.season} E${event.episode}" else "",color=Muted)
                         Text(if(event.owner==state.session?.userId) tr("Organizado por ti","Organized by you")+" · ${event.guests.size} "+tr("invitados","guests") else tr("Te han invitado","You're invited"),color=Muted)
                         Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
-                            event.cloud?.let { cloud -> FocusButton(tr("Ver contenido","View title")) { state.launch { state.socialAction {
-                                val media=state.tmdb.byCloudId(cloud)
-                                    ?: throw IllegalStateException(tr("Contenido no disponible","Title unavailable"))
-                                state.open(media);close()
-                            } } } }
+                            if(event.cloud!=null || event.channelId.isNotBlank()) FocusButton(tr("Ver contenido","View title")) { state.launch { state.socialAction { state.openCalendarEvent(event);close() } } }
                             if(event.owner==state.session?.userId) FocusButton(tr("Eliminar evento","Delete event")) { state.launch { state.socialAction { state.deleteCalendarEvent(event.id) } } }
                         }
                     }
@@ -209,17 +224,71 @@ private fun CreateEventDialog(state: AppState, day: String?, close: () -> Unit) 
     var season by remember { mutableStateOf("1") };var episode by remember { mutableStateOf("1") }
     val guests=remember { mutableStateListOf<String>() }
     var saving by remember { mutableStateOf(false) }
+    var channel by remember { mutableStateOf<LiveChannel?>(null) }
+    var channels by remember { mutableStateOf<List<LiveChannel>>(emptyList()) }
+    var categories by remember { mutableStateOf<List<LiveCategory>>(emptyList()) }
+    var category by remember { mutableStateOf<LiveCategory?>(null) }
+    var offset by remember { mutableStateOf(0) }
+    var more by remember { mutableStateOf(false) }
+    var loading by remember { mutableStateOf(false) }
+    val repo=remember { LiveRepository() }
+    LaunchedEffect(kind) {
+        if(kind=="live" || kind=="sports") state.socialAction {
+            categories=repo.categories(state.calendarLiveManifest(kind));category=categories.firstOrNull()
+        }
+    }
+    LaunchedEffect(kind,category,query) {
+        val chosen=category
+        if((kind=="live" || kind=="sports") && chosen!=null) {
+            loading=true
+            try { state.socialAction {
+                kotlinx.coroutines.delay(300)
+                channels=repo.channels(state.calendarLiveManifest(kind),chosen,search=query)
+                offset=channels.size;more=chosen.paginated && channels.isNotEmpty()
+            } } finally { loading=false }
+        }
+    }
     Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         LazyColumn(Modifier.width(760.dp).heightIn(max=550.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
             item { Text(tr("Crear evento","Create event"),color=Color.White,fontSize=26.sp) }
-            item { Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) { listOf("movie" to tr("Película","Movie"),"series" to tr("Serie","Series"),"game" to tr("Juego","Game")).forEach { (k,name) -> FocusButton(name,primary=kind==k,modifier=if(k=="movie") Modifier.focusRequester(first) else Modifier) { kind=k;item=null } } } }
+            item { Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) { listOf("movie" to tr("Película","Movie"),"series" to tr("Serie","Series"),"live" to "Live TV","sports" to "Live Sports").forEach { (k,name) -> FocusButton(name,primary=kind==k,modifier=if(k=="movie") Modifier.focusRequester(first) else Modifier) { kind=k;item=null;channel=null;channels=emptyList();categories=emptyList();category=null;results=emptyList();query="" } } } }
             item { NativeTextField(title,{title=it},tr("Título del evento","Event title")) }
             item { NativeTextField(date,{date=it},"YYYY-MM-DD HH:mm") }
-            if(kind!="game") {
-                item { NativeTextField(query,{query=it},tr("Buscar contenido","Search titles"));FocusButton(tr("Buscar","Search")) { state.launch { state.socialAction { results=state.tmdb.search(query).filter { it.type==kind } } } } }
-                items(results.take(8),key={it.cloudId}) { result -> FocusButton(result.title,primary=item?.cloudId==result.cloudId) { item=result;title=result.title } }
+            if(kind=="movie" || kind=="series") {
+                item { NativeTextField(query,{query=it},tr("Buscar contenido","Search titles"));FocusButton(tr("Buscar","Search")) { state.launch { state.socialAction { val requestedKind=kind;val requestedQuery=query;val found=state.tmdb.search(requestedQuery).filter { it.type==requestedKind };if(kind==requestedKind && query==requestedQuery) results=found } } } }
+                items(results.chunked(3)) { row ->
+                    Row(Modifier.fillMaxWidth().padding(horizontal=8.dp,vertical=12.dp),horizontalArrangement=Arrangement.spacedBy(22.dp)) {
+                        row.forEach { result -> Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                            MediaCard(result,modifier=Modifier.fillMaxWidth()) { item=result;title=result.title }
+                            Text(result.title+" · "+result.year,color=if(item?.cloudId==result.cloudId) Color.White else Muted,maxLines=2)
+                        } }
+                        repeat(3-row.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                }
                 item { Text(tr("Contenido seleccionado","Selected title")+": "+item?.title.orEmpty(),color=Muted) }
                 if(kind=="series") item { Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) { NativeTextField(season,{season=it},tr("Temporada","Season"),modifier=Modifier.weight(1f));NativeTextField(episode,{episode=it},tr("Episodio","Episode"),modifier=Modifier.weight(1f)) } }
+            }
+            if(kind=="live" || kind=="sports") {
+                item { androidx.compose.foundation.lazy.LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(8.dp)) {
+                    items(categories,key={it.type+":"+it.id+":"+it.genre}) { c -> FocusButton(c.name,primary=category==c) { channel=null;category=c } }
+                } }
+                item { NativeTextField(query,{query=it},tr("Buscar canal o evento","Search channel or event")) }
+                if(loading) item { Text(tr("Cargando…","Loading…"),color=Muted) }
+                items(channels.filter { category?.searchable==true || query.isBlank() || it.name.contains(query,true) }.distinctBy { it.id },key={it.id}) { live ->
+                    Row(Modifier.fillMaxWidth().padding(8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
+                        AsyncImage(model=live.poster,contentDescription=null,modifier=Modifier.size(70.dp),contentScale=ContentScale.Fit)
+                        FocusButton(live.name,primary=channel?.id==live.id,modifier=Modifier.weight(1f)) { channel=live;title=live.name }
+                    }
+                }
+                if(more) item { FocusButton(tr("Cargar más","Load more")) { if(!loading) state.launch {
+                    loading=true
+                    try { state.socialAction { category?.let { c ->
+                        val requestedKind=kind;val requestedQuery=query;val requestedOffset=offset
+                        val next=repo.channels(state.calendarLiveManifest(requestedKind),c,requestedOffset,requestedQuery)
+                        if(kind==requestedKind && category==c && query==requestedQuery) { channels=(channels+next).distinctBy { it.id };offset=requestedOffset+next.size;more=next.isNotEmpty() }
+                    } } } finally { loading=false }
+                } } }
+                item { Text(tr("Seleccionado: ","Selected: ")+channel?.name.orEmpty(),color=Muted) }
             }
             item { Text(state.error.orEmpty(),color=Color.White) }
             item { Text(tr("Invitar amigos (máximo 20)","Invite friends (up to 20)"),color=Color.White) }
@@ -232,10 +301,10 @@ private fun CreateEventDialog(state: AppState, day: String?, close: () -> Unit) 
                 FocusButton(if(saving) tr("Guardando…","Saving…") else tr("Guardar evento","Save event")) { if(!saving) state.launch {
                     saving=true
                     try { state.socialAction {
-                        require(kind=="game" || item?.type==kind) { tr("Selecciona el contenido","Select a title") }
+                        require(if(kind=="live" || kind=="sports") channel!=null else item?.type==kind) { tr("Selecciona el contenido","Select a title") }
                         val s=if(kind=="series") season.toIntOrNull() ?: 0 else 0;val e=if(kind=="series") episode.toIntOrNull() ?: 0 else 0
                         require(kind!="series" || s>0 && e>0) { tr("Temporada/episodio inválidos","Invalid season/episode") }
-                        state.createCalendarEvent(title,kind,date,if(kind=="game") null else item?.cloudId,s,e,guests.toList());close()
+                        state.createCalendarEvent(title,kind,date,if(kind=="live" || kind=="sports") null else item?.cloudId,s,e,guests.toList(),channel);close()
                     } } finally { saving=false }
                 } }
                 FocusButton(tr("Cancelar","Cancel")) { close() }

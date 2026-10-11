@@ -178,12 +178,13 @@ internal fun PlayerOptionsDialog(menu: String, player: Player, tracks: Tracks, s
                         } }
                         var count=0
                         tracks.groups.filter { it.type==type }.forEach { group ->
-                            for(index in 0 until group.length) if(group.isTrackSupported(index)) {
+                            for(index in 0 until group.length) {
                                 count++
                                 val format=group.getTrackFormat(index)
+                                val supported=group.isTrackSupported(index)
                                 val label=listOfNotNull(format.label?.takeIf { it.isNotBlank() },format.language?.takeIf { it.isNotBlank() },format.codecs?.takeIf { it.isNotBlank() },if(format.channelCount>0) "${format.channelCount} ch" else null).distinct().joinToString(" · ").ifBlank { "${tr("Pista","Track")} $count" }
-                                item { FocusButton("${if(group.isTrackSelected(index)) "✓ " else ""}$label",modifier=Modifier.fillMaxWidth()) {
-                                    player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(type,false).setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup,index)).build();onClose()
+                                item { FocusButton("${if(group.isTrackSelected(index)) "✓ " else ""}$label${if(!supported) tr(" · No compatible con esta TV"," · Unsupported on this TV") else ""}",modifier=Modifier.fillMaxWidth()) {
+                                    if(supported) { player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(type,false).setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup,index)).build();onClose() }
                                 } }
                             }
                         }

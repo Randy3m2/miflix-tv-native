@@ -116,6 +116,60 @@ class AppState(context: Context) {
         audioLanguage = audio; subtitleLanguage = subtitle; autoplayNext = autoplay
         playbackPrefs.edit().putString("audio",audio).putString("subtitle",subtitle).putBoolean("autoplay",autoplay).apply()
     }
+    private var queueRevision by mutableStateOf(0)
+    private fun queueKey()="queue_${session?.userId ?: "local"}_${activeProfile.id}"
+    val queueEntries: List<QueueEntry> get() {
+        queueRevision
+        val a=runCatching { org.json.JSONArray(playbackPrefs.getString(queueKey(),"[]")) }.getOrDefault(org.json.JSONArray())
+        return (0 until a.length()).mapNotNull { i -> runCatching { val x=a.getJSONObject(i); QueueEntry(x.getString("id"),x.getString("cloud"),x.getString("title"),x.optInt("season"),x.optInt("episode")) }.getOrNull() }
+    }
+    private fun saveQueue(rows: List<QueueEntry>) {
+        val a=org.json.JSONArray();rows.forEach { x -> a.put(org.json.JSONObject().put("id",x.id).put("cloud",x.cloud).put("title",x.title).put("season",x.season).put("episode",x.episode)) }
+        playbackPrefs.edit().putString(queueKey(),a.toString()).apply();queueRevision++
+    }
+    fun enqueue(item: MediaSummary, season: Int=0, episode: Int=0) {
+        require(queueEntries.size<100) { tr("La cola permite hasta 100 contenidos","Queue supports up to 100 titles") }
+        saveQueue(queueEntries+QueueEntry(UUID.randomUUID().toString(),item.cloudId,item.title,season,episode))
+    }
+    fun removeQueued(id: String)=saveQueue(queueEntries.filterNot { it.id==id })
+    fun clearQueue()=saveQueue(emptyList())
+    fun moveQueued(id: String, delta: Int) {
+        val rows=queueEntries.toMutableList();val i=rows.indexOfFirst { it.id==id };val target=i+delta
+        if(i>=0 && target in rows.indices) { java.util.Collections.swap(rows,i,target);saveQueue(rows) }
+    }
+    suspend fun playQueued(req: PlayerRequest, entry: QueueEntry) {
+        if(partyRole==PartyRole.GUEST || playerRequest?.playbackId!=req.playbackId) return
+        val owner=queueKey();val item=tmdb.byCloudId(entry.cloud);val d=tmdb.details(item)
+        if(partyRole==PartyRole.GUEST || owner!=queueKey() || playerRequest?.playbackId!=req.playbackId || queueEntries.none { it.id==entry.id }) return
+        val imdb=d.imdbId ?: throw IllegalStateException(tr("IMDb no disponible","IMDb unavailable"))
+        var started: PlayerRequest?=null
+        playResolved(item,imdb,entry.season,entry.episode,resumeOverride=0,onStarted={ newRequest ->
+            if(owner==queueKey()) { started=newRequest;selected=item;details=d;currentSeason=entry.season;removeQueued(entry.id) }
+        })
+        val active=started ?: return
+        if(item.type=="series") {
+            val rows=runCatching { tmdb.season(item.id,entry.season) }.getOrDefault(emptyList())
+            if(owner==queueKey() && playerRequest?.playbackId==active.playbackId) { episodes.clear();episodes.addAll(rows) }
+        }
+    }
+
+    val calendarEvents=mutableStateListOf<CalendarEvent>()
+    suspend fun refreshCalendar() {
+        val owner=session ?: return
+        val events=social.calendar(owner)
+        if(session?.userId==owner.userId) { calendarEvents.clear();calendarEvents.addAll(events) }
+    }
+    suspend fun createCalendarEvent(title: String, kind: String, date: String, cloud: String?, season: Int, episode: Int, guests: List<String>) {
+        val owner=session ?: throw IllegalStateException(tr("Inicia sesión","Sign in first"))
+        require(title.trim().isNotEmpty() && title.length<=160) { tr("Escribe un título","Enter a title") }
+        val parser=java.text.SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.US).apply { isLenient=false }
+        val value=parser.parse(date) ?: throw IllegalArgumentException(tr("Fecha inválida","Invalid date"))
+        require(parser.format(value)==date) { tr("Usa YYYY-MM-DD HH:mm","Use YYYY-MM-DD HH:mm") }
+        val utc=java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'",Locale.US).apply { timeZone=java.util.TimeZone.getTimeZone("UTC") }
+        social.createCalendar(owner,title.trim(),kind,utc.format(value),cloud,season,episode,guests)
+        refreshCalendar()
+    }
+    suspend fun deleteCalendarEvent(id: String) { session?.let { social.deleteCalendar(it,id);refreshCalendar() } }
     private fun noticesKey() = "notices_${session?.userId ?: "local"}_${activeProfile.id}"
     private fun knownKey() = "known_${session?.userId ?: "local"}_${activeProfile.id}"
     private fun persistNotices() {
@@ -513,6 +567,7 @@ class AppState(context: Context) {
             sourceSelection=null
             playerRequest=null
             detachParty()
+            calendarEvents.clear()
             session = it
             local.saveSession(it)
             syncFromCloud()
@@ -895,18 +950,18 @@ class AppState(context: Context) {
         } catch(e: CancellationException) { throw e } catch(e: Exception) { if(generation==playbackWork.generation) error=e.message } finally { randomChoosing=false; if(generation==playbackWork.generation) busyMessage=null }
     }
 
-    suspend fun playMovie() {
+    suspend fun playMovie(fromStart: Boolean=false) {
         val item = selected ?: return
         val d = details ?: tmdb.details(item).also { details = it }
         val imdb = d.imdbId ?: throw IllegalStateException(tr("IMDb ID no disponible","IMDb ID unavailable"))
-        playResolved(item, imdb, 0, 0)
+        playResolved(item, imdb, 0, 0,if(fromStart) 0L else null)
     }
 
-    suspend fun playEpisode(ep: EpisodeSummary) {
+    suspend fun playEpisode(ep: EpisodeSummary, fromStart: Boolean=false) {
         val item = selected ?: return
         val d = details ?: tmdb.details(item).also { details = it }
         val imdb = d.imdbId ?: throw IllegalStateException(tr("IMDb ID no disponible","IMDb ID unavailable"))
-        playResolved(item, imdb, ep.season, ep.episode)
+        playResolved(item, imdb, ep.season, ep.episode,if(fromStart) 0L else null)
     }
 
     suspend fun switchPlayerEpisode(ep: EpisodeSummary) {
@@ -929,7 +984,7 @@ class AppState(context: Context) {
         val item = selected ?: return
         val d = details ?: tmdb.details(item).also { details = it }
         val imdb = d.imdbId ?: throw IllegalStateException(tr("IMDb ID no disponible","IMDb ID unavailable"))
-        playResolved(item, imdb, 1, 1)
+        playResolved(item, imdb, 1, 1,resumeOverride=0)
     }
 
     suspend fun chooseEpisodeSources(ep: EpisodeSummary) {
@@ -995,7 +1050,7 @@ class AppState(context: Context) {
         return subtitleRepo.resolve(imdb,req.item.type,req.season,req.episode,req.stream)
     }
 
-    private suspend fun playResolved(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeOverride: Long? = null, selectedStream: StreamChoice? = null) = coroutineScope {
+    private suspend fun playResolved(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeOverride: Long? = null, selectedStream: StreamChoice? = null, onStarted: ((PlayerRequest) -> Unit)? = null) = coroutineScope {
         val ticket=playbackWork.begin()
         val playbackOwner=session?.userId; val playbackProfile=activeProfile.id
         fun valid()=playbackWork.current(ticket) && session?.userId==playbackOwner && activeProfile.id==playbackProfile
@@ -1026,6 +1081,7 @@ class AppState(context: Context) {
             val saved = progress[key] ?: progress[item.cloudId]
             playerRequest = PlayerRequest(item, enriched, season, episode, resumeOverride ?: saved?.position ?: 0L)
             screen = Screen.PLAYER
+            playerRequest?.let { onStarted?.invoke(it) }
         }.onFailure { if(it is CancellationException) throw it; if(valid()) error=it.message }
         if(valid()) busyMessage=null
     }
@@ -1382,7 +1438,7 @@ class AppState(context: Context) {
         setAccountManifests(emptyList()); sourceSelection=null; playerRequest=null
         watchParty=null; partyRole=null; nickname=""
         partyMessages.clear(); floatingEvents.clear(); partyMembers.clear()
-        friendRows.clear(); friendPeople.clear(); friendActivity.clear(); accessRequests.clear(); pendingPartyCode=null; lastEventId=-1
+        calendarEvents.clear();friendRows.clear(); friendPeople.clear(); friendActivity.clear(); accessRequests.clear(); pendingPartyCode=null; lastEventId=-1
         traktConnected=false; traktDevice=null; traktSent.clear()
         session = null
         local.saveSession(null)

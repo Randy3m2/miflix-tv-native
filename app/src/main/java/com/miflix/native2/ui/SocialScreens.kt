@@ -48,6 +48,7 @@ fun FriendsScreen(state: AppState) {
     var search by remember { mutableStateOf("") }
     var person by remember { mutableStateOf<FriendActivity?>(null) }
     var manage by remember { mutableStateOf(false) }
+    var calendar by remember { mutableStateOf(false) }
     var refreshing by remember { mutableStateOf(false) }
     BackHandler { state.screen=Screen.HOME }
     val contentFocus=remember { FocusRequester() }
@@ -71,6 +72,7 @@ fun FriendsScreen(state: AppState) {
                 item {
                     Row(horizontalArrangement=Arrangement.spacedBy(16.dp)) {
                         listOf(tr("Amigos","Friends"),tr("Salas","Parties"),tr("Solicitudes","Requests")).forEachIndexed { index,label -> FocusButton(label,primary=tab==index) { tab=index } }
+                        FocusButton(tr("Calendario","Calendar")) { calendar=true }
                         FocusButton(tr("Mi nickname / frases","My nickname / Phrases")) { manage=true }
                     }
                 }
@@ -119,6 +121,7 @@ fun FriendsScreen(state: AppState) {
         }
     }
     if(manage) SocialSettingsDialog(state) { manage=false }
+    if(calendar) CalendarDialog(state) { calendar=false }
 }
 
 @Composable

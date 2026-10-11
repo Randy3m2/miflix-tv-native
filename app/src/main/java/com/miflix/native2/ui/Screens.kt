@@ -448,11 +448,28 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
     val details = state.details
     val saved = state.progress[item.cloudId]
     var showRating by remember(item.cloudId) { mutableStateOf(false) }
+    var episodeChoice by remember(item.cloudId) { mutableStateOf<EpisodeSummary?>(null) }
+    var showQueueAdd by remember(item.cloudId) { mutableStateOf(false) }
+    var showQueue by remember { mutableStateOf(false) }
     val detailScroll=rememberLazyListState()
     val playFocus = remember(item.cloudId) { FocusRequester() }
     LaunchedEffect(item.cloudId) { delay(150); playFocus.requestFocus(); detailScroll.scrollToItem(0) }
     BackHandler(onBack = onBack)
     if(showRating) RatingDialog(state,item) { showRating=false }
+    episodeChoice?.let { ep ->
+        Dialog(onDismissRequest={ episodeChoice=null }) {
+            Column(Modifier.width(530.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                Text("S${ep.season} E${ep.episode} · ${ep.title}",color=Color.White,fontSize=22.sp)
+                val resume=state.progress["${item.cloudId}:s${ep.season}e${ep.episode}"]
+                if((resume?.position ?: 0L)>0 && (resume?.percent ?: 0.0)<96) FocusButton(tr("Continuar viendo","Continue watching")) { state.launch { state.socialAction { state.playEpisode(ep);episodeChoice=null } } }
+                FocusButton(tr("Desde el principio","Play from beginning")) { state.launch { state.socialAction { state.playEpisode(ep,true);episodeChoice=null } } }
+                FocusButton(tr("Añadir a cola","Add to queue")) { state.enqueue(item,ep.season,ep.episode);episodeChoice=null }
+                FocusButton(tr("Cancelar","Cancel")) { episodeChoice=null }
+            }
+        }
+    }
+    if(showQueueAdd) QueueAddDialog(state,item) { showQueueAdd=false }
+    if(showQueue) QueueDialog(state) { showQueue=false }
 
     Box(Modifier.fillMaxSize().background(Bg)) {
         AsyncImage(item.backdrop, null, Modifier.fillMaxWidth().height(590.dp).align(Alignment.TopCenter), contentScale = ContentScale.Crop)
@@ -496,6 +513,9 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                                 state.launch { runCatching { if (canResume) state.resumeSeries() else state.playSeriesFromStart() }.onFailure { state.error = it.message } }
                             }
                         }
+                        FocusButton(tr("Desde el principio","Play from beginning")) { state.launch { runCatching { if(item.type=="movie") state.playMovie(true) else state.playSeriesFromStart() }.onFailure { state.error=it.message } } }
+                        FocusButton(tr("+ Añadir a cola","+ Add to queue")) { if(item.type=="series") showQueueAdd=true else state.enqueue(item) }
+                        FocusButton(tr("Ver cola","View queue")+" · ${state.queueEntries.size}") { showQueue=true }
                         FocusButton(if (state.favorites.contains(item.cloudId)) tr("✓ Mi lista","✓ My List") else tr("+ Mi lista","+ My List")) {
                             state.toggleFavorite(item); state.launch { runCatching { state.pushCloud() } }
                         }
@@ -520,7 +540,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                     Spacer(Modifier.height(12.dp))
                     LazyRow(modifier = Modifier.fillMaxWidth().height(236.dp), contentPadding = PaddingValues(end = 54.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(state.episodes, key = { "${it.season}:${it.episode}" }) { ep ->
-                            EpisodeCard(ep, onLongClick = { state.launch { state.chooseEpisodeSources(ep) } }) { state.launch { runCatching { state.playEpisode(ep) }.onFailure { state.error = it.message } } }
+                            EpisodeCard(ep, onLongClick = { state.launch { state.chooseEpisodeSources(ep) } }) { episodeChoice=ep }
                         }
                     }
                     Spacer(Modifier.height(28.dp))
@@ -984,7 +1004,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var surfaceGeneration by remember(request.playbackId) { mutableStateOf(0) }
     var tracks by remember(request.playbackId) { mutableStateOf(androidx.media3.common.Tracks.EMPTY) }
     var showPartyActions by remember { mutableStateOf(false) }
+    var showQueue by remember { mutableStateOf(false) }
     var creatingParty by remember { mutableStateOf(false) }
+    var introDismissed by remember(request.playbackId) { mutableStateOf(false) }
     var showAccessRequests by remember { mutableStateOf(false) }
     var showEpisodes by remember(request.playbackId) { mutableStateOf(false) }
     var episodesResumeAfterClose by remember(request.playbackId) { mutableStateOf(false) }
@@ -1047,16 +1069,11 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }
     }
 
-    fun openPlayerParty() {
-        if(state.watchParty!=null) showPartyActions=true
-        else if(!creatingParty) {
+    fun openPlayerParty() { showPartyActions=true }
+    fun createPlayerParty() {
+        if(!creatingParty) {
             creatingParty=true
-            state.launch { try {
-                if(state.createWatchParty(true)!=null) {
-                    state.hostPartyUpdate(request,player.currentPosition,player.playWhenReady)
-                    showPartyActions=true
-                }
-            } finally { creatingParty=false } }
+            state.launch { try { if(state.createWatchParty(true)!=null) state.hostPartyUpdate(request,player.currentPosition,player.playWhenReady) } finally { creatingParty=false } }
         }
     }
 
@@ -1081,11 +1098,17 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         pauseSynopsis = false
         if(paused) { delay(5000); if(!pauseInfoDismissed) pauseSynopsis = true }
     }
-    LaunchedEffect(ended,upcoming,cancelAutoplay,state.autoplayNext) {
-        if(ended && upcoming != null && state.autoplayNext && !cancelAutoplay && state.partyRole != PartyRole.GUEST) {
-            countdown = 10
-            while(countdown > 0) { delay(1000); countdown-- }
-            state.launch { runCatching { state.playNext(request,upcoming!!) }.onFailure { state.error=it.message } }
+    val queueNext=state.queueEntries.firstOrNull()
+    var queueSynopsis by remember(queueNext?.id) { mutableStateOf("") }
+    LaunchedEffect(queueNext?.id) {
+        queueNext?.let { entry -> queueSynopsis=runCatching { val nextItem=state.tmdb.byCloudId(entry.cloud);if(entry.season>0) state.tmdb.episodeInfo(nextItem,entry.season,entry.episode)?.overview.orEmpty() else nextItem.overview }.getOrDefault("") }
+    }
+    LaunchedEffect(ended,upcoming,queueNext?.id,cancelAutoplay,state.autoplayNext,rateAtEnd) {
+        if(ended && !rateAtEnd && !cancelAutoplay && state.partyRole!=PartyRole.GUEST && (queueNext!=null || upcoming!=null && state.autoplayNext)) {
+            countdown=10
+            while(countdown>0) { delay(1000);countdown-- }
+            cancelAutoplay=true
+            state.launch { runCatching { if(queueNext!=null) state.playQueued(request,queueNext) else upcoming?.let { state.playNext(request,it) } }.onFailure { state.error=it.message } }
         }
     }
     LaunchedEffect(player) { showEpisodes = false }
@@ -1201,7 +1224,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
 
     // Explicit timer also covers controls holding focus on TV remotes.
     LaunchedEffect(player, controlInteraction, showEpisodes, showPartyActions, showAccessRequests, state.sourceSelection, playerMenu, paused, ended, playbackError) {
-        if (playbackError==null && !paused && !ended && playerMenu == null && !showEpisodes && !showPartyActions && !showAccessRequests && state.sourceSelection == null) {
+        if (playbackError==null && !paused && !ended && playerMenu == null && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && state.sourceSelection == null) {
             delay(3000)
             controlsVisible = false
             surfaceFocus.requestFocus()
@@ -1209,7 +1232,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     }
 
     LaunchedEffect(controlsVisible, showEpisodes, showPartyActions, showAccessRequests, playerMenu, state.sourceSelection, pauseSynopsis, pauseInfoDismissed, ended, playbackError) {
-        if(playbackError==null && controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !ended && !showEpisodes && !showPartyActions && !showAccessRequests && playerMenu == null && state.sourceSelection == null) {
+        if(playbackError==null && controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !ended && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu == null && state.sourceSelection == null) {
             withFrameNanos { }; playFocus.requestFocus()
         }
     }
@@ -1231,7 +1254,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         else if (dismissKey == code) {
             if (event.type == KeyEventType.KeyUp) dismissKey = null
             true
-        } else if (event.type == KeyEventType.KeyDown && !showEpisodes && !showPartyActions && !showAccessRequests && playerMenu == null && state.sourceSelection == null) {
+        } else if (event.type == KeyEventType.KeyDown && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu == null && state.sourceSelection == null) {
             val wasHidden = !controlsVisible
             controlsVisible = true
             controlInteraction++
@@ -1329,7 +1352,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 party=state.watchParty!=null,onParty={ openPlayerParty() },onClose=onClose, onMaximize={ maximized=!maximized },
                 nextAvailable=upcoming!=null && state.partyRole!=PartyRole.GUEST,
                 onNext={ upcoming?.let { next -> cancelAutoplay=true; state.launch { runCatching { state.playNext(request,next) }.onFailure { state.error=it.message } } } },
-                onEpisodes={ episodesResumeAfterClose=false; showEpisodes=true })
+                onEpisodes={ episodesResumeAfterClose=false; showEpisodes=true },onQueue={ showQueue=true })
         }
         if(showAccessRequests) {
             Dialog(onDismissRequest={ showAccessRequests=false },properties=DialogProperties(usePlatformDefaultWidth=false)) {
@@ -1369,14 +1392,14 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             Column(Modifier.align(Alignment.BottomEnd).padding(end=35.dp,bottom=100.dp)
                 .background(Color(0xAA000000),RoundedCornerShape(12.dp)).padding(14.dp)) {
                 Text("${tr("Hora","Time")} · $clock",color=Color(0xFFE0E0E0),fontSize=19.sp, lineHeight=23.sp)
-                Text(if(request.live || durationMs <= 0) remainingText else "${tr("Restante","Remaining")} · $remainingText",color=Color(0xFFE0E0E0),fontSize=19.sp, lineHeight=23.sp)
+                Text(if(request.live || durationMs <= 0) remainingText else "${tr("Termina a las","Ends at")} · "+android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(clockNow+((durationMs-positionMs).coerceAtLeast(0)/speed.coerceAtLeast(0.1f)).toLong())),color=Color(0xFFE0E0E0),fontSize=19.sp, lineHeight=23.sp)
             }
         }
-        if(!ended && !showEpisodes && state.partyRole != PartyRole.GUEST && durationMs > 0) {
+        if(!ended && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu==null && state.sourceSelection==null && state.partyRole != PartyRole.GUEST && durationMs > 0) {
             val intro = segments.intro?.takeIf { it.endMs <= durationMs && positionMs >= it.startMs && positionMs < it.endMs }
             val credits = segments.outro?.takeIf { it.startMs < durationMs && positionMs >= it.startMs && positionMs < it.endMs }
             if(intro != null || credits != null) Box(Modifier.align(Alignment.BottomEnd).padding(end=30.dp,bottom=100.dp)) {
-                if(intro != null) FocusButton(tr("Saltar introducción","Skip Intro"),primary=true) { player.seekTo(intro.endMs) }
+                if(intro != null && !introDismissed) SkipIntroDialog({ introDismissed=true;player.seekTo(intro.endMs) }) { introDismissed=true }
                 else if(credits != null) FocusButton(tr("Saltar créditos","Skip Credits"),primary=true) {
                     val post = segments.postCredits?.startMs?.takeIf { it > positionMs && it < durationMs }
                     player.seekTo(post ?: credits.endMs.coerceAtMost(durationMs))
@@ -1384,12 +1407,22 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
         }
         if(rateAtEnd) RatingDialog(state,request.item) { rateAtEnd=false; state.launch { recommendations=state.recommendationsFor(request.item) } }
-        if(ended && state.partyRole != PartyRole.GUEST && !rateAtEnd) {
+        if(ended && state.partyRole != PartyRole.GUEST && !rateAtEnd && !showQueue && !showPartyActions) {
             Dialog(onDismissRequest={ cancelAutoplay=true; onClose() },properties=DialogProperties(usePlatformDefaultWidth=false)) {
                 Column(Modifier.width(850.dp).heightIn(max=600.dp).background(Color(0xF00B0B0B),RoundedCornerShape(20.dp)).padding(25.dp)) {
                     Text("${tr("Terminaste","You finished")} ${request.item.title}",color=Color.White,fontSize=26.sp, lineHeight=31.sp)
-                    upcoming?.let { next ->
+                    queueNext?.let { entry ->
+                        Text(tr("Siguiente en tu cola","Next in your queue")+": "+entry.title+if(entry.season>0) " · S${entry.season} E${entry.episode}" else "",color=Color.White,fontSize=20.sp)
+                        Text(queueSynopsis,color=Color.White,fontSize=15.sp,lineHeight=20.sp,maxLines=4)
+                        Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                            FocusButton(if(!cancelAutoplay) "${tr("Reproducir cola","Play queue")} · ${countdown}s" else tr("Reproducir cola","Play queue")) { cancelAutoplay=true;state.launch { state.socialAction { state.playQueued(request,entry) } } }
+                            FocusButton(tr("Cancelar","Cancel")) { cancelAutoplay=true }
+                            FocusButton(tr("Editar cola","Edit queue")) { cancelAutoplay=true;showQueue=true }
+                        }
+                    }
+                    if(queueNext==null) upcoming?.let { next ->
                         Text("${tr("Siguiente","Next")}: S${next.season} E${next.episode} · ${next.title}",color=Muted)
+                        Text(next.overview,color=Color.White,fontSize=15.sp,lineHeight=20.sp,maxLines=4)
                         Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                             FocusButton(if(state.autoplayNext && !cancelAutoplay) "${tr("Siguiente episodio","Next episode")} · ${countdown}s" else tr("Siguiente episodio","Next episode"),primary=true) { cancelAutoplay=true; state.launch { state.playNext(request,next) } }
                             FocusButton(tr("Cancelar reproducción automática","Cancel autoplay")) { cancelAutoplay=true }
@@ -1408,7 +1441,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 }
             }
         }
-        if (showPartyActions) PartyActionsDialog(state) { showPartyActions = false }
+        if (showPartyActions) PlayerSocialDialog(state,{ createPlayerParty() }) { showPartyActions=false }
+        if(showQueue) QueueDialog(state) { showQueue=false }
         if (state.watchParty != null && state.floatingEvents.isNotEmpty()) {
             Column(Modifier.align(Alignment.CenterEnd).padding(30.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                 state.floatingEvents.toList().forEach { event ->

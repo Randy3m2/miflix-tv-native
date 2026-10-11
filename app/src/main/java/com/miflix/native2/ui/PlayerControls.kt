@@ -52,7 +52,7 @@ internal fun CompactPlayerControls(
     maximized: Boolean, playFocus: FocusRequester, onInteraction: () -> Unit, onPlay: () -> Unit,
     onResize: () -> Unit, onMenu: (String) -> Unit, onLinks: () -> Unit, onSeek: (Long) -> Unit,
     seekable: Boolean, party: Boolean, onParty: () -> Unit, onClose: () -> Unit, onMaximize: () -> Unit,
-    nextAvailable: Boolean, onNext: () -> Unit, onEpisodes: () -> Unit
+    nextAvailable: Boolean, onNext: () -> Unit, onEpisodes: () -> Unit, onQueue: () -> Unit
 ) {
     val seekFocus=remember { FocusRequester() }
     var focusedLabel by remember { mutableStateOf("") }
@@ -86,8 +86,9 @@ internal fun CompactPlayerControls(
                 PlayerIconButton("audio",tr("Pista de audio","Audio track"),onInteraction=onInteraction,onClick={onMenu("audio")},onLabel={ focusedLabel=it })
                 PlayerIconButton("links",tr("Enlaces de reproducción","Playback links"),onInteraction=onInteraction,onClick=onLinks,onLabel={ focusedLabel=it })
                 PlayerIconButton("party",if(party) tr("Mi Party","My Party") else tr("Crear Party","Create Party"),onInteraction=onInteraction,onClick=onParty,onLabel={ focusedLabel=it })
+                PlayerIconButton("queue",tr("Cola","Queue"),onInteraction=onInteraction,onClick=onQueue,onLabel={ focusedLabel=it })
                 Spacer(Modifier.weight(1f))
-                Text(if(duration>0) "${playbackTime(position)} / ${playbackTime(duration)}" else if(request.live) tr("EN VIVO","LIVE") else playbackTime(position),
+                Text(if(duration>0) "${tr("Termina","Ends")} " + java.text.SimpleDateFormat("HH:mm",java.util.Locale.getDefault()).format(java.util.Date(System.currentTimeMillis()+((duration-position).coerceAtLeast(0)/speed.coerceAtLeast(0.1f)).toLong())) else if(request.live) tr("EN VIVO","LIVE") else playbackTime(position),
                     color=Color.White,fontSize=14.sp,lineHeight=18.sp)
             }
         }
@@ -116,6 +117,7 @@ private fun PlayerGlyph(icon: String, color: Color, modifier: Modifier) {
             "play" -> drawPath(Path().apply { moveTo(w*.28f,h*.15f); lineTo(w*.85f,h*.5f); lineTo(w*.28f,h*.85f); close() },color)
             "pause" -> { drawRect(color,Offset(w*.22f,h*.17f),Size(w*.18f,h*.66f)); drawRect(color,Offset(w*.60f,h*.17f),Size(w*.18f,h*.66f)) }
             "next" -> { drawPath(Path().apply { moveTo(w*.16f,h*.15f);lineTo(w*.70f,h*.5f);lineTo(w*.16f,h*.85f);close() },color);drawRect(color,Offset(w*.76f,h*.15f),Size(w*.10f,h*.70f)) }
+            "queue" -> { line(.12f,.2f,.88f,.2f);line(.12f,.5f,.70f,.5f);line(.12f,.8f,.55f,.8f);line(.78f,.64f,.78f,.94f);line(.64f,.79f,.92f,.79f) }
             "episodes" -> { rectangle(.08f,.12f,.24f,.20f);rectangle(.08f,.42f,.24f,.20f);rectangle(.08f,.72f,.24f,.20f);line(.46f,.22f,.92f,.22f);line(.46f,.52f,.92f,.52f);line(.46f,.82f,.92f,.82f) }
             "close" -> { line(.2f,.2f,.8f,.8f); line(.8f,.2f,.2f,.8f) }
             "maximize" -> { line(.1f,.35f,.1f,.1f);line(.1f,.1f,.35f,.1f);line(.65f,.1f,.9f,.1f);line(.9f,.1f,.9f,.35f);line(.9f,.65f,.9f,.9f);line(.9f,.9f,.65f,.9f);line(.35f,.9f,.1f,.9f);line(.1f,.9f,.1f,.65f) }

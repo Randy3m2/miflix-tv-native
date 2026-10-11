@@ -8,6 +8,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -126,6 +129,17 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         }
         AvatarUploadDialog(state)
         PartyRequestPopup(state)
+        if(state.partyClosedNotice) {
+            Dialog(onDismissRequest={ state.partyClosedNotice=false }) {
+                val confirm=remember { FocusRequester() }
+                LaunchedEffect(Unit) { withFrameNanos { };confirm.requestFocus() }
+                Column(Modifier.width(480.dp).background(Color(0xFF252525),RoundedCornerShape(20.dp)).padding(28.dp),
+                    verticalArrangement=Arrangement.spacedBy(22.dp)) {
+                    Text(tr("El party fue cerrado","The party was closed"),color=Color.White,fontSize=24.sp)
+                    FocusButton("OK",modifier=Modifier.focusRequester(confirm)) { state.partyClosedNotice=false }
+                }
+            }
+        }
     }
 }
 }

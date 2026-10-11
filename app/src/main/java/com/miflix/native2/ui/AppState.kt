@@ -75,6 +75,25 @@ class AppState(context: Context) {
         if(tmdb.token.isNotBlank()) loadHome()
     }
     private val playbackWork = PlaybackWorkGate()
+    private var activeSourceJob: kotlinx.coroutines.Job? = null
+    private suspend fun beginSourceWork(): PlaybackWorkGate.Ticket {
+        val current=kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]
+        if(activeSourceJob!==current) activeSourceJob?.cancel()
+        activeSourceJob=current
+        val pending=playbackSubtitleJobs.filterValues { !it.isCompleted || it.isCancelled }.keys.toList()
+        pending.forEach { playbackSubtitleJobs.remove(it)?.cancel() }
+        return playbackWork.begin()
+    }
+    fun recoverPlayback(req: PlayerRequest, position: Long, playing: Boolean, automatic: Boolean): Boolean {
+        if(screen!=Screen.PLAYER || playerRequest?.playbackId!=req.playbackId) return false
+        if(automatic && req.recoveryAttempt>=2) return false
+        invalidatePlaybackWork()
+        error=null
+        playerRequest=req.copy(resumeMs=if(req.live) 0L else position.coerceAtLeast(0),
+            playbackId=UUID.randomUUID().toString(),recoveryAttempt=if(automatic) req.recoveryAttempt+1 else 0,
+            resumePlaying=playing)
+        return true
+    }
     private var partyEpoch = 0L
     private var switchingPartyEpoch: Long? = null
     var streamSizeLimitGb by mutableStateOf((playbackPrefs.getString("stream_size_gb","0")?.toDoubleOrNull() ?: 0.0))
@@ -87,11 +106,13 @@ class AppState(context: Context) {
         invalidatePlaybackWork()
     }
     private fun invalidatePlaybackWork() {
+        activeSourceJob?.cancel();activeSourceJob=null
         playbackWork.invalidate(); sourceSelection=null; busyMessage=null
         playbackSubtitleJobs.values.forEach { it.cancel() }; playbackSubtitleJobs.clear()
     }
     private fun sameParty(epoch: Long, owner: String, room: String): Boolean =
         partyEpoch==epoch && session?.userId==owner && watchParty?.roomCode==room
+    var partyClosedNotice by mutableStateOf(false)
     var partyJoinedNotice by mutableStateOf<String?>(null)
     private var joinedNoticeSequence=0L
     private var knownPartyMembers: Set<String>? = null
@@ -1044,16 +1065,16 @@ class AppState(context: Context) {
             if (item.type == "series") (if (resume) saved!!.episode else 1) else 0)
     }
 
-    private suspend fun chooseSources(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeMs: Long? = null) {
-        val ticket=playbackWork.begin(); val owner=session?.userId; val profile=activeProfile.id
+    private suspend fun chooseSources(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeMs: Long? = null) = coroutineScope {
+        val ticket=beginSourceWork(); val owner=session?.userId; val profile=activeProfile.id
         fun valid()=playbackWork.current(ticket) && session?.userId==owner && activeProfile.id==profile
         sourceSelection=null; busyMessage=tr("Buscando todos los enlaces…","Finding all playback links…"); error=null
         try {
-            val links=streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title)
-            if(!valid()) return
+            val links=kotlinx.coroutines.withTimeout(25000) { streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title) }
+            if(!valid()) return@coroutineScope
             if(links.isEmpty()) error=tr("No hay enlaces que cumplan los filtros. Revisa Size Limit en Settings.","No links match your filters. Check Size Limit in Settings.")
             else sourceSelection=SourceSelection(item,imdb,season,episode,links,resumeMs,ticket.generation,ticket.sequence)
-        } catch(e: CancellationException) { throw e } catch(e: Exception) { if(valid()) error=e.message } finally { if(valid()) busyMessage=null }
+        } catch(e: kotlinx.coroutines.TimeoutCancellationException) { if(valid()) error=tr("La búsqueda tardó demasiado. Intenta otro enlace.","Source search timed out. Try another link.") } catch(e: CancellationException) { throw e } catch(e: Exception) { if(valid()) error=e.message } finally { if(valid()) busyMessage=null }
     }
 
     suspend fun playSelectedSource(selection: SourceSelection, stream: StreamChoice) {
@@ -1093,12 +1114,13 @@ class AppState(context: Context) {
     }
 
     private suspend fun playResolved(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeOverride: Long? = null, selectedStream: StreamChoice? = null, onStarted: ((PlayerRequest) -> Unit)? = null) = coroutineScope {
-        val ticket=playbackWork.begin()
+        val ticket=beginSourceWork()
         val playbackOwner=session?.userId; val playbackProfile=activeProfile.id
         fun valid()=playbackWork.current(ticket) && session?.userId==playbackOwner && activeProfile.id==playbackProfile
         busyMessage = tr("Buscando el mejor enlace…","Finding the best source…")
         error = null
-        val streamsJob = async { if (selectedStream != null) listOf(selectedStream).filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) } else streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title) }
+        try {
+        val streamsJob = async { kotlinx.coroutines.withTimeout(25000) { if (selectedStream != null) listOf(selectedStream).filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) } else streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title) } }
         val subtitleKey=subtitleKey(item,season,episode)
         if(playbackSubtitleJobs.size>=16 && subtitleKey !in playbackSubtitleJobs) {
             val oldest=playbackSubtitleJobs.keys.first(); playbackSubtitleJobs.remove(oldest)?.cancel()
@@ -1125,7 +1147,7 @@ class AppState(context: Context) {
             screen = Screen.PLAYER
             playerRequest?.let { onStarted?.invoke(it) }
         }.onFailure { if(it is CancellationException) throw it; if(valid()) error=it.message }
-        if(valid()) busyMessage=null
+        } catch(e: kotlinx.coroutines.TimeoutCancellationException) { if(valid()) error=tr("La búsqueda tardó demasiado. Vuelve a intentarlo.","Source search timed out. Please retry.") } finally { if(valid()) busyMessage=null }
     }
 
     fun updateProgress(req: PlayerRequest, position: Long, duration: Long, ended: Boolean = false) {
@@ -1268,7 +1290,7 @@ class AppState(context: Context) {
         watchParty=null; partyRole=null; pendingPartyCode=null; accessRequests.clear()
         partyMessages.clear(); floatingEvents.clear(); partyMembers.clear(); lastEventId=-1
         knownPartyMembers=null; partyJoinedNotice=null; joinedNoticeSequence++
-        partyStatus=""; error=null
+        partyStatus=""; error=null; partyClosedNotice=false
         if(screen==Screen.PLAYER) screen=if(playerRequest?.live==true) Screen.LIVE_TV else if(selected!=null) Screen.DETAILS else Screen.HOME
         playerRequest=null
     }
@@ -1339,7 +1361,13 @@ class AppState(context: Context) {
         fun valid()=sameParty(epoch,s.userId,p.roomCode)
         val fresh=cloud.readWatchParty(s,p.roomCode)
         if(!valid()) return
-        if(fresh==null) { detachParty(); partyStatus=tr("La sala cerró o expiró","Room closed or expired"); return }
+        if(fresh==null) {
+            val wasGuest=partyRole==PartyRole.GUEST
+            detachParty()
+            partyStatus=tr("El party fue cerrado","The party was closed")
+            partyClosedNotice=wasGuest
+            return
+        }
         if(partyRole==PartyRole.GUEST) { watchParty=fresh; if(fresh.cloudId.isNotBlank()) switchToPartyState(fresh) }
         if(!valid()) return
         val members=social.members(s,p.roomCode)
@@ -1512,7 +1540,9 @@ data class PlayerRequest(
     val liveChannelId: String = "",
     val liveProvider: String = "",
     val playbackId: String = java.util.UUID.randomUUID().toString(),
-    val liveType: String = "tv"
+    val liveType: String = "tv",
+    val recoveryAttempt: Int = 0,
+    val resumePlaying: Boolean = true
 )
 
 data class SourceSelection(

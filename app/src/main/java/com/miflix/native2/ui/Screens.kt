@@ -1076,7 +1076,25 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             trackSelectionParameters = trackBuilder.build()
             videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
             prepare()
-            playWhenReady = if (state.partyRole == PartyRole.GUEST) state.watchParty?.playing ?: true else true
+            playWhenReady = if (state.partyRole == PartyRole.GUEST) state.watchParty?.playing ?: request.resumePlaying else request.resumePlaying
+        }
+    }
+
+    LaunchedEffect(player,request.playbackId) {
+        val monitor=com.miflix.native2.data.PlaybackStallMonitor()
+        while(true) {
+            delay(1000)
+            if(state.playerRequest?.playbackId!=request.playbackId || state.screen!=Screen.PLAYER) break
+            val expected=player.playWhenReady && player.playbackState!=Player.STATE_ENDED &&
+                player.playbackSuppressionReason==Player.PLAYBACK_SUPPRESSION_REASON_NONE && playbackError==null &&
+                state.busyMessage==null && state.sourceSelection==null && !state.queueStarting
+            if(monitor.stalled(android.os.SystemClock.elapsedRealtime(),player.currentPosition,expected,player.playbackState==Player.STATE_BUFFERING)) {
+                if(!state.recoverPlayback(request,player.currentPosition,player.playWhenReady,true)) {
+                    playbackError=tr("La reproducción dejó de avanzar. Prueba otro enlace o reinicia el reproductor.","Playback stopped advancing. Try another source or restart the player.")
+                    controlsVisible=true
+                }
+                break
+            }
         }
     }
 
@@ -1334,7 +1352,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 Text(tr("No se pudo reproducir este enlace","This link could not be played"),color=Color.White,fontSize=22.sp,lineHeight=27.sp)
                 Text(playbackError.orEmpty(),color=Muted)
                 Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                    FocusButton(tr("Reintentar","Retry")) { playbackError=null; surfaceGeneration++; player.prepare() }
+                    FocusButton(tr("Reiniciar reproductor","Restart player")) { state.recoverPlayback(request,player.currentPosition,player.playWhenReady,false) }
                     FocusButton(tr("Otro enlace","Another link")) { playbackError=null; state.launch { state.playerSources(request,player.currentPosition) } }
                     FocusButton(tr("Salir","Exit")) { onClose() }
                 }

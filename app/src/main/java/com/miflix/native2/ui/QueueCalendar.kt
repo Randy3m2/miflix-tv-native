@@ -1,6 +1,13 @@
 package com.miflix.native2.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.*
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -77,6 +84,29 @@ fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,close: () -> Unit) {
     var parties by remember { mutableStateOf(false) }
     var reactions by remember { mutableStateOf(false) }
     var calendar by remember { mutableStateOf(false) }
+    val closeFocus=remember { FocusRequester() }
+    val listState=rememberLazyListState()
+    val scope=rememberCoroutineScope()
+    val friends=state.friendActivity.filter { !parties || it.room!=null }.distinctBy { it.id }
+        .sortedWith(compareBy<com.miflix.native2.data.FriendActivity> { it.nickname.lowercase(Locale.ROOT) }.thenBy { it.id })
+    val ids=friends.map { it.id }
+    val rowFocus=remember(ids) { ids.associateWith { FocusRequester() } }
+    fun moveTo(index: Int) {
+        scope.launch {
+            if(index<0) { first.requestFocus();return@launch }
+            if(index>=friends.size) { closeFocus.requestFocus();return@launch }
+            val visible=listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index==index }
+            if(visible==null || visible.offset<listState.layoutInfo.viewportStartOffset || visible.offset+visible.size>listState.layoutInfo.viewportEndOffset) listState.scrollToItem(index)
+            withFrameNanos { }
+            runCatching { rowFocus[friends[index].id]?.requestFocus() }
+        }
+    }
+    val enterList=Modifier.onPreviewKeyEvent { event ->
+        if(event.key==Key.DirectionDown) {
+            if(event.type==KeyEventType.KeyDown) moveTo(if(friends.isEmpty()) friends.size else 0)
+            true
+        } else false
+    }
     Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Column(Modifier.width(780.dp).heightIn(max=530.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             Text(tr("Amigos y Party","Friends & Party"),color=Color.White,fontSize=26.sp)
@@ -88,28 +118,49 @@ fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,close: () -> Unit) {
             }
             if(state.watchParty!=null) Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
                 Text("Party · ${state.watchParty?.roomCode}",color=Color.White)
-                FocusButton(tr("Reacciones / Chat / QR","Reactions / Chat / QR")) { reactions=true }
-                FocusButton(tr("Salir de sala","Leave Party")) { state.launch { state.leaveWatchParty();close() } }
-            } else FocusButton(tr("Crear sala con este contenido","Create Party with this title")) { onCreate() }
-            LazyColumn(Modifier.weight(1f,false),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                val friends=state.friendActivity.filter { !parties || it.room!=null }
+                FocusButton(tr("Reacciones / Chat / QR","Reactions / Chat / QR"),modifier=enterList) { reactions=true }
+                FocusButton(tr("Salir de sala","Leave Party"),modifier=enterList) { state.launch { state.leaveWatchParty();close() } }
+            } else FocusButton(tr("Crear sala con este contenido","Create Party with this title"),modifier=enterList) { onCreate() }
+            LazyColumn(Modifier.weight(1f),state=listState,contentPadding=PaddingValues(6.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 if(friends.isEmpty()) item { Text(tr("Pulsa Actualizar para ver la actividad","Select Refresh to see activity"),color=Muted) }
                 items(friends,key={it.id}) { friend ->
-                    Column(Modifier.fillMaxWidth().background(Color(0xFF252525),RoundedCornerShape(14.dp)).padding(14.dp)) {
+                    var focused by remember(friend.id) { mutableStateOf(false) }
+                    val ink=if(focused) Color.Black else Color.White
+                    val secondary=if(focused) Color(0xFF333333) else Muted
+                    val index=ids.indexOf(friend.id)
+                    val activate: () -> Unit = {
+                        if(friend.room!=null) state.launch { state.socialAction { state.joinWatchParty(friend.room) } }
+                        else state.partyStatus=tr("Este amigo no tiene un Party disponible","This friend has no available Party")
+                    }
+                    Column(Modifier.fillMaxWidth().focusRequester(rowFocus.getValue(friend.id))
+                        .onPreviewKeyEvent { event ->
+                            when(event.key) {
+                                Key.DirectionDown,Key.DirectionUp -> {
+                                    if(event.type==KeyEventType.KeyDown) moveTo(index+if(event.key==Key.DirectionDown) 1 else -1)
+                                    true
+                                }
+                                Key.DirectionLeft,Key.DirectionRight -> true
+                                else -> false
+                            }
+                        }.onFocusChanged { focused=it.isFocused }.focusable().tvClick(activate).clickable(onClick=activate)
+                        .background(if(focused) Color.White else Color(0xFF252525),RoundedCornerShape(14.dp))
+                        .border(2.dp,if(focused) Color.White else Color.Transparent,RoundedCornerShape(14.dp)).padding(14.dp)) {
                         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
                             ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(76.dp))
                             Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                                Text("@${friend.nickname}",color=Color.White,fontSize=20.sp)
-                                Text(if(friend.title.isNotBlank()) tr("Viendo ","Watching ")+friend.title+(if(friend.season>0) " · S${friend.season} E${friend.episode}" else "") else if(friend.online) tr("En línea","Online") else tr("Desconectado","Offline"),color=Muted,maxLines=3)
+                                Text("@${friend.nickname}",color=ink,fontSize=20.sp)
+                                Text(if(friend.title.isNotBlank()) tr("Viendo ","Watching ")+friend.title+(if(friend.season>0) " · S${friend.season} E${friend.episode}" else "") else if(friend.online) tr("En línea","Online") else tr("Desconectado","Offline"),color=secondary,maxLines=3)
                             }
                         }
-                        friend.room?.let { code -> FocusButton(tr("Solicitar acceso","Request access")) { state.launch { state.socialAction { state.joinWatchParty(code) } } } }
+                        if(friend.room!=null) Text(tr("OK · Solicitar acceso","OK · Request access"),color=secondary,fontSize=14.sp)
                     }
                 }
             }
             Text(state.partyStatus,color=Muted)
             state.error?.let { Text(it,color=Color.White,maxLines=3) }
-            FocusButton(tr("Cerrar","Close")) { close() }
+            FocusButton(tr("Cerrar","Close"),modifier=Modifier.focusRequester(closeFocus).onPreviewKeyEvent { event ->
+                if(event.key==Key.DirectionUp && friends.isNotEmpty()) { if(event.type==KeyEventType.KeyDown) moveTo(friends.lastIndex);true } else false
+            }) { close() }
         }
     }
     if(reactions) PartyActionsDialog(state) { reactions=false }

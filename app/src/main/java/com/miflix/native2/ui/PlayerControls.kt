@@ -158,12 +158,26 @@ private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seek
 @Composable
 internal fun PlayerOptionsDialog(menu: String, player: Player, tracks: Tracks, speed: Float,
     onSpeed: (Float) -> Unit, externalSubtitles: List<SubtitleChoice>, subtitleLoading: Boolean, onExternalSubtitle: (SubtitleChoice) -> Unit, series: Boolean, party: Boolean, onEpisodes: () -> Unit, onParty: () -> Unit, onClose: () -> Unit) {
+    var audioStatus by remember(player,menu) { mutableStateOf("") }
+    var pendingAudio by remember(player,menu) { mutableStateOf<TrackSelectionOverride?>(null) }
+    LaunchedEffect(player,pendingAudio) {
+        val target=pendingAudio ?: return@LaunchedEffect
+        var applied=false
+        for(attempt in 0 until 80) {
+            val current=player.currentTracks.groups.firstOrNull { it.mediaTrackGroup==target.mediaTrackGroup }
+            if(current!=null && target.trackIndices.all { it in 0 until current.length && current.isTrackSelected(it) }) { applied=true;break }
+            kotlinx.coroutines.delay(100)
+        }
+        audioStatus=if(applied) tr("Pista de audio seleccionada ✓","Audio track selected ✓") else tr("El reproductor no confirmó el cambio. Prueba otra pista o enlace.","The player did not confirm the change. Try another track or source.")
+        pendingAudio=null
+    }
     val first=remember(menu) { FocusRequester() }
     LaunchedEffect(menu) { withFrameNanos { }; first.requestFocus() }
     val title=when(menu) { "content" -> tr("Contenido / Party","Content / Party"); "speed" -> tr("Velocidad","Speed"); "audio" -> tr("Pista de audio","Audio track"); else -> tr("Subtítulos","Subtitles") }
     Dialog(onDismissRequest=onClose,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Column(Modifier.width(550.dp).heightIn(max=460.dp).background(Color(0xF0181818),RoundedCornerShape(18.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             Text(title,color=Color.White,fontSize=24.sp,lineHeight=29.sp)
+            if(menu=="audio" && audioStatus.isNotBlank()) Text(audioStatus,color=Color.White,fontSize=14.sp)
             LazyColumn(Modifier.weight(1f,false),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(4.dp)) {
                 when(menu) {
                     "content" -> {
@@ -181,10 +195,25 @@ internal fun PlayerOptionsDialog(menu: String, player: Player, tracks: Tracks, s
                             for(index in 0 until group.length) {
                                 count++
                                 val format=group.getTrackFormat(index)
-                                val supported=group.isTrackSupported(index)
+                                val supported=group.isTrackSupported(index,true)
+                                val limited=supported && !group.isTrackSupported(index)
                                 val label=listOfNotNull(format.label?.takeIf { it.isNotBlank() },format.language?.takeIf { it.isNotBlank() },format.codecs?.takeIf { it.isNotBlank() },if(format.channelCount>0) "${format.channelCount} ch" else null).distinct().joinToString(" · ").ifBlank { "${tr("Pista","Track")} $count" }
-                                item { FocusButton("${if(group.isTrackSelected(index)) "✓ " else ""}$label${if(!supported) tr(" · No compatible con esta TV"," · Unsupported on this TV") else ""}",modifier=Modifier.fillMaxWidth()) {
-                                    if(supported) { player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(type,false).setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup,index)).build();onClose() }
+                                item { FocusButton("${if(group.isTrackSelected(index)) "✓ " else ""}$count · $label${if(limited) tr(" · Compatibilidad limitada"," · Limited compatibility") else ""}${if(!supported) tr(" · No compatible con esta TV"," · Unsupported on this TV") else ""}",modifier=Modifier.fillMaxWidth()) {
+                                    val current=player.currentTracks.groups.firstOrNull { it.mediaTrackGroup==group.mediaTrackGroup }
+                                    if(current==null || index !in 0 until current.length) {
+                                        audioStatus=tr("La lista cambió. Cierra y vuelve a abrir este menú.","The track list changed. Close and reopen this menu.")
+                                    } else if(!current.isTrackSupported(index,true)) {
+                                        audioStatus=tr("La TV no puede decodificar esta pista. Elige otra pista o un enlace con otro formato de audio.","This TV cannot decode this track. Choose another track or a source with a different audio format.")
+                                    } else {
+                                        val override=TrackSelectionOverride(current.mediaTrackGroup,index)
+                                        val params=player.trackSelectionParameters.buildUpon().clearOverridesOfType(type).setTrackTypeDisabled(type,false)
+                                        if(type==C.TRACK_TYPE_AUDIO) params.setPreferredAudioLanguage(null)
+                                        player.trackSelectionParameters=params.setOverrideForType(override).build()
+                                        if(type==C.TRACK_TYPE_AUDIO) {
+                                            audioStatus=tr("Cambiando pista de audio…","Switching audio track…")
+                                            pendingAudio=override
+                                        } else onClose()
+                                    }
                                 } }
                             }
                         }

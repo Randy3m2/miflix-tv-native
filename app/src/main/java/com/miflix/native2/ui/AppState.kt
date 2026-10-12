@@ -181,7 +181,7 @@ class AppState(context: Context) {
         refreshCalendar()
     }
     fun calendarLiveManifest(kind: String): String = when(kind) {
-        "iptv" -> IptvRepository.PLAYLIST
+        "iptv", "iptv:do", "iptv:tur", "iptv:mx", "iptv:es", "iptv:us" -> IptvRepository.manifest(kind)
         "sports" -> livePrefs.getString("sports_manifest","https://sportsfree-us2.highfly.to/manifest.json").orEmpty()
         else -> "https://stremio-addon-wheat.vercel.app/manifest.json"
     }
@@ -561,9 +561,52 @@ class AppState(context: Context) {
         finally { customFilterLoading=false }
     }
     var session by mutableStateOf(local.loadSession())
+    private fun jwt(token: String): org.json.JSONObject = runCatching {
+        org.json.JSONObject(String(android.util.Base64.decode(token.split('.')[1],android.util.Base64.URL_SAFE or android.util.Base64.NO_WRAP),Charsets.UTF_8))
+    }.getOrDefault(org.json.JSONObject())
+    private val sessionRenewal=SessionRenewal({ session },{ session=it;local.saveSession(it) },
+        { jwt(it.accessToken).optLong("exp",0)*1000L<=System.currentTimeMillis()+90000L },{ cloud.refresh(it) })
+    init {
+        Http.authorize={ url,headers,force ->
+            val root=BuildConfig.SUPABASE_URL.trimEnd('/')
+            val bearer=headers["Authorization"]?.removePrefix("Bearer ")
+            if(bearer==null || !(url.startsWith("$root/rest/v1/") || url.startsWith("$root/functions/v1/") || url.startsWith("$root/storage/v1/"))) headers
+            else {
+                val original=jwt(bearer);val owner=original.optString("sub")
+                val current=session ?: throw CancellationException("Signed out")
+                if(owner!=current.userId || original.optString("session_id")!=jwt(current.accessToken).optString("session_id")) throw CancellationException("Account changed")
+                val valid=sessionRenewal.valid(owner,if(force) bearer else null)
+                headers+("Authorization" to "Bearer ${valid.accessToken}")
+            }
+        }
+    }
+
     var activeProfile by mutableStateOf(Profile("default", "Main", primary = true))
     val profiles = mutableStateListOf<Profile>()
     val favorites = mutableStateListOf<String>()
+    var myListLimit by mutableStateOf(20)
+    var myListLoading by mutableStateOf(false)
+    var myListMessage by mutableStateOf("")
+    val myListTitles=mutableStateListOf<MediaSummary>()
+    private var myListOwner=""
+    private var myListGeneration=0
+    private val myListCache=mutableMapOf<String,MediaSummary>()
+    suspend fun loadMyListPage(owner: String,ids: List<String>) = coroutineScope {
+        if(myListOwner!=owner) { myListOwner=owner;myListLimit=20;myListCache.clear();myListTitles.clear() }
+        val generation=++myListGeneration
+        myListLoading=true;myListMessage=""
+        val desired=ids.take(myListLimit);val permits=Semaphore(4)
+        try {
+            val rows=desired.map { id -> async { myListCache[id] ?: permits.withPermit {
+                try { tmdb.byCloudId(id) } catch(e: CancellationException) { throw e } catch(_: Exception) { null }
+            } } }.awaitAll().filterNotNull()
+            if(myListOwner!=owner || generation!=myListGeneration || owner!="${session?.userId}:${activeProfile.id}") return@coroutineScope
+            rows.forEach { myListCache[it.cloudId]=it };myListCache.keys.retainAll(ids.toSet())
+            myListTitles.clear();myListTitles.addAll(rows)
+            if(rows.size<desired.size) myListMessage=tr("Algunos títulos no pudieron cargar.","Some titles could not load.")
+        } finally { if(generation==myListGeneration) myListLoading=false }
+    }
+
     val progress = mutableStateMapOf<String, PlaybackProgress>()
 
     val genreCovers=mutableStateMapOf<String,String>()
@@ -729,12 +772,7 @@ class AppState(context: Context) {
     suspend fun bootstrap() {
         if(session==null) loadOfflineProfiles()
         session?.let { s ->
-            if (s.refreshToken.isNotBlank()) {
-                runCatching { cloud.refresh(s.refreshToken) }.onSuccess {
-                    session = it
-                    local.saveSession(it)
-                }
-            }
+            runCatching { sessionRenewal.valid(s.userId) }
             runCatching { syncFromCloud() }
         }
         if (tmdb.token.isNotBlank()) {
@@ -1457,10 +1495,7 @@ class AppState(context: Context) {
 
     suspend fun refreshAccountSession() {
         val account=session ?: return
-        if(account.refreshToken.isBlank())return
-        runCatching { cloud.refresh(account.refreshToken) }.onSuccess { refreshed ->
-            if(session?.userId==account.userId) { session=refreshed; local.saveSession(refreshed) }
-        }
+        try { sessionRenewal.valid(account.userId) } catch(e: CancellationException) { throw e } catch(_: Exception) { }
     }
 
     suspend fun socialAction(block: suspend () -> Unit) {

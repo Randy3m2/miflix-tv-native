@@ -39,8 +39,11 @@ fun LiveScreen(state: AppState) {
     val repo = remember { LiveRepository() }
     val scope = rememberCoroutineScope()
     var provider by remember { mutableStateOf(state.liveProviderTab) }
+    var showFavorites by remember { mutableStateOf(false) }
+    var showGuideSettings by remember { mutableStateOf(false) }
+    val guide=rememberLiveGuide()
     val sports=provider=="sports"
-    val iptv=provider=="iptv"
+    val iptv=provider.startsWith("iptv")
     var refreshVersion by remember { mutableStateOf(0) }
     var sportsManifest by remember { mutableStateOf(prefs.getString("sports_manifest", "https://sportsfree-us2.highfly.to/manifest.json").orEmpty()) }
     var editManifest by remember { mutableStateOf(false) }
@@ -120,34 +123,39 @@ fun LiveScreen(state: AppState) {
     val contentFocus=remember { FocusRequester() }
     Column(Modifier.fillMaxSize().background(Bg)) {
         Sidebar(Screen.LIVE_TV, state.activeProfile.name, { state.screen = it },state.notifications.size,state.activeProfile,onMoveDown={ contentFocus.requestFocus(); Unit })
-        Column(Modifier.weight(1f).fillMaxHeight().padding(horizontal=34.dp,vertical=24.dp).focusRequester(contentFocus).focusGroup()) {
-            Text(tr("TV en vivo","Live TV"), color = Color.White, fontSize = 28.sp, lineHeight=34.sp)
-            Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                FocusButton(tr("Canales de TV","TV Channels"), primary = provider=="nauta") { provider="nauta";state.liveProviderTab=provider;state.liveCategoryId=null }
-                FocusButton(tr("Deportes en vivo","Live Sports"), primary = sports) { provider="sports";state.liveProviderTab=provider;state.liveCategoryId=null }
-                FocusButton(tr("Canales 10k","10k Channels"),primary=iptv) { provider="iptv";state.liveProviderTab=provider;state.liveCategoryId=null }
-                if(iptv) FocusButton(tr("Actualizar","Refresh")) { if(!loading) scope.launch {
+        Column(Modifier.weight(1f).fillMaxHeight().padding(horizontal=34.dp,vertical=16.dp).focusRequester(contentFocus).focusGroup()) {
+            Text(tr("TV en vivo","Live TV"), color=Color.White,fontSize=22.sp,lineHeight=26.sp)
+            Spacer(Modifier.height(8.dp))
+            LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                item { FocusButton(tr("Canales de TV","TV Channels"),primary=provider=="nauta") { provider="nauta";state.liveProviderTab=provider;state.liveCategoryId=null } }
+                item { FocusButton(tr("Deportes en vivo","Live Sports"),primary=sports) { provider="sports";state.liveProviderTab=provider;state.liveCategoryId=null } }
+                item { FocusButton(tr("Canales","Channels"),primary=iptv) { provider="iptv:do";state.liveProviderTab=provider;state.liveCategoryId=null } }
+                item { FocusButton(tr("★ Favoritos","★ Favorites")) { showFavorites=true } }
+                item { FocusButton("EPG") { showGuideSettings=true } }
+                if(iptv) item { FocusButton(tr("Actualizar","Refresh")) { if(!loading) scope.launch {
                     loading=true
-                    try { IptvRepository.refresh();refreshVersion++ } catch(e: Exception) { if(e is CancellationException) throw e;message=e.message.orEmpty() } finally { loading=false }
-                } }
-                if (sports) FocusButton(tr("Manifiesto de deportes","Sports manifest")) { editManifest = true }
+                    try { IptvRepository.refresh(manifest);refreshVersion++ } catch(e: Exception) { if(e is CancellationException) throw e;message=e.message.orEmpty() } finally { loading=false }
+                } } }
+                if(sports) item { FocusButton(tr("Manifiesto de deportes","Sports manifest")) { editManifest=true } }
             }
-            Spacer(Modifier.height(12.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                items(categories) { c -> FocusButton(c.name, primary = c == category) { category = c; state.liveCategoryId=c.id } }
-            }
-            Spacer(Modifier.height(14.dp))
+            if(iptv) { Spacer(Modifier.height(8.dp));RegionTabs(provider) { provider=it;state.liveProviderTab=it;state.liveCategoryId=null } }
+            Spacer(Modifier.height(8.dp))
             NativeTextField(search, { search = it; state.liveSearch=it }, tr("Buscar nombre o número de canal","Search channel name or number"), modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp))
             if (loading) Text(tr("Cargando canales…","Loading live content…"), color = Color.White)
             if (message.isNotBlank()) Text(message, color = Color.White, fontSize = 14.sp, lineHeight=17.sp)
-            LazyColumn(Modifier.weight(1f).padding(bottom=24.dp), contentPadding=PaddingValues(bottom=24.dp,end=8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            LazyColumn(Modifier.weight(1f), contentPadding=PaddingValues(bottom=24.dp,end=8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if(categories.size>1) item(key="categories") {
+                    LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp)) { items(categories) { c -> FocusButton(c.name,primary=c==category) { category=c;state.liveCategoryId=c.id } } }
+                }
                 val visible = channels.filter { channel ->
                     search.isBlank() || liveSearchKey(channel.name).contains(liveSearchKey(search)) || channelNumber(channel).toString() == search.trim()
                 }
                 items(visible, key = { it.id }) { channel ->
-                    LiveChannelRow(channel, channelNumber(channel), { openChannel(channel, false) }, { openChannel(channel, true) })
+                    Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                        Box(Modifier.weight(1f)) { LiveChannelRow(channel,channelNumber(channel),{ openChannel(channel,false) },{ openChannel(channel,true) }) { color -> ChannelSchedule(provider,channel,guide,color) } }
+                        ChannelExtras(state,provider,channel,guide,compact=true)
+                    }
                 }
                 if (!loading && channels.isNotEmpty() && visible.isEmpty()) item {
                     Text(tr("No hay canales coincidentes en esta categoría.","No matching channels in this category."), color = Color.White)
@@ -176,6 +184,8 @@ fun LiveScreen(state: AppState) {
             }
         }
     }
+    if(showFavorites) FavoriteChannelsDialog(state,{ showFavorites=false;state.openLivePlayer(it) }) { showFavorites=false }
+    if(showGuideSettings) LiveGuideDialog { showGuideSettings=false }
     if (editManifest) Dialog(onDismissRequest = { editManifest = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         var draft by remember { mutableStateOf(sportsManifest) }
         Column(Modifier.fillMaxWidth().background(Panel).padding(30.dp)) {
@@ -210,7 +220,7 @@ private fun liveSearchKey(value: String): String = Normalizer.normalize(value.tr
     .replace(Regex("\\p{M}+"), "")
 
 @Composable
-private fun LiveChannelRow(channel: LiveChannel, number: Int, onClick: () -> Unit, onLongClick: () -> Unit) {
+private fun LiveChannelRow(channel: LiveChannel, number: Int, onClick: () -> Unit, onLongClick: () -> Unit,schedule: @Composable (Color)->Unit = {}) {
     var focused by remember(channel.id) { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().onFocusChanged { focused = it.hasFocus }
         .tvPlaybackClick(onClick, onLongClick).focusable().clickable(onClick = onClick)
@@ -224,7 +234,10 @@ private fun LiveChannelRow(channel: LiveChannel, number: Int, onClick: () -> Uni
             channel.poster?.let { AsyncImage(it, channel.name, Modifier.fillMaxSize(), contentScale = ContentScale.Fit) }
         }
         Spacer(Modifier.width(18.dp))
-        Text(channel.name, color = if (focused) Color.Black else Color.White, fontSize = 16.sp, lineHeight=19.sp, modifier = Modifier.weight(1f))
+        Column(Modifier.weight(1f)) {
+            Text(channel.name,color=if(focused) Color.Black else Color.White,fontSize=16.sp,lineHeight=19.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            schedule(if(focused) Color.DarkGray else Muted)
+        }
         Text(tr("EN VIVO","LIVE"), color = if (focused) Color.Black else Color.White, fontSize = 12.sp, lineHeight=15.sp)
     }
 }

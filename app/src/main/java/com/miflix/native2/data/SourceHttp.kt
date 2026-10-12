@@ -24,7 +24,7 @@ internal object SourceHttp {
                 c=current;connection.set(current)
                 if(!continuation.isActive) throw CancellationException()
                 current.connectTimeout=10000;current.readTimeout=12000;current.instanceFollowRedirects=false
-                current.setRequestProperty("User-Agent","BruniO/RC33")
+                current.setRequestProperty("User-Agent","BruniO/RC34")
                 headers.forEach { (key,value) -> current.setRequestProperty(key,value) }
                 if(body!=null) {
                     current.requestMethod="POST";current.doOutput=true;current.setRequestProperty("Content-Type",contentType)

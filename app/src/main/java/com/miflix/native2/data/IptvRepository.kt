@@ -7,7 +7,16 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 internal object IptvRepository {
-    const val PLAYLIST="https://iptv-org.github.io/iptv/index.category.m3u"
+    const val PLAYLIST="https://iptv-org.github.io/iptv/countries/do.m3u"
+    val sources=linkedMapOf(
+        "iptv:do" to ("Dominicana" to PLAYLIST),
+        "iptv:tur" to ("Türkiye" to "https://iptv-org.github.io/iptv/languages/tur.m3u"),
+        "iptv:mx" to ("México" to "https://iptv-org.github.io/iptv/countries/mx.m3u"),
+        "iptv:es" to ("España" to "https://iptv-org.github.io/iptv/countries/es.m3u"),
+        "iptv:us" to ("USA" to "https://iptv-org.github.io/iptv/countries/us.m3u"))
+    fun isPlaylist(url: String)=sources.values.any { it.second==url }
+    fun manifest(provider: String)=sources[provider]?.second ?: PLAYLIST
+    private class Feed(val url: String) {
     private val lock=Mutex()
     private var loadedAt=0L
     private var entries=emptyMap<String,List<IptvEntry>>()
@@ -16,13 +25,13 @@ internal object IptvRepository {
     private var groupKeys=emptyMap<String,Set<String>>()
     private suspend fun load(force: Boolean=false) = lock.withLock {
         if(!force && channels.isNotEmpty() && System.currentTimeMillis()-loadedAt<6*60*60*1000) return@withLock
-        val raw=try { SourceHttp.text(PLAYLIST,"IPTV-org") } catch(e: kotlinx.coroutines.CancellationException) { throw e } catch(e: Exception) { if(!force && channels.isNotEmpty()) return@withLock else throw e }
+        val raw=try { SourceHttp.text(url,"IPTV-org") } catch(e: kotlinx.coroutines.CancellationException) { throw e } catch(e: Exception) { if(!force && channels.isNotEmpty()) return@withLock else throw e }
         val parsed=withContext(Dispatchers.Default) { IptvPlaylist.parse(raw) }
         check(parsed.isNotEmpty()) { "IPTV-org · empty playlist" }
         val grouped=withContext(Dispatchers.Default) { parsed.groupBy { it.id } }
         val nextChannels=withContext(Dispatchers.Default) {
             grouped.values.sortedBy { IptvPlaylist.searchKey(it.first().name) }.mapIndexed { i,rows ->
-                val row=rows.first();LiveChannel(row.id,"tv",row.name,row.logo,rows.flatMap { it.groups }.distinct().joinToString(" · "),i+1)
+                val row=rows.first();LiveChannel(row.id,"tv",row.name,row.logo,rows.flatMap { it.groups }.distinct().joinToString(" · "),i+1,row.tvgId)
             }
         }
         val nextSearch=withContext(Dispatchers.Default) { nextChannels.associate { it.id to IptvPlaylist.searchKey(it.name) } }
@@ -49,4 +58,11 @@ internal object IptvRepository {
         load()
         return entries[channel.id].orEmpty().map { StreamChoice("IPTV-org",it.url,it.name,requestHeaders=it.headers,addonName="IPTV-org") }
     }
+    }
+    private val feeds=sources.values.associate { it.second to Feed(it.second) }
+    private fun feed(url: String)=feeds[url] ?: error("Unknown IPTV source")
+    suspend fun refresh(url: String=PLAYLIST)=feed(url).refresh()
+    suspend fun categories(url: String=PLAYLIST)=feed(url).categories()
+    suspend fun channels(category: LiveCategory,skip: Int,search: String,url: String=PLAYLIST)=feed(url).channels(category,skip,search)
+    suspend fun streams(channel: LiveChannel,url: String=PLAYLIST)=feed(url).streams(channel)
 }

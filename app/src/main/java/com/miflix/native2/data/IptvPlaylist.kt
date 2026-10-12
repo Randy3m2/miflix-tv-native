@@ -4,7 +4,7 @@ import java.security.MessageDigest
 import java.text.Normalizer
 import java.util.Locale
 
-internal data class IptvEntry(val id: String,val name: String,val logo: String?,val groups: Set<String>,val url: String,val headers: Map<String,String>)
+internal data class IptvEntry(val id: String,val name: String,val logo: String?,val groups: Set<String>,val url: String,val headers: Map<String,String>,val tvgId: String="")
 
 internal object IptvPlaylist {
     fun searchKey(value: String)=Normalizer.normalize(value,Normalizer.Form.NFD).replace(Regex("\\p{M}+"),"").lowercase(Locale.ROOT)
@@ -29,7 +29,7 @@ internal object IptvPlaylist {
                     if(name.isNotBlank() && http(line) && !drm) {
                         val identity=attrs["tvg-id"].orEmpty().ifBlank { searchKey(name) }
                         result.add(IptvEntry("iptv:"+digest(identity),name,attrs["tvg-logo"]?.takeIf(::http),
-                            attrs["group-title"].orEmpty().split(';').map { it.trim() }.filter { it.isNotBlank() }.toSet().ifEmpty { setOf("Undefined") },line,headers.toMap()))
+                            attrs["group-title"].orEmpty().split(';').map { it.trim() }.filter { it.isNotBlank() }.toSet().ifEmpty { setOf("Undefined") },line,headers.toMap(),attrs["tvg-id"].orEmpty()))
                     }
                     name="";attrs=emptyMap();headers=mutableMapOf();drm=false
                 }

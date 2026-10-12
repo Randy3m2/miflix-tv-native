@@ -5,14 +5,14 @@ import org.json.JSONObject
 import java.net.URLEncoder
 
 data class LiveCategory(val type: String, val id: String, val name: String, val genre: String? = null, val paginated: Boolean = false, val searchable: Boolean = false)
-data class LiveChannel(val id: String, val type: String, val name: String, val poster: String?, val description: String, val number: Int = 0)
+data class LiveChannel(val id: String, val type: String, val name: String, val poster: String?, val description: String, val number: Int = 0,val tvgId: String = "")
 
 class LiveRepository {
     private fun base(manifest: String) = manifest.trim().removeSuffix("/manifest.json")
     private fun enc(s: String) = URLEncoder.encode(s, "UTF-8").replace("+", "%20")
 
     suspend fun categories(manifest: String): List<LiveCategory> {
-        if(manifest==IptvRepository.PLAYLIST) return IptvRepository.categories()
+        if(IptvRepository.isPlaylist(manifest)) return IptvRepository.categories(manifest)
         val json = JSONObject(Http.text(manifest, timeoutMs = 20000))
         val catalogs = json.optJSONArray("catalogs") ?: return emptyList()
         return buildList {
@@ -40,7 +40,7 @@ class LiveRepository {
     }
 
     suspend fun channels(manifest: String, category: LiveCategory, skip: Int = 0, search: String = ""): List<LiveChannel> {
-        if(manifest==IptvRepository.PLAYLIST) return IptvRepository.channels(category,skip,search)
+        if(IptvRepository.isPlaylist(manifest)) return IptvRepository.channels(category,skip,search,manifest)
         val extra = buildList {
             if (search.isNotBlank() && category.searchable) add("search=${enc(search.trim())}")
             category.genre?.let { add("genre=${enc(it)}") }
@@ -57,7 +57,7 @@ class LiveRepository {
     }
 
     suspend fun streams(manifest: String, channel: LiveChannel): List<StreamChoice> {
-        if(manifest==IptvRepository.PLAYLIST) return IptvRepository.streams(channel)
+        if(IptvRepository.isPlaylist(manifest)) return IptvRepository.streams(channel,manifest)
         val j = JSONObject(Http.text("${base(manifest)}/stream/${enc(channel.type)}/${enc(channel.id)}.json", timeoutMs = 25000))
         val rows = j.optJSONArray("streams") ?: return emptyList()
         return (0 until rows.length()).mapNotNull { i ->

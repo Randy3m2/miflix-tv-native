@@ -168,11 +168,19 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
 
 @Composable
 private fun MyListScreen(state: AppState, onBack: () -> Unit) {
-    var catalog by remember { mutableStateOf<List<com.miflix.native2.model.MediaSummary>>(emptyList()) }
-    LaunchedEffect(state.favorites.toList()) {
-        catalog = state.favorites.mapNotNull { id -> runCatching { state.tmdb.byCloudId(id) }.getOrNull() }
-    }
-    CatalogScreen(state, tr("Mi lista","My List"), catalog, onBack)
+    val owner="${state.session?.userId}:${state.activeProfile.id}"
+    val ids=state.favorites.toList()
+    LaunchedEffect(owner,ids,state.myListLimit) { state.loadMyListPage(owner,ids) }
+    CatalogScreen(state,tr("Mi lista","My List"),state.myListTitles,onBack,footer={
+        Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        if(state.myListLoading) Text(tr("Cargando…","Loading…"),color=Color.White)
+        else {
+            if(state.myListMessage.isNotBlank()) Text(state.myListMessage,color=Color.White)
+            if(ids.size>state.myListLimit) FocusButton(tr("Cargar más","Load more")) { state.myListLimit+=20 }
+            if(state.myListMessage.isNotBlank()) FocusButton(tr("Reintentar","Retry")) { state.launch { state.loadMyListPage(owner,ids) } }
+        }
+        }
+    })
 }
 
 @Composable

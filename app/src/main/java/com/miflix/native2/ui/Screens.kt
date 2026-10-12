@@ -281,7 +281,7 @@ private fun CollectionRail(title: String, rows: List<CollectionTile>, onClick: (
 }
 
 @Composable
-fun CatalogScreen(state: AppState, title: String, catalog: List<MediaSummary>, onBack: () -> Unit) {
+fun CatalogScreen(state: AppState, title: String, catalog: List<MediaSummary>, onBack: () -> Unit, footer: (@Composable () -> Unit)? = null) {
     BackHandler(onBack = onBack)
     AppShell(state, state.screen, { state.screen = it }) {
         Column(Modifier.fillMaxSize().padding(start = 34.dp, top = 30.dp, end = 34.dp)) {
@@ -290,6 +290,7 @@ fun CatalogScreen(state: AppState, title: String, catalog: List<MediaSummary>, o
             LazyVerticalGrid(columns=GridCells.Adaptive(168.dp),modifier=Modifier.weight(1f).fillMaxWidth(),
                 horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(bottom=48.dp,top=8.dp)) {
                 gridItems(catalog,key={it.cloudId}) { item -> MediaCard(item,modifier=Modifier.fillMaxWidth(),progressPercent=state.progress[item.cloudId]?.percent) { state.launch { state.open(item) } } }
+                if(footer!=null) item(span={ androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { footer() }
             }
         }
     }
@@ -618,6 +619,8 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var addonUrl by remember { mutableStateOf("") }
+    var showGuideSettings by remember { mutableStateOf(false) }
+    if(showGuideSettings) LiveGuideDialog { showGuideSettings=false }
     var showUpdates by remember { mutableStateOf(false) }
     if(showUpdates) AppUpdateDialog(state) { showUpdates=false }
     val context = LocalContext.current
@@ -636,6 +639,8 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
             item {
                 Text(tr("Ajustes","Settings"), color = Color.White, fontSize = 34.sp, lineHeight=41.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.height(8.dp))
+                FocusButton(tr("Guía de canales · EPG","Channel guide · EPG")) { showGuideSettings=true }
+                Spacer(Modifier.height(12.dp))
                 Text("BruniO ${BuildConfig.VERSION_NAME}", color = Muted, fontSize = 14.sp, lineHeight=17.sp)
                 Spacer(Modifier.height(30.dp))
 
@@ -1259,19 +1264,28 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     LaunchedEffect(pauseSynopsis, pauseInfoDismissed, mini) {
         if(!mini && pauseSynopsis && !pauseInfoDismissed) { withFrameNanos { }; runCatching { surfaceFocus.requestFocus() } }
     }
+    var exitArmedAt by remember(request.playbackId) { mutableStateOf(0L) }
+    fun requestExit() {
+        val now=android.os.SystemClock.elapsedRealtime()
+        if(exitArmedAt!=0L && now-exitArmedAt<=2200L) { exitArmedAt=0L;onClose() }
+        else exitArmedAt=now
+    }
+    LaunchedEffect(exitArmedAt) { if(exitArmedAt!=0L) { delay(2200);exitArmedAt=0L } }
     BackHandler(enabled=!mini) {
         if (playerMenu != null) playerMenu = null
         else if (showEpisodes) { showEpisodes=false; if(episodesResumeAfterClose) player.play() }
         else if (paused && !pauseInfoDismissed) {
             pauseSynopsis = false; pauseInfoDismissed = true
-            controlsVisible = true; controlInteraction++
-        } else onClose()
+            controlsVisible = true; controlInteraction++;requestExit()
+        } else requestExit()
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black).focusRequester(surfaceFocus).onPreviewKeyEvent { event ->
         if(mini) return@onPreviewKeyEvent false
         val code = event.nativeKeyEvent.keyCode
-        if(code in listOf(android.view.KeyEvent.KEYCODE_VOLUME_UP,android.view.KeyEvent.KEYCODE_VOLUME_DOWN,android.view.KeyEvent.KEYCODE_VOLUME_MUTE)) false
+        if(code!=android.view.KeyEvent.KEYCODE_BACK && event.type==KeyEventType.KeyDown && code !in listOf(android.view.KeyEvent.KEYCODE_DPAD_CENTER,android.view.KeyEvent.KEYCODE_ENTER)) exitArmedAt=0L
+        if(code==android.view.KeyEvent.KEYCODE_BACK) false
+        else if(code in listOf(android.view.KeyEvent.KEYCODE_VOLUME_UP,android.view.KeyEvent.KEYCODE_VOLUME_DOWN,android.view.KeyEvent.KEYCODE_VOLUME_MUTE)) false
         else if (dismissKey == code) {
             if (event.type == KeyEventType.KeyUp) dismissKey = null
             true
@@ -1410,7 +1424,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 onResize={ resizeMode=if(resizeMode == androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT) androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM else androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT },
                 onMenu={ playerMenu=it }, onLinks={ state.launch { state.playerSources(request,player.currentPosition) } },
                 onSeek={ if(player.isCurrentMediaItemSeekable) { positionMs=it; player.seekTo(it) } }, seekable=player.isCurrentMediaItemSeekable && durationMs>0,
-                party=state.watchParty!=null,onParty={ openPlayerParty() },onClose=onClose, onMaximize={ maximized=!maximized },
+                party=state.watchParty!=null,onParty={ openPlayerParty() },onClose={ requestExit() }, onMaximize={ maximized=!maximized },
                 nextAvailable=upcoming!=null && state.partyRole!=PartyRole.GUEST,
                 onNext={ upcoming?.let { next -> cancelAutoplay=true; state.launch { runCatching { state.playNext(request,next) }.onFailure { state.error=it.message } } } },
                 onEpisodes={ if(request.live) playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else "channels" else { episodesResumeAfterClose=false;showEpisodes=true } },onQueue={ showQueue=true },
@@ -1525,6 +1539,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
 
 
         } // full-size controls
+        if(!mini && exitArmedAt!=0L) Text(tr("Pulsa dos veces para salir","Double tap to exit"),color=Color.White,fontSize=18.sp,
+            modifier=Modifier.align(Alignment.TopCenter).padding(top=32.dp).background(Color(0xE6222222),RoundedCornerShape(16.dp)).padding(horizontal=24.dp,vertical=14.dp))
     }
 }
 

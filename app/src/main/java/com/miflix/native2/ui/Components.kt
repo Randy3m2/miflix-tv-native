@@ -262,8 +262,8 @@ fun CollectionCard(
                     .background(Color(0xFF191919))
             ) {
                 if(tile.id.startsWith("franchise:")) Box(Modifier.fillMaxSize().background(if(tile.id.endsWith("marvel")) Color(0xFF24080C) else Color(0xFF081B32)),contentAlignment=Alignment.Center) {
-                    Text(if(tile.id.endsWith("marvel")) "MARVEL" else "DC",color=Color.White,fontSize=42.sp,lineHeight=48.sp,fontWeight=FontWeight.Black,
-                        modifier=Modifier.background(if(tile.id.endsWith("marvel")) Color(0xFFD82029) else Color(0xFF146AC2),RoundedCornerShape(8.dp)).padding(horizontal=20.dp,vertical=8.dp))
+                    Image(painterResource(if(tile.id.endsWith("marvel")) R.drawable.franchise_marvel else R.drawable.franchise_dc),tile.title,
+                        modifier=Modifier.fillMaxSize().padding(if(tile.id.endsWith("marvel")) 24.dp else 10.dp),contentScale=ContentScale.Fit)
                 } else if(tile.id=="natgeo") Row(Modifier.fillMaxSize().padding(28.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
                     Box(Modifier.width(44.dp).height(66.dp).border(5.dp,Color(0xFFFFCC00)))
                     Text("NATIONAL\nGEOGRAPHIC",color=Color.White,fontSize=19.sp,lineHeight=23.sp,fontWeight=FontWeight.Bold)

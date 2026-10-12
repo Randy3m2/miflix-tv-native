@@ -7,14 +7,26 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 internal object Http {
+    var authorize: (suspend (String,Map<String,String>,Boolean) -> Map<String,String>)? = null
     suspend fun text(
         url: String,
         method: String = "GET",
         headers: Map<String, String> = emptyMap(),
         body: String? = null,
         timeoutMs: Int = 12000
-    ): String = withContext(Dispatchers.IO) {
+    ): String {
+        val hook=authorize
+        val fresh=hook?.invoke(url,headers,false) ?: headers
+        return try { request(url,method,fresh,body,timeoutMs) } catch(e: HttpFailure) {
+            if(e.status!=401 || hook==null) throw e
+            val renewed=hook(url,fresh,true)
+            if(renewed==fresh) throw e
+            request(url,method,renewed,body,timeoutMs)
+        }
+    }
+    private suspend fun request(url: String,method: String,headers: Map<String,String>,body: String?,timeoutMs: Int): String = withContext(Dispatchers.IO) {
         val c = URL(url).openConnection() as HttpURLConnection
+        try {
         c.requestMethod = method
         c.connectTimeout = timeoutMs
         c.readTimeout = timeoutMs
@@ -29,14 +41,16 @@ internal object Http {
         val code = c.responseCode
         val stream = if (code in 200..299) c.inputStream else c.errorStream
         val result = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
-        c.disconnect()
         if (code !in 200..299) {
             val message = runCatching {
                 val j = JSONObject(result)
                 j.optString("message", j.optString("msg", j.optString("error_description", result)))
             }.getOrDefault(result)
-            throw IllegalStateException("HTTP $code: $message")
+            throw HttpFailure(code,"HTTP $code: $message")
         }
         result
+        } finally { c.disconnect() }
     }
 }
+
+internal class HttpFailure(val status: Int,message: String): IllegalStateException(message)

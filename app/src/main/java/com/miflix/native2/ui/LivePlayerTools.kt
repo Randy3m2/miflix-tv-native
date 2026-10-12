@@ -60,6 +60,8 @@ fun LiveChannelPicker(state: AppState, initialProvider: String, select: (PlayerR
     val repo=remember { LiveRepository() }
     val scope=rememberCoroutineScope()
     var provider by remember { mutableStateOf(initialProvider) }
+    var showFavorites by remember { mutableStateOf(false) }
+    val guide=rememberLiveGuide()
     val manifest=state.calendarLiveManifest(provider)
     var categories by remember { mutableStateOf<List<LiveCategory>>(emptyList()) }
     var category by remember { mutableStateOf<LiveCategory?>(null) }
@@ -94,9 +96,11 @@ fun LiveChannelPicker(state: AppState, initialProvider: String, select: (PlayerR
             Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 FocusButton("Live TV",modifier=Modifier.focusRequester(first)) { if(!resolving) provider="nauta" }
                 FocusButton("Live Sports") { if(!resolving) provider="sports" }
-                FocusButton(tr("Canales 10k","10k Channels")) { if(!resolving) provider="iptv" }
+                FocusButton(tr("Canales","Channels")) { if(!resolving) provider="iptv:do" }
+                FocusButton("★") { if(!resolving) showFavorites=true }
                 FocusButton(tr("Cerrar","Close")) { if(!resolving) close() }
             }
+            RegionTabs(provider) { if(!resolving) provider=it }
             LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 items(categories) { c -> FocusButton(c.name,primary=category==c) { if(!resolving) category=c } }
             }
@@ -106,7 +110,7 @@ fun LiveChannelPicker(state: AppState, initialProvider: String, select: (PlayerR
             LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(6.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                 val visible=channels.filter { search.isBlank() || IptvPlaylist.searchKey(it.name).contains(IptvPlaylist.searchKey(search)) || it.number.toString()==search.trim() }
                 items(visible,key={it.type+":"+it.id}) { channel ->
-                    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                    Column { Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     AsyncImage(channel.poster,null,Modifier.size(48.dp),contentScale=ContentScale.Fit)
                     FocusButton("${number(manifest,channel).toString().padStart(3,'0')} · ${channel.name}",modifier=Modifier.weight(1f)) {
                         if(!busy && !resolving) scope.launch {
@@ -120,6 +124,8 @@ fun LiveChannelPicker(state: AppState, initialProvider: String, select: (PlayerR
                         }
                     }
                 }
+                    ChannelExtras(state,provider,channel,guide)
+                    }
                 }
                 if(visible.isEmpty() && !busy) item { Text(tr("No hay canales en esta búsqueda","No channels for this search"),color=Muted) }
                 if(more && !busy) item { FocusButton(tr("Cargar más","Load more")) { scope.launch {
@@ -137,6 +143,8 @@ fun LiveChannelPicker(state: AppState, initialProvider: String, select: (PlayerR
             }
         }
     }
+    if(showFavorites) FavoriteChannelsDialog(state,{ showFavorites=false;select(it) }) { showFavorites=false }
+
 }
 
 @Composable

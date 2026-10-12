@@ -261,7 +261,10 @@ fun CollectionCard(
                     .clip(RoundedCornerShape(14.dp))
                     .background(Color(0xFF191919))
             ) {
-                if(tile.id=="natgeo") Row(Modifier.fillMaxSize().padding(28.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
+                if(tile.id.startsWith("franchise:")) Box(Modifier.fillMaxSize().background(if(tile.id.endsWith("marvel")) Color(0xFF24080C) else Color(0xFF081B32)),contentAlignment=Alignment.Center) {
+                    Text(if(tile.id.endsWith("marvel")) "MARVEL" else "DC",color=Color.White,fontSize=42.sp,lineHeight=48.sp,fontWeight=FontWeight.Black,
+                        modifier=Modifier.background(if(tile.id.endsWith("marvel")) Color(0xFFD82029) else Color(0xFF146AC2),RoundedCornerShape(8.dp)).padding(horizontal=20.dp,vertical=8.dp))
+                } else if(tile.id=="natgeo") Row(Modifier.fillMaxSize().padding(28.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
                     Box(Modifier.width(44.dp).height(66.dp).border(5.dp,Color(0xFFFFCC00)))
                     Text("NATIONAL\nGEOGRAPHIC",color=Color.White,fontSize=19.sp,lineHeight=23.sp,fontWeight=FontWeight.Bold)
                 } else {
@@ -328,7 +331,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
             profile: com.miflix.native2.model.Profile? = null, backgroundAlpha: Float = 0f, onHeaderFocused: (() -> Unit)? = null, onMoveDown: (() -> Unit)? = null) {
     val current=when(screen) {
         Screen.WATCH_PARTY -> Screen.FRIENDS
-        Screen.GENRES,Screen.GENRE_DETAIL,Screen.YEAR_DETAIL,Screen.PLATFORM_DETAIL,Screen.COLLECTION_DETAIL -> Screen.COLLECTIONS
+        Screen.FRANCHISE,Screen.CUSTOM_FILTER,Screen.GENRES,Screen.GENRE_DETAIL,Screen.YEAR_DETAIL,Screen.PLATFORM_DETAIL,Screen.COLLECTION_DETAIL -> Screen.COLLECTIONS
         else -> screen
     }
     val navItems=listOf(

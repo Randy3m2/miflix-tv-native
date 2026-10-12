@@ -46,10 +46,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
-fun LiveChannelPicker(state: AppState, initialSports: Boolean, select: (PlayerRequest) -> Unit, close: () -> Unit) {
+fun LiveChannelPicker(state: AppState, initialProvider: String, select: (PlayerRequest) -> Unit, close: () -> Unit) {
     val context=LocalContext.current
     val prefs=remember { context.getSharedPreferences("miflix_live",android.content.Context.MODE_PRIVATE) }
     fun number(manifest: String,channel: LiveChannel): Int {
+        if(channel.number>0) return channel.number
         val key="channel_${manifest}_${channel.id}"
         val known=prefs.getInt(key,0)
         if(known>0) return known
@@ -58,8 +59,8 @@ fun LiveChannelPicker(state: AppState, initialSports: Boolean, select: (PlayerRe
     }
     val repo=remember { LiveRepository() }
     val scope=rememberCoroutineScope()
-    var sports by remember { mutableStateOf(initialSports) }
-    val manifest=state.calendarLiveManifest(if(sports) "sports" else "live")
+    var provider by remember { mutableStateOf(initialProvider) }
+    val manifest=state.calendarLiveManifest(provider)
     var categories by remember { mutableStateOf<List<LiveCategory>>(emptyList()) }
     var category by remember { mutableStateOf<LiveCategory?>(null) }
     var channels by remember { mutableStateOf<List<LiveChannel>>(emptyList()) }
@@ -91,8 +92,9 @@ fun LiveChannelPicker(state: AppState, initialSports: Boolean, select: (PlayerRe
         Column(Modifier.fillMaxWidth(.9f).heightIn(max=540.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Text(tr("Elegir canal","Choose channel"),color=Color.White,fontSize=25.sp)
             Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                FocusButton("Live TV",modifier=Modifier.focusRequester(first)) { if(!resolving) sports=false }
-                FocusButton("Live Sports") { if(!resolving) sports=true }
+                FocusButton("Live TV",modifier=Modifier.focusRequester(first)) { if(!resolving) provider="nauta" }
+                FocusButton("Live Sports") { if(!resolving) provider="sports" }
+                FocusButton(tr("Canales 10k","10k Channels")) { if(!resolving) provider="iptv" }
                 FocusButton(tr("Cerrar","Close")) { if(!resolving) close() }
             }
             LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -102,7 +104,7 @@ fun LiveChannelPicker(state: AppState, initialSports: Boolean, select: (PlayerRe
             if(busy || resolving) Text(tr("Cargando…","Loading…"),color=Muted)
             if(message.isNotBlank()) Text(message,color=Color.White,maxLines=3)
             LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(6.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                val visible=channels.filter { search.isBlank() || it.name.contains(search,true) }
+                val visible=channels.filter { search.isBlank() || IptvPlaylist.searchKey(it.name).contains(IptvPlaylist.searchKey(search)) || it.number.toString()==search.trim() }
                 items(visible,key={it.type+":"+it.id}) { channel ->
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     AsyncImage(channel.poster,null,Modifier.size(48.dp),contentScale=ContentScale.Fit)
@@ -112,7 +114,7 @@ fun LiveChannelPicker(state: AppState, initialSports: Boolean, select: (PlayerRe
                             try {
                                 val stream=repo.streams(manifest,channel).firstOrNull() ?: error(tr("Canal sin enlaces disponibles","No streams available"))
                                 val item=MediaSummary(channel.id.hashCode(),"live",channel.name,channel.description,null,channel.poster,0.0,"LIVE")
-                                select(PlayerRequest(item,stream,0,0,0,true,channel.id,if(sports) "sports" else "nauta",liveType=channel.type))
+                                select(PlayerRequest(item,stream,0,0,0,true,channel.id,provider,liveType=channel.type))
                             } catch(e: Exception) { if(e is CancellationException) throw e;message=e.message.orEmpty() }
                             finally { resolving=false }
                         }
@@ -206,7 +208,7 @@ fun MultiViewScreen(state: AppState) {
             }
         }
     }
-    if(picker) LiveChannelPicker(state,state.liveSports,select={ req ->
+    if(picker) LiveChannelPicker(state,state.liveProviderTab,select={ req ->
         val i=state.multiViewRequests.indexOfFirst { it.playbackId==replacing }
         if(i>=0) { replacing?.let { players.release(it) };if(sound==replacing) sound=req.playbackId;state.multiViewRequests[i]=req }
         else if(state.multiViewRequests.size<4) { state.multiViewRequests.add(req);if(sound==null) sound=req.playbackId }

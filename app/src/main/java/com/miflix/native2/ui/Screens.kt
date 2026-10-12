@@ -100,7 +100,7 @@ private val StreamingTiles = listOf(
 )
 
 @Composable
-private fun AppShell(state: AppState, screen: Screen, onNavigate: (Screen) -> Unit, content: @Composable BoxScope.() -> Unit) {
+internal fun AppShell(state: AppState, screen: Screen, onNavigate: (Screen) -> Unit, content: @Composable BoxScope.() -> Unit) {
     val contentFocus=remember { FocusRequester() }
     Column(Modifier.fillMaxSize().background(Bg)) {
         Sidebar(screen, state.activeProfile.name, onNavigate, state.notifications.size, state.activeProfile,
@@ -355,8 +355,19 @@ fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
                     Text(tr("Colecciones","Collections"), color = Color.White, fontSize = 32.sp, lineHeight=38.sp, fontWeight = FontWeight.Black)
                     Spacer(Modifier.height(5.dp))
                     Text(tr("Plataformas, géneros y películas por año.","Streaming services, genres and movies by year."), color = Muted, fontSize = 14.sp, lineHeight=17.sp)
+                    Spacer(Modifier.height(16.dp))
+                    FocusButton(tr("Filtro personalizado","Custom filter")) { state.screen=Screen.CUSTOM_FILTER }
                     Spacer(Modifier.height(24.dp))
                 }
+            }
+            item {
+                Text(tr("Franquicias","Franchises"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(start=34.dp,bottom=12.dp))
+                LazyRow(Modifier.fillMaxWidth(),contentPadding=PaddingValues(horizontal=28.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(16.dp)) {
+                    items(listOf("marvel" to "Marvel","dc" to "DC")) { (brand,label) ->
+                        CollectionCard(CollectionTile("franchise:$brand",label,"")) { state.launch { state.openFranchise(brand) } }
+                    }
+                }
+                Spacer(Modifier.height(24.dp))
             }
             item { Column {
                 Text(tr("Géneros","Genres"),color=Color.White,fontSize=24.sp,lineHeight=29.sp,fontWeight=FontWeight.Bold,
@@ -758,6 +769,9 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 }
 
                 Spacer(Modifier.height(34.dp))
+            }
+            item {
+                NativeSourcesSettings(state)
             }
             item {
                 Text(tr("Almacenamiento","Storage"),color=Color.White,fontSize=22.sp,lineHeight=26.sp)
@@ -1376,7 +1390,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 FocusButton("OK",modifier=Modifier.focusRequester(first)) { playerMenu=null;controlInteraction++ }
             }
         }
-        if(playerMenu=="channels") LiveChannelPicker(state,request.liveProvider=="sports",select={ req ->
+        if(playerMenu=="channels") LiveChannelPicker(state,request.liveProvider,select={ req ->
             if(state.partyRole==PartyRole.GUEST) state.error=tr("El host cambia el canal del party","The host changes the party channel")
             else { playerMenu=null;state.openLivePlayer(req) }
         },close={ playerMenu=null;controlInteraction++ })

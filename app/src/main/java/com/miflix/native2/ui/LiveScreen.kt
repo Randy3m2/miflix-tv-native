@@ -38,10 +38,13 @@ fun LiveScreen(state: AppState) {
     val prefs = remember { context.getSharedPreferences("miflix_live", Context.MODE_PRIVATE) }
     val repo = remember { LiveRepository() }
     val scope = rememberCoroutineScope()
-    var sports by remember { mutableStateOf(state.liveSports) }
+    var provider by remember { mutableStateOf(state.liveProviderTab) }
+    val sports=provider=="sports"
+    val iptv=provider=="iptv"
+    var refreshVersion by remember { mutableStateOf(0) }
     var sportsManifest by remember { mutableStateOf(prefs.getString("sports_manifest", "https://sportsfree-us2.highfly.to/manifest.json").orEmpty()) }
     var editManifest by remember { mutableStateOf(false) }
-    val manifest = if (sports) sportsManifest else "https://stremio-addon-wheat.vercel.app/manifest.json"
+    val manifest = if(sports) sportsManifest else state.calendarLiveManifest(provider)
     var categories by remember { mutableStateOf<List<LiveCategory>>(emptyList()) }
     var category by remember { mutableStateOf<LiveCategory?>(null) }
     var channels by remember { mutableStateOf<List<LiveChannel>>(emptyList()) }
@@ -51,6 +54,7 @@ fun LiveScreen(state: AppState) {
     var sources by remember { mutableStateOf<List<StreamChoice>>(emptyList()) }
     var search by remember { mutableStateOf(state.liveSearch) }
     fun channelNumber(channel: LiveChannel): Int {
+        if(channel.number>0) return channel.number
         val key = "channel_${manifest}_${channel.id}"
         val existing = prefs.getInt(key, 0)
         if (existing > 0) return existing
@@ -61,8 +65,9 @@ fun LiveScreen(state: AppState) {
     }
     var offset by remember { mutableStateOf(0) }
     var canLoadMore by remember { mutableStateOf(false) }
+    var generation by remember { mutableStateOf(0) }
 
-    LaunchedEffect(manifest) {
+    LaunchedEffect(manifest,refreshVersion) {
         categories = emptyList(); category = null; channels = emptyList(); message = ""; loading = true
         try {
             categories = repo.categories(manifest)
@@ -74,11 +79,12 @@ fun LiveScreen(state: AppState) {
         } finally { loading = false }
     }
     LaunchedEffect(manifest, category, search) {
+        generation++;canLoadMore=false;sources=emptyList();sourceChannel=null
         val selected = category ?: return@LaunchedEffect
         loading = true; message = ""; channels = emptyList(); offset = 0
         try {
             if (search.isNotBlank()) delay(350)
-            channels = repo.channels(manifest, selected, search = if (search.trim().toIntOrNull() == null) search else "")
+            channels = repo.channels(manifest, selected, search = if (iptv || search.trim().toIntOrNull() == null) search else "")
             channels.forEach { channelNumber(it) }
             offset = channels.size
             canLoadMore = selected.paginated && channels.isNotEmpty()
@@ -91,16 +97,16 @@ fun LiveScreen(state: AppState) {
     fun play(channel: LiveChannel, stream: StreamChoice) {
         sources = emptyList(); sourceChannel = null
         val item = MediaSummary(channel.id.hashCode(), "live", channel.name, channel.description, null, channel.poster, 0.0, tr("EN VIVO","LIVE"))
-        state.selected=item
-        state.playerRequest = PlayerRequest(item, stream, 0, 0, 0L, live = true, liveChannelId = channel.id, liveProvider = if (sports) "sports" else "nauta", liveType=channel.type)
-        state.screen = Screen.PLAYER
+        state.openLivePlayer(PlayerRequest(item, stream, 0, 0, 0L, live = true, liveChannelId = channel.id, liveProvider = provider, liveType=channel.type))
     }
     fun openChannel(channel: LiveChannel, manual: Boolean) {
         if (loading) return
         scope.launch {
+            val requestedManifest=manifest;val requestedGeneration=generation
             loading = true; message = ""
             try {
-                val links = repo.streams(manifest, channel)
+                val links = repo.streams(requestedManifest, channel)
+                if(requestedGeneration!=generation || requestedManifest!=manifest) return@launch
                 if (links.isEmpty()) message = tr("Este canal no devolvió enlaces HTTP reproducibles.","No playable HTTP links returned for this channel.")
                 else if (manual || links.size > 1) { sourceChannel = channel; sources = links }
                 else play(channel, links.first())
@@ -118,8 +124,13 @@ fun LiveScreen(state: AppState) {
             Text(tr("TV en vivo","Live TV"), color = Color.White, fontSize = 28.sp, lineHeight=34.sp)
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                FocusButton(tr("Canales de TV","TV Channels"), primary = !sports) { sports = false; state.liveSports=false; state.liveCategoryId=null }
-                FocusButton(tr("Deportes en vivo","Live Sports"), primary = sports) { sports = true; state.liveSports=true; state.liveCategoryId=null }
+                FocusButton(tr("Canales de TV","TV Channels"), primary = provider=="nauta") { provider="nauta";state.liveProviderTab=provider;state.liveCategoryId=null }
+                FocusButton(tr("Deportes en vivo","Live Sports"), primary = sports) { provider="sports";state.liveProviderTab=provider;state.liveCategoryId=null }
+                FocusButton(tr("Canales 10k","10k Channels"),primary=iptv) { provider="iptv";state.liveProviderTab=provider;state.liveCategoryId=null }
+                if(iptv) FocusButton(tr("Actualizar","Refresh")) { if(!loading) scope.launch {
+                    loading=true
+                    try { IptvRepository.refresh();refreshVersion++ } catch(e: Exception) { if(e is CancellationException) throw e;message=e.message.orEmpty() } finally { loading=false }
+                } }
                 if (sports) FocusButton(tr("Manifiesto de deportes","Sports manifest")) { editManifest = true }
             }
             Spacer(Modifier.height(12.dp))
@@ -145,9 +156,11 @@ fun LiveScreen(state: AppState) {
                     FocusButton(tr("Cargar más","Load more")) {
                         val c = category ?: return@FocusButton
                         scope.launch {
+                            val requestedManifest=manifest;val requestedSearch=search;val requestedOffset=offset;val requestedGeneration=generation
                             loading = true
                             try {
-                                val more = repo.channels(manifest, c, offset, if (search.trim().toIntOrNull() == null) search else "")
+                                val more = repo.channels(requestedManifest, c, requestedOffset, if (iptv || requestedSearch.trim().toIntOrNull() == null) requestedSearch else "")
+                                if(generation!=requestedGeneration || manifest!=requestedManifest) return@launch
                                 more.forEach { channelNumber(it) }
                                 val before = channels.size
                                 channels = (channels + more).distinctBy { it.id }

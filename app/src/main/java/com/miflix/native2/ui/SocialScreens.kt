@@ -50,7 +50,6 @@ fun FriendsScreen(state: AppState) {
     var recommendations by remember { mutableStateOf(false) }
     var manage by remember { mutableStateOf(false) }
     var calendar by remember { mutableStateOf(false) }
-    var refreshing by remember { mutableStateOf(false) }
     BackHandler { state.screen=Screen.HOME }
     val contentFocus=remember { FocusRequester() }
     Column(Modifier.fillMaxSize()) {
@@ -62,13 +61,10 @@ fun FriendsScreen(state: AppState) {
                 item {
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                         Text(tr("Amigos y salas","Friends & Party"),color=Color.White,fontSize=28.sp, lineHeight=34.sp,modifier=Modifier.weight(1f))
-                        FocusButton(if(refreshing) tr("Actualizando…","Refreshing…") else tr("Actualizar","Refresh")) { if(!refreshing) state.launch {
-                            refreshing=true
-                            try { state.socialAction { state.refreshFriendsDirectory() } } finally { refreshing=false }
-                        } }
+                        FocusButton(if(state.friendsTabLoading) tr("Actualizando…","Refreshing…") else tr("Actualizar","Refresh")) { state.refreshFriendsTab() }
                         FocusButton(if(state.watchParty==null) tr("Crear sala","Create Party") else tr("Mi sala","My Party")) { state.screen=Screen.WATCH_PARTY }
                     }
-                    Text(tr("Actualiza cuando quieras ver la actividad reciente de tus amigos","Refresh to see your friends' recent activity"),color=Muted,fontSize=13.sp, lineHeight=16.sp)
+                    Text(tr("La actividad se actualiza al pulsar Amigos y salas. También puedes actualizar manualmente.","Activity refreshes when you select Friends & Party. You can also refresh manually."),color=Muted,fontSize=13.sp, lineHeight=16.sp)
                 }
                 item {
                     Row(horizontalArrangement=Arrangement.spacedBy(16.dp)) {

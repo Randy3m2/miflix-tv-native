@@ -17,6 +17,95 @@ class TmdbRepository(var token: String) {
     var language: String = "en-US"
     private val base = "https://api.themoviedb.org/3"
 
+    private val filterCreditsCache=linkedMapOf<String,List<JSONObject>>()
+    suspend fun filterPeople(query: String): List<CatalogPerson> {
+        val a=get("/search/person",mapOf("query" to query.trim(),"include_adult" to "false")).optJSONArray("results") ?: return emptyList()
+        return (0 until a.length()).map { a.getJSONObject(it) }.filter { !it.optBoolean("adult") }.map { x ->
+            val known=x.optJSONArray("known_for") ?: org.json.JSONArray()
+            CatalogPerson(x.getInt("id"),x.getString("name"),image(x.optString("profile_path"),"w185"),
+                (0 until known.length()).map { known.getJSONObject(it).let { k -> k.optString("title").ifBlank { k.optString("name") } } }.filter { it.isNotBlank() }.take(3).joinToString(" · "))
+        }
+    }
+    suspend fun filterGenres(type: String): List<CatalogGenre> {
+        val a=get("/genre/${if(type=="series") "tv" else "movie"}/list").getJSONArray("genres")
+        return (0 until a.length()).map { a.getJSONObject(it).let { x -> CatalogGenre(x.getInt("id"),x.getString("name")) } }
+    }
+    private suspend fun filterCredits(person: CatalogPerson,type: String,director: Boolean): List<JSONObject> {
+        val key="$language:${person.id}:$type:$director"
+        filterCreditsCache[key]?.let { return it }
+        val data=get("/person/${person.id}/${if(type=="series") "tv" else "movie"}_credits")
+        val a=data.optJSONArray(if(director) "crew" else "cast") ?: org.json.JSONArray()
+        val rows=(0 until a.length()).map { a.getJSONObject(it) }
+            .filter { !it.optBoolean("adult") && (!director || it.optString("job")=="Director") }
+            .distinctBy { it.getInt("id") }
+        if(filterCreditsCache.size>=12) filterCreditsCache.remove(filterCreditsCache.keys.first())
+        filterCreditsCache[key]=rows
+        return rows
+    }
+    suspend fun customCatalog(filter: CustomCatalogFilter,page: Int): CustomCatalogPage {
+        filter.validate();require(page in 1..500)
+        val tv=filter.type=="series"
+        val sort=when(filter.sort) { "rating" -> "vote_average.desc";"newest" -> if(tv) "first_air_date.desc" else "primary_release_date.desc";else -> "popularity.desc" }
+        if(filter.actor==null && filter.director==null) {
+            val params=linkedMapOf("include_adult" to "false","sort_by" to sort,"page" to page.toString(),"vote_average.gte" to filter.minimumRating.toString())
+            filter.genre?.let { params["with_genres"]=it.id.toString() }
+            val field=if(tv) "first_air_date" else "primary_release_date"
+            if(filter.fromYear.isNotBlank()) params["$field.gte"]="${filter.fromYear}-01-01"
+            if(filter.toYear.isNotBlank()) params["$field.lte"]="${filter.toYear}-12-31"
+            val result=get("/discover/${if(tv) "tv" else "movie"}",params)
+            return CustomCatalogPage(parseList(result,filter.type,20),page<minOf(result.optInt("total_pages"),500))
+        }
+        // A crew credit alone is insufficient: explicitly require job == Director.
+        val cast=filter.actor?.let { filterCredits(it,filter.type,false) }
+        val crew=filter.director?.let { filterCredits(it,filter.type,true) }
+        val allowed=crew?.map { it.getInt("id") }?.toSet()
+        val dateField=if(tv) "first_air_date" else "release_date"
+        val rows=(cast ?: crew.orEmpty()).filter { x ->
+            val date=x.optString(dateField);val year=date.take(4).toIntOrNull()
+            val genres=x.optJSONArray("genre_ids") ?: org.json.JSONArray()
+            (cast==null || allowed==null || x.getInt("id") in allowed) &&
+                (filter.genre==null || (0 until genres.length()).any { genres.optInt(it)==filter.genre.id }) &&
+                (filter.fromYear.isBlank() || year!=null && year>=filter.fromYear.toInt()) &&
+                (filter.toYear.isBlank() || year!=null && year<=filter.toYear.toInt()) &&
+                x.optDouble("vote_average",0.0)>=filter.minimumRating
+        }.sortedWith(when(filter.sort) {
+            "rating" -> compareByDescending<JSONObject> { it.optDouble("vote_average",0.0) }.thenByDescending { it.optDouble("popularity",0.0) }
+            "newest" -> compareByDescending<JSONObject> { it.optString(dateField) }
+            else -> compareByDescending<JSONObject> { it.optDouble("popularity",0.0) }
+        }.thenBy { it.getInt("id") })
+        return CustomCatalogPage(rows.drop((page-1)*20).take(20).map { mapItem(it,filter.type) },rows.size>page*20)
+    }
+
+    private val franchiseIds=mutableMapOf<String,Pair<List<Int>,List<Int>>>()
+    private suspend fun franchiseMetadata(brand: String): Pair<List<Int>,List<Int>> = coroutineScope {
+        franchiseIds[brand]?.let { return@coroutineScope it }
+        require(brand in listOf("marvel","dc"))
+        val names=if(brand=="marvel") listOf("Marvel Studios","Marvel Entertainment","Marvel Television","Marvel Animation") else listOf("DC Entertainment","DC Films","DC Studios")
+        val companies=names.map { name -> async {
+            val a=get("/search/company",mapOf("query" to name)).optJSONArray("results") ?: org.json.JSONArray()
+            (0 until a.length()).map { a.getJSONObject(it) }.filter { it.optString("name").equals(name,true) }.map { it.getInt("id") }
+        } }
+        val word=if(brand=="marvel") "marvel comics" else "dc comics"
+        val a=get("/search/keyword",mapOf("query" to word)).optJSONArray("results") ?: org.json.JSONArray()
+        val keywords=(0 until a.length()).map { a.getJSONObject(it) }.filter { it.optString("name").equals(word,true) }.map { it.getInt("id") }
+        val result=companies.awaitAll().flatten().distinct() to keywords.distinct()
+        require(result.first.isNotEmpty() || result.second.isNotEmpty()) { "Franchise metadata unavailable" }
+        franchiseIds[brand]=result;result
+    }
+    suspend fun franchiseCatalog(brand: String,type: String,page: Int): CustomCatalogPage = coroutineScope {
+        require(page in 1..500 && type in listOf("movie","series"))
+        val (companies,keywords)=franchiseMetadata(brand)
+        val filters=buildList {
+            if(companies.isNotEmpty()) add("with_companies" to companies.joinToString("|"))
+            if(keywords.isNotEmpty()) add("with_keywords" to keywords.joinToString("|"))
+        }
+        val pages=filters.map { (key,value) -> async {
+            val result=get("/discover/${if(type=="series") "tv" else "movie"}",mapOf(key to value,"include_adult" to "false","sort_by" to "popularity.desc","page" to page.toString()))
+            CustomCatalogPage(parseList(result,type,20),page<minOf(result.optInt("total_pages"),500))
+        } }.awaitAll()
+        CustomCatalogPage(pages.flatMap { it.items }.distinctBy { it.cloudId }.sortedByDescending { it.popularity },pages.any { it.hasMore })
+    }
+
     suspend fun directorPerson(name: String): DirectorPerson? {
         val a=get("/search/person",mapOf("query" to name,"include_adult" to "false")).optJSONArray("results") ?: return null
         val people=(0 until a.length()).map { a.getJSONObject(it) }
@@ -221,7 +310,8 @@ class TmdbRepository(var token: String) {
             originCountry = origin,
             originalLanguage = originalLanguage,
             cast = cast,
-            trailers = trailers
+            trailers = trailers,
+            originalTitle = j.optString(if(kind=="movie") "original_title" else "original_name")
         )
     }
 

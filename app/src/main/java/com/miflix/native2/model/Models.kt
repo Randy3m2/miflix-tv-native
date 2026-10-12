@@ -48,7 +48,8 @@ data class MediaDetails(
     val originCountry: String = "",
     val originalLanguage: String = "",
     val cast: List<CastMember> = emptyList(),
-    val trailers: List<TrailerSummary> = emptyList()
+    val trailers: List<TrailerSummary> = emptyList(),
+    val originalTitle: String = ""
 )
 
 data class EpisodeSummary(
@@ -70,7 +71,8 @@ data class StreamChoice(
     val videoHash: String = "",
     val videoSize: Long = 0L,
     val requestHeaders: Map<String, String> = emptyMap(),
-    val addonName: String = ""
+    val addonName: String = "",
+    val nativeSource: com.miflix.native2.data.NativeSource? = null
 )
 
 data class SubtitleChoice(

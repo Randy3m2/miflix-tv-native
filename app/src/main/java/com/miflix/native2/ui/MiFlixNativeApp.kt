@@ -68,6 +68,8 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             Screen.SEARCH -> SearchScreen(state) { state.screen = Screen.HOME }
             Screen.MOVIES -> CatalogScreen(state, tr("Películas","Movies"), state.movies) { state.screen = Screen.HOME }
             Screen.SERIES -> CatalogScreen(state, tr("Series","Series"), state.series) { state.screen = Screen.HOME }
+            Screen.FRANCHISE -> FranchiseScreen(state)
+            Screen.CUSTOM_FILTER -> CustomFilterScreen(state)
             Screen.COLLECTIONS -> CollectionsScreen(state) { state.screen = Screen.HOME }
             Screen.COLLECTION_DETAIL -> CatalogScreen(state, state.collectionTitle, state.collectionItems) { state.screen = Screen.COLLECTIONS }
             Screen.PLATFORM_DETAIL -> PlatformScreen(state) { state.screen = Screen.COLLECTIONS }

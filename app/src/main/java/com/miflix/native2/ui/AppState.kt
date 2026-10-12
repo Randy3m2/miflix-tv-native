@@ -180,7 +180,11 @@ class AppState(context: Context) {
         social.createCalendar(owner,title.trim(),kind,utc.format(value),cloud,season,episode,guests,channel)
         refreshCalendar()
     }
-    fun calendarLiveManifest(kind: String): String = if(kind=="sports") livePrefs.getString("sports_manifest","https://sportsfree-us2.highfly.to/manifest.json").orEmpty() else "https://stremio-addon-wheat.vercel.app/manifest.json"
+    fun calendarLiveManifest(kind: String): String = when(kind) {
+        "iptv" -> IptvRepository.PLAYLIST
+        "sports" -> livePrefs.getString("sports_manifest","https://sportsfree-us2.highfly.to/manifest.json").orEmpty()
+        else -> "https://stremio-addon-wheat.vercel.app/manifest.json"
+    }
     suspend fun openCalendarEvent(event: CalendarEvent) {
         if(event.kind=="live" || event.kind=="sports") {
             require(partyRole!=PartyRole.GUEST) { tr("El anfitrión elige el contenido de la sala","The host chooses the room content") }
@@ -376,8 +380,10 @@ class AppState(context: Context) {
         val s=session ?: return
         refreshFriends()
         val people=social.activity(s)
+        val requests=social.requests(s)
+        if(session?.userId!=s.userId) return
         friendActivity.clear(); friendActivity.addAll(people)
-        accessRequests.clear(); accessRequests.addAll(social.requests(s))
+        accessRequests.clear(); accessRequests.addAll(requests)
     }
     suspend fun refreshSocialActivity() {
         val s=session ?: return
@@ -427,6 +433,53 @@ class AppState(context: Context) {
 
     val tmdb = TmdbRepository(BuildConfig.MIFLIX_TMDB_TOKEN).also { it.language=if(interfaceLanguage=="es") "es-ES" else "en-US" }
     val streamRepo = StreamRepository("")
+    private val nativeStore=NativeSourceStore(context)
+    private val nativeSources=NativeSourceRepository()
+    private var nativeRevision by mutableStateOf(0)
+    var nativeSourceStatus by mutableStateOf("")
+    var nativeSourceSaving by mutableStateOf(false)
+    val nativeSourceEnabled: Boolean get() { nativeRevision;return nativeStore.enabled(session?.userId) }
+    val nativeSourceConfigured: Boolean get() { nativeRevision;return nativeStore.hasKey(session?.userId) }
+    fun toggleNativeSources() {
+        val owner=session?.userId ?: run { error=tr("Inicia sesión primero","Sign in first");return }
+        if(!nativeSourceEnabled && nativeStore.token(owner).isBlank()) { error=tr("Guarda primero tu API key de TorBox","Save your TorBox API key first");return }
+        nativeStore.enable(owner,!nativeSourceEnabled);nativeRevision++;nativeSources.invalidate();invalidatePlaybackWork()
+    }
+    suspend fun saveNativeSourceKey(value: String) {
+        val owner=session?.userId ?: error(tr("Inicia sesión primero","Sign in first"))
+        if(nativeSourceSaving) return
+        nativeSourceSaving=true;nativeSourceStatus=""
+        try {
+            val token=value.trim();require(token.length in 16..256 && token.none { it.isWhitespace() }) { tr("API key inválida","Invalid API key") }
+            nativeSources.validate(token)
+            if(session?.userId!=owner) return
+            nativeStore.save(owner,token);nativeRevision++;nativeSources.invalidate();invalidatePlaybackWork()
+            nativeSourceStatus=tr("Clave verificada y guardada. Puedes activar el motor.","Key verified and saved. You can enable the engine.")
+        } finally { nativeSourceSaving=false }
+    }
+    fun clearNativeSourceKey() {
+        session?.userId?.let { nativeStore.clear(it) };nativeRevision++;nativeSources.invalidate();invalidatePlaybackWork();nativeSourceStatus=""
+    }
+    private suspend fun resolvePlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = supervisorScope {
+        val owner=session?.userId
+        val native=owner!=null && nativeStore.enabled(owner)
+        // Disabled is the default and leaves the existing add-on path unchanged.
+        if(!native) return@supervisorScope streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title)
+        val token=nativeStore.token(owner)
+        val addon=async {
+            if(streamRepo.manifests().isEmpty()) emptyList() else streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title)
+        }
+        var failure: String?=null
+        val builtIn=try {
+            check(token.isNotBlank()) { tr("Vuelve a guardar tu API key de TorBox","Save your TorBox API key again") }
+            val detail=details?.takeIf { selected?.cloudId==item.cloudId } ?: tmdb.details(item)
+            kotlinx.coroutines.withTimeout(25000) { nativeSources.search(owner!!,token,listOf(detail.originalTitle,item.title),item.type,item.year,season,episode,streamSizeBytes) }
+        } catch(e: kotlinx.coroutines.TimeoutCancellationException) { failure=tr("Motor nativo: tiempo agotado","Native engine: timed out");emptyList() } catch(e: CancellationException) { throw e } catch(e: Exception) { failure=e.message;emptyList() }
+        val links=StreamOrdering.sorted((addon.await()+builtIn).filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) })
+        if(session?.userId==owner) nativeSourceStatus=failure ?: tr("Motor nativo: ","Native engine: ")+builtIn.size+tr(" enlaces disponibles"," available links")
+        if(links.isEmpty() && failure!=null) throw IllegalStateException(failure)
+        links
+    }
     val addonManifests=mutableStateListOf<String>()
     private fun setAccountManifests(values: List<String>) {
         invalidatePlaybackWork()
@@ -434,7 +487,79 @@ class AppState(context: Context) {
         addonManifests.clear(); addonManifests.addAll(streamRepo.manifests())
     }
 
-    var screen by mutableStateOf(Screen.SPLASH)
+    private var currentScreen by mutableStateOf(Screen.SPLASH)
+    var screen: Screen
+        get()=currentScreen
+        set(value) {
+            currentScreen=value
+            if(value==Screen.FRIENDS) refreshFriendsTab()
+        }
+    var friendsTabLoading by mutableStateOf(false)
+        private set
+    private var friendsTabPending=false
+    fun refreshFriendsTab() {
+        friendsTabPending=true
+        if(friendsTabLoading) return
+        friendsTabLoading=true
+        launch {
+            try {
+                while(friendsTabPending) {
+                    friendsTabPending=false
+                    socialAction { refreshFriendsDirectory() }
+                }
+            } finally { friendsTabLoading=false }
+        }
+    }
+    var franchiseBrand by mutableStateOf("marvel")
+    var franchiseType by mutableStateOf("movie")
+    val franchiseItems=mutableStateListOf<MediaSummary>()
+    var franchiseLoading by mutableStateOf(false)
+    var franchiseError by mutableStateOf("")
+    var franchiseMore by mutableStateOf(false)
+    var franchisePage=0
+    var franchiseScrollIndex=0
+    var franchiseScrollOffset=0
+    suspend fun openFranchise(brand: String) {
+        if(franchiseLoading) return
+        franchiseBrand=brand;franchiseType="movie";franchiseItems.clear();franchisePage=0
+        franchiseMore=false;franchiseError=""
+        franchiseScrollIndex=0;franchiseScrollOffset=0;screen=Screen.FRANCHISE
+        loadFranchise("movie")
+    }
+    suspend fun loadFranchise(type: String,more: Boolean=false) {
+        if(franchiseLoading) return
+        franchiseLoading=true;franchiseError=""
+        try {
+            val page=if(more) franchisePage+1 else 1
+            val result=tmdb.franchiseCatalog(franchiseBrand,type,page)
+            if(!more) { franchiseItems.clear();franchiseScrollIndex=0;franchiseScrollOffset=0 }
+            franchiseItems.addAll(result.items.filter { row -> franchiseItems.none { it.cloudId==row.cloudId } })
+            franchiseType=type;franchiseMore=result.hasMore;franchisePage=page
+        } catch(e: CancellationException) { throw e } catch(e: Exception) { franchiseError=e.message.orEmpty() }
+        finally { franchiseLoading=false }
+    }
+    var customFilter by mutableStateOf(CustomCatalogFilter())
+    var appliedCustomFilter by mutableStateOf<CustomCatalogFilter?>(null)
+    val customFilterResults=mutableStateListOf<MediaSummary>()
+    var customFilterLoading by mutableStateOf(false)
+    var customFilterError by mutableStateOf("")
+    var customFilterMore by mutableStateOf(false)
+    var customFilterPage=0
+    var customFilterScrollIndex=0
+    var customFilterScrollOffset=0
+    suspend fun applyCustomFilter(filter: CustomCatalogFilter,more: Boolean=false) {
+        if(customFilterLoading) return
+        customFilterLoading=true;customFilterError=""
+        try {
+            filter.validate()
+            val page=if(more) customFilterPage+1 else 1
+            val result=tmdb.customCatalog(filter,page)
+            if(!more) { customFilterResults.clear();customFilterScrollIndex=0;customFilterScrollOffset=0 }
+            customFilterResults.addAll(result.items.filter { row -> customFilterResults.none { it.cloudId==row.cloudId } })
+            customFilter=filter;appliedCustomFilter=filter;customFilterPage=page;customFilterMore=result.hasMore
+        } catch(e: CancellationException) { throw e } catch(e: Exception) { customFilterError=e.message.orEmpty() }
+        finally { customFilterLoading=false }
+    }
     var session by mutableStateOf(local.loadSession())
     var activeProfile by mutableStateOf(Profile("default", "Main", primary = true))
     val profiles = mutableStateListOf<Profile>()
@@ -520,15 +645,21 @@ class AppState(context: Context) {
     var miniPlayer by mutableStateOf(false)
     val multiViewRequests = mutableStateListOf<PlayerRequest>()
     fun openLivePlayer(req: PlayerRequest) {
+        invalidatePlaybackWork()
+        if(req.liveProvider.isNotBlank() && liveProviderTab!=req.liveProvider) { liveProviderTab=req.liveProvider;liveCategoryId=null }
         miniPlayer=false;selected=req.item;playerRequest=req;screen=Screen.PLAYER
     }
     fun beginMultiView(req: PlayerRequest) {
         require(req.live)
+        if(req.liveProvider.isNotBlank()) liveProviderTab=req.liveProvider
         miniPlayer=false;multiViewRequests.clear();multiViewRequests.add(req)
         playerRequest=null;screen=Screen.MULTIVIEW
     }
     var liveSearch by mutableStateOf("")
-    var liveSports by mutableStateOf(false)
+    var liveProviderTab by mutableStateOf("nauta")
+    var liveSports: Boolean
+        get()=liveProviderTab=="sports"
+        set(value) { liveProviderTab=if(value) "sports" else "nauta" }
     var liveCategoryId by mutableStateOf<String?>(null)
     fun searchHistoryOwner()="search_history_${session?.userId ?: "local"}_${activeProfile.id}"
     fun searchHistory(): List<String> = runCatching {
@@ -1084,7 +1215,7 @@ class AppState(context: Context) {
         fun valid()=playbackWork.current(ticket) && session?.userId==owner && activeProfile.id==profile
         sourceSelection=null; busyMessage=tr("Buscando todos los enlaces…","Finding all playback links…"); error=null
         try {
-            val links=streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title)
+            val links=resolvePlaybackSources(item,imdb,season,episode)
             if(!valid()) return
             if(links.isEmpty()) error=tr("No hay enlaces que cumplan los filtros. Revisa Size Limit en Settings.","No links match your filters. Check Size Limit in Settings.")
             else sourceSelection=SourceSelection(item,imdb,season,episode,links,resumeMs,ticket.generation,ticket.sequence)
@@ -1133,7 +1264,7 @@ class AppState(context: Context) {
         fun valid()=playbackWork.current(ticket) && session?.userId==playbackOwner && activeProfile.id==playbackProfile
         busyMessage = tr("Buscando el mejor enlace…","Finding the best source…")
         error = null
-        val streamsJob = async { if (selectedStream != null) listOf(selectedStream).filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) } else streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title) }
+        val streamsJob = async { if (selectedStream != null) listOf(selectedStream).filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) } else resolvePlaybackSources(item,imdb,season,episode) }
         val subtitleKey=subtitleKey(item,season,episode)
         if(playbackSubtitleJobs.size>=16 && subtitleKey !in playbackSubtitleJobs) {
             val oldest=playbackSubtitleJobs.keys.first(); playbackSubtitleJobs.remove(oldest)?.cancel()
@@ -1145,7 +1276,11 @@ class AppState(context: Context) {
         runCatching {
             val streams = streamsJob.await()
             if(!valid()) return@coroutineScope
-            val best = streams.firstOrNull() ?: throw IllegalStateException(tr("No se encontraron enlaces reproducibles","No playable sources found"))
+            val chosen = streams.firstOrNull() ?: throw IllegalStateException(tr("No se encontraron enlaces reproducibles","No playable sources found"))
+            val best = if(chosen.nativeSource==null) chosen else {
+                check(nativeStore.enabled(playbackOwner)) { tr("El motor nativo está apagado","Native engine is disabled") }
+                nativeSources.materialize(chosen,nativeStore.token(playbackOwner),::valid)
+            }
             val externalSubs = withTimeoutOrNull(800) { subsJob.await() }.orEmpty()
             val mergedSubs = (best.subtitles + externalSubs)
                 .distinctBy { it.url }
@@ -1276,7 +1411,7 @@ class AppState(context: Context) {
             if(current!=null && current.item.cloudId==remote.cloudId && current.season==remote.season && current.episode==remote.episode) return
             if(remote.cloudId.isBlank()) return
             if(remote.liveChannelId.isNotBlank()) {
-                val manifest=if(remote.liveProvider=="sports") livePrefs.getString("sports_manifest","https://sportsfree-us2.highfly.to/manifest.json").orEmpty() else "https://stremio-addon-wheat.vercel.app/manifest.json"
+                val manifest=calendarLiveManifest(remote.liveProvider)
                 val channel=LiveChannel(remote.liveChannelId,remote.liveType,remote.liveTitle,null,"")
                 val stream=LiveRepository().streams(manifest,channel).firstOrNull() ?: return
                 if(!valid()) return
@@ -1351,10 +1486,13 @@ class AppState(context: Context) {
     }
     suspend fun refreshFriends() = socialAction {
         val s = session ?: return@socialAction
-        nickname = social.nickname(s)
-        friendRows.clear(); friendRows.addAll(social.friends(s))
-        val ids = friendRows.flatMap { listOf(it.sender,it.receiver) }.distinct()
-        social.people(s, ids).forEach { friendPeople[it.id] = it.nickname }
+        val name=social.nickname(s)
+        val rows=social.friends(s)
+        val ids=rows.flatMap { listOf(it.sender,it.receiver) }.distinct()
+        val people=social.people(s,ids)
+        if(session?.userId!=s.userId) return@socialAction
+        nickname=name;friendRows.clear();friendRows.addAll(rows)
+        friendPeople.clear();people.forEach { friendPeople[it.id]=it.nickname }
     }
     suspend fun addFriend(id: String) = socialAction {
         val s = session ?: error(tr("Inicia sesión primero","Sign in first"))
@@ -1541,7 +1679,7 @@ class AppState(context: Context) {
 enum class Screen {
     SPLASH, HOME, SEARCH, MOVIES, SERIES, COLLECTIONS, COLLECTION_DETAIL, PLATFORM_DETAIL,
     GENRES, GENRE_DETAIL, YEAR_DETAIL, MY_LIST, SETTINGS, PROFILES, WATCH_PARTY, PAIR_DEVICE,
-    DETAILS, PLAYER, MULTIVIEW, LIVE_TV, FRIENDS, TRAKT, NOTIFICATIONS, DIRECTOR_DETAIL
+    DETAILS, CUSTOM_FILTER, FRANCHISE, PLAYER, MULTIVIEW, LIVE_TV, FRIENDS, TRAKT, NOTIFICATIONS, DIRECTOR_DETAIL
 }
 
 data class PlayerRequest(

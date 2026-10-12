@@ -79,4 +79,26 @@ class NativeSourceRepositoryTest {
         assertTrue(repo.search("a","test-secret",listOf("Example Movie"),"movie","2020",0,0,0).isEmpty())
         assertEquals(0,torboxCalls)
     }
+
+    @Test fun alternateTitlesSearchConcurrently() = runBlocking {
+        val barrier=kotlinx.coroutines.CompletableDeferred<Unit>();var started=0
+        val repo=NativeSourceRepository { _,service,_,_,_ ->
+            if(service=="Knaben") { started++;if(started==2) barrier.complete(Unit);kotlinx.coroutines.withTimeout(1000) { barrier.await() };hits() } else cached()
+        }
+        assertEquals(1,repo.search("a","key",listOf("Example Show","Ejemplo"),"series","2020",1,1,0).size)
+        assertEquals(2,started)
+    }
+    @Test fun nextEpisodeReusesIndexButRechecksAvailability() = runBlocking {
+        var indexCalls=0;var cacheChecks=0
+        val repo=NativeSourceRepository { _,service,_,_,_ -> if(service=="Knaben") { indexCalls++;hits() } else { cacheChecks++;cached() } }
+        repo.search("a","key",listOf("Example Show"),"series","2020",1,1,0)
+        val next=repo.search("a","key",listOf("Example Show"),"series","2020",1,2,0)
+        assertEquals(1,indexCalls);assertEquals(2,cacheChecks);assertEquals("Example.Show.S01E02.mkv",next.single().filename)
+    }
+    @Test fun failedAlternateTitleDoesNotDiscardGoodResults() = runBlocking {
+        val repo=NativeSourceRepository { _,service,_,body,_ -> if(service=="Knaben") {
+            if(body.orEmpty().contains("Ejemplo")) error("timeout") else hits()
+        } else cached() }
+        assertEquals(1,repo.search("a","key",listOf("Example Show","Ejemplo"),"series","2020",1,1,0).size)
+    }
 }

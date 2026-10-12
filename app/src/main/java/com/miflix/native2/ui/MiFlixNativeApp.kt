@@ -61,15 +61,15 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         when (state.screen) {
             Screen.SPLASH -> BruniOSplashScreen()
             Screen.HOME -> HomeScreen(state) { state.screen = it }
-            Screen.FRIENDS -> FriendsScreen(state)
-            Screen.TRAKT -> TraktScreen(state)
-            Screen.NOTIFICATIONS -> NotificationsScreen(state)
-            Screen.LIVE_TV -> LiveScreen(state)
+            Screen.FRIENDS -> FriendsScreen(state) { state.screen = Screen.HOME }
+            Screen.TRAKT -> TraktScreen(state) { state.screen = Screen.HOME }
+            Screen.NOTIFICATIONS -> NotificationsScreen(state) { state.screen = Screen.HOME }
+            Screen.LIVE_TV -> LiveScreen(state) { state.screen = Screen.HOME }
             Screen.SEARCH -> SearchScreen(state) { state.screen = Screen.HOME }
             Screen.MOVIES -> CatalogScreen(state, tr("Películas","Movies"), state.movies) { state.screen = Screen.HOME }
             Screen.SERIES -> CatalogScreen(state, tr("Series","Series"), state.series) { state.screen = Screen.HOME }
-            Screen.FRANCHISE -> FranchiseScreen(state)
-            Screen.CUSTOM_FILTER -> CustomFilterScreen(state)
+            Screen.FRANCHISE -> FranchiseScreen(state) { state.screen = Screen.HOME }
+            Screen.CUSTOM_FILTER -> CustomFilterScreen(state) { state.screen = Screen.HOME }
             Screen.COLLECTIONS -> CollectionsScreen(state) { state.screen = Screen.HOME }
             Screen.COLLECTION_DETAIL -> CatalogScreen(state, state.collectionTitle, state.collectionItems) { state.screen = Screen.COLLECTIONS }
             Screen.PLATFORM_DETAIL -> PlatformScreen(state) { state.screen = Screen.COLLECTIONS }
@@ -83,7 +83,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             Screen.WATCH_PARTY -> WatchPartyScreen(state) { state.screen = Screen.FRIENDS }
             Screen.PAIR_DEVICE -> PairDeviceScreen(state) { state.screen = Screen.SETTINGS }
             Screen.DETAILS -> DetailsScreen(state) { state.screen = state.detailsReturnScreen }
-            Screen.MULTIVIEW -> MultiViewScreen(state)
+            Screen.MULTIVIEW -> MultiViewScreen(state) { state.screen = Screen.HOME }
             Screen.PLAYER -> if(state.playerRequest==null) state.screen=Screen.HOME
 
         }

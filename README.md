@@ -1,3 +1,7 @@
+# RC31 — Playback tools and multiview
+
+2.0.0-rc31 (22029). Subtitle timing, channels in the player, technical info, in-app PiP and up to four live channels. See RC31_SETUP.md. No new SQL.
+
 # RC30 — Friends recommendations and independent Watch
 
 2.0.0-rc30 (22028). Run supabase_rc30_upgrade.sql before using the new social features. See RC30_SETUP.md.

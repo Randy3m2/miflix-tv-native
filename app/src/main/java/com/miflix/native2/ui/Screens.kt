@@ -981,6 +981,10 @@ fun WatchPartyScreen(state: AppState,onBack: () -> Unit) {
 @Composable
 fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     val context = LocalContext.current
+    val mini=state.miniPlayer && state.screen!=Screen.PLAYER
+    val timing=remember(request.playbackId) { com.miflix.native2.player.SubtitleTiming() }
+    var timingMs by remember(request.playbackId) { mutableStateOf(0L) }
+    var confirmMulti by remember { mutableStateOf(false) }
     val playbackView = LocalView.current
     var controlsVisible by remember(request.playbackId) { mutableStateOf(true) }
     var controlInteraction by remember { mutableStateOf(0) }
@@ -1026,7 +1030,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var cancelAutoplay by remember(request.playbackId) { mutableStateOf(false) }
 
     val player = remember(request.playbackId) {
-        val renderers = DefaultRenderersFactory(context).setEnableDecoderFallback(true)
+        val renderers = com.miflix.native2.player.TimedTextRenderers(context,timing).setEnableDecoderFallback(true)
         val httpFactory = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
             .setDefaultRequestProperties(request.stream.requestHeaders)
@@ -1225,23 +1229,23 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     }
 
     // Explicit timer also covers controls holding focus on TV remotes.
-    LaunchedEffect(player, controlInteraction, showEpisodes, showQueue, showPartyActions, showAccessRequests, state.sourceSelection, playerMenu, paused, ended, playbackError) {
-        if (playbackError==null && !paused && !ended && playerMenu == null && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && state.sourceSelection == null) {
+    LaunchedEffect(player, controlInteraction, showEpisodes, showQueue, showPartyActions, showAccessRequests, state.sourceSelection, playerMenu, paused, ended, playbackError, mini) {
+        if (!mini && playbackError==null && !paused && !ended && playerMenu == null && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && state.sourceSelection == null) {
             delay(3000)
             controlsVisible = false
             runCatching { surfaceFocus.requestFocus() }
         }
     }
 
-    LaunchedEffect(controlsVisible, showEpisodes, showQueue, showPartyActions, showAccessRequests, playerMenu, state.sourceSelection, pauseSynopsis, pauseInfoDismissed, ended, playbackError) {
-        if(playbackError==null && controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !ended && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu == null && state.sourceSelection == null) {
+    LaunchedEffect(controlsVisible, showEpisodes, showQueue, showPartyActions, showAccessRequests, playerMenu, state.sourceSelection, pauseSynopsis, pauseInfoDismissed, ended, playbackError, mini) {
+        if(!mini && playbackError==null && controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !ended && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu == null && state.sourceSelection == null) {
             withFrameNanos { }; runCatching { playFocus.requestFocus() }
         }
     }
-    LaunchedEffect(pauseSynopsis, pauseInfoDismissed) {
-        if(pauseSynopsis && !pauseInfoDismissed) { withFrameNanos { }; runCatching { surfaceFocus.requestFocus() } }
+    LaunchedEffect(pauseSynopsis, pauseInfoDismissed, mini) {
+        if(!mini && pauseSynopsis && !pauseInfoDismissed) { withFrameNanos { }; runCatching { surfaceFocus.requestFocus() } }
     }
-    BackHandler {
+    BackHandler(enabled=!mini) {
         if (playerMenu != null) playerMenu = null
         else if (showEpisodes) { showEpisodes=false; if(episodesResumeAfterClose) player.play() }
         else if (paused && !pauseInfoDismissed) {
@@ -1251,6 +1255,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black).focusRequester(surfaceFocus).onPreviewKeyEvent { event ->
+        if(mini) return@onPreviewKeyEvent false
         val code = event.nativeKeyEvent.keyCode
         if(code in listOf(android.view.KeyEvent.KEYCODE_VOLUME_UP,android.view.KeyEvent.KEYCODE_VOLUME_DOWN,android.view.KeyEvent.KEYCODE_VOLUME_MUTE)) false
         else if (dismissKey == code) {
@@ -1273,7 +1278,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 dismissKey = code; true
             } else false
         } else false
-    }.focusable()) {
+    }.focusable(enabled=!mini)) {
         key(player,surfaceGeneration) { AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
@@ -1310,6 +1315,18 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             },
             modifier = if(maximized) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(horizontal=40.dp,vertical=24.dp)
         ) }
+        if(mini) {
+            Row(Modifier.align(Alignment.BottomCenter).background(Color(0xEE171717)).padding(6.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                FocusButton(if(paused) "▶" else "Ⅱ",horizontalPadding=12.dp) { player.playWhenReady=!player.playWhenReady }
+                FocusButton(tr("Ampliar","Expand"),horizontalPadding=14.dp) { state.launch {
+                    if(!request.live) { state.open(request.item);if(request.season>1) state.loadSeason(request.season) }
+                    if(state.playerRequest?.playbackId==request.playbackId) {
+                        state.selected=request.item;state.miniPlayer=false;state.screen=Screen.PLAYER;controlsVisible=true;controlInteraction++
+                    }
+                } }
+                FocusButton(tr("Cerrar","Close"),horizontalPadding=14.dp) { state.miniPlayer=false;state.playerRequest=null }
+            }
+        } else {
         if(playbackError!=null) {
             Dialog(onDismissRequest=onClose,properties=DialogProperties(usePlatformDefaultWidth=false)) {
             Column(Modifier.width(600.dp).background(Color(0xEE171717),RoundedCornerShape(18.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
@@ -1324,7 +1341,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
         }
 
-        if(playerMenu != null) PlayerOptionsDialog(playerMenu!!, player, tracks, speed,
+        if(playerMenu in listOf("content","speed","audio","subtitles")) PlayerOptionsDialog(playerMenu!!, player, tracks, speed,
             onSpeed={ speed=it; player.setPlaybackSpeed(it) },
             externalSubtitles=externalSubtitles.filter { extra -> request.stream.subtitles.none { it.url==extra.url } }, subtitleLoading=subtitleLoading,
             onExternalSubtitle={ selected ->
@@ -1343,7 +1360,35 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             series=request.item.type=="series", party=state.watchParty!=null,
             onEpisodes={ episodesResumeAfterClose=player.playWhenReady; player.pause(); showEpisodes=true },
             onParty={ openPlayerParty() },
+            onTiming={ playerMenu="timing" },
             onClose={ playerMenu=null; controlInteraction++ })
+        if(playerMenu=="timing") SubtitleTimingDialog(timingMs,apply={ value ->
+            timingMs=value;timing.delayMs=value
+            // Explicit user adjustment, not a recovery loop. Re-read subtitle cues at this position.
+            if(player.isCurrentMediaItemSeekable) player.seekTo(player.currentPosition)
+        },close={ playerMenu=null;controlInteraction++ })
+        if(playerMenu=="info") PlaybackInfoDialog(player,request) { playerMenu=null;controlInteraction++ }
+        if(playerMenu=="channel_permission") Dialog(onDismissRequest={ playerMenu=null }) {
+            val first=remember { FocusRequester() }
+            LaunchedEffect(Unit) { withFrameNanos { };first.requestFocus() }
+            Column(Modifier.width(460.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+                Text(tr("El host cambia el canal del party. Sal de la sala si quieres ver otro por tu cuenta.","The host changes the party channel. Leave the party to watch a different channel independently."),color=Color.White)
+                FocusButton("OK",modifier=Modifier.focusRequester(first)) { playerMenu=null;controlInteraction++ }
+            }
+        }
+        if(playerMenu=="channels") LiveChannelPicker(state,request.liveProvider=="sports",select={ req ->
+            if(state.partyRole==PartyRole.GUEST) state.error=tr("El host cambia el canal del party","The host changes the party channel")
+            else { playerMenu=null;state.openLivePlayer(req) }
+        },close={ playerMenu=null;controlInteraction++ })
+        if(confirmMulti) Dialog(onDismissRequest={ confirmMulti=false }) {
+            val first=remember { FocusRequester() }
+            LaunchedEffect(Unit) { withFrameNanos { };first.requestFocus() }
+            Column(Modifier.width(520.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                Text(if(state.partyRole==PartyRole.HOST) tr("Multivista cerrará tu party actual. ¿Continuar?","Multiview will close your current party. Continue?") else tr("Multivista saldrá de tu party actual. ¿Continuar?","Multiview will leave your current party. Continue?"),color=Color.White)
+                FocusButton(tr("Cancelar","Cancel"),modifier=Modifier.focusRequester(first)) { confirmMulti=false }
+                FocusButton(tr("Continuar","Continue")) { state.launch { state.leaveWatchParty();state.beginMultiView(request) } }
+            }
+        }
         if(controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !showEpisodes && !showPartyActions && !ended) {
             CompactPlayerControls(request, paused, positionMs, durationMs, speed, maximized, playFocus,
                 onInteraction={ controlInteraction++ },
@@ -1354,7 +1399,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 party=state.watchParty!=null,onParty={ openPlayerParty() },onClose=onClose, onMaximize={ maximized=!maximized },
                 nextAvailable=upcoming!=null && state.partyRole!=PartyRole.GUEST,
                 onNext={ upcoming?.let { next -> cancelAutoplay=true; state.launch { runCatching { state.playNext(request,next) }.onFailure { state.error=it.message } } } },
-                onEpisodes={ episodesResumeAfterClose=false; showEpisodes=true },onQueue={ showQueue=true })
+                onEpisodes={ if(request.live) playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else "channels" else { episodesResumeAfterClose=false;showEpisodes=true } },onQueue={ showQueue=true },
+                onInfo={ playerMenu="info" },onPip={ playerMenu=null;controlsVisible=false;state.miniPlayer=true;state.screen=Screen.HOME },
+                onMultiView={ if(state.watchParty!=null || state.pendingPartyCode!=null) confirmMulti=true else state.beginMultiView(request) })
         }
         if(showAccessRequests) {
             Dialog(onDismissRequest={ showAccessRequests=false },properties=DialogProperties(usePlatformDefaultWidth=false)) {
@@ -1463,6 +1510,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }
 
 
+        } // full-size controls
     }
 }
 

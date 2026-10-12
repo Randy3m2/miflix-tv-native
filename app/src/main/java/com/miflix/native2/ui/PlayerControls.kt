@@ -52,12 +52,15 @@ internal fun CompactPlayerControls(
     maximized: Boolean, playFocus: FocusRequester, onInteraction: () -> Unit, onPlay: () -> Unit,
     onResize: () -> Unit, onMenu: (String) -> Unit, onLinks: () -> Unit, onSeek: (Long) -> Unit,
     seekable: Boolean, party: Boolean, onParty: () -> Unit, onClose: () -> Unit, onMaximize: () -> Unit,
-    nextAvailable: Boolean, onNext: () -> Unit, onEpisodes: () -> Unit, onQueue: () -> Unit
+    nextAvailable: Boolean, onNext: () -> Unit, onEpisodes: () -> Unit, onQueue: () -> Unit, onInfo: () -> Unit, onPip: () -> Unit, onMultiView: () -> Unit
 ) {
     val seekFocus=remember { FocusRequester() }
     var focusedLabel by remember { mutableStateOf("") }
     Box(Modifier.fillMaxSize()) {
         Row(Modifier.align(Alignment.TopEnd).padding(top=20.dp,end=24.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+            PlayerIconButton("info",tr("Información técnica","Playback info"),onInteraction=onInteraction,onClick=onInfo,onLabel={ focusedLabel=it })
+            PlayerIconButton("pip",tr("Ventana flotante","Picture in Picture"),onInteraction=onInteraction,onClick=onPip,onLabel={ focusedLabel=it })
+            if(request.live) PlayerIconButton("grid",tr("Hasta 4 canales","Up to 4 channels"),onInteraction=onInteraction,onClick=onMultiView,onLabel={ focusedLabel=it })
             PlayerIconButton("close",tr("Salir","Exit"),onInteraction=onInteraction,onClick=onClose,onLabel={ focusedLabel=it })
             PlayerIconButton("maximize",if(maximized) tr("Restaurar tamaño","Restore size") else tr("Maximizar","Maximize"),onInteraction=onInteraction,onClick=onMaximize,onLabel={ focusedLabel=it })
         }
@@ -80,6 +83,7 @@ internal fun CompactPlayerControls(
                     PlayerIconButton("next",tr("Siguiente episodio","Next episode"),onInteraction=onInteraction,onClick=onNext,onLabel={ focusedLabel=it },enabled=nextAvailable)
                     PlayerIconButton("episodes",tr("Episodios","Episodes"),onInteraction=onInteraction,onClick=onEpisodes,onLabel={ focusedLabel=it })
                 }
+                if(request.live) PlayerIconButton("episodes",tr("Canales","Channels"),onInteraction=onInteraction,onClick=onEpisodes,onLabel={ focusedLabel=it })
                 PlayerIconButton("resize",tr("Agrandar / encoger","Zoom / Fit"),onInteraction=onInteraction,onClick=onResize,onLabel={ focusedLabel=it })
                 PlayerIconButton("speed","${tr("Velocidad","Speed")} · ${speed}×",onInteraction=onInteraction,onClick={onMenu("speed")},onLabel={ focusedLabel=it })
                 PlayerIconButton("cc",tr("Subtítulos","Subtitles"),onInteraction=onInteraction,onClick={onMenu("subtitles")},onLabel={ focusedLabel=it })
@@ -119,6 +123,9 @@ private fun PlayerGlyph(icon: String, color: Color, modifier: Modifier) {
             "next" -> { drawPath(Path().apply { moveTo(w*.16f,h*.15f);lineTo(w*.70f,h*.5f);lineTo(w*.16f,h*.85f);close() },color);drawRect(color,Offset(w*.76f,h*.15f),Size(w*.10f,h*.70f)) }
             "queue" -> { line(.12f,.2f,.88f,.2f);line(.12f,.5f,.70f,.5f);line(.12f,.8f,.55f,.8f);line(.78f,.64f,.78f,.94f);line(.64f,.79f,.92f,.79f) }
             "episodes" -> { rectangle(.08f,.12f,.24f,.20f);rectangle(.08f,.42f,.24f,.20f);rectangle(.08f,.72f,.24f,.20f);line(.46f,.22f,.92f,.22f);line(.46f,.52f,.92f,.52f);line(.46f,.82f,.92f,.82f) }
+            "info" -> { drawCircle(color,w*.4f,Offset(w*.5f,h*.5f),style=stroke);line(.5f,.45f,.5f,.75f);drawCircle(color,w*.04f,Offset(w*.5f,h*.27f)) }
+            "pip" -> { rectangle(.05f,.15f,.9f,.7f);drawRect(color,Offset(w*.52f,h*.48f),Size(w*.33f,h*.26f)) }
+            "grid" -> { rectangle(.08f,.08f,.35f,.35f);rectangle(.57f,.08f,.35f,.35f);rectangle(.08f,.57f,.35f,.35f);rectangle(.57f,.57f,.35f,.35f) }
             "close" -> { line(.2f,.2f,.8f,.8f); line(.8f,.2f,.2f,.8f) }
             "maximize" -> { line(.1f,.35f,.1f,.1f);line(.1f,.1f,.35f,.1f);line(.65f,.1f,.9f,.1f);line(.9f,.1f,.9f,.35f);line(.9f,.65f,.9f,.9f);line(.9f,.9f,.65f,.9f);line(.35f,.9f,.1f,.9f);line(.1f,.9f,.1f,.65f) }
             "resize" -> { rectangle(.1f,.2f,.8f,.6f);line(.22f,.65f,.42f,.45f);line(.22f,.65f,.22f,.46f);line(.22f,.65f,.41f,.65f);line(.78f,.35f,.58f,.55f);line(.78f,.35f,.78f,.54f);line(.78f,.35f,.59f,.35f) }
@@ -157,7 +164,7 @@ private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seek
 
 @Composable
 internal fun PlayerOptionsDialog(menu: String, player: Player, tracks: Tracks, speed: Float,
-    onSpeed: (Float) -> Unit, externalSubtitles: List<SubtitleChoice>, subtitleLoading: Boolean, onExternalSubtitle: (SubtitleChoice) -> Unit, series: Boolean, party: Boolean, onEpisodes: () -> Unit, onParty: () -> Unit, onClose: () -> Unit) {
+    onSpeed: (Float) -> Unit, externalSubtitles: List<SubtitleChoice>, subtitleLoading: Boolean, onExternalSubtitle: (SubtitleChoice) -> Unit, series: Boolean, party: Boolean, onEpisodes: () -> Unit, onParty: () -> Unit, onTiming: () -> Unit, onClose: () -> Unit) {
     var audioStatus by remember(player,menu) { mutableStateOf("") }
     var pendingAudio by remember(player,menu) { mutableStateOf<TrackSelectionOverride?>(null) }
     LaunchedEffect(player,pendingAudio) {
@@ -190,6 +197,7 @@ internal fun PlayerOptionsDialog(menu: String, player: Player, tracks: Tracks, s
                         item { FocusButton(if(type==C.TRACK_TYPE_TEXT) tr("Desactivados","Off") else tr("Automático","Automatic"),modifier=Modifier.focusRequester(first)) {
                             player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().clearOverridesOfType(type).setTrackTypeDisabled(type,type==C.TRACK_TYPE_TEXT).build();onClose()
                         } }
+                        if(type==C.TRACK_TYPE_TEXT) item { FocusButton(tr("Sincronizar subtítulos","Subtitle timing")) { onTiming() } }
                         var count=0
                         tracks.groups.filter { it.type==type }.forEach { group ->
                             for(index in 0 until group.length) {

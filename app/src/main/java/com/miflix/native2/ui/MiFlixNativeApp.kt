@@ -52,6 +52,11 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 state.launch { state.joinWatchParty(initialPartyCode) }
             }
         }
+        LaunchedEffect(state.screen) { if(state.screen==Screen.PLAYER) state.miniPlayer=false }
+        LaunchedEffect(state.activeProfile.id,state.session?.userId) {
+            if(state.miniPlayer) { state.miniPlayer=false;state.playerRequest=null }
+        }
+        Box(Modifier.fillMaxSize()) {
         key(state.screen) {
         when (state.screen) {
             Screen.SPLASH -> BruniOSplashScreen()
@@ -76,10 +81,19 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             Screen.WATCH_PARTY -> WatchPartyScreen(state) { state.screen = Screen.FRIENDS }
             Screen.PAIR_DEVICE -> PairDeviceScreen(state) { state.screen = Screen.SETTINGS }
             Screen.DETAILS -> DetailsScreen(state) { state.screen = state.detailsReturnScreen }
-            Screen.PLAYER -> state.playerRequest?.let { req -> androidx.compose.runtime.key(req.playbackId) { PlayerScreen(state, req) { state.screen = if (req.live) Screen.LIVE_TV else Screen.DETAILS } } }
-                ?: run { state.screen = Screen.HOME }
+            Screen.MULTIVIEW -> MultiViewScreen(state)
+            Screen.PLAYER -> if(state.playerRequest==null) state.screen=Screen.HOME
+
         }
 
+        }
+        state.playerRequest?.takeIf { state.screen==Screen.PLAYER || state.miniPlayer }?.let { req ->
+            key(req.playbackId) {
+                Box(if(state.miniPlayer && state.screen!=Screen.PLAYER) Modifier.align(Alignment.BottomEnd).padding(20.dp).width(320.dp).height(220.dp) else Modifier.fillMaxSize()) {
+                    PlayerScreen(state,req) { state.miniPlayer=false;state.screen=if(req.live) Screen.LIVE_TV else Screen.DETAILS }
+                }
+            }
+        }
         }
         LaunchedEffect(bootstrapped,state.session?.userId,state.activeProfile.id) {
             if(bootstrapped) runCatching { state.loadRatings() }.onFailure { state.error=it.message }

@@ -383,7 +383,7 @@ class AppState(context: Context) {
         val s=session ?: return
         val epoch=partyEpoch
         fun valid()=partyEpoch==epoch && session?.userId==s.userId
-        val req=playerRequest.takeIf { screen==Screen.PLAYER || watchParty!=null }
+        val req=playerRequest.takeIf { screen==Screen.PLAYER || miniPlayer || watchParty!=null }
         social.presence(s,req?.item?.title.orEmpty(),req?.item?.cloudId.orEmpty(),req?.season ?: 0,req?.episode ?: 0,watchParty?.roomCode)
         social.publishAvatar(s,activeProfile.avatarValue ?: ProfileAvatars[(activeProfile.id.hashCode() and Int.MAX_VALUE)%4].key)
         val requests=social.requests(s)
@@ -517,6 +517,16 @@ class AppState(context: Context) {
     val episodes = mutableStateListOf<EpisodeSummary>()
     var currentSeason by mutableStateOf(1)
     var sourceSelection by mutableStateOf<SourceSelection?>(null)
+    var miniPlayer by mutableStateOf(false)
+    val multiViewRequests = mutableStateListOf<PlayerRequest>()
+    fun openLivePlayer(req: PlayerRequest) {
+        miniPlayer=false;selected=req.item;playerRequest=req;screen=Screen.PLAYER
+    }
+    fun beginMultiView(req: PlayerRequest) {
+        require(req.live)
+        miniPlayer=false;multiViewRequests.clear();multiViewRequests.add(req)
+        playerRequest=null;screen=Screen.MULTIVIEW
+    }
     var liveSearch by mutableStateOf("")
     var liveSports by mutableStateOf(false)
     var liveCategoryId by mutableStateOf<String?>(null)
@@ -1288,6 +1298,7 @@ class AppState(context: Context) {
     }
 
     private fun detachParty() {
+        miniPlayer=false
         partyEpoch++; switchingPartyEpoch=null; invalidatePlaybackWork()
         session?.let { socialPrefs.edit().remove("room_${it.userId}").apply() }
         watchParty=null; partyRole=null; pendingPartyCode=null; accessRequests.clear()
@@ -1530,7 +1541,7 @@ class AppState(context: Context) {
 enum class Screen {
     SPLASH, HOME, SEARCH, MOVIES, SERIES, COLLECTIONS, COLLECTION_DETAIL, PLATFORM_DETAIL,
     GENRES, GENRE_DETAIL, YEAR_DETAIL, MY_LIST, SETTINGS, PROFILES, WATCH_PARTY, PAIR_DEVICE,
-    DETAILS, PLAYER, LIVE_TV, FRIENDS, TRAKT, NOTIFICATIONS, DIRECTOR_DETAIL
+    DETAILS, PLAYER, MULTIVIEW, LIVE_TV, FRIENDS, TRAKT, NOTIFICATIONS, DIRECTOR_DETAIL
 }
 
 data class PlayerRequest(

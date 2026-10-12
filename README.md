@@ -1,3 +1,7 @@
+# RC30 — Friends recommendations and independent Watch
+
+2.0.0-rc30 (22028). Run supabase_rc30_upgrade.sql before using the new social features. See RC30_SETUP.md.
+
 # RC29 — Animated BruniO startup
 
 2.0.0-rc29 (22027). See RC29_SETUP.md. Original logo animation; RC25 player preserved.

@@ -66,17 +66,17 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             Screen.NOTIFICATIONS -> NotificationsScreen(state)
             Screen.LIVE_TV -> LiveScreen(state)
             Screen.SEARCH -> SearchScreen(state) { state.screen = Screen.HOME }
-            Screen.MOVIES -> CatalogScreen(state, tr("Películas","Movies"), state.movies) { state.screen = Screen.HOME }
-            Screen.SERIES -> CatalogScreen(state, tr("Series","Series"), state.series) { state.screen = Screen.HOME }
+            Screen.MOVIES -> CatalogScreen(state, tr("Películas","Movies"), state.movies, onBack = { state.screen = Screen.HOME })
+            Screen.SERIES -> CatalogScreen(state, tr("Series","Series"), state.series, onBack = { state.screen = Screen.HOME })
             Screen.FRANCHISE -> FranchiseScreen(state)
             Screen.CUSTOM_FILTER -> CustomFilterScreen(state)
             Screen.COLLECTIONS -> CollectionsScreen(state) { state.screen = Screen.HOME }
-            Screen.COLLECTION_DETAIL -> CatalogScreen(state, state.collectionTitle, state.collectionItems) { state.screen = Screen.COLLECTIONS }
+            Screen.COLLECTION_DETAIL -> CatalogScreen(state, state.collectionTitle, state.collectionItems, onBack = { state.screen = Screen.COLLECTIONS })
             Screen.PLATFORM_DETAIL -> PlatformScreen(state) { state.screen = Screen.COLLECTIONS }
             Screen.GENRES -> CollectionsScreen(state) { state.screen = Screen.HOME }
-            Screen.GENRE_DETAIL -> CatalogScreen(state, state.genreTitle, state.genreItems) { state.screen = Screen.COLLECTIONS }
-            Screen.DIRECTOR_DETAIL -> CatalogScreen(state,state.directorTitle,state.directorItems) { state.screen=Screen.HOME }
-            Screen.YEAR_DETAIL -> CatalogScreen(state, state.yearTitle, state.yearItems) { state.screen = Screen.COLLECTIONS }
+            Screen.GENRE_DETAIL -> CatalogScreen(state, state.genreTitle, state.genreItems, onBack = { state.screen = Screen.COLLECTIONS })
+            Screen.DIRECTOR_DETAIL -> CatalogScreen(state,state.directorTitle,state.directorItems, onBack = { state.screen=Screen.HOME })
+            Screen.YEAR_DETAIL -> CatalogScreen(state, state.yearTitle, state.yearItems, onBack = { state.screen = Screen.COLLECTIONS })
             Screen.MY_LIST -> MyListScreen(state) { state.screen = Screen.HOME }
             Screen.SETTINGS -> SettingsScreen(state) { state.screen = Screen.HOME }
             Screen.PROFILES -> ProfilesScreen(state) { state.screen = Screen.HOME }

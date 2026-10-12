@@ -1,0 +1,8 @@
+<resources>
+    <style name="Theme.MiFlix.Native" parent="Theme.MiFlix.Base">
+        <item name="android:windowBackground">@drawable/brunio_launch_background</item>
+        <item name="android:windowSplashScreenBackground">@color/brunio_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/app_icon</item>
+        <item name="android:windowSplashScreenAnimationDuration">300</item>
+    </style>
+</resources>

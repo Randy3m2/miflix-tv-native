@@ -1,3 +1,7 @@
+# RC34 — Session recovery, regional channels and guide
+
+2.0.0-rc34 (22032). Automatic JWT renewal and one-time 401 retry; My List pages of 20; five regional IPTV lists replacing the global 10k feed; channel favorites and XMLTV now/next; double-tap player exit; Marvel/DC logos; parallel native lookup and season index cache. See **RC34_SETUP.md** for locations, EPG coverage and verification limits. No new SQL or signing secrets.
+
 # RC33 — Native sources and 10k Channels
 
 2.0.0-rc33 (22031). Optional native Knaben/TorBox source engine, disabled by default, with encrypted account-scoped credentials on this TV. Additional IPTV-org catalog in Live TV, the player channel picker and multiview. See RC33_SETUP.md. No new SQL or signing secrets.

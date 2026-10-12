@@ -1,3 +1,11 @@
+# RC33 — Native sources and 10k Channels
+
+2.0.0-rc33 (22031). Optional native Knaben/TorBox source engine, disabled by default, with encrypted account-scoped credentials on this TV. Additional IPTV-org catalog in Live TV, the player channel picker and multiview. See RC33_SETUP.md. No new SQL or signing secrets.
+
+# RC32 — Custom discovery and franchises
+
+2.0.0-rc32 (22030). Collections now includes combined actor/director/genre/year filters and Marvel/DC movie and series catalogs. Friends & Party refreshes whenever its tab is selected. See RC32_SETUP.md. No new SQL.
+
 # RC31 — Playback tools and multiview
 
 2.0.0-rc31 (22029). Subtitle timing, channels in the player, technical info, in-app PiP and up to four live channels. See RC31_SETUP.md. No new SQL.

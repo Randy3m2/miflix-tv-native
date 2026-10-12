@@ -7,7 +7,9 @@ import java.net.URLEncoder
 
 data class SocialPerson(val id: String, val nickname: String)
 data class PartyEvent(val id: Long, val userId: String, val kind: String, val body: String)
-data class FriendActivity(val id: String, val nickname: String, val title: String, val season: Int, val episode: Int, val room: String?, val online: Boolean, val avatar: String? = null)
+data class FriendActivity(val id: String, val nickname: String, val title: String, val season: Int, val episode: Int, val room: String?, val online: Boolean, val avatar: String? = null, val cloudId: String = "")
+data class FriendRecommendation(val owner: String, val nickname: String, val cloud: String, val title: String, val poster: String?)
+
 data class AccessRequest(val room: String, val id: String, val nickname: String)
 data class Friendship(val sender: String, val receiver: String, val status: String)
 
@@ -35,8 +37,22 @@ class SocialRepository(private val url: String, private val key: String) {
         write(s,"rpc/miflix_set_presence",JSONObject().put("title",title).put("media",media).put("s",season).put("e",episode).put("room",room ?: JSONObject.NULL))
     }
     suspend fun activity(s: CloudSession): List<FriendActivity> {
-        val a=JSONArray(Http.text("$url/rest/v1/rpc/miflix_friend_activity","POST",headers(s),"{}"))
-        return (0 until a.length()).map { a.getJSONObject(it).let { x -> FriendActivity(x.getString("user_id"),x.getString("nickname"),x.optString("title"),x.optInt("season"),x.optInt("episode"),if(x.isNull("room_code")) null else x.optString("room_code"),x.optBoolean("online"),x.optString("avatar_value").takeUnless { it.isBlank() || it=="null" }) } }
+        val a=JSONArray(Http.text("$url/rest/v1/rpc/miflix_friend_activity_v30","POST",headers(s),"{}"))
+        return (0 until a.length()).map { a.getJSONObject(it).let { x -> FriendActivity(x.getString("user_id"),x.getString("nickname"),x.optString("title"),x.optInt("season"),x.optInt("episode"),if(x.isNull("room_code")) null else x.optString("room_code"),x.optBoolean("online"),x.optString("avatar_value").takeUnless { it.isBlank() || it=="null" },x.optString("cloud_id").takeUnless { it=="null" }.orEmpty()) } }
+    }
+    suspend fun recommendations(s: CloudSession): List<FriendRecommendation> {
+        val a=JSONArray(Http.text("$url/rest/v1/rpc/miflix_friend_recommendations","POST",headers(s),"{}"))
+        return (0 until a.length()).map { i -> val x=a.getJSONObject(i)
+            FriendRecommendation(x.getString("owner_id"),x.getString("nickname"),x.getString("cloud_id"),x.getString("title"),x.optString("poster").takeUnless { it.isBlank() || it=="null" }) }
+    }
+    suspend fun recommend(s: CloudSession, item: com.miflix.native2.model.MediaSummary) {
+        Http.text("$url/rest/v1/miflix_recommendations?on_conflict=owner_id,cloud_id","POST",
+            headers(s)+("Prefer" to "resolution=merge-duplicates,return=minimal"),
+            JSONObject().put("owner_id",s.userId).put("cloud_id",item.cloudId).put("title",item.title)
+                .put("poster",item.poster ?: JSONObject.NULL).toString())
+    }
+    suspend fun removeRecommendation(s: CloudSession, cloud: String) {
+        Http.text("$url/rest/v1/miflix_recommendations?owner_id=eq.${s.userId}&cloud_id=eq.${enc(cloud)}","DELETE",headers(s))
     }
     suspend fun requestAccess(s: CloudSession, room: String): String = Http.text("$url/rest/v1/rpc/miflix_request_access","POST",headers(s),JSONObject().put("code",room).toString()).trim().trim('"')
     suspend fun requests(s: CloudSession): List<AccessRequest> {

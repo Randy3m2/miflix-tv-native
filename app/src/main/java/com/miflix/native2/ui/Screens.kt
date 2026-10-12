@@ -458,6 +458,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
     val item = state.selected ?: return
     val details = state.details
     val saved = state.progress[item.cloudId]
+    var showRecommend by remember(item.cloudId) { mutableStateOf(false) }
     var showRating by remember(item.cloudId) { mutableStateOf(false) }
     var episodeChoice by remember(item.cloudId) { mutableStateOf<EpisodeSummary?>(null) }
     var showQueueAdd by remember(item.cloudId) { mutableStateOf(false) }
@@ -466,6 +467,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
     val playFocus = remember(item.cloudId) { FocusRequester() }
     LaunchedEffect(item.cloudId) { delay(150); playFocus.requestFocus(); detailScroll.scrollToItem(0) }
     BackHandler(onBack = onBack)
+    if(showRecommend) RecommendTitleDialog(state,item) { showRecommend=false }
     if(showRating) RatingDialog(state,item) { showRating=false }
     episodeChoice?.let { ep ->
         Dialog(onDismissRequest={ episodeChoice=null }) {
@@ -530,6 +532,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                         FocusButton(if (state.favorites.contains(item.cloudId)) tr("✓ Mi lista","✓ My List") else tr("+ Mi lista","+ My List")) {
                             state.toggleFavorite(item); state.launch { runCatching { state.pushCloud() } }
                         }
+                        FocusButton(tr("Recomendar a amigos","Recommend to friends")) { showRecommend=true }
                         FocusButton("★ ${state.ratings[item.cloudId]?.let { "$it/10" } ?: tr("Puntuar","Rate")}") { showRating=true }
                         FocusButton(tr("Sala compartida","Watch Party")) { state.screen = Screen.WATCH_PARTY }
                     }

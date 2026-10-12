@@ -47,6 +47,7 @@ fun FriendsScreen(state: AppState) {
     var tab by remember { mutableStateOf(0) }
     var search by remember { mutableStateOf("") }
     var person by remember { mutableStateOf<FriendActivity?>(null) }
+    var recommendations by remember { mutableStateOf(false) }
     var manage by remember { mutableStateOf(false) }
     var calendar by remember { mutableStateOf(false) }
     var refreshing by remember { mutableStateOf(false) }
@@ -75,6 +76,9 @@ fun FriendsScreen(state: AppState) {
                         FocusButton(tr("Calendario","Calendar")) { calendar=true }
                         FocusButton(tr("Mi nickname / frases","My nickname / Phrases")) { manage=true }
                     }
+                }
+                item {
+                    FocusButton(tr("Recomendaciones de amigos","Friends' recommendations")) { recommendations=true }
                 }
                 if(state.session==null) item { FocusButton(tr("Iniciar sesión","Sign in")) { state.screen=Screen.SETTINGS } }
                 else {
@@ -105,21 +109,8 @@ fun FriendsScreen(state: AppState) {
             }
         }
     }
-    person?.let { friend ->
-        Dialog(onDismissRequest={ person=null }) {
-            Column(Modifier.width(430.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-                ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(100.dp))
-                Text("@${friend.nickname}",color=Color.White,fontSize=25.sp, lineHeight=30.sp)
-                Text(if(friend.title.isBlank()) if(friend.online) tr("En línea","Online") else tr("Desconectado","Offline") else "${tr("Viendo","Watching")} ${friend.title}",color=Muted)
-                friend.room?.let { code ->
-                    FocusButton(if(state.pendingPartyCode==code) tr("Esperando aprobación","Waiting for approval") else tr("Solicitar acceso","Request access"),primary=true) {
-                        state.launch { state.socialAction { state.joinWatchParty(code); person=null } }
-                    }
-                }
-                FocusButton(tr("Cerrar","Close")) { person=null }
-            }
-        }
-    }
+    person?.let { friend -> FriendActionsDialog(state,friend,close={ person=null }) }
+    if(recommendations) FriendRecommendationsDialog(state) { recommendations=false }
     if(manage) SocialSettingsDialog(state) { manage=false }
     if(calendar) CalendarDialog(state) { calendar=false }
 }

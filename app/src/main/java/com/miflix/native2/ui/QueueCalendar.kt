@@ -81,6 +81,7 @@ fun QueueAddDialog(state: AppState,item: MediaSummary,close: () -> Unit) {
 fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,close: () -> Unit) {
     val first=remember { FocusRequester() }
     LaunchedEffect(Unit) { withFrameNanos { };first.requestFocus() }
+    var person by remember { mutableStateOf<com.miflix.native2.data.FriendActivity?>(null) }
     var parties by remember { mutableStateOf(false) }
     var reactions by remember { mutableStateOf(false) }
     var calendar by remember { mutableStateOf(false) }
@@ -128,10 +129,7 @@ fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,close: () -> Unit) {
                     val ink=if(focused) Color.Black else Color.White
                     val secondary=if(focused) Color(0xFF333333) else Muted
                     val index=ids.indexOf(friend.id)
-                    val activate: () -> Unit = {
-                        if(friend.room!=null) state.launch { state.socialAction { state.joinWatchParty(friend.room) } }
-                        else state.partyStatus=tr("Este amigo no tiene un Party disponible","This friend has no available Party")
-                    }
+                    val activate: () -> Unit = { person=friend }
                     Column(Modifier.fillMaxWidth().focusRequester(rowFocus.getValue(friend.id))
                         .onPreviewKeyEvent { event ->
                             when(event.key) {
@@ -152,7 +150,7 @@ fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,close: () -> Unit) {
                                 Text(if(friend.title.isNotBlank()) tr("Viendo ","Watching ")+friend.title+(if(friend.season>0) " · S${friend.season} E${friend.episode}" else "") else if(friend.online) tr("En línea","Online") else tr("Desconectado","Offline"),color=secondary,maxLines=3)
                             }
                         }
-                        if(friend.room!=null) Text(tr("OK · Solicitar acceso","OK · Request access"),color=secondary,fontSize=14.sp)
+                        Text(tr("OK · Ver opciones","OK · View options"),color=secondary,fontSize=14.sp)
                     }
                 }
             }
@@ -163,6 +161,7 @@ fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,close: () -> Unit) {
             }) { close() }
         }
     }
+    person?.let { friend -> FriendActionsDialog(state,friend,close={ person=null },onContentOpened={ person=null;close() }) }
     if(reactions) PartyActionsDialog(state) { reactions=false }
     if(calendar) CalendarDialog(state) { calendar=false }
 }

@@ -348,6 +348,30 @@ class AppState(context: Context) {
     val friendActivity = mutableStateListOf<FriendActivity>()
     val accessRequests = mutableStateListOf<AccessRequest>()
     var pendingPartyCode by mutableStateOf<String?>(null)
+    suspend fun friendRecommendations(): List<FriendRecommendation> = social.recommendations(
+        session ?: error(tr("Inicia sesión primero","Sign in first")))
+    suspend fun recommendToFriends(item: MediaSummary) {
+        val account=session ?: error(tr("Inicia sesión primero","Sign in first"))
+        social.recommend(account,item)
+    }
+    suspend fun removeFriendRecommendation(cloudId: String) {
+        social.removeRecommendation(session ?: error(tr("Inicia sesión primero","Sign in first")),cloudId)
+    }
+    suspend fun openRecommendation(cloudId: String) {
+        val item=tmdb.byCloudId(cloudId) ?: error(tr("Contenido no disponible","Content unavailable"))
+        this.open(item)
+    }
+    // Called only after the UI confirms leaving any existing party.
+    suspend fun watchFriendIndependently(friend: FriendActivity) {
+        val item=tmdb.byCloudId(friend.cloudId) ?: error(tr("Contenido no disponible","Content unavailable"))
+        val ep=if(item.type=="series" && friend.season>0 && friend.episode>0) {
+            tmdb.season(item.id,friend.season).firstOrNull { it.episode==friend.episode }
+                ?: error(tr("Episodio no disponible","Episode unavailable"))
+        } else null
+        if(watchParty!=null || pendingPartyCode!=null) leaveWatchParty()
+        this.open(item)
+        if(item.type=="movie") playMovie() else if(ep!=null) playEpisode(ep) else resumeSeries()
+    }
     suspend fun refreshFriendsDirectory() {
         val s=session ?: return
         refreshFriends()

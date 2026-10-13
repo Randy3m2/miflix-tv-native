@@ -62,32 +62,47 @@ jobs:
         run: gradle :app:testReleaseUnitTest :app:assembleRelease --stacktrace
 
       - name: Verify signing and prepare APKs and update metadata
-        run: python3 scripts/prepare_update.py app/build/outputs/apk/release/app-release.apk
+        id: prepare
+        run: |
+          python3 scripts/prepare_update.py app/build/outputs/apk/release/app-release.apk
+          python3 - <<'PYTHON'
+          import json, os
+          from pathlib import Path
+          metadata = json.loads(Path('update.json').read_text())
+          version = metadata['version']
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+              out.write(f'version={version}\n')
+              out.write(f'apk=MiFlix-TV-Native-v{version}.apk\n')
+          PYTHON
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MiFlix-TV-Native-v2.0.0-rc34
+          name: MiFlix-TV-Native-v${{ steps.prepare.outputs.version }}
           path: |
-            MiFlix-TV-Native-v2.0.0-rc34.apk
+            ${{ steps.prepare.outputs.apk }}
             update.json
 
       - name: Publish versioned release
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ steps.prepare.outputs.version }}
+          RELEASE_APK: ${{ steps.prepare.outputs.apk }}
         run: |
-          TAG="native-v2.0.0-rc34"
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native 2.0 RC34" --notes "RC34: automatic JWT renewal, My List pagination, five regional IPTV lists, guide and channel favorites, double-tap player exit, franchise logos and faster native source lookup. No new SQL migration."
-          gh release upload "$TAG" MiFlix-TV-Native-v2.0.0-rc34.apk update.json --clobber
+          TAG="native-v${RELEASE_VERSION}"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "BruniO TV Native ${RELEASE_VERSION}" --notes "Current version: ${RELEASE_VERSION}. Actor filmography, season dropdowns and playback file size."
+          gh release upload "$TAG" "${RELEASE_APK}" update.json --clobber
 
       - name: Update permanent latest channel
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ steps.prepare.outputs.version }}
+          RELEASE_APK: ${{ steps.prepare.outputs.apk }}
         run: |
           TAG="native-latest"
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native · Latest" --notes "Current version: 2.0.0-rc34"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "MiFlix TV Native · Latest" --notes "Current version: ${RELEASE_VERSION}"
           gh release upload "$TAG" MiFlix-TV-Native.apk update.json --clobber
-          gh release edit "$TAG" --title "MiFlix TV Native · Latest" --notes "Current version: 2.0.0-rc34"
+          gh release edit "$TAG" --title "MiFlix TV Native · Latest" --notes "Current version: ${RELEASE_VERSION}"
 
       - name: Remove runner copy of private signing key
         if: always()

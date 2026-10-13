@@ -69,6 +69,14 @@ class StreamRepository(initialManifestUrl: String) {
             val filename = hints?.optString("filename").orEmpty()
             val videoHash = hints?.optString("videoHash").orEmpty()
             val videoSize = hints?.optLong("videoSize", 0L) ?: 0L
+            // Only explicit audio fields; subtitle language is not audio evidence.
+            fun languageValues(value: Any?): List<String> = when(value) {
+                is org.json.JSONArray -> (0 until value.length()).mapNotNull { value.optString(it).takeIf { x -> x.isNotBlank() } }
+                is String -> value.split(Regex("[,;|/\\s]+" )).filter { it.isNotBlank() }
+                else -> emptyList()
+            }
+            val audioLanguages = (languageValues(s.opt("audioLanguages")) + languageValues(s.opt("languages")) +
+                languageValues(hints?.opt("audioLanguages"))).distinct()
             val subs = s.optJSONArray("subtitles")?.let { sa ->
                 (0 until sa.length()).mapNotNull { si ->
                     val sub = sa.optJSONObject(si) ?: return@mapNotNull null
@@ -84,7 +92,8 @@ class StreamRepository(initialManifestUrl: String) {
                 filename = filename,
                 videoHash = videoHash,
                 videoSize = videoSize,
-                addonName = addonName
+                addonName = addonName,
+                audioLanguages = audioLanguages
             )
         }
     }

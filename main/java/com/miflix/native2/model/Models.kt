@@ -73,7 +73,8 @@ data class StreamChoice(
     val videoSize: Long = 0L,
     val requestHeaders: Map<String, String> = emptyMap(),
     val addonName: String = "",
-    val nativeSource: com.miflix.native2.data.NativeSource? = null
+    val nativeSource: com.miflix.native2.data.NativeSource? = null,
+    val audioLanguages: List<String> = emptyList()
 )
 
 data class SubtitleChoice(

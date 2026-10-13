@@ -3,7 +3,7 @@ package com.miflix.native2.data
 import com.miflix.native2.model.StreamChoice
 import java.util.Locale
 
-/** Factory ordering across all installed stream add-ons: resolution, then known file size. */
+/** Audio preference first when Spanish is selected; resolution and size break ties. */
 internal object StreamOrdering {
     private val resolution=Regex("(?<!\\d)(4320|2160|1440|1080|720|576|480|360)(?:p)?(?!\\d)",RegexOption.IGNORE_CASE)
     private val size=Regex("(?<![\\d.])(\\d+(?:[.,]\\d+)?)\\s*(GiB|GB|MiB|MB|TiB|TB)\\b",RegexOption.IGNORE_CASE)
@@ -20,6 +20,13 @@ internal object StreamOrdering {
     }
     fun playable(stream: StreamChoice): Boolean = !Regex("\\bTB[\\s\\p{P}\\p{S}\\p{M}]*Download\\b",RegexOption.IGNORE_CASE)
         .containsMatchIn(stream.name+" "+stream.title)
-    fun sorted(streams: List<StreamChoice>): List<StreamChoice> = streams.filter { playable(it) }.distinctBy { it.url }
-        .sortedWith(compareByDescending<StreamChoice> { quality(it) }.thenByDescending { bytes(it) })
+    fun languageRank(stream: StreamChoice): Int = StreamLanguagePriority.rank(
+        stream.audioLanguages.joinToString(" "), "${stream.name}\n${stream.title}\n${stream.filename}")
+    fun sorted(streams: List<StreamChoice>, preferredAudio: String = ""): List<StreamChoice> {
+        val spanish = StreamLanguagePriority.prefersSpanish(preferredAudio)
+        return streams.filter { playable(it) }
+            .sortedWith(compareBy<StreamChoice> { if(spanish) languageRank(it) else 0 }
+                .thenByDescending { quality(it) }.thenByDescending { bytes(it) })
+            .distinctBy { it.url }
+    }
 }

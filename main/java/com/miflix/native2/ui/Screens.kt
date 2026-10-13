@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
@@ -485,7 +486,11 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
     episodeChoice?.let { ep ->
         Dialog(onDismissRequest={ episodeChoice=null }) {
             Column(Modifier.width(530.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-                Text("S${ep.season} E${ep.episode} · ${ep.title}",color=Color.White,fontSize=22.sp)
+                var reveal by remember(item.cloudId,ep.season,ep.episode) { mutableStateOf(false) }
+                val hidden=!state.episodeWatched(item,ep) && !reveal
+                Text("S${ep.season} E${ep.episode} · ${if(hidden) tr("No visto","Not watched") else ep.title}",color=Color.White,fontSize=22.sp)
+                if(hidden) FocusButton(tr("Mostrar detalles (spoilers)","Reveal details (spoilers)")) { reveal=true }
+                if(reveal && ep.overview.isNotBlank()) Text(ep.overview,color=Muted,fontSize=15.sp,maxLines=5)
                 val resume=state.progress["${item.cloudId}:s${ep.season}e${ep.episode}"]
                 if((resume?.position ?: 0L)>0 && (resume?.percent ?: 0.0)<96) FocusButton(tr("Continuar viendo","Continue watching")) { state.launch { state.socialAction { state.playEpisode(ep);episodeChoice=null } } }
                 FocusButton(tr("Desde el principio","Play from beginning")) { state.launch { state.socialAction { state.playEpisode(ep,true);episodeChoice=null } } }
@@ -568,7 +573,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                     Spacer(Modifier.height(12.dp))
                     LazyRow(modifier = Modifier.fillMaxWidth().height(236.dp), contentPadding = PaddingValues(end = 54.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(state.episodes, key = { "${it.season}:${it.episode}" }) { ep ->
-                            EpisodeCard(ep, onLongClick = { state.launch { state.chooseEpisodeSources(ep) } }) { episodeChoice=ep }
+                            EpisodeCard(ep, hidden=!state.episodeWatched(item,ep), onLongClick = { state.launch { state.chooseEpisodeSources(ep) } }) { episodeChoice=ep }
                         }
                     }
                     Spacer(Modifier.height(28.dp))
@@ -601,6 +606,8 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                     Spacer(Modifier.height(28.dp))
                 }
             }
+
+            item(key = "trakt-comments") { TraktCommentsSection(state, item) }
 
             item(key = "info") {
                 Text(if (item.type == "movie") tr("Detalles de la película","Movie Details") else tr("Detalles de la serie","Series Details"), color = Color.White, fontSize = 27.sp, lineHeight=32.sp, fontWeight = FontWeight.Black)
@@ -723,6 +730,10 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
             item {
                 Text(tr("Preferencias de reproducción","Playback preferences"),color=Color.White,fontSize=22.sp, lineHeight=26.sp)
                 Text("Audio: ${state.audioLanguage.ifBlank { tr("Automático","Automatic") }}",color=Muted)
+                if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(state.audioLanguage)) {
+                    Text(tr("Enlaces: español latino y de España primero; inglés como alternativa.",
+                        "Links: Latin American and Spain Spanish first; English as fallback."),color=Muted,fontSize=14.sp)
+                }
                 LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(vertical=8.dp)) { item { FlowRow(horizontalArrangement=Arrangement.spacedBy(18.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
                     listOf("" to tr("Automático","Auto"), "es" to "Español", "en" to "English", "pt" to "Português", "fr" to "Français").forEach { (code,label) ->
                         FocusButton(label,primary=state.audioLanguage==code) { state.savePlaybackPreferences(code,state.subtitleLanguage,state.autoplayNext) }
@@ -1109,7 +1120,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 )
             }
             setMediaItem(builder.build(), request.resumeMs)
-            val trackBuilder = TrackSelectionParameters.Builder(context).setPreferredAudioLanguage(state.audioLanguage.takeIf { it.isNotBlank() })
+            val trackBuilder = TrackSelectionParameters.Builder(context)
+            if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(state.audioLanguage)) {
+                trackBuilder.setPreferredAudioLanguages("es", "en")
+            } else trackBuilder.setPreferredAudioLanguage(state.audioLanguage.takeIf { it.isNotBlank() })
             if (preferredText != null) trackBuilder.setPreferredTextLanguage(preferredText)
             trackBuilder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT,state.subtitleLanguage == "off")
             trackSelectionParameters = trackBuilder.build()
@@ -1532,8 +1546,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                         }
                     }
                     if(queueNext==null) upcoming?.let { next ->
-                        Text("${tr("Siguiente","Next")}: S${next.season} E${next.episode} · ${next.title}",color=Muted)
-                        Text(next.overview,color=Color.White,fontSize=15.sp,lineHeight=20.sp,maxLines=4)
+                        val hidden=!state.episodeWatched(request.item,next)
+                        Text("${tr("Siguiente","Next")}: S${next.season} E${next.episode} · ${if(hidden) tr("No visto","Not watched") else next.title}",color=Muted)
+                        Text(if(hidden) tr("Sinopsis oculta para evitar spoilers","Synopsis hidden to avoid spoilers") else next.overview,color=Color.White,fontSize=15.sp,lineHeight=20.sp,maxLines=4)
                         Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                             FocusButton(if(state.autoplayNext && !cancelAutoplay) "${tr("Siguiente episodio","Next episode")} · ${countdown}s" else tr("Siguiente episodio","Next episode"),primary=true) { cancelAutoplay=true; state.launch { state.playNext(request,next) } }
                             FocusButton(tr("Cancelar reproducción automática","Cancel autoplay")) { cancelAutoplay=true }
@@ -1613,7 +1628,7 @@ private fun EpisodePickerOverlay(state: AppState, request: PlayerRequest, onClos
             LazyColumn(state=listState,modifier=Modifier.weight(1f),contentPadding = PaddingValues(bottom = 30.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(state.episodes, key = { "${it.season}:${it.episode}" }) { ep ->
                     val active = ep.season == request.season && ep.episode == request.episode
-                    EpisodeListRow(ep, active, modifier=if(state.episodes.indexOf(ep)==focusIndex) Modifier.focusRequester(episodeFocus) else Modifier, onLongClick = { state.launch { state.chooseEpisodeSources(ep) } }) {
+                    EpisodeListRow(ep, active, hidden=!state.episodeWatched(request.item,ep), modifier=if(state.episodes.indexOf(ep)==focusIndex) Modifier.focusRequester(episodeFocus) else Modifier, onLongClick = { state.launch { state.chooseEpisodeSources(ep) } }) {
                         state.launch {
                             runCatching { state.playEpisode(ep) }.onFailure { state.error = it.message }
                             onClose()
@@ -1627,7 +1642,7 @@ private fun EpisodePickerOverlay(state: AppState, request: PlayerRequest, onClos
 }
 
 @Composable
-private fun EpisodeListRow(ep: EpisodeSummary, active: Boolean, modifier: Modifier=Modifier, onLongClick: () -> Unit, onClick: () -> Unit) {
+private fun EpisodeListRow(ep: EpisodeSummary, active: Boolean, hidden: Boolean, modifier: Modifier=Modifier, onLongClick: () -> Unit, onClick: () -> Unit) {
     var focused by remember(ep.season, ep.episode) { mutableStateOf(false) }
     Row(
         modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused }.tvPlaybackClick(onClick, onLongClick).clickable(onClick = onClick)
@@ -1635,11 +1650,11 @@ private fun EpisodeListRow(ep: EpisodeSummary, active: Boolean, modifier: Modifi
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        AsyncImage(ep.still, ep.title, Modifier.width(150.dp).height(84.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+        EpisodeArtwork(ep,hidden,Modifier.width(150.dp).height(84.dp).clip(RoundedCornerShape(8.dp)))
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text("S${ep.season} E${ep.episode} · ${ep.title}", color = if (focused) Color.Black else Color.White, fontSize = 14.sp, lineHeight=17.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-            Text(ep.overview, color = if (focused) Color(0xFF333333) else Muted, fontSize = 11.sp, lineHeight=13.sp, maxLines = 2)
+            Text("S${ep.season} E${ep.episode} · ${if(hidden) tr("No visto","Not watched") else ep.title}", color = if (focused) Color.Black else Color.White, fontSize = 14.sp, lineHeight=17.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(if(hidden) tr("Sinopsis oculta para evitar spoilers","Synopsis hidden to avoid spoilers") else ep.overview, color = if (focused) Color(0xFF333333) else Muted, fontSize = 11.sp, lineHeight=13.sp, maxLines = 2)
         }
         if (active) Text(tr("ACTUAL","NOW"), color = if (focused) Color.Black else Color.White, fontSize = 10.sp, lineHeight=12.sp, fontWeight = FontWeight.Black)
     }
@@ -1686,17 +1701,17 @@ private fun TrailerCard(trailer: TrailerSummary, onClick: () -> Unit) {
 }
 
 @Composable
-private fun EpisodeCard(ep: EpisodeSummary, onLongClick: () -> Unit, onClick: () -> Unit) {
+private fun EpisodeCard(ep: EpisodeSummary, hidden: Boolean, onLongClick: () -> Unit, onClick: () -> Unit) {
     var focused by remember(ep.season, ep.episode) { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) 1.02f else 1f, tween(80, easing = LinearOutSlowInEasing), label = "episodeScale")
     Box(Modifier.width(328.dp).height(225.dp), contentAlignment = Alignment.TopCenter) {
         Column(Modifier.width(316.dp).graphicsLayer { scaleX = scale; scaleY = scale }.onFocusChanged { focused = it.isFocused }.focusable().tvPlaybackClick(onClick, onLongClick).clickable(onClick = onClick)) {
             Box(Modifier.fillMaxWidth().height(176.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFF1B1B1B)).border(if (focused) 2.dp else 0.dp, Color.White, RoundedCornerShape(12.dp))) {
-                AsyncImage(ep.still, ep.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                EpisodeArtwork(ep,hidden,Modifier.fillMaxSize())
                 if (focused) Box(Modifier.fillMaxSize().background(Color(0x26000000)), contentAlignment = Alignment.Center) { Text("▶", color = Color.White, fontSize = 32.sp, lineHeight=38.sp) }
             }
             Spacer(Modifier.height(7.dp))
-            Text("S${ep.season} E${ep.episode} · ${ep.title}", color = Color.White, fontSize = 13.sp, lineHeight=16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text("S${ep.season} E${ep.episode} · ${if(hidden) tr("No visto","Not watched") else ep.title}", color = Color.White, fontSize = 13.sp, lineHeight=16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
             if (ep.airDate.isNotBlank()) Text(ep.airDate, color = Muted, fontSize = 10.sp, lineHeight=12.sp, maxLines = 1)
         }
     }
@@ -1845,6 +1860,22 @@ private fun ActorCreditsDialog(person: CastMember, state: AppState, close: () ->
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun EpisodeArtwork(ep: EpisodeSummary, hidden: Boolean, modifier: Modifier) {
+    Box(modifier.background(Color(0xFF171B24)),contentAlignment=Alignment.Center) {
+        if(!hidden) {
+            AsyncImage(ep.still,ep.title,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+        } else {
+            // Older Android TVs ignore Modifier.blur: never load the spoiler image there.
+            if(android.os.Build.VERSION.SDK_INT>=31) {
+                AsyncImage(ep.still,null,Modifier.fillMaxSize().blur(32.dp),contentScale=ContentScale.Crop)
+            }
+            Box(Modifier.fillMaxSize().background(Color(0xDB10131A)))
+            Text(tr("No visto","Not watched"),color=Color(0xFFCED1D8),fontSize=14.sp)
         }
     }
 }

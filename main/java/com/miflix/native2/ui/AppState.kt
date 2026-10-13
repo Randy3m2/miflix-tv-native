@@ -114,6 +114,7 @@ class AppState(context: Context) {
     private var checkingNotices = false
     private val introRepo = IntroRepository()
     fun savePlaybackPreferences(audio: String, subtitle: String, autoplay: Boolean) {
+        if(audioLanguage != audio) invalidatePlaybackWork()
         audioLanguage = audio; subtitleLanguage = subtitle; autoplayNext = autoplay
         playbackPrefs.edit().putString("audio",audio).putString("subtitle",subtitle).putBoolean("autoplay",autoplay).apply()
     }
@@ -464,7 +465,8 @@ class AppState(context: Context) {
         val owner=session?.userId
         val native=owner!=null && nativeStore.enabled(owner)
         // Disabled is the default and leaves the existing add-on path unchanged.
-        if(!native) return@supervisorScope streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title)
+        if(!native) return@supervisorScope StreamOrdering.sorted(
+            streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title), audioLanguage)
         val token=nativeStore.token(owner)
         val addon=async {
             if(streamRepo.manifests().isEmpty()) emptyList() else streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title)
@@ -473,9 +475,9 @@ class AppState(context: Context) {
         val builtIn=try {
             check(token.isNotBlank()) { tr("Vuelve a guardar tu API key de TorBox","Save your TorBox API key again") }
             val detail=details?.takeIf { selected?.cloudId==item.cloudId } ?: tmdb.details(item)
-            kotlinx.coroutines.withTimeout(25000) { nativeSources.search(owner!!,token,listOf(detail.originalTitle,item.title),item.type,item.year,season,episode,streamSizeBytes) }
+            kotlinx.coroutines.withTimeout(25000) { nativeSources.search(owner!!,token,listOf(detail.originalTitle,item.title),item.type,item.year,season,episode,streamSizeBytes,audioLanguage) }
         } catch(e: kotlinx.coroutines.TimeoutCancellationException) { failure=tr("Motor nativo: tiempo agotado","Native engine: timed out");emptyList() } catch(e: CancellationException) { throw e } catch(e: Exception) { failure=e.message;emptyList() }
-        val links=StreamOrdering.sorted((addon.await()+builtIn).filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) })
+        val links=StreamOrdering.sorted((addon.await()+builtIn).filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) }, audioLanguage)
         if(session?.userId==owner) nativeSourceStatus=failure ?: tr("Motor nativo: ","Native engine: ")+builtIn.size+tr(" enlaces disponibles"," available links")
         if(links.isEmpty() && failure!=null) throw IllegalStateException(failure)
         links
@@ -1340,6 +1342,15 @@ class AppState(context: Context) {
         if(valid()) busyMessage=null
     }
 
+    private fun watchedEpisodesKey()="watched_episodes_${session?.userId ?: "local"}_${activeProfile.id}"
+    fun episodeWatched(item: MediaSummary, ep: EpisodeSummary): Boolean {
+        val key="${item.cloudId}:s${ep.season}e${ep.episode}"
+        val exact=progress[key]
+        val last=progress[item.cloudId]?.takeIf { it.season==ep.season && it.episode==ep.episode }
+        return (exact?.percent ?: last?.percent ?: 0.0)>=96.0 ||
+            playbackPrefs.getStringSet(watchedEpisodesKey(),emptySet()).orEmpty().contains(key)
+    }
+
     fun updateProgress(req: PlayerRequest, position: Long, duration: Long, ended: Boolean = false) {
         if (req.live || duration <= 0) return
         val key = if (req.item.type == "series") "${req.item.cloudId}:s${req.season}e${req.episode}" else req.item.cloudId
@@ -1351,6 +1362,10 @@ class AppState(context: Context) {
             season = req.season,
             episode = req.episode
         )
+        if(req.item.type=="series" && (row.percent>=96.0 || (progress[key]?.percent ?: 0.0)>=96.0)) {
+            val saved=playbackPrefs.getStringSet(watchedEpisodesKey(),emptySet()).orEmpty()
+            if(key !in saved) playbackPrefs.edit().putStringSet(watchedEpisodesKey(),saved.toSet()+key).apply()
+        }
         progress[key] = row
         progress[req.item.cloudId] = row
         if (ended) continueWatching.removeAll { it.cloudId == req.item.cloudId }

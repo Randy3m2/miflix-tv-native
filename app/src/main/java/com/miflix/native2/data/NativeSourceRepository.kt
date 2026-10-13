@@ -48,10 +48,10 @@ class NativeSourceRepository(private val transport: suspend (String,String,Map<S
         return (0 until a.length()).mapNotNull { a.optJSONObject(it) }
     }
     private fun fileName(file: JSONObject)=file.optString("name").ifBlank { file.optString("short_name") }
-    suspend fun search(owner: String,token: String,titles: List<String>,type: String,year: String,season: Int,episode: Int,maxBytes: Long): List<StreamChoice> = lock.withLock {
+    suspend fun search(owner: String,token: String,titles: List<String>,type: String,year: String,season: Int,episode: Int,maxBytes: Long,preferredAudio: String = ""): List<StreamChoice> = lock.withLock {
         val names=titles.filter { it.isNotBlank() }.distinctBy { NativeSourceMatching.normalize(it) }.take(2)
         val fingerprint=java.security.MessageDigest.getInstance("SHA-256").digest(token.toByteArray()).joinToString("") { "%02x".format(it) }
-        val cacheKey=listOf(fingerprint,names.joinToString("|"),type,year,season,episode,maxBytes).joinToString(":")
+        val cacheKey=listOf(fingerprint,names.joinToString("|"),type,year,season,episode,maxBytes,preferredAudio).joinToString(":")
         if(lastOwner==owner && lastQuery==cacheKey && System.currentTimeMillis()-lastAt<120_000) return@withLock lastResults
         // Cache index results by season, but verify TorBox availability for every new episode.
         val indexKey=listOf(owner,fingerprint,names.joinToString("|"),type,year,season).joinToString(":")
@@ -87,13 +87,16 @@ class NativeSourceRepository(private val transport: suspend (String,String,Map<S
             val videos=files(data).filter { NativeSourceMatching.video(fileName(it)) }
             val matching=if(type=="series") videos.filter { NativeSourceMatching.episodeMatches(fileName(it),season,episode) }
                 else if(videos.size==1) videos else videos.filter { NativeSourceMatching.titleMatches(fileName(it).substringAfterLast('/'),names) }
-            val file=matching.maxByOrNull { it.optLong("size") } ?: return@mapNotNull null
+            val spanish=StreamLanguagePriority.prefersSpanish(preferredAudio)
+            val file=matching.sortedWith(compareBy<JSONObject> {
+                if(spanish) StreamLanguagePriority.rank("",fileName(it)) else 0
+            }.thenByDescending { it.optLong("size") }).firstOrNull() ?: return@mapNotNull null
             val name=fileName(file);val size=file.optLong("size")
             if(size<=0 || maxBytes>0 && size>maxBytes) return@mapNotNull null
             StreamChoice("BruniO Native · TorBox","brunio-native://$hash/${enc(name)}",hit.getString("title")+"\n"+String.format(Locale.US,"%.2f GB",size/1_000_000_000.0),
                 filename=name,videoSize=size,addonName="BruniO Native",nativeSource=NativeSource(hash,name,size))
         }
-        val sorted=StreamOrdering.sorted(results.filter { StreamFilters.allowed(it,type,year,maxBytes,names.firstOrNull()) })
+        val sorted=StreamOrdering.sorted(results.filter { StreamFilters.allowed(it,type,year,maxBytes,names.firstOrNull()) }, preferredAudio)
         lastOwner=owner;lastQuery=cacheKey;lastAt=System.currentTimeMillis();lastResults=sorted
         sorted
     }

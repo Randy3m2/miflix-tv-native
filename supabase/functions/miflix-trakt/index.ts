@@ -78,6 +78,26 @@ Deno.serve(async(req: Request)=>{
    if(!pending||Date.now()>pending.started+pending.expires_in*1000)return response({error:"Authorization expired. Connect again."},410);
    return response({pending:true});
   }
+  // Community comments are public Trakt data: no user Trakt OAuth required.
+  if(action==="comments") {
+   const tmdb=Number(input.tmdb);
+   const kind=input.type==="movie"?"movie":input.type==="series"?"show":null;
+   if(!kind || !Number.isSafeInteger(tmdb) || tmdb<1) return response({error:"Invalid title"},400);
+   const search=await trakt(`/search/tmdb/${tmdb}?type=${kind}`);
+   if(search.status===404) return response({items:[]});
+   if(search.status!==200 || !Array.isArray(search.data)) return response({error:"Trakt title lookup unavailable"},502);
+   const match=search.data.find((row:any)=>row.type===kind && row[kind]?.ids?.tmdb===tmdb);
+   const id=match?.[kind]?.ids?.trakt;
+   if(!Number.isSafeInteger(id) || id<1) return response({items:[]});
+   const comments=await trakt(`/${kind==="movie"?"movies":"shows"}/${id}/comments/likes?page=1&limit=10`);
+   if(comments.status===404) return response({items:[]});
+   if(comments.status!==200 || !Array.isArray(comments.data)) return response({error:"Trakt comments unavailable"},502);
+   const items=comments.data.filter((row:any)=>Number.isSafeInteger(row.id) && typeof row.comment==="string" && row.comment.trim())
+    .map((row:any)=>({id:row.id,author:String(row.user?.name || row.user?.username || "Trakt user").slice(0,100),
+      text:row.comment.slice(0,12000),spoiler:!!row.spoiler || /\[spoiler(?:=[^\]]*)?\]/i.test(row.comment),
+      likes:Math.max(0,Number(row.likes)||0),date:String(row.created_at || "").slice(0,10)}));
+   return response({items});
+  }
   const token=await access(uid);
   if(action==="disconnect"){
    await trakt("/oauth/revoke",undefined,{token,client_id:clientId});

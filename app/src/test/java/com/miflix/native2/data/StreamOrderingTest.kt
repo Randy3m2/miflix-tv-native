@@ -32,4 +32,34 @@ class StreamOrderingTest {
         assertEquals(4320,StreamOrdering.quality(stream("e","8K")))
         assertEquals(0L,StreamOrdering.bytes(stream("f","No size")))
     }
+    @Test fun spanishAudioPrecedesEnglishEvenAtLowerResolution() {
+        val english=stream("en","2160p English",9000)
+        val latin=stream("lat","720p Latino",100)
+        val spain=stream("es","1080p Castellano",200)
+        assertEquals(listOf(spain,latin,english),StreamOrdering.sorted(listOf(english,latin,spain),"es"))
+    }
+    @Test fun englishFallbackPrecedesUnknownAndOtherAudio() {
+        val french=stream("fr","2160p French",9000)
+        val unknown=stream("unknown","4K MULTI",100)
+        val english=stream("en","720p ENG",200)
+        assertEquals(listOf(english,unknown,french),StreamOrdering.sorted(listOf(french,unknown,english),"es"))
+    }
+    @Test fun subtitlesDoNotClaimSpanishAudio() {
+        val subOnly=stream("subs","2160p\nSpanish subtitles").copy(subtitles=listOf(com.miflix.native2.model.SubtitleChoice("https://test/sub.srt","es","Español")))
+        val english=stream("en","720p English")
+        assertEquals(2,StreamOrdering.languageRank(subOnly))
+        assertEquals(listOf(english,subOnly),StreamOrdering.sorted(listOf(subOnly,english),"es"))
+    }
+    @Test fun explicitAudioMetadataAndSpanishRegionsAreRecognized() {
+        val spanish=stream("es","720p").copy(audioLanguages=listOf("es-419"))
+        val english=stream("en","2160p").copy(audioLanguages=listOf("en"))
+        assertEquals(listOf(spanish,english),StreamOrdering.sorted(listOf(english,spanish),"es-ES"))
+        assertEquals(listOf(english,spanish),StreamOrdering.sorted(listOf(english,spanish)))
+    }
+    @Test fun duplicateUrlKeepsSpanishEvidence() {
+        val english=stream("same","2160p English")
+        val spanish=stream("same","1080p Castellano")
+        assertEquals(listOf(spanish),StreamOrdering.sorted(listOf(english,spanish),"es"))
+    }
+
 }

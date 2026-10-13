@@ -29,4 +29,38 @@ class SessionRenewalTest {
         try { renewal.valid("a");fail() } catch(_:IllegalStateException) { }
         assertEquals("expired",current!!.accessToken)
     }
+    @Test fun transientFailureWaitsBeforeRetryAndIncreasesDelay()=runBlocking {
+        var current:CloudSession?=session();var calls=0;var now=0L
+        val renewal=SessionRenewal({current},{current=it},{true}) { calls++;error("offline") }
+        renewal.nowMs={ now }
+        repeat(20) { try { renewal.valid("a") } catch(_:IllegalStateException) { } }
+        assertEquals(1,calls)
+        now=14_999;try { renewal.valid("a") } catch(_:IllegalStateException) { };assertEquals(1,calls)
+        now=15_000;try { renewal.valid("a") } catch(_:IllegalStateException) { };assertEquals(2,calls)
+        now=44_999;try { renewal.valid("a") } catch(_:IllegalStateException) { };assertEquals(2,calls)
+        now=45_000;try { renewal.valid("a") } catch(_:IllegalStateException) { };assertEquals(3,calls)
+    }
+    @Test fun invalidCredentialRefreshesOnlyOnceUntilNewSignIn()=runBlocking {
+        var current:CloudSession?=session();var calls=0
+        val renewal=SessionRenewal({current},{current=it},{true}) {
+            calls++
+            if(it=="refresh-expired") throw HttpFailure(400,"Invalid refresh token")
+            session("fresh")
+        }
+        repeat(20) { try { renewal.valid("a") } catch(_:SessionSignInRequired) { } }
+        assertEquals(1,calls)
+        current=session("new-login")
+        assertEquals("fresh",renewal.valid("a").accessToken)
+        assertEquals(2,calls)
+    }
+    @Test fun cancelledRefreshDoesNotStartCooldown()=runBlocking {
+        var current:CloudSession?=session();var calls=0
+        val renewal=SessionRenewal({current},{current=it},{true}) {
+            calls++;if(calls==1) throw CancellationException("Cancelled");session("fresh")
+        }
+        try { renewal.valid("a") } catch(_:CancellationException) { }
+        assertEquals("fresh",renewal.valid("a").accessToken)
+        assertEquals(2,calls)
+    }
+
 }

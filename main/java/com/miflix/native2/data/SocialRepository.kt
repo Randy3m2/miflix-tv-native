@@ -4,6 +4,8 @@ import com.miflix.native2.model.CloudSession
 import org.json.JSONObject
 import org.json.JSONArray
 import java.net.URLEncoder
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 data class SocialPerson(val id: String, val nickname: String)
 data class PartyEvent(val id: Long, val userId: String, val kind: String, val body: String)
@@ -17,6 +19,11 @@ data class QueueEntry(val id: String, val cloud: String, val title: String, val 
 data class CalendarEvent(val id: String, val owner: String, val title: String, val kind: String, val starts: String, val cloud: String?, val season: Int, val episode: Int, val guests: List<String>, val channelId: String="", val channelType: String="tv")
 
 class SocialRepository(private val url: String, private val key: String) {
+    private val presenceMutex=Mutex()
+    private val avatarMutex=Mutex()
+    private var presenceSignature=""
+    private var presenceAt=0L
+    private var avatarSignature=""
     private fun headers(s: CloudSession) = mapOf("apikey" to key, "Authorization" to "Bearer ${s.accessToken}", "Content-Type" to "application/json")
     private fun enc(s: String) = URLEncoder.encode(s,"UTF-8")
     private suspend fun rows(s: CloudSession, path: String) = JSONArray(Http.text("$url/rest/v1/$path", headers=headers(s)))
@@ -30,11 +37,19 @@ class SocialRepository(private val url: String, private val key: String) {
         write(s,"miflix_calendar_events",JSONObject().put("owner_id",s.userId).put("title",title).put("kind",kind).put("starts_at",starts).put("cloud_id",cloud ?: JSONObject.NULL).put("season",season).put("episode",episode).put("guests",JSONArray(guests)).put("channel_id",channel?.id.orEmpty()).put("channel_type",channel?.type ?: "tv"))
     }
     suspend fun deleteCalendar(s: CloudSession,id: String) { Http.text("$url/rest/v1/miflix_calendar_events?id=eq.$id","DELETE",headers(s)) }
-    suspend fun publishAvatar(s: CloudSession,avatar: String) {
+    suspend fun publishAvatar(s: CloudSession,avatar: String) = avatarMutex.withLock {
+        val signature=s.userId+":"+avatar
+        if(signature==avatarSignature) return@withLock
         write(s,"miflix_social_profiles?user_id=eq.${s.userId}",JSONObject().put("avatar_value",avatar),"PATCH")
+        avatarSignature=signature
     }
-    suspend fun presence(s: CloudSession, title: String, media: String, season: Int, episode: Int, room: String?) {
-        write(s,"rpc/miflix_set_presence",JSONObject().put("title",title).put("media",media).put("s",season).put("e",episode).put("room",room ?: JSONObject.NULL))
+    suspend fun presence(s: CloudSession, title: String, media: String, season: Int, episode: Int, room: String?) = presenceMutex.withLock {
+        val body=JSONObject().put("title",title).put("media",media).put("s",season).put("e",episode).put("room",room ?: JSONObject.NULL)
+        val signature=s.userId+":"+body.toString()
+        val now=android.os.SystemClock.elapsedRealtime()
+        if(signature==presenceSignature && now-presenceAt<60_000L) return@withLock
+        write(s,"rpc/miflix_set_presence",body)
+        presenceSignature=signature;presenceAt=android.os.SystemClock.elapsedRealtime()
     }
     suspend fun activity(s: CloudSession): List<FriendActivity> {
         val a=JSONArray(Http.text("$url/rest/v1/rpc/miflix_friend_activity_v30","POST",headers(s),"{}"))

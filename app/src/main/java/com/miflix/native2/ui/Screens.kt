@@ -1259,9 +1259,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }
     }
 
-    LaunchedEffect(player, state.partyRole, state.watchParty?.roomCode, request.stream.url) {
-        while (state.watchParty != null) {
+    LaunchedEffect(player, state.partyRole, state.watchParty?.roomCode, request.stream.url,state.appForeground) {
+        while (state.watchParty != null && state.appForeground) {
             delay(1000)
+            if(state.sessionNeedsSignIn) continue
             when (state.partyRole) {
                 PartyRole.HOST -> {
                     val command=try { state.takePartyPlayback() } catch(e: kotlinx.coroutines.CancellationException) { throw e } catch(e: Exception) { state.error=e.message;null }

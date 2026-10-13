@@ -28,6 +28,17 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
     val baseContext=LocalContext.current
     val context = baseContext.applicationContext
     val state = remember { AppState(context) }
+    DisposableEffect(baseContext) {
+        val lifecycle=(baseContext as? androidx.lifecycle.LifecycleOwner)?.lifecycle
+        state.appForeground=lifecycle?.currentState?.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)==true
+        val observer=androidx.lifecycle.LifecycleEventObserver { _, _ ->
+            state.appForeground=lifecycle?.currentState?.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)==true
+        }
+        lifecycle?.addObserver(observer)
+        onDispose { lifecycle?.removeObserver(observer);state.appForeground=false }
+    }
+    LaunchedEffect(state.session?.refreshToken) { state.sessionNeedsSignIn=false }
+
 
     val localizedContext=remember(baseContext,state.interfaceLanguage) {
         val config=android.content.res.Configuration(context.resources.configuration)
@@ -106,24 +117,32 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 delay(30*60*1000L)
             }
         }
-        LaunchedEffect(state.session?.userId) {
-            if(state.session!=null) while(true) {
+        LaunchedEffect(state.session?.userId,state.appForeground) {
+            if(state.session!=null && state.appForeground) while(true) {
                 delay(30*60*1000L)
-                state.refreshAccountSession()
+                if(!state.sessionNeedsSignIn) state.refreshAccountSession()
             }
         }
-        LaunchedEffect(bootstrapped,state.session?.userId) {
-            if(bootstrapped && state.session!=null) while(true) {
-                runCatching { state.refreshSocialActivity() }
-                delay(5000)
+        LaunchedEffect(bootstrapped,state.session?.userId,state.appForeground,
+            state.activeProfile.avatarValue,state.playerRequest?.item?.cloudId,state.playerRequest?.season,
+            state.playerRequest?.episode,state.screen,state.watchParty?.roomCode,state.pendingPartyCode) {
+            if(bootstrapped && state.session!=null && state.appForeground) while(true) {
+                if(!state.sessionNeedsSignIn) {
+                    try { state.refreshSocialActivity() }
+                    catch(e: kotlinx.coroutines.CancellationException) { throw e }
+                    catch(_: Exception) { }
+                }
+                delay(5000) // Local check; presence writes are throttled to 60 seconds.
             }
         }
-        LaunchedEffect(state.session?.userId, state.watchParty?.roomCode) {
-            if (state.watchParty != null) {
+        LaunchedEffect(state.session?.userId, state.watchParty?.roomCode,state.appForeground) {
+            if (state.watchParty != null && state.appForeground) {
                 var ticks = 0
-                while (state.watchParty != null) {
-                    state.socialAction { state.pollSocialRoom() }
-                    if (++ticks % 30 == 0) state.socialAction { state.heartbeatRoom() }
+                while (state.watchParty != null && state.appForeground) {
+                    if(!state.sessionNeedsSignIn) {
+                        state.socialAction { state.pollSocialRoom() }
+                        if (++ticks % 30 == 0) state.socialAction { state.heartbeatRoom() }
+                    }
                     delay(2000)
                 }
             }

@@ -393,9 +393,11 @@ class AppState(context: Context) {
         val req=playerRequest.takeIf { screen==Screen.PLAYER || miniPlayer || watchParty!=null }
         social.presence(s,req?.item?.title.orEmpty(),req?.item?.cloudId.orEmpty(),req?.season ?: 0,req?.episode ?: 0,watchParty?.roomCode)
         social.publishAvatar(s,activeProfile.avatarValue ?: ProfileAvatars[(activeProfile.id.hashCode() and Int.MAX_VALUE)%4].key)
-        val requests=social.requests(s)
-        if(!valid()) return
-        accessRequests.clear(); accessRequests.addAll(requests)
+        if(watchParty!=null && partyRole==PartyRole.HOST) {
+            val requests=social.requests(s)
+            if(!valid()) return
+            accessRequests.clear();accessRequests.addAll(requests)
+        } else accessRequests.clear()
         pendingPartyCode?.let { code ->
             val decision=try { social.requestAccess(s,code) } catch(e: Exception) {
                 if(e is CancellationException) throw e
@@ -562,6 +564,8 @@ class AppState(context: Context) {
         } catch(e: CancellationException) { throw e } catch(e: Exception) { customFilterError=e.message.orEmpty() }
         finally { customFilterLoading=false }
     }
+    var appForeground by mutableStateOf(false)
+    var sessionNeedsSignIn by mutableStateOf(false)
     var session by mutableStateOf(local.loadSession())
     private fun jwt(token: String): org.json.JSONObject = runCatching {
         org.json.JSONObject(String(android.util.Base64.decode(token.split('.')[1],android.util.Base64.URL_SAFE or android.util.Base64.NO_WRAP),Charsets.UTF_8))
@@ -577,7 +581,14 @@ class AppState(context: Context) {
                 val original=jwt(bearer);val owner=original.optString("sub")
                 val current=session ?: throw CancellationException("Signed out")
                 if(owner!=current.userId || original.optString("session_id")!=jwt(current.accessToken).optString("session_id")) throw CancellationException("Account changed")
-                val valid=sessionRenewal.valid(owner,if(force) bearer else null)
+                val valid=try { sessionRenewal.valid(owner,if(force) bearer else null) }
+                catch(e: com.miflix.native2.data.SessionSignInRequired) {
+                    if(!sessionNeedsSignIn) {
+                        sessionNeedsSignIn=true
+                        error=tr("Tu sesión ya no es válida. Ve a Settings, cierra sesión y vuelve a iniciarla.","Your session is no longer valid. Open Settings, sign out and sign in again.")
+                    }
+                    throw e
+                }
                 headers+("Authorization" to "Bearer ${valid.accessToken}")
             }
         }

@@ -28,6 +28,17 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
     val baseContext=LocalContext.current
     val context = baseContext.applicationContext
     val state = remember { AppState(context) }
+    DisposableEffect(baseContext) {
+        val lifecycle=(baseContext as? androidx.lifecycle.LifecycleOwner)?.lifecycle
+        state.appForeground=lifecycle?.currentState?.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)==true
+        val observer=androidx.lifecycle.LifecycleEventObserver { _, _ ->
+            state.appForeground=lifecycle?.currentState?.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)==true
+        }
+        lifecycle?.addObserver(observer)
+        onDispose { lifecycle?.removeObserver(observer);state.appForeground=false }
+    }
+    LaunchedEffect(state.session?.refreshToken) { state.sessionNeedsSignIn=false }
+
 
     val localizedContext=remember(baseContext,state.interfaceLanguage) {
         val config=android.content.res.Configuration(context.resources.configuration)
@@ -66,17 +77,17 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             Screen.NOTIFICATIONS -> NotificationsScreen(state)
             Screen.LIVE_TV -> LiveScreen(state)
             Screen.SEARCH -> SearchScreen(state) { state.screen = Screen.HOME }
-            Screen.MOVIES -> CatalogScreen(state, tr("Películas","Movies"), state.movies) { state.screen = Screen.HOME }
-            Screen.SERIES -> CatalogScreen(state, tr("Series","Series"), state.series) { state.screen = Screen.HOME }
+            Screen.MOVIES -> CatalogScreen(state, tr("Películas","Movies"), state.movies, onBack = { state.screen = Screen.HOME })
+            Screen.SERIES -> CatalogScreen(state, tr("Series","Series"), state.series, onBack = { state.screen = Screen.HOME })
             Screen.FRANCHISE -> FranchiseScreen(state)
             Screen.CUSTOM_FILTER -> CustomFilterScreen(state)
             Screen.COLLECTIONS -> CollectionsScreen(state) { state.screen = Screen.HOME }
-            Screen.COLLECTION_DETAIL -> CatalogScreen(state, state.collectionTitle, state.collectionItems) { state.screen = Screen.COLLECTIONS }
+            Screen.COLLECTION_DETAIL -> CatalogScreen(state, state.collectionTitle, state.collectionItems, onBack = { state.screen = Screen.COLLECTIONS })
             Screen.PLATFORM_DETAIL -> PlatformScreen(state) { state.screen = Screen.COLLECTIONS }
             Screen.GENRES -> CollectionsScreen(state) { state.screen = Screen.HOME }
-            Screen.GENRE_DETAIL -> CatalogScreen(state, state.genreTitle, state.genreItems) { state.screen = Screen.COLLECTIONS }
-            Screen.DIRECTOR_DETAIL -> CatalogScreen(state,state.directorTitle,state.directorItems) { state.screen=Screen.HOME }
-            Screen.YEAR_DETAIL -> CatalogScreen(state, state.yearTitle, state.yearItems) { state.screen = Screen.COLLECTIONS }
+            Screen.GENRE_DETAIL -> CatalogScreen(state, state.genreTitle, state.genreItems, onBack = { state.screen = Screen.COLLECTIONS })
+            Screen.DIRECTOR_DETAIL -> CatalogScreen(state,state.directorTitle,state.directorItems, onBack = { state.screen=Screen.HOME })
+            Screen.YEAR_DETAIL -> CatalogScreen(state, state.yearTitle, state.yearItems, onBack = { state.screen = Screen.COLLECTIONS })
             Screen.MY_LIST -> MyListScreen(state) { state.screen = Screen.HOME }
             Screen.SETTINGS -> SettingsScreen(state) { state.screen = Screen.HOME }
             Screen.PROFILES -> ProfilesScreen(state) { state.screen = Screen.HOME }
@@ -106,24 +117,32 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 delay(30*60*1000L)
             }
         }
-        LaunchedEffect(state.session?.userId) {
-            if(state.session!=null) while(true) {
+        LaunchedEffect(state.session?.userId,state.appForeground) {
+            if(state.session!=null && state.appForeground) while(true) {
                 delay(30*60*1000L)
-                state.refreshAccountSession()
+                if(!state.sessionNeedsSignIn) state.refreshAccountSession()
             }
         }
-        LaunchedEffect(bootstrapped,state.session?.userId) {
-            if(bootstrapped && state.session!=null) while(true) {
-                runCatching { state.refreshSocialActivity() }
-                delay(5000)
+        LaunchedEffect(bootstrapped,state.session?.userId,state.appForeground,
+            state.activeProfile.avatarValue,state.playerRequest?.item?.cloudId,state.playerRequest?.season,
+            state.playerRequest?.episode,state.screen,state.watchParty?.roomCode,state.pendingPartyCode) {
+            if(bootstrapped && state.session!=null && state.appForeground) while(true) {
+                if(!state.sessionNeedsSignIn) {
+                    try { state.refreshSocialActivity() }
+                    catch(e: kotlinx.coroutines.CancellationException) { throw e }
+                    catch(_: Exception) { }
+                }
+                delay(5000) // Local check; presence writes are throttled to 60 seconds.
             }
         }
-        LaunchedEffect(state.session?.userId, state.watchParty?.roomCode) {
-            if (state.watchParty != null) {
+        LaunchedEffect(state.session?.userId, state.watchParty?.roomCode,state.appForeground) {
+            if (state.watchParty != null && state.appForeground) {
                 var ticks = 0
-                while (state.watchParty != null) {
-                    state.socialAction { state.pollSocialRoom() }
-                    if (++ticks % 30 == 0) state.socialAction { state.heartbeatRoom() }
+                while (state.watchParty != null && state.appForeground) {
+                    if(!state.sessionNeedsSignIn) {
+                        state.socialAction { state.pollSocialRoom() }
+                        if (++ticks % 30 == 0) state.socialAction { state.heartbeatRoom() }
+                    }
                     delay(2000)
                 }
             }
@@ -168,11 +187,19 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
 
 @Composable
 private fun MyListScreen(state: AppState, onBack: () -> Unit) {
-    var catalog by remember { mutableStateOf<List<com.miflix.native2.model.MediaSummary>>(emptyList()) }
-    LaunchedEffect(state.favorites.toList()) {
-        catalog = state.favorites.mapNotNull { id -> runCatching { state.tmdb.byCloudId(id) }.getOrNull() }
-    }
-    CatalogScreen(state, tr("Mi lista","My List"), catalog, onBack)
+    val owner="${state.session?.userId}:${state.activeProfile.id}"
+    val ids=state.favorites.toList()
+    LaunchedEffect(owner,ids,state.myListLimit) { state.loadMyListPage(owner,ids) }
+    CatalogScreen(state,tr("Mi lista","My List"),state.myListTitles,onBack,footer={
+        Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        if(state.myListLoading) Text(tr("Cargando…","Loading…"),color=Color.White)
+        else {
+            if(state.myListMessage.isNotBlank()) Text(state.myListMessage,color=Color.White)
+            if(ids.size>state.myListLimit) FocusButton(tr("Cargar más","Load more")) { state.myListLimit+=20 }
+            if(state.myListMessage.isNotBlank()) FocusButton(tr("Reintentar","Retry")) { state.launch { state.loadMyListPage(owner,ids) } }
+        }
+        }
+    })
 }
 
 @Composable

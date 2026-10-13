@@ -9,14 +9,36 @@ import kotlinx.coroutines.sync.withLock
 class SessionRenewal(private val current: () -> CloudSession?,private val save: (CloudSession) -> Unit,
                      private val expiresSoon: (CloudSession) -> Boolean,private val refresh: suspend (String) -> CloudSession) {
     private val mutex=Mutex()
+    internal var nowMs: () -> Long = { System.nanoTime()/1_000_000L }
+    private var failedCredential=""
+    private var retryAfter=0L
+    private var failureCount=0
+    private var signInRequired=false
     suspend fun valid(owner: String,failedToken: String?=null): CloudSession = mutex.withLock {
         val before=current()?.takeIf { it.userId==owner } ?: throw CancellationException("Account changed")
         if(!expiresSoon(before) && (failedToken==null || failedToken!=before.accessToken)) return@withLock before
-        check(before.refreshToken.isNotBlank()) { "Vuelve a iniciar sesión / Please sign in again" }
-        val next=refresh(before.refreshToken)
+        if(failedCredential!=before.refreshToken) {
+            failedCredential=before.refreshToken;failureCount=0;retryAfter=0;signInRequired=false
+        }
+        if(signInRequired || before.refreshToken.isBlank()) throw SessionSignInRequired()
+        if(nowMs()<retryAfter) throw IllegalStateException("Renovación en espera / Session refresh cooling down")
+        val next=try { refresh(before.refreshToken) }
+        catch(e: CancellationException) { throw e }
+        catch(e: Exception) {
+            failureCount++
+            if(e is HttpFailure && e.status in listOf(400,401,403)) {
+                signInRequired=true
+                throw SessionSignInRequired()
+            }
+            retryAfter=nowMs()+minOf(300_000L,15_000L*(1L shl minOf(failureCount-1,5)))
+            throw e
+        }
         val active=current()
         if(active?.userId!=owner || active.refreshToken!=before.refreshToken) throw CancellationException("Account changed during refresh")
         check(next.userId==owner) { "Unexpected session owner" }
+        failureCount=0;retryAfter=0;signInRequired=false;failedCredential=""
         save(next);next
     }
 }
+
+class SessionSignInRequired : IllegalStateException("Vuelve a iniciar sesión / Please sign in again")

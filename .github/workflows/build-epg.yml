@@ -15,7 +15,7 @@ concurrency:
 jobs:
   guide:
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,18 +28,24 @@ jobs:
         run: |
           git clone --depth 1 -b master https://github.com/iptv-org/epg.git /tmp/epg
           cd /tmp/epg && npm install
-      - name: Build channel list from the app's 5 lists
-        run: python3 scripts/build_channels.py /tmp/epg /tmp/epg/custom.channels.xml
-      - name: Download schedules
+      - name: Build channel lists (one file per source site)
+        run: python3 scripts/build_channels.py /tmp/epg /tmp/epg/channels
+      - name: Download schedules (one process per site)
         working-directory: /tmp/epg
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: |
-          grep -c "<channel " custom.channels.xml
-          npx tsx scripts/commands/epg/grab.ts --channels=custom.channels.xml --days=3 --maxConnections=10 --timeout=30000 --output=raw.xml || echo "grab exited with an error"
-          ls -la raw.xml
-      - name: Shrink to app limit
+          mkdir -p guides
+          for f in channels/*.channels.xml; do
+            site=$(basename "$f" .channels.xml)
+            echo "=== $site ($(grep -c '<channel ' "$f") channels)"
+            timeout 25m npx tsx scripts/commands/epg/grab.ts --channels="$f" --days=3 --maxConnections=5 --timeout=30000 --output="guides/$site.xml" > "guides/$site.log" 2>&1 || echo "  $site finished with errors"
+            tail -n 3 "guides/$site.log"
+          done
+          ls -la guides/*.xml
+      - name: Merge and shrink to app limit
         run: |
-          test -s /tmp/epg/raw.xml
-          python3 scripts/shrink_guide.py /tmp/epg/raw.xml /tmp/guide.xml
+          python3 scripts/shrink_guide.py /tmp/epg/guides /tmp/guide.xml
           grep -o "<programme " /tmp/guide.xml | wc -l
       - name: Publish guide.xml (single-commit branch epg-data)
         run: |

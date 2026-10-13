@@ -36,6 +36,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -1744,13 +1745,47 @@ private fun SourceLinkCard(stream: com.miflix.native2.model.StreamChoice,modifie
 @Composable
 private fun SeasonSelector(state: AppState, count: Int) {
     var expanded by remember { mutableStateOf(false) }
+    var anchorHeight by remember { mutableStateOf(0) }
+    val anchorFocus = remember { FocusRequester() }
+    val selectedFocus = remember { FocusRequester() }
+    fun dismiss() {
+        expanded = false
+        runCatching { anchorFocus.requestFocus() }
+    }
     Box {
-        FocusButton("${tr("Temporada", "Season")} ${state.currentSeason} ▾") { expanded=true }
-        androidx.compose.material3.DropdownMenu(expanded=expanded, onDismissRequest={ expanded=false }, modifier=Modifier.heightIn(max=360.dp)) {
-            (1..count).forEach { season ->
-                androidx.compose.material3.DropdownMenuItem(text={ Text("${tr("Temporada", "Season")} $season") }, onClick={
-                    expanded=false; state.launch { state.loadSeason(season) }
-                })
+        FocusButton("${tr("Temporada", "Season")} ${state.currentSeason} ▾",
+            modifier=Modifier.focusRequester(anchorFocus).onSizeChanged { anchorHeight=it.height }) {
+            if(count > 0) expanded=true
+        }
+        if(expanded) {
+            androidx.compose.ui.window.Popup(
+                alignment=Alignment.TopStart,
+                offset=androidx.compose.ui.unit.IntOffset(0, anchorHeight),
+                onDismissRequest={ dismiss() },
+                properties=androidx.compose.ui.window.PopupProperties(focusable=true)
+            ) {
+                val initialSeason = state.currentSeason.coerceIn(1, count)
+                val listState = rememberLazyListState(initialFirstVisibleItemIndex=initialSeason-1)
+                LaunchedEffect(Unit) {
+                    withFrameNanos { }
+                    runCatching { selectedFocus.requestFocus() }
+                }
+                LazyColumn(
+                    state=listState,
+                    modifier=Modifier.width(260.dp).heightIn(max=360.dp)
+                        .background(Panel, RoundedCornerShape(12.dp))
+                        .border(1.dp, Color(0xFF555555), RoundedCornerShape(12.dp)),
+                    contentPadding=PaddingValues(10.dp),
+                    verticalArrangement=Arrangement.spacedBy(6.dp)
+                ) {
+                    items((1..count).toList(), key={ it }) { season ->
+                        FocusButton("${if(season==state.currentSeason) "✓ " else ""}${tr("Temporada", "Season")} $season",
+                            modifier=Modifier.fillMaxWidth().then(if(season==initialSeason) Modifier.focusRequester(selectedFocus) else Modifier)) {
+                            dismiss()
+                            state.launch { state.loadSeason(season) }
+                        }
+                    }
+                }
             }
         }
     }

@@ -591,6 +591,8 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                 }
             }
 
+            item(key = "trakt-comments") { TraktCommentsSection(state, item) }
+
             if (!details?.trailers.isNullOrEmpty()) {
                 item(key = "trailers") {
                     Text(tr("Tráilers","Trailers"), color = Color.White, fontSize = 27.sp, lineHeight=32.sp, fontWeight = FontWeight.Black)
@@ -606,8 +608,6 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                     Spacer(Modifier.height(28.dp))
                 }
             }
-
-            item(key = "trakt-comments") { TraktCommentsSection(state, item) }
 
             item(key = "info") {
                 Text(if (item.type == "movie") tr("Detalles de la película","Movie Details") else tr("Detalles de la serie","Series Details"), color = Color.White, fontSize = 27.sp, lineHeight=32.sp, fontWeight = FontWeight.Black)

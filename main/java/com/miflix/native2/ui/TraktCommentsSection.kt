@@ -41,7 +41,11 @@ fun TraktCommentsSection(state: AppState, item: MediaSummary) {
         finally { loading=false }
     }
     Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        Text(tr("Opiniones · Trakt","Community reviews · Trakt"),color=Color.White,fontSize=27.sp)
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(16.dp)) {
+            Text(tr("Opiniones · Trakt","Community reviews · Trakt"),color=Color.White,fontSize=27.sp,modifier=Modifier.weight(1f))
+            // A focus target keeps this section reachable by D-pad, even without comments.
+            FocusButton(tr("Actualizar comentarios","Refresh comments")) { if(!loading) retry++ }
+        }
         when {
             owner==null -> Text(tr("Inicia sesión en BruniO para leer comentarios de Trakt.","Sign in to BruniO to read Trakt comments."),color=Muted)
             loading -> Text(tr("Cargando comentarios…","Loading comments…"),color=Muted)

@@ -626,6 +626,33 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
     var showUpdates by remember { mutableStateOf(false) }
     if(showUpdates) AppUpdateDialog(state) { showUpdates=false }
     val context = LocalContext.current
+    var showUsage by remember { mutableStateOf(false) }
+    var usageMs by remember { mutableStateOf(com.miflix.native2.data.AppUsageTracker.totalMs(context)) }
+    LaunchedEffect(context) {
+        while(true) {
+            usageMs = com.miflix.native2.data.AppUsageTracker.totalMs(context)
+            delay(5000)
+        }
+    }
+    val usageHours = usageMs / 3_600_000L
+    val usageMinutes = (usageMs / 60_000L) % 60L
+    val usageLabel = "$usageHours h $usageMinutes min"
+    if(showUsage) {
+        val closeFocus = remember { FocusRequester() }
+        LaunchedEffect(Unit) { withFrameNanos { }; runCatching { closeFocus.requestFocus() } }
+        Dialog(onDismissRequest={ showUsage=false }) {
+            Column(Modifier.widthIn(max=560.dp).background(Panel,RoundedCornerShape(20.dp)).padding(26.dp),
+                verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                Text(tr("Tiempo de uso de BruniO", "BruniO usage time"),color=Color.White,fontSize=24.sp)
+                Text(usageLabel,color=Color.White,fontSize=34.sp,fontWeight=FontWeight.Bold)
+                Text(tr("Total en este dispositivo, sumando todos los perfiles. Incluye navegación y reproducción mientras la app está visible.",
+                    "Total on this device, across all profiles. Includes browsing and playback while the app is visible."),color=Muted,fontSize=16.sp)
+                Text(tr("Se cuenta desde esta actualización. Se conserva al cerrar y actualizar la app.",
+                    "Tracking starts with this update. Saved when closing and updating the app."),color=Muted,fontSize=14.sp)
+                FocusButton(tr("Cerrar", "Close"),modifier=Modifier.focusRequester(closeFocus)) { showUsage=false }
+            }
+        }
+    }
     BackHandler(onBack = onBack)
 
     AppShell(state, Screen.SETTINGS, { state.screen = it }) {
@@ -644,6 +671,11 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 FocusButton(tr("Guía de canales · EPG","Channel guide · EPG")) { showGuideSettings=true }
                 Spacer(Modifier.height(12.dp))
                 Text("BruniO ${BuildConfig.VERSION_NAME}", color = Muted, fontSize = 14.sp, lineHeight=17.sp)
+                Spacer(Modifier.height(12.dp))
+                FocusButton("${tr("Tiempo de uso", "Usage time")} · $usageLabel") {
+                    usageMs=com.miflix.native2.data.AppUsageTracker.totalMs(context)
+                    showUsage=true
+                }
                 Spacer(Modifier.height(30.dp))
 
             }

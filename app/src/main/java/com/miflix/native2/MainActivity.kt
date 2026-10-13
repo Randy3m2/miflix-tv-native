@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.core.view.WindowCompat
 import com.miflix.native2.ui.MiFlixNativeApp
+import com.miflix.native2.data.AppUsageTracker
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,6 +20,16 @@ class MainActivity : ComponentActivity() {
         )
         val partyCode = intent?.data?.takeIf { it.scheme == "miflix" && it.host == "watch-party" }?.getQueryParameter("code")
         setContent { MiFlixNativeApp(partyCode) }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        AppUsageTracker.start(this)
+    }
+
+    override fun onStop() {
+        AppUsageTracker.stop()
+        super.onStop()
     }
 
     override fun onNewIntent(intent: Intent) {

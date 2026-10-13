@@ -36,6 +36,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -625,6 +626,33 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
     var showUpdates by remember { mutableStateOf(false) }
     if(showUpdates) AppUpdateDialog(state) { showUpdates=false }
     val context = LocalContext.current
+    var showUsage by remember { mutableStateOf(false) }
+    var usageMs by remember { mutableStateOf(com.miflix.native2.data.AppUsageTracker.totalMs(context)) }
+    LaunchedEffect(context) {
+        while(true) {
+            usageMs = com.miflix.native2.data.AppUsageTracker.totalMs(context)
+            delay(5000)
+        }
+    }
+    val usageHours = usageMs / 3_600_000L
+    val usageMinutes = (usageMs / 60_000L) % 60L
+    val usageLabel = "$usageHours h $usageMinutes min"
+    if(showUsage) {
+        val closeFocus = remember { FocusRequester() }
+        LaunchedEffect(Unit) { withFrameNanos { }; runCatching { closeFocus.requestFocus() } }
+        Dialog(onDismissRequest={ showUsage=false }) {
+            Column(Modifier.widthIn(max=560.dp).background(Panel,RoundedCornerShape(20.dp)).padding(26.dp),
+                verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                Text(tr("Tiempo de uso de BruniO", "BruniO usage time"),color=Color.White,fontSize=24.sp)
+                Text(usageLabel,color=Color.White,fontSize=34.sp,fontWeight=FontWeight.Bold)
+                Text(tr("Total en este dispositivo, sumando todos los perfiles. Incluye navegación y reproducción mientras la app está visible.",
+                    "Total on this device, across all profiles. Includes browsing and playback while the app is visible."),color=Muted,fontSize=16.sp)
+                Text(tr("Se cuenta desde esta actualización. Se conserva al cerrar y actualizar la app.",
+                    "Tracking starts with this update. Saved when closing and updating the app."),color=Muted,fontSize=14.sp)
+                FocusButton(tr("Cerrar", "Close"),modifier=Modifier.focusRequester(closeFocus)) { showUsage=false }
+            }
+        }
+    }
     BackHandler(onBack = onBack)
 
     AppShell(state, Screen.SETTINGS, { state.screen = it }) {
@@ -643,6 +671,11 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 FocusButton(tr("Guía de canales · EPG","Channel guide · EPG")) { showGuideSettings=true }
                 Spacer(Modifier.height(12.dp))
                 Text("BruniO ${BuildConfig.VERSION_NAME}", color = Muted, fontSize = 14.sp, lineHeight=17.sp)
+                Spacer(Modifier.height(12.dp))
+                FocusButton("${tr("Tiempo de uso", "Usage time")} · $usageLabel") {
+                    usageMs=com.miflix.native2.data.AppUsageTracker.totalMs(context)
+                    showUsage=true
+                }
                 Spacer(Modifier.height(30.dp))
 
             }
@@ -1744,13 +1777,47 @@ private fun SourceLinkCard(stream: com.miflix.native2.model.StreamChoice,modifie
 @Composable
 private fun SeasonSelector(state: AppState, count: Int) {
     var expanded by remember { mutableStateOf(false) }
+    var anchorHeight by remember { mutableStateOf(0) }
+    val anchorFocus = remember { FocusRequester() }
+    val selectedFocus = remember { FocusRequester() }
+    fun dismiss() {
+        expanded = false
+        runCatching { anchorFocus.requestFocus() }
+    }
     Box {
-        FocusButton("${tr("Temporada", "Season")} ${state.currentSeason} ▾") { expanded=true }
-        androidx.compose.material3.DropdownMenu(expanded=expanded, onDismissRequest={ expanded=false }, modifier=Modifier.heightIn(max=360.dp)) {
-            (1..count).forEach { season ->
-                androidx.compose.material3.DropdownMenuItem(text={ Text("${tr("Temporada", "Season")} $season") }, onClick={
-                    expanded=false; state.launch { state.loadSeason(season) }
-                })
+        FocusButton("${tr("Temporada", "Season")} ${state.currentSeason} ▾",
+            modifier=Modifier.focusRequester(anchorFocus).onSizeChanged { anchorHeight=it.height }) {
+            if(count > 0) expanded=true
+        }
+        if(expanded) {
+            androidx.compose.ui.window.Popup(
+                alignment=Alignment.TopStart,
+                offset=androidx.compose.ui.unit.IntOffset(0, anchorHeight),
+                onDismissRequest={ dismiss() },
+                properties=androidx.compose.ui.window.PopupProperties(focusable=true)
+            ) {
+                val initialSeason = state.currentSeason.coerceIn(1, count)
+                val listState = rememberLazyListState(initialFirstVisibleItemIndex=initialSeason-1)
+                LaunchedEffect(Unit) {
+                    withFrameNanos { }
+                    runCatching { selectedFocus.requestFocus() }
+                }
+                LazyColumn(
+                    state=listState,
+                    modifier=Modifier.width(260.dp).heightIn(max=360.dp)
+                        .background(Panel, RoundedCornerShape(12.dp))
+                        .border(1.dp, Color(0xFF555555), RoundedCornerShape(12.dp)),
+                    contentPadding=PaddingValues(10.dp),
+                    verticalArrangement=Arrangement.spacedBy(6.dp)
+                ) {
+                    items((1..count).toList(), key={ it }) { season ->
+                        FocusButton("${if(season==state.currentSeason) "✓ " else ""}${tr("Temporada", "Season")} $season",
+                            modifier=Modifier.fillMaxWidth().then(if(season==initialSeason) Modifier.focusRequester(selectedFocus) else Modifier)) {
+                            dismiss()
+                            state.launch { state.loadSeason(season) }
+                        }
+                    }
+                }
             }
         }
     }

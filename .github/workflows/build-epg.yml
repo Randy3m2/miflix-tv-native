@@ -29,16 +29,17 @@ jobs:
           git clone --depth 1 -b master https://github.com/iptv-org/epg.git /tmp/epg
           cd /tmp/epg && npm install
       - name: Build channel list from the app's 5 lists
-        run: python3 scripts/build_channels.py /tmp/epg /tmp/custom.channels.xml
+        run: python3 scripts/build_channels.py /tmp/epg /tmp/epg/custom.channels.xml
       - name: Download schedules
+        working-directory: /tmp/epg
         run: |
-          cd /tmp/epg
-          npm run grab --- --channels=/tmp/custom.channels.xml --days=3 --maxConnections=10 --timeout=30000 --output=/tmp/raw.xml
-        continue-on-error: true
+          grep -c "<channel " custom.channels.xml
+          npx tsx scripts/commands/epg/grab.ts --channels=custom.channels.xml --days=3 --maxConnections=10 --timeout=30000 --output=raw.xml || echo "grab exited with an error"
+          ls -la raw.xml
       - name: Shrink to app limit
         run: |
-          test -s /tmp/raw.xml
-          python3 scripts/shrink_guide.py /tmp/raw.xml /tmp/guide.xml
+          test -s /tmp/epg/raw.xml
+          python3 scripts/shrink_guide.py /tmp/epg/raw.xml /tmp/guide.xml
           grep -o "<programme " /tmp/guide.xml | wc -l
       - name: Publish guide.xml (single-commit branch epg-data)
         run: |

@@ -29,7 +29,7 @@ jobs:
           git clone --depth 1 -b master https://github.com/iptv-org/epg.git /tmp/epg
           cd /tmp/epg && npm install
       - name: Build channel list from the app's 5 lists
-        run: python3 scripts/epg/build_channels.py /tmp/epg /tmp/custom.channels.xml
+        run: python3 scripts/build_channels.py /tmp/epg /tmp/custom.channels.xml
       - name: Download schedules
         run: |
           cd /tmp/epg
@@ -38,7 +38,7 @@ jobs:
       - name: Shrink to app limit
         run: |
           test -s /tmp/raw.xml
-          python3 scripts/epg/shrink_guide.py /tmp/raw.xml /tmp/guide.xml
+          python3 scripts/shrink_guide.py /tmp/raw.xml /tmp/guide.xml
           grep -o "<programme " /tmp/guide.xml | wc -l
       - name: Publish guide.xml (single-commit branch epg-data)
         run: |

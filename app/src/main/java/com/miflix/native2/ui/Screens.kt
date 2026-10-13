@@ -558,6 +558,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                         Text("${tr("Temporada","Season")} ${state.currentSeason}", color = Color.White, fontSize = 25.sp, lineHeight=30.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.width(16.dp))
                         if ((details?.seasonCount ?: 0) > 1) {
+                            SeasonSelector(state, details?.seasonCount ?: 0)
                             FocusButton("‹") { if (state.currentSeason > 1) state.launch { state.loadSeason(state.currentSeason - 1) } }
                             Spacer(Modifier.width(7.dp))
                             FocusButton("›") { if (state.currentSeason < (details?.seasonCount ?: 1)) state.launch { state.loadSeason(state.currentSeason + 1) } }
@@ -578,7 +579,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                     Text(tr("Reparto","Cast"), color = Color.White, fontSize = 27.sp, lineHeight=32.sp, fontWeight = FontWeight.Black)
                     Spacer(Modifier.height(14.dp))
                     LazyRow(contentPadding = PaddingValues(end = 50.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        items(details?.cast.orEmpty(), key = { it.name }) { CastCard(it) }
+                        items(details?.cast.orEmpty(), key = { "${it.id}:${it.name}" }) { CastCard(it, state) }
                     }
                     Spacer(Modifier.height(28.dp))
                 }
@@ -1570,7 +1571,8 @@ private fun EpisodePickerOverlay(state: AppState, request: PlayerRequest, onClos
             }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                FocusButton("‹") { if (state.currentSeason > 1) state.launch { state.loadSeason(state.currentSeason - 1) } }
+                SeasonSelector(state, details?.seasonCount ?: 0)
+                            FocusButton("‹") { if (state.currentSeason > 1) state.launch { state.loadSeason(state.currentSeason - 1) } }
                 Text("${tr("Temporada","Season")} ${state.currentSeason}", color = Color.White, fontSize = 18.sp, lineHeight=22.sp, fontWeight = FontWeight.Bold)
                 FocusButton("›") { if (state.currentSeason < (details?.seasonCount ?: 1)) state.launch { state.loadSeason(state.currentSeason + 1) } }
             }
@@ -1620,8 +1622,12 @@ private fun InfoLine(label: String, value: String) {
 }
 
 @Composable
-private fun CastCard(person: CastMember) {
-    Column(Modifier.width(138.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+private fun CastCard(person: CastMember, state: AppState) {
+    var show by remember(person.id) { mutableStateOf(false) }
+    var focused by remember { mutableStateOf(false) }
+    if(show) ActorCreditsDialog(person, state) { show=false }
+    val click = { if(person.id>0) show=true }
+    Column(Modifier.width(138.dp).border(if(focused) 2.dp else 0.dp, Color.White, RoundedCornerShape(12.dp)).onFocusChanged { focused=it.isFocused }.focusable().tvClick(click).clickable(onClick=click), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.size(106.dp).clip(RoundedCornerShape(53.dp)).background(Color(0xFF252525)), contentAlignment = Alignment.Center) {
             if (!person.profile.isNullOrBlank()) AsyncImage(person.profile, person.name, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             else Text(person.name.split(" ").take(2).mapNotNull { it.firstOrNull()?.toString() }.joinToString(""), color = Color(0xFFAAAAAF), fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold)
@@ -1732,5 +1738,46 @@ private fun SourceLinkCard(stream: com.miflix.native2.model.StreamChoice,modifie
         }
         if(stream.filename.isNotBlank() && !stream.title.contains(stream.filename)) Text(stream.filename,color=ink,fontSize=12.sp,lineHeight=18.sp,
             maxLines=if(focused) Int.MAX_VALUE else 2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun SeasonSelector(state: AppState, count: Int) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        FocusButton("${tr("Temporada", "Season")} ${state.currentSeason} ▾") { expanded=true }
+        androidx.compose.material3.DropdownMenu(expanded=expanded, onDismissRequest={ expanded=false }, modifier=Modifier.heightIn(max=360.dp)) {
+            (1..count).forEach { season ->
+                androidx.compose.material3.DropdownMenuItem(text={ Text("${tr("Temporada", "Season")} $season") }, onClick={
+                    expanded=false; state.launch { state.loadSeason(season) }
+                })
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActorCreditsDialog(person: CastMember, state: AppState, close: () -> Unit) {
+    var credits by remember(person.id) { mutableStateOf<List<MediaSummary>?>(null) }
+    var failure by remember(person.id) { mutableStateOf<String?>(null) }
+    LaunchedEffect(person.id) {
+        try { credits=state.tmdb.actorCredits(person.id) }
+        catch(e: kotlinx.coroutines.CancellationException) { throw e }
+        catch(e: Exception) { failure=e.message ?: tr("Error al cargar", "Unable to load") }
+    }
+    Dialog(onDismissRequest=close, properties=DialogProperties(usePlatformDefaultWidth=false)) {
+        Column(Modifier.width(850.dp).heightIn(max=580.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp)) {
+            Text(person.name, color=Color.White, fontSize=26.sp)
+            FocusButton(tr("Cerrar", "Close")) { close() }
+            if(credits==null) Text(failure ?: tr("Cargando…", "Loading…"),color=Color.White)
+            if(credits?.isEmpty()==true) Text(tr("Sin títulos disponibles", "No titles available"),color=Muted)
+            LazyColumn(Modifier.weight(1f,false),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                items(credits.orEmpty(),key={ it.cloudId }) { item ->
+                    FocusButton("${item.title} · ${item.year} · ${if(item.type=="series") tr("Serie","Series") else tr("Película","Movie")}") {
+                        close(); state.launch { state.open(item) }
+                    }
+                }
+            }
+        }
     }
 }

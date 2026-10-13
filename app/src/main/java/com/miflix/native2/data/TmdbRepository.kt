@@ -26,6 +26,15 @@ class TmdbRepository(var token: String) {
                 (0 until known.length()).map { known.getJSONObject(it).let { k -> k.optString("title").ifBlank { k.optString("name") } } }.filter { it.isNotBlank() }.take(3).joinToString(" · "))
         }
     }
+    suspend fun actorCredits(personId: Int): List<MediaSummary> {
+        require(personId > 0)
+        val a = get("/person/$personId/combined_credits").optJSONArray("cast") ?: return emptyList()
+        return (0 until a.length()).map { a.getJSONObject(it) }
+            .filter { !it.optBoolean("adult") && it.optString("media_type") in listOf("movie", "tv") }
+            .map { mapItem(it, if(it.optString("media_type")=="tv") "series" else "movie") }
+            .distinctBy { it.cloudId }.sortedByDescending { it.popularity }
+    }
+
     suspend fun filterGenres(type: String): List<CatalogGenre> {
         val a=get("/genre/${if(type=="series") "tv" else "movie"}/list").getJSONArray("genres")
         return (0 until a.length()).map { a.getJSONObject(it).let { x -> CatalogGenre(x.getInt("id"),x.getString("name")) } }
@@ -276,6 +285,7 @@ class TmdbRepository(var token: String) {
                 val x = a.optJSONObject(i) ?: return@mapNotNull null
                 val name = x.optString("name").takeIf { it.isNotBlank() } ?: return@mapNotNull null
                 CastMember(
+                    id = x.optInt("id"),
                     name = name,
                     character = x.optString("character"),
                     profile = image(x.optString("profile_path"), "w185")

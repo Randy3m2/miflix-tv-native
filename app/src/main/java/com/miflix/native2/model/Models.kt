@@ -17,7 +17,8 @@ data class MediaSummary(
 data class CastMember(
     val name: String,
     val character: String,
-    val profile: String?
+    val profile: String?,
+    val id: Int = 0
 )
 
 data class TrailerSummary(

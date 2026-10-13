@@ -1,3 +1,6 @@
 [functions.miflix-trakt]
 # JWT is verified explicitly using Supabase Auth in index.ts.
 verify_jwt = false
+
+[functions.brunio-episode-reminders]
+verify_jwt = false

@@ -1145,10 +1145,14 @@ class AppState(context: Context) {
 
     suspend fun loadSeason(season: Int) {
         val item = selected ?: return
+        if(season < 1 || season > (details?.seasonCount ?: 0)) return
         currentSeason = season
-        runCatching { tmdb.season(item.id, season) }.onSuccess {
-            episodes.replaceWith(it)
-        }.onFailure { error = it.message }
+        episodes.clear()
+        try {
+            val rows = tmdb.season(item.id, season)
+            if(selected?.cloudId == item.cloudId && currentSeason == season) episodes.replaceWith(rows)
+        } catch(e: CancellationException) { throw e }
+        catch(e: Exception) { if(selected?.cloudId == item.cloudId && currentSeason == season) error=e.message }
     }
 
     fun toggleFavorite(item: MediaSummary) {

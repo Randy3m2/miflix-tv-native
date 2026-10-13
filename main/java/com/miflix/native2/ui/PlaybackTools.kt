@@ -68,6 +68,9 @@ fun PlaybackInfoDialog(player: ExoPlayer, request: PlayerRequest, close: () -> U
                 item { InfoLine(tr("Formato de audio","Audio format"),listOfNotNull(audio?.sampleMimeType,audio?.codecs,audio?.channelCount?.takeIf { it>0 }?.let { "$it ch" },audio?.sampleRate?.takeIf { it>0 }?.let { "$it Hz" },audio?.language).joinToString(" · ").ifBlank { "—" }) }
                 item { InfoLine(tr("Bitrate de audio (declarado)","Audio bitrate (declared)"),rate(audio)) }
                 item { InfoLine(tr("Nombre del archivo","File name"),request.stream.filename.ifBlank { tr("No informado por el proveedor","Not supplied by provider") }) }
+                item { InfoLine(tr("Tamaño del archivo","File Size"),request.stream.videoSize.takeIf { it>0 }?.let {
+                    String.format(Locale.US,"%.2f GiB (%d bytes)",it/1073741824.0,it)
+                } ?: tr("No informado por el proveedor","Not supplied by provider")) }
                 item { InfoLine(tr("Fuente","Source"),request.stream.name) }
                 item { InfoLine("Buffer",String.format(Locale.US,"%.1f s",buffer/1000.0)) }
             }

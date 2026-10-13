@@ -1,0 +1,50 @@
+name: Build EPG guide
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */12 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-epg
+  cancel-in-progress: true
+
+jobs:
+  guide:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Get iptv-org/epg
+        run: |
+          git clone --depth 1 -b master https://github.com/iptv-org/epg.git /tmp/epg
+          cd /tmp/epg && npm install
+      - name: Build channel list from the app's 5 lists
+        run: python3 scripts/epg/build_channels.py /tmp/epg /tmp/custom.channels.xml
+      - name: Download schedules
+        run: |
+          cd /tmp/epg
+          npm run grab --- --channels=/tmp/custom.channels.xml --days=3 --maxConnections=10 --timeout=30000 --output=/tmp/raw.xml
+        continue-on-error: true
+      - name: Shrink to app limit
+        run: |
+          test -s /tmp/raw.xml
+          python3 scripts/epg/shrink_guide.py /tmp/raw.xml /tmp/guide.xml
+          grep -o "<programme " /tmp/guide.xml | wc -l
+      - name: Publish guide.xml (single-commit branch epg-data)
+        run: |
+          mkdir /tmp/pub && cp /tmp/guide.xml /tmp/pub/guide.xml
+          cd /tmp/pub
+          git init -q -b epg-data
+          git config user.name "epg-bot"; git config user.email "epg-bot@users.noreply.github.com"
+          git add guide.xml && git commit -q -m "EPG $(date -u +%F\ %H:%M)"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" epg-data

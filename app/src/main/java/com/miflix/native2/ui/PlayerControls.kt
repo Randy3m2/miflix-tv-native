@@ -51,7 +51,7 @@ internal fun CompactPlayerControls(
     request: PlayerRequest, paused: Boolean, position: Long, duration: Long, speed: Float,
     maximized: Boolean, playFocus: FocusRequester, onInteraction: () -> Unit, onPlay: () -> Unit,
     onResize: () -> Unit, onMenu: (String) -> Unit, onLinks: () -> Unit, onSeek: (Long) -> Unit,
-    seekable: Boolean, party: Boolean, onParty: () -> Unit, onClose: () -> Unit, onMaximize: () -> Unit,
+    seekable: Boolean, party: Boolean, onParty: () -> Unit, onChat: () -> Unit, onReactions: () -> Unit, onClose: () -> Unit, onMaximize: () -> Unit,
     nextAvailable: Boolean, onNext: () -> Unit, onEpisodes: () -> Unit, onQueue: () -> Unit, onInfo: () -> Unit, onPip: () -> Unit, onMultiView: () -> Unit
 ) {
     val seekFocus=remember { FocusRequester() }
@@ -84,12 +84,12 @@ internal fun CompactPlayerControls(
                     PlayerIconButton("episodes",tr("Episodios","Episodes"),onInteraction=onInteraction,onClick=onEpisodes,onLabel={ focusedLabel=it })
                 }
                 if(request.live) PlayerIconButton("episodes",tr("Canales","Channels"),onInteraction=onInteraction,onClick=onEpisodes,onLabel={ focusedLabel=it })
-                PlayerIconButton("resize",tr("Agrandar / encoger","Zoom / Fit"),onInteraction=onInteraction,onClick=onResize,onLabel={ focusedLabel=it })
-                PlayerIconButton("speed","${tr("Velocidad","Speed")} · ${speed}×",onInteraction=onInteraction,onClick={onMenu("speed")},onLabel={ focusedLabel=it })
                 PlayerIconButton("cc",tr("Subtítulos","Subtitles"),onInteraction=onInteraction,onClick={onMenu("subtitles")},onLabel={ focusedLabel=it })
                 PlayerIconButton("audio",tr("Pista de audio","Audio track"),onInteraction=onInteraction,onClick={onMenu("audio")},onLabel={ focusedLabel=it })
                 PlayerIconButton("links",tr("Enlaces de reproducción","Playback links"),onInteraction=onInteraction,onClick=onLinks,onLabel={ focusedLabel=it })
                 PlayerIconButton("party",if(party) tr("Mi Party","My Party") else tr("Crear Party","Create Party"),onInteraction=onInteraction,onClick=onParty,onLabel={ focusedLabel=it })
+                PlayerIconButton("chat",tr("Chat del Party","Party chat"),onInteraction=onInteraction,onClick=onChat,onLabel={ focusedLabel=it })
+                PlayerIconButton("reactions",tr("Reacciones / Chat QR","Reactions / Chat QR"),onInteraction=onInteraction,onClick=onReactions,onLabel={ focusedLabel=it })
                 PlayerIconButton("queue",tr("Cola","Queue"),onInteraction=onInteraction,onClick=onQueue,onLabel={ focusedLabel=it })
                 Spacer(Modifier.weight(1f))
                 Text(if(duration>0) "${tr("Termina","Ends")} " + java.text.SimpleDateFormat("HH:mm",java.util.Locale.getDefault()).format(java.util.Date(System.currentTimeMillis()+((duration-position).coerceAtLeast(0)/speed.coerceAtLeast(0.1f)).toLong())) else if(request.live) tr("EN VIVO","LIVE") else playbackTime(position),
@@ -133,6 +133,8 @@ private fun PlayerGlyph(icon: String, color: Color, modifier: Modifier) {
             "cc" -> { rectangle(.04f,.2f,.92f,.6f);drawArc(color,60f,240f,false,Offset(w*.17f,h*.34f),Size(w*.26f,h*.32f),style=stroke);drawArc(color,60f,240f,false,Offset(w*.56f,h*.34f),Size(w*.26f,h*.32f),style=stroke) }
             "audio" -> { rectangle(.24f,.08f,.52f,.84f);drawCircle(color,w*.08f,Offset(w*.5f,h*.3f),style=stroke);drawCircle(color,w*.16f,Offset(w*.5f,h*.66f),style=stroke) }
             "links" -> { drawRoundRect(color,Offset(w*.04f,h*.38f),Size(w*.55f,h*.3f),cornerRadius=androidx.compose.ui.geometry.CornerRadius(w*.14f),style=stroke);drawRoundRect(color,Offset(w*.41f,h*.26f),Size(w*.55f,h*.3f),cornerRadius=androidx.compose.ui.geometry.CornerRadius(w*.14f),style=stroke);line(.35f,.55f,.65f,.4f) }
+            "chat" -> { rectangle(.08f,.12f,.84f,.62f);line(.22f,.74f,.22f,.94f);line(.22f,.94f,.44f,.74f);line(.24f,.34f,.76f,.34f);line(.24f,.52f,.60f,.52f) }
+            "reactions" -> { drawCircle(color,w*.42f,Offset(w*.5f,h*.5f),style=stroke);drawCircle(color,w*.035f,Offset(w*.35f,h*.38f));drawCircle(color,w*.035f,Offset(w*.65f,h*.38f));drawArc(color,0f,180f,false,Offset(w*.27f,h*.42f),Size(w*.46f,h*.30f),style=stroke) }
             "party" -> { drawCircle(color,w*.14f,Offset(w*.34f,h*.3f),style=stroke);drawCircle(color,w*.11f,Offset(w*.75f,h*.35f),style=stroke);drawArc(color,180f,180f,false,Offset(w*.08f,h*.52f),Size(w*.52f,h*.38f),style=stroke);drawArc(color,180f,180f,false,Offset(w*.60f,h*.6f),Size(w*.30f,h*.25f),style=stroke) }
 
         }

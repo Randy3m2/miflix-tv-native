@@ -1473,7 +1473,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 onResize={ resizeMode=if(resizeMode == androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT) androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM else androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT },
                 onMenu={ playerMenu=it }, onLinks={ state.launch { state.playerSources(request,player.currentPosition) } },
                 onSeek={ if(player.isCurrentMediaItemSeekable) { positionMs=it; player.seekTo(it) } }, seekable=player.isCurrentMediaItemSeekable && durationMs>0,
-                party=state.watchParty!=null,onParty={ openPlayerParty() },onClose={ requestExit() }, onMaximize={ maximized=!maximized },
+                party=state.watchParty!=null,onParty={ openPlayerParty() },
+                onChat={ if(state.watchParty==null) openPlayerParty() else playerMenu="party-chat" },
+                onReactions={ if(state.watchParty==null) openPlayerParty() else playerMenu="party-reactions" },onClose={ requestExit() }, onMaximize={ maximized=!maximized },
                 nextAvailable=upcoming!=null && state.partyRole!=PartyRole.GUEST,
                 onNext={ upcoming?.let { next -> cancelAutoplay=true; state.launch { runCatching { state.playNext(request,next) }.onFailure { state.error=it.message } } } },
                 onEpisodes={ if(request.live) playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else "channels" else { episodesResumeAfterClose=false;showEpisodes=true } },onQueue={ showQueue=true },
@@ -1568,6 +1570,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 }
             }
         }
+        if(playerMenu=="party-chat") PlayerPartyChatDialog(state) { playerMenu=null;controlInteraction++ }
+        if(playerMenu=="party-reactions") PartyActionsDialog(state) { playerMenu=null;controlInteraction++ }
         if (showPartyActions) PlayerSocialDialog(state,{ createPlayerParty() }) { showPartyActions=false }
         if(showQueue) QueueDialog(state) { showQueue=false }
         if (state.watchParty != null && state.floatingEvents.isNotEmpty()) {
@@ -1752,8 +1756,12 @@ fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("${tr("Enlaces de reproducción","Playback links")} · ${selection.streams.size}", color = Color.White, fontSize = 26.sp, lineHeight=31.sp,
                         fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    FocusButton(tr("Actualizar enlaces","Refresh links")) { state.launch { state.refreshPlaybackLinks(selection) } }
+                    Spacer(Modifier.width(12.dp))
                     FocusButton(tr("Cerrar","Close")) { state.sourceSelection = null }
                 }
+                Text(tr("Enlaces guardados hasta 3 horas. Usa Actualizar enlaces si alguno dejó de funcionar.",
+                    "Links cached for up to 3 hours. Refresh links if one stops working."),color=Muted,fontSize=14.sp)
                 if(state.partyRole==PartyRole.GUEST) Text(tr("Este enlace se cambia solo para ti · sigues sincronizado con el host","This link changes only for you · You stay synced with the host"),color=Muted)
                 Spacer(Modifier.height(18.dp))
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 30.dp)) {

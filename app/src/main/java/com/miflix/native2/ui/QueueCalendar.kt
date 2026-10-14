@@ -84,6 +84,7 @@ fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,close: () -> Unit) {
     var person by remember { mutableStateOf<com.miflix.native2.data.FriendActivity?>(null) }
     var parties by remember { mutableStateOf(false) }
     var reactions by remember { mutableStateOf(false) }
+    var chat by remember { mutableStateOf(false) }
     var calendar by remember { mutableStateOf(false) }
     val closeFocus=remember { FocusRequester() }
     val listState=rememberLazyListState()
@@ -119,7 +120,8 @@ fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,close: () -> Unit) {
             }
             if(state.watchParty!=null) Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
                 Text("Party · ${state.watchParty?.roomCode}",color=Color.White)
-                FocusButton(tr("Reacciones / Chat / QR","Reactions / Chat / QR"),modifier=enterList) { reactions=true }
+                FocusButton(tr("Chat","Chat"),modifier=enterList) { chat=true }
+                FocusButton(tr("Reacciones / Chat QR","Reactions / Chat QR")) { reactions=true }
                 FocusButton(tr("Salir de sala","Leave Party"),modifier=enterList) { state.launch { state.leaveWatchParty();close() } }
             } else FocusButton(tr("Crear sala con este contenido","Create Party with this title"),modifier=enterList) { onCreate() }
             LazyColumn(Modifier.weight(1f),state=listState,contentPadding=PaddingValues(6.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -162,6 +164,7 @@ fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,close: () -> Unit) {
         }
     }
     person?.let { friend -> FriendActionsDialog(state,friend,close={ person=null },onContentOpened={ person=null;close() }) }
+    if(chat) PlayerPartyChatDialog(state) { chat=false }
     if(reactions) PartyActionsDialog(state) { reactions=false }
     if(calendar) CalendarDialog(state) { calendar=false }
 }
@@ -359,6 +362,55 @@ private fun CreateEventDialog(state: AppState, day: String?, close: () -> Unit) 
                 } }
                 FocusButton(tr("Cancelar","Cancel")) { close() }
             } }
+        }
+    }
+}
+
+@Composable
+fun PlayerPartyChatDialog(state: AppState, close: () -> Unit) {
+    val room=state.watchParty?.roomCode
+    var draft by remember(room) { mutableStateOf("") }
+    var sending by remember(room) { mutableStateOf(false) }
+    val closeFocus=remember { FocusRequester() }
+    val listState=rememberLazyListState()
+    val messages=state.partyMessages.filter { it.kind=="chat" }
+    LaunchedEffect(Unit) { withFrameNanos { };runCatching { closeFocus.requestFocus() } }
+    LaunchedEffect(messages.lastOrNull()?.id) { if(messages.isNotEmpty()) listState.scrollToItem(messages.lastIndex) }
+    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+        Column(Modifier.width(850.dp).heightIn(max=570.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                Text("${tr("Chat del Party","Party chat")} · ${room.orEmpty()}",color=Color.White,fontSize=26.sp,modifier=Modifier.weight(1f))
+                FocusButton(tr("Cerrar","Close"),modifier=Modifier.focusRequester(closeFocus)) { close() }
+            }
+            LazyColumn(state=listState,modifier=Modifier.weight(1f,false).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                if(messages.isEmpty()) item { Text(tr("Todavía no hay mensajes.","No messages yet."),color=Muted) }
+                items(messages,key={ it.id }) { message ->
+                    val author=if(message.userId==state.session?.userId) state.nickname.ifBlank { tr("Tú","You") }
+                        else state.friendPeople[message.userId] ?: tr("Participante","Participant")
+                    Column(Modifier.fillMaxWidth().background(Color(0xFF22242B),RoundedCornerShape(10.dp)).padding(12.dp).focusable()) {
+                        Text(author,color=Muted,fontSize=13.sp)
+                        Text(message.body,color=Color.White,fontSize=18.sp)
+                    }
+                }
+            }
+            if(room==null) Text(tr("Únete a un Party para conversar.","Join a Party to chat."),color=Muted)
+            Row(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
+                NativeTextField(draft,{ draft=it.take(500) },tr("Escribe un mensaje","Write a message"),modifier=Modifier.weight(1f))
+                FocusButton(if(sending) tr("Enviando…","Sending…") else tr("Enviar","Send")) {
+                    val text=draft.trim()
+                    if(text.isNotBlank() && room!=null && !sending && state.watchParty?.roomCode==room) {
+                        sending=true
+                        state.launch {
+                            try {
+                                state.error=null
+                                state.sendPartyEvent("chat",text)
+                                if(state.error==null) draft=""
+                            } finally { sending=false }
+                        }
+                    }
+                }
+            }
+            state.error?.let { Text(it,color=Color.White,fontSize=13.sp,maxLines=2) }
         }
     }
 }

@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -14,6 +15,10 @@ import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import java.text.Normalizer
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -141,23 +146,27 @@ fun LiveScreen(state: AppState) {
             Spacer(Modifier.height(12.dp))
             if (loading) Text(tr("Cargando canales…","Loading live content…"), color = Color.White)
             if (message.isNotBlank()) Text(message, color = Color.White, fontSize = 14.sp, lineHeight=17.sp)
-            LazyColumn(Modifier.weight(1f), contentPadding=PaddingValues(bottom=24.dp,end=8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                if(categories.size>1) item(key="categories") {
+            LazyVerticalGrid(columns=GridCells.Adaptive(180.dp),modifier=Modifier.weight(1f),contentPadding=PaddingValues(bottom=32.dp,top=6.dp),horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+                if(categories.size>1) item(key="categories",span={GridItemSpan(maxLineSpan)}) {
                     LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp)) { items(categories) { c -> FocusButton(c.name,primary=c==category) { category=c;state.liveCategoryId=c.id } } }
                 }
                 val visible = channels.filter { channel ->
                     search.isBlank() || liveSearchKey(channel.name).contains(liveSearchKey(search)) || channelNumber(channel).toString() == search.trim()
                 }
-                items(visible, key = { it.id }) { channel ->
-                    Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                        Box(Modifier.weight(1f)) { LiveChannelRow(channel,channelNumber(channel),{ openChannel(channel,false) },{ openChannel(channel,true) }) }
-                        ChannelExtras(state,provider,channel,compact=true)
+                gridItems(visible,key={it.id}) { channel ->
+                    val revision=LiveLibrary.revision
+                    val favorite=remember(revision,provider,channel.id,state.session?.userId,state.activeProfile.id) {
+                        LiveLibrary.favorites(context,state).any { it.provider==provider && it.channel.id==channel.id }
+                    }
+                    LiveChannelTile(channel,channelNumber(channel),favorite,{ openChannel(channel,false) }) {
+                        LiveLibrary.toggle(context,state,provider,channel)
+                        message=if(favorite) tr("Quitado de favoritos","Removed from favorites") else tr("Añadido a favoritos","Added to favorites")
                     }
                 }
-                if (!loading && channels.isNotEmpty() && visible.isEmpty()) item {
+                if (!loading && channels.isNotEmpty() && visible.isEmpty()) item(span={GridItemSpan(maxLineSpan)}) {
                     Text(tr("No hay canales coincidentes en esta categoría.","No matching channels in this category."), color = Color.White)
                 }
-                if (canLoadMore && !loading) item {
+                if (canLoadMore && !loading) item(span={GridItemSpan(maxLineSpan)}) {
                     FocusButton(tr("Cargar más","Load more")) {
                         val c = category ?: return@FocusButton
                         scope.launch {
@@ -235,5 +244,26 @@ private fun LiveChannelRow(channel: LiveChannel, number: Int, onClick: () -> Uni
             schedule(if(focused) Color.DarkGray else Muted)
         }
         Text(tr("EN VIVO","LIVE"), color = if (focused) Color.Black else Color.White, fontSize = 12.sp, lineHeight=15.sp)
+    }
+}
+
+@Composable
+private fun LiveChannelTile(channel: LiveChannel,number: Int,favorite: Boolean,onClick: () -> Unit,onLongClick: () -> Unit) {
+    var focused by remember(channel.id) { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().height(156.dp).onFocusChanged { focused=it.isFocused }.focusable()
+        .tvPlaybackClick(onClick,onLongClick).clickable(onClick=onClick)
+        .background(if(focused) FocusedPanel else Panel,RoundedCornerShape(14.dp))
+        .border(1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(14.dp)).padding(14.dp),
+        verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+            Text(number.toString().padStart(3,'0'),color=Muted,fontSize=12.sp)
+            Text(if(favorite) "★" else tr("EN VIVO","LIVE"),color=if(favorite) Accent else Muted,fontSize=12.sp)
+        }
+        Box(Modifier.fillMaxWidth().weight(1f),contentAlignment=androidx.compose.ui.Alignment.Center) {
+            if(channel.poster!=null) AsyncImage(channel.poster,channel.name,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+            else Text(channel.name.take(2).uppercase(),color=Accent,fontSize=24.sp)
+        }
+        Text(channel.name,color=Color.White,fontSize=14.sp,lineHeight=18.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        Text(tr("Mantén OK: favorito","Hold OK: favorite"),color=Muted,fontSize=10.sp)
     }
 }

@@ -430,3 +430,73 @@ fun PlayerPartyChatDialog(state: AppState, close: () -> Unit) {
     }
 
 }
+
+/** Fits the Friends content viewport. Each pane scrolls within its own measured bounds. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun InlineCalendar(state: AppState,modifier: Modifier=Modifier) {
+    var offset by remember { mutableIntStateOf(0) }
+    var day by remember { mutableStateOf<String?>(null) }
+    var creating by remember { mutableStateOf(false) }
+    val month=remember(offset) { Calendar.getInstance().apply { add(Calendar.MONTH,offset);set(Calendar.DAY_OF_MONTH,1) } }
+    val prefix=SimpleDateFormat("yyyy-MM",Locale.US).format(month.time)
+    val days=List((month.get(Calendar.DAY_OF_WEEK)+5)%7) { 0 }+(1..month.getActualMaximum(Calendar.DAY_OF_MONTH)).toList()
+    LaunchedEffect(state.session?.userId) { if(state.session!=null) state.socialAction { state.refreshCalendar();state.refreshFriends() } }
+    BoxWithConstraints(modifier) {
+    val dayHeight=((maxHeight-123.dp)/6f).coerceIn(18.dp,34.dp)
+    Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+            FocusButton("‹",horizontalPadding=14.dp) { offset--;day=null }
+            Text(prefix,color=Color.White,fontSize=20.sp,modifier=Modifier.weight(1f))
+            FocusButton("›",horizontalPadding=14.dp) { offset++;day=null }
+            FocusButton(tr("Crear evento","Create event")) { creating=true }
+            FocusButton(tr("Actualizar","Refresh")) { state.launch { state.socialAction { state.refreshCalendar() } } }
+        }
+        Row(Modifier.weight(1f).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(16.dp)) {
+            LazyColumn(Modifier.weight(1f).fillMaxHeight().background(Panel,RoundedCornerShape(14.dp)).padding(12.dp),
+                contentPadding=PaddingValues(bottom=12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                item { Row { tr("L M X J V S D","M T W T F S S").split(" ").forEach { Text(it,color=Muted,fontSize=11.sp,modifier=Modifier.weight(1f)) } } }
+                items(days.chunked(7)) { week ->
+                    Row(horizontalArrangement=Arrangement.spacedBy(5.dp)) {
+                        week.forEach { n ->
+                            if(n==0) Spacer(Modifier.weight(1f)) else {
+                                val date="$prefix-${n.toString().padStart(2,'0')}"
+                                val count=state.calendarEvents.count { eventLocal(it.starts).startsWith(date) }
+                                CalendarDay(n,count,day==date,Modifier.weight(1f),height=dayHeight) { day=if(day==date) null else date }
+                            }
+                        }
+                        repeat(7-week.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                }
+            }
+            LazyColumn(Modifier.weight(1f).fillMaxHeight(),contentPadding=PaddingValues(bottom=16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                item { Text(day ?: tr("Eventos del mes","This month's events"),color=Muted,fontSize=13.sp) }
+                val events=state.calendarEvents.filter { eventLocal(it.starts).startsWith(day ?: prefix) }
+                if(events.isEmpty()) item { Text(tr("No hay eventos en este período","No events in this period"),color=Muted) }
+                items(events,key={it.id}) { event ->
+                    Column(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(12.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                        Text(event.title,color=Color.White,fontSize=17.sp,maxLines=2)
+                        Text(eventLocal(event.starts),color=Muted,fontSize=12.sp)
+                        Text(if(event.owner==state.session?.userId) tr("Organizado por ti","Organized by you") else tr("Te han invitado","You're invited"),color=Muted,fontSize=12.sp)
+                        FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                            if(event.cloud!=null || event.channelId.isNotBlank()) FocusButton(tr("Ver contenido","View title")) { state.launch { state.socialAction { state.openCalendarEvent(event) } } }
+                            if(event.owner==state.session?.userId) FocusButton(tr("Eliminar","Delete"),destructive=true) { state.launch { state.socialAction { state.deleteCalendarEvent(event.id) } } }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    }
+    if(creating) CreateEventDialog(state,day) { creating=false }
+}
+
+@Composable
+private fun CalendarDay(number: Int,count: Int,selected: Boolean,modifier: Modifier,height: androidx.compose.ui.unit.Dp=34.dp,onClick: () -> Unit) {
+    var focused by remember { mutableStateOf(false) }
+    Box(modifier.height(height).onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
+        .background(if(selected) FocusedPanel else Color.Transparent,RoundedCornerShape(7.dp))
+        .border(1.dp,if(focused) Accent else if(selected) PanelBorder else Color.Transparent,RoundedCornerShape(7.dp)),contentAlignment=Alignment.Center) {
+        Text(number.toString()+(if(count>0) " •" else ""),color=if(count>0) Accent else Color.White,fontSize=12.sp,maxLines=1)
+    }
+}

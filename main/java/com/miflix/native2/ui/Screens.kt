@@ -144,7 +144,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                     MediaRail(compact=true,title=tr("Seguir viendo","Continue Watching"),rows=state.continueWatching,landscape=true,
                         progressFor={ state.progress[it.cloudId]?.percent },onClick=openItem)
                 }
-                if(state.forYou.isNotEmpty()) item(key="for_you") { MediaRail(compact=true,title=tr("Para ti · tus puntuaciones","For you · Your ratings"),rows=state.forYou,onClick=openItem) }
+                item(key="streaming") { CollectionRail(tr("Plataformas","Streaming"),StreamingTiles,openCollection) }
                 item(key="genres_home") { Column {
                     Text(tr("Explora por género","Browse by genre"),color=Color.White,fontSize=24.sp,lineHeight=29.sp,fontWeight=FontWeight.Bold,
                         modifier=Modifier.padding(start=40.dp,end=40.dp,top=16.dp,bottom=16.dp))
@@ -153,7 +153,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                     }
                     Spacer(Modifier.height(24.dp))
                 } }
-                item(key="streaming") { CollectionRail(tr("Plataformas","Streaming"),StreamingTiles,openCollection) }
+                if(state.forYou.isNotEmpty()) item(key="for_you") { MediaRail(compact=true,title=tr("Para ti · tus puntuaciones","For you · Your ratings"),rows=state.forYou,onClick=openItem) }
                 item(key="movies") { MediaRail(compact=true,title=tr("Películas populares","Popular · Movies"),rows=state.movies,onClick=openItem) }
                 item(key="series") { MediaRail(compact=true,title=tr("Series populares","Popular · Series"),rows=state.series,onClick=openItem) }
                 item(key="top") { MediaRail(compact=true,title=tr("Mejor valorados","Top Rated"),rows=state.topRated,onClick=openItem) }
@@ -479,6 +479,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
     val item = state.selected ?: return
     val details = state.details
     val saved = state.progress[item.cloudId]
+    var showMore by remember(item.cloudId) { mutableStateOf(false) }
     var showRecommend by remember(item.cloudId) { mutableStateOf(false) }
     var showRating by remember(item.cloudId) { mutableStateOf(false) }
     var episodeChoice by remember(item.cloudId) { mutableStateOf<EpisodeSummary?>(null) }
@@ -509,8 +510,23 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
     if(showQueueAdd) QueueAddDialog(state,item) { showQueueAdd=false }
     if(showQueue) QueueDialog(state) { showQueue=false }
 
-    Box(Modifier.fillMaxSize().background(Bg)) {
-        AsyncImage(item.backdrop, null, Modifier.fillMaxWidth().height(590.dp).align(Alignment.TopCenter), contentScale = ContentScale.Crop)
+    if(showMore) Dialog(onDismissRequest={ showMore=false }) {
+        val moreFocus=remember { FocusRequester() }
+        LaunchedEffect(Unit) { withFrameNanos { };runCatching { moreFocus.requestFocus() } }
+        Column(Modifier.widthIn(max=520.dp).background(Panel,RoundedCornerShape(18.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            Text(tr("Más opciones","More options"),color=Color.White,fontSize=24.sp)
+            FocusButton(tr("Desde el principio","Play from beginning"),modifier=Modifier.focusRequester(moreFocus)) { showMore=false;state.launch { if(item.type=="movie") state.playMovie(true) else state.playSeriesFromStart() } }
+            FocusButton(tr("Añadir a cola","Add to queue")) { showMore=false;if(item.type=="series") showQueueAdd=true else state.enqueue(item) }
+            FocusButton(tr("Ver cola","View queue")+" · ${state.queueEntries.size}") { showMore=false;showQueue=true }
+            FocusButton(tr("Recomendar a amigos","Recommend to friends")) { showMore=false;showRecommend=true }
+            FocusButton("★ "+(state.ratings[item.cloudId]?.let { "$it/10" } ?: tr("Puntuar","Rate"))) { showMore=false;showRating=true }
+            FocusButton(tr("Cerrar","Close")) { showMore=false }
+        }
+    }
+
+    AppShell(state,state.detailsReturnScreen,{ state.screen=it }) {
+    Box(Modifier.fillMaxSize().background(Bg).clipToBounds()) {
+        AsyncImage(item.backdrop, null, Modifier.fillMaxWidth().height(430.dp).align(Alignment.TopCenter), contentScale = ContentScale.Crop)
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x22000000), Color(0x66000000), Bg), startY = 150f)))
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xF7050505), Color(0xA8050505), Color.Transparent), endX = 980f)))
 
@@ -526,9 +542,9 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
             contentPadding = PaddingValues(start = 34.dp, end = 34.dp, top = 28.dp, bottom = 70.dp)
         ) {
             item(key = "hero") {
-                Column(Modifier.fillMaxWidth().heightIn(min = 500.dp)) {
+                Column(Modifier.fillMaxWidth().heightIn(min = 300.dp)) {
                     BackIconButton(onClick = onBack)
-                    Spacer(Modifier.height(26.dp))
+                    Spacer(Modifier.height(14.dp))
                     Text(item.title, color = Color.White, fontSize = 40.sp, lineHeight=46.sp, fontWeight = FontWeight.Black, maxLines = 2, overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     Spacer(Modifier.height(8.dp))
                     Text("${item.year}   ★ ${"%.1f".format(item.rating)}   ${details?.runtimeText.orEmpty()}", color = Color(0xFFD6D6D8), fontSize = 15.sp, lineHeight=18.sp)
@@ -537,29 +553,25 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                         Text(details?.genres?.take(4)?.joinToString("  ·  ").orEmpty(), color = Color(0xFFB9B9BD), fontSize = 13.sp, lineHeight=16.sp)
                     }
                     Spacer(Modifier.height(14.dp))
-                    Text(item.overview, color = Color(0xFFE8E8EB), fontSize = 16.sp, lineHeight=22.sp, maxLines = 3, modifier = Modifier.widthIn(max = 860.dp))
+                    Text(item.overview, color = Color(0xFFE8E8EB), fontSize = 16.sp, lineHeight=22.sp, maxLines = 3, modifier = Modifier.fillMaxWidth(.72f))
                     Spacer(Modifier.height(24.dp))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement=Arrangement.spacedBy(12.dp)) {
                         if (item.type == "movie") {
                             val label = if ((saved?.percent ?: 0.0) in 1.0..95.0) "▶  ${tr("Reanudar","Resume")} ${formatPosition(saved?.position ?: 0)}" else tr("▶  Reproducir","▶  Play")
-                            FocusButton(label, onLongClick = { state.launch { state.chooseCurrentSources() } }, primary = true, modifier = Modifier.focusRequester(playFocus).width(280.dp)) {
+                            FocusButton(label, onLongClick = { state.launch { state.chooseCurrentSources() } }, primary = true, modifier = Modifier.focusRequester(playFocus).width(220.dp)) {
                                 state.launch { runCatching { state.playMovie() }.onFailure { state.error = it.message } }
                             }
                         } else {
                             val canResume = (saved?.season ?: 0) > 0 && (saved?.episode ?: 0) > 0 && (saved?.percent ?: 0.0) < 96.0
-                            FocusButton(if (canResume) "▶  ${tr("Continuar","Continue")} S${saved?.season} E${saved?.episode}" else tr("▶  Reproducir S1 E1","▶  Play S1 E1"), onLongClick = { state.launch { state.chooseCurrentSources() } }, primary = true, modifier = Modifier.focusRequester(playFocus).width(280.dp)) {
+                            FocusButton(if (canResume) "▶  ${tr("Continuar","Continue")} S${saved?.season} E${saved?.episode}" else tr("▶  Reproducir S1 E1","▶  Play S1 E1"), onLongClick = { state.launch { state.chooseCurrentSources() } }, primary = true, modifier = Modifier.focusRequester(playFocus).width(220.dp)) {
                                 state.launch { runCatching { if (canResume) state.resumeSeries() else state.playSeriesFromStart() }.onFailure { state.error = it.message } }
                             }
                         }
-                        FocusButton(tr("Desde el principio","Play from beginning")) { state.launch { runCatching { if(item.type=="movie") state.playMovie(true) else state.playSeriesFromStart() }.onFailure { state.error=it.message } } }
-                        FocusButton(tr("+ Añadir a cola","+ Add to queue")) { if(item.type=="series") showQueueAdd=true else state.enqueue(item) }
-                        FocusButton(tr("Ver cola","View queue")+" · ${state.queueEntries.size}") { showQueue=true }
                         FocusButton(if (state.favorites.contains(item.cloudId)) tr("✓ Mi lista","✓ My List") else tr("+ Mi lista","+ My List")) {
                             state.toggleFavorite(item); state.launch { runCatching { state.pushCloud() } }
                         }
-                        FocusButton(tr("Recomendar a amigos","Recommend to friends")) { showRecommend=true }
-                        FocusButton("★ ${state.ratings[item.cloudId]?.let { "$it/10" } ?: tr("Puntuar","Rate")}") { showRating=true }
                         FocusButton(tr("Sala compartida","Watch Party")) { state.screen = Screen.WATCH_PARTY }
+                        FocusButton(tr("Más","More")) { showMore=true }
                     }
                     Spacer(Modifier.height(38.dp))
                 }
@@ -568,7 +580,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
             if (item.type == "series") {
                 item(key = "episodes") {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("${tr("Temporada","Season")} ${state.currentSeason}", color = Color.White, fontSize = 25.sp, lineHeight=30.sp, fontWeight = FontWeight.Bold)
+                        Text(tr("Episodios","Episodes"), color = Color.White, fontSize = 25.sp, lineHeight=30.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.width(16.dp))
                         if ((details?.seasonCount ?: 0) > 1) {
                             SeasonSelector(state, details?.seasonCount ?: 0)
@@ -587,18 +599,19 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                 }
             }
 
-            if (!details?.cast.isNullOrEmpty()) {
-                item(key = "cast") {
-                    Text(tr("Reparto","Cast"), color = Color.White, fontSize = 27.sp, lineHeight=32.sp, fontWeight = FontWeight.Black)
-                    Spacer(Modifier.height(14.dp))
-                    LazyRow(contentPadding = PaddingValues(end = 50.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        items(details?.cast.orEmpty(), key = { "${it.id}:${it.name}" }) { CastCard(it, state) }
+            item(key="cast-reviews") {
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(24.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        Text(tr("Reparto","Cast"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
+                        Spacer(Modifier.height(14.dp))
+                        LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(end=12.dp)) {
+                            items(details?.cast.orEmpty(),key={ "${it.id}:${it.name}" }) { CastCard(it,state,compact=true) }
+                        }
                     }
-                    Spacer(Modifier.height(28.dp))
+                    Column(Modifier.weight(1f)) { TraktCommentsSection(state,item,compact=true) }
                 }
+                Spacer(Modifier.height(24.dp))
             }
-
-            item(key = "trakt-comments") { TraktCommentsSection(state, item) }
 
             if (!details?.trailers.isNullOrEmpty()) {
                 item(key = "trailers") {
@@ -626,6 +639,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
             }
         }
     }
+}
 }
 }
 
@@ -693,6 +707,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
         SocialBackdrop()
         CompositionLocalProvider(LocalBringIntoViewSpec provides object : BringIntoViewSpec {
             override fun calculateScrollDistance(offset: Float,size: Float,containerSize: Float): Float = when {
+                size>containerSize-48 -> offset-24
                 offset<24 -> offset-24
                 offset+size>containerSize-24 -> offset+size-containerSize+24
                 else -> 0f
@@ -1767,13 +1782,13 @@ private fun InfoLine(label: String, value: String) {
 }
 
 @Composable
-private fun CastCard(person: CastMember, state: AppState) {
+private fun CastCard(person: CastMember, state: AppState,compact: Boolean=false) {
     var show by remember(person.id) { mutableStateOf(false) }
     var focused by remember { mutableStateOf(false) }
     if(show) ActorCreditsDialog(person, state) { show=false }
     val click = { if(person.id>0) show=true }
-    Column(Modifier.width(138.dp).border(if(focused) 2.dp else 0.dp, Color.White, RoundedCornerShape(12.dp)).onFocusChanged { focused=it.isFocused }.focusable().tvClick(click).clickable(onClick=click), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.size(106.dp).clip(RoundedCornerShape(53.dp)).background(Color(0xFF252525)), contentAlignment = Alignment.Center) {
+    Column(Modifier.width(if(compact) 92.dp else 138.dp).border(if(focused) 2.dp else 0.dp, Accent, RoundedCornerShape(12.dp)).onFocusChanged { focused=it.isFocused }.focusable().tvClick(click).clickable(onClick=click), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(if(compact) 72.dp else 106.dp).clip(RoundedCornerShape(53.dp)).background(Color(0xFF252525)), contentAlignment = Alignment.Center) {
             if (!person.profile.isNullOrBlank()) AsyncImage(person.profile, person.name, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             else Text(person.name.split(" ").take(2).mapNotNull { it.firstOrNull()?.toString() }.joinToString(""), color = Color(0xFFAAAAAF), fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold)
         }

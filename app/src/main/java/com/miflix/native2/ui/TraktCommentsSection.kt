@@ -22,7 +22,7 @@ import com.miflix.native2.model.MediaSummary
 import kotlinx.coroutines.CancellationException
 
 @Composable
-fun TraktCommentsSection(state: AppState, item: MediaSummary) {
+fun TraktCommentsSection(state: AppState, item: MediaSummary,compact: Boolean=false) {
     val owner=state.session?.userId
     var rows by remember(item.cloudId,owner) { mutableStateOf<List<TraktComment>>(emptyList()) }
     var loading by remember(item.cloudId,owner) { mutableStateOf(false) }
@@ -41,9 +41,8 @@ fun TraktCommentsSection(state: AppState, item: MediaSummary) {
         finally { loading=false }
     }
     Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(16.dp)) {
-            Text(tr("Opiniones · Trakt","Community reviews · Trakt"),color=Color.White,fontSize=27.sp,modifier=Modifier.weight(1f))
-            // A focus target keeps this section reachable by D-pad, even without comments.
+        Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            Text(tr("Opiniones · Trakt","Community reviews · Trakt"),color=Color.White,fontSize=if(compact) 22.sp else 27.sp)
             FocusButton(tr("Actualizar comentarios","Refresh comments")) { if(!loading) retry++ }
         }
         when {
@@ -56,7 +55,7 @@ fun TraktCommentsSection(state: AppState, item: MediaSummary) {
             rows.isEmpty() -> Text(tr("Todavía no hay comentarios disponibles en Trakt para este título.","No Trakt comments available for this title yet."),color=Muted)
             else -> LazyRow(horizontalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(end=40.dp)) {
                 items(rows,key={ it.id }) { row ->
-                    Column(Modifier.width(370.dp).height(275.dp).background(Panel,RoundedCornerShape(14.dp)).padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    Column(Modifier.width(if(compact) 280.dp else 370.dp).height(if(compact) 240.dp else 275.dp).background(Panel,RoundedCornerShape(14.dp)).padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                         Text(row.author,color=Color.White,fontSize=18.sp,maxLines=1)
                         Text("♥ ${row.likes} · ${row.date}",color=Muted,fontSize=13.sp)
                         Text(if(row.spoiler) tr("⚠ Contiene spoilers","⚠ Contains spoilers") else row.text,

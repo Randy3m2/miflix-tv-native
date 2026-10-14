@@ -64,16 +64,14 @@ fun FriendsScreen(state: AppState) {
         finally { previewsLoading=false }
     }
     var manage by remember { mutableStateOf(false) }
-    var calendar by remember { mutableStateOf(false) }
-    BackHandler { state.screen=Screen.HOME }
+    BackHandler { if(tab==3) tab=0 else state.screen=Screen.HOME }
     val contentFocus=remember { FocusRequester() }
     Column(Modifier.fillMaxSize()) {
         Sidebar(Screen.FRIENDS,state.activeProfile.name,{ state.screen=it },state.notifications.size,state.activeProfile,onMoveDown={ contentFocus.requestFocus(); Unit })
         BoxWithConstraints(Modifier.weight(1f).fillMaxHeight().focusRequester(contentFocus).focusGroup()) {
             val columns=if(maxWidth>=720.dp) 3 else 2
             SocialBackdrop()
-            LazyColumn(Modifier.fillMaxSize().padding(horizontal=34.dp),contentPadding=PaddingValues(top=16.dp,bottom=32.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                item {
+            Column(Modifier.fillMaxSize().padding(horizontal=34.dp,vertical=16.dp)) {
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                         Text(tr("Amigos y salas","Friends & Party"),color=Color.White,fontSize=28.sp, lineHeight=34.sp,modifier=Modifier.weight(1f))
                         FocusButton(tr("Recomendaciones","Recommendations")) { recommendations=true }
@@ -81,14 +79,18 @@ fun FriendsScreen(state: AppState) {
                         FocusButton(if(state.watchParty==null) tr("Crear sala","Create Party") else tr("Mi sala","My Party")) { state.screen=Screen.WATCH_PARTY }
                     }
                     Text(tr("Descubre qué están viendo tus amigos.","Discover what your friends are watching."),color=Muted,fontSize=13.sp, lineHeight=16.sp)
-                }
-                item {
+
+                Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement=Arrangement.spacedBy(16.dp)) {
                         listOf(tr("Amigos","Friends"),tr("Salas","Parties"),tr("Solicitudes","Requests")).forEachIndexed { index,label -> NavigationTab(label,selected=tab==index) { tab=index } }
-                        NavigationTab(tr("Calendario","Calendar"),selected=false) { calendar=true }
+                        NavigationTab(tr("Calendario","Calendar"),selected=tab==3) { tab=3 }
                         FocusButton(tr("Administrar perfil","Manage profile")) { manage=true }
                     }
-                }
+
+                Spacer(Modifier.height(12.dp))
+                Box(Modifier.weight(1f).fillMaxWidth()) {
+                    if(tab==3 && state.session!=null) InlineCalendar(state,Modifier.fillMaxSize())
+                    else LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(bottom=32.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 if(state.session==null) item { FocusButton(tr("Iniciar sesión","Sign in")) { state.screen=Screen.SETTINGS } }
                 else {
                     if(tab==2) {
@@ -136,7 +138,7 @@ fun FriendsScreen(state: AppState) {
                                 val next=state.calendarEvents.filter { eventLocal(it.starts)>=now }.minByOrNull { eventLocal(it.starts) }
                                 Column(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(16.dp)).border(1.dp,PanelBorder,RoundedCornerShape(16.dp)).padding(18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                                     NextEventSummary(state,next)
-                                    FocusButton(tr("Abrir calendario","Open calendar")) { calendar=true }
+                                    FocusButton(tr("Abrir calendario","Open calendar")) { tab=3 }
                                 }
                             }
                         }
@@ -144,13 +146,15 @@ fun FriendsScreen(state: AppState) {
                     }
                     if(state.partyStatus.isNotBlank()) item { Text(state.partyStatus,color=Muted) }
                 }
+            
+                    }
+                }
             }
         }
     }
     person?.let { friend -> FriendActionsDialog(state,friend,close={ person=null }) }
     if(recommendations) FriendRecommendationsDialog(state) { recommendations=false }
     if(manage) SocialSettingsDialog(state) { manage=false }
-    if(calendar) CalendarDialog(state) { calendar=false }
 }
 
 @Composable

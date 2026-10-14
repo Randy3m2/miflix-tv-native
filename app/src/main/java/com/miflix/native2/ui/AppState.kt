@@ -463,7 +463,28 @@ class AppState(context: Context) {
     fun clearNativeSourceKey() {
         session?.userId?.let { nativeStore.clear(it) };nativeRevision++;nativeSources.invalidate();invalidatePlaybackWork();nativeSourceStatus=""
     }
-    private suspend fun resolvePlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = supervisorScope {
+    private data class PlaybackCacheKey(
+        val owner: String?,val profile: String,val cloudId: String,val imdb: String,
+        val season: Int,val episode: Int,val year: String,val title: String,
+        val manifests: List<String>,val nativeEnabled: Boolean,val nativeVersion: Int,
+        val sizeLimit: Long,val audio: String
+    )
+    private val playbackLinkCache=com.miflix.native2.data.PlaybackLinkCache<PlaybackCacheKey,List<StreamChoice>>(12) {
+        android.os.SystemClock.elapsedRealtime()
+    }
+    private val playbackCacheMutex=Mutex()
+    private fun playbackCacheKey(item: MediaSummary,imdb: String,season: Int,episode: Int)=PlaybackCacheKey(
+        session?.userId,activeProfile.id,item.cloudId,imdb,season,episode,item.year,item.title,
+        streamRepo.manifests().toList(),nativeSourceEnabled,nativeRevision,streamSizeBytes,audioLanguage)
+    private suspend fun resolvePlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = playbackCacheMutex.withLock {
+        val key=playbackCacheKey(item,imdb,season,episode)
+        playbackLinkCache.get(key)?.let { return@withLock it }
+        val streams=fetchPlaybackSources(item,imdb,season,episode)
+        // Cache successful lists only; account/settings changes cannot publish stale results.
+        if(streams.isNotEmpty() && key==playbackCacheKey(item,imdb,season,episode)) playbackLinkCache.put(key,streams)
+        streams
+    }
+    private suspend fun fetchPlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = supervisorScope {
         val owner=session?.userId
         val native=owner!=null && nativeStore.enabled(owner)
         // Disabled is the default and leaves the existing add-on path unchanged.
@@ -1277,6 +1298,18 @@ class AppState(context: Context) {
         } catch(e: CancellationException) { throw e } catch(e: Exception) { if(valid()) error=e.message } finally { if(valid()) busyMessage=null }
     }
 
+    suspend fun refreshPlaybackLinks(selection: SourceSelection) {
+        val ticket=PlaybackWorkGate.Ticket(selection.workGeneration,selection.workSequence)
+        if(sourceSelection!=selection || !playbackWork.current(ticket)) return
+        playbackCacheMutex.withLock {
+            if(sourceSelection!=selection || !playbackWork.current(ticket)) return
+            playbackLinkCache.remove(playbackCacheKey(selection.item,selection.imdb,selection.season,selection.episode))
+            nativeSources.invalidate()
+        }
+        if(sourceSelection==selection && playbackWork.current(ticket))
+            chooseSources(selection.item,selection.imdb,selection.season,selection.episode,selection.resumeMs)
+    }
+
     suspend fun playSelectedSource(selection: SourceSelection, stream: StreamChoice) {
         val ticket=PlaybackWorkGate.Ticket(selection.workGeneration,selection.workSequence)
         if(sourceSelection!=selection || !playbackWork.current(ticket)) return
@@ -1721,6 +1754,7 @@ class AppState(context: Context) {
     }
 
     fun signOut() {
+        playbackLinkCache.clear()
         closeAvatarUpload()
         detachParty()
         setAccountManifests(emptyList()); sourceSelection=null; playerRequest=null

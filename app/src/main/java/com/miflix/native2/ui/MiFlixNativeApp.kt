@@ -1,6 +1,7 @@
 package com.miflix.native2.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.layout.ContentScale
 import com.miflix.native2.R
@@ -152,18 +153,6 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
 
         state.busyMessage?.let { LoadingOverlay(it) }
 
-        state.error?.takeIf { it.isNotBlank() && !it.contains("rememberCoroutineScope", ignoreCase = true) }?.let { message ->
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-                Row(
-                    Modifier.padding(bottom = 28.dp).background(Color(0xEE6E202A), RoundedCornerShape(14.dp)).padding(horizontal = 20.dp, vertical = 11.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(message, color = Color.White, fontSize = 13.sp, lineHeight=16.sp)
-                    Spacer(Modifier.width(12.dp))
-                    FocusButton(tr("Cerrar","Dismiss")) { state.error = null }
-                }
-            }
-        }
         state.partyJoinedNotice?.let { notice ->
             Box(Modifier.fillMaxSize(),contentAlignment=Alignment.TopEnd) {
                 Text(notice,color=Color.White,fontSize=18.sp,modifier=Modifier.padding(32.dp).background(Color(0xEE272727),RoundedCornerShape(16.dp)).padding(20.dp))
@@ -182,6 +171,33 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 }
             }
         }
+        state.error?.takeIf { it.isNotBlank() }?.let { message ->
+            key(message) {
+                LaunchedEffect(message) {
+                    delay(5000)
+                    if(state.error==message) state.error=null
+                }
+                Dialog(onDismissRequest={ if(state.error==message) state.error=null },
+                    properties=androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth=false)) {
+                    val dismissFocus=remember { FocusRequester() }
+                    LaunchedEffect(Unit) { withFrameNanos { };runCatching { dismissFocus.requestFocus() } }
+                    Column(Modifier.widthIn(max=620.dp).fillMaxWidth(.85f)
+                        .background(Color(0xFF381B22),RoundedCornerShape(18.dp)).padding(24.dp),
+                        verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                        Text(tr("No se pudo completar","Could not complete"),color=Color.White,fontSize=20.sp,fontWeight=FontWeight.Bold)
+                        Box(Modifier.heightIn(max=220.dp).then(Modifier
+                            .verticalScroll(androidx.compose.foundation.rememberScrollState()))) {
+                            Text(message,color=Color.White,fontSize=15.sp,lineHeight=20.sp)
+                        }
+                        Text(tr("Se cierra automáticamente en 5 segundos.","Closes automatically after 5 seconds."),color=Color(0xFFDEBAC3),fontSize=12.sp)
+                        FocusButton(tr("Cerrar","Dismiss"),modifier=Modifier.focusRequester(dismissFocus)) {
+                            if(state.error==message) state.error=null
+                        }
+                    }
+                }
+            }
+        }
+
     }
 }
 }

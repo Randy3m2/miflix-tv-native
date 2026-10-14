@@ -1497,12 +1497,19 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
         } else {
         if(playbackError!=null) {
-            Dialog(onDismissRequest=onClose,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+            val errorMessage=playbackError
+            LaunchedEffect(errorMessage) {
+                delay(5000)
+                if(playbackError==errorMessage) { playbackError=null;controlsVisible=true;controlInteraction++ }
+            }
+            Dialog(onDismissRequest={ playbackError=null;controlsVisible=true },properties=DialogProperties(usePlatformDefaultWidth=false)) {
+            val retryFocus=remember { FocusRequester() }
+            LaunchedEffect(Unit) { withFrameNanos { };runCatching { retryFocus.requestFocus() } }
             Column(Modifier.width(600.dp).background(Color(0xEE171717),RoundedCornerShape(18.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
                 Text(tr("No se pudo reproducir este enlace","This link could not be played"),color=Color.White,fontSize=22.sp,lineHeight=27.sp)
                 Text(playbackError.orEmpty(),color=Muted)
                 Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                    FocusButton(tr("Reintentar","Retry")) { playbackError=null; surfaceGeneration++; player.prepare() }
+                    FocusButton(tr("Reintentar","Retry"),modifier=Modifier.focusRequester(retryFocus)) { playbackError=null; surfaceGeneration++; player.prepare() }
                     FocusButton(tr("Otro enlace","Another link")) { playbackError=null; state.launch { state.playerSources(request,player.currentPosition) } }
                     FocusButton(tr("Salir","Exit")) { onClose() }
                 }

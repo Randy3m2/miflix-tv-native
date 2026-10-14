@@ -203,7 +203,7 @@ fun QueueDialog(state: AppState, close: () -> Unit) {
     }
 }
 
-private fun eventLocal(value: String): String = runCatching {
+internal fun eventLocal(value: String): String = runCatching {
     val normalized=value.replace(Regex("\\.\\d+"),"").replace("+00:00","Z")
     val parser=SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssX",Locale.US).apply { timeZone=TimeZone.getTimeZone("UTC") }
     SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.US).format(parser.parse(normalized)!!)

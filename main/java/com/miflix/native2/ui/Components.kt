@@ -64,6 +64,10 @@ val SoftWhite = Color(0xFFF3F3F3)
 val Accent = Color(0xFFB792FF)
 val FocusedPanel = Color(0xFF242126)
 val PanelBorder = Color(0xFF303035)
+val BrowseTileWidth = 240.dp
+val BrowseTileHeight = 136.dp
+val BrowseTileSlotWidth = 254.dp
+val BrowseTileSlotHeight = 152.dp
 
 private val FastMotion = tween<Float>(durationMillis = 80, easing = LinearOutSlowInEasing)
 
@@ -261,12 +265,12 @@ fun CollectionCard(
     }
     val model = if (focused && animationReady && !animationFailed && !tile.focusGifUrl.isNullOrBlank()) tile.focusGifUrl else tile.coverUrl
 
-    Column(Modifier.width(300.dp)) {
-        Box(Modifier.width(300.dp).height(178.dp), contentAlignment = Alignment.Center) {
+    Column(Modifier.width(BrowseTileSlotWidth)) {
+        Box(Modifier.width(BrowseTileSlotWidth).height(BrowseTileSlotHeight), contentAlignment = Alignment.Center) {
             Box(
                 Modifier
-                    .width(286.dp)
-                    .height(162.dp)
+                    .width(BrowseTileWidth)
+                    .height(BrowseTileHeight)
                     .graphicsLayer { scaleX = scale; scaleY = scale; shadowElevation = 0f }
                     .contentFocusBorder(14.dp)
                     

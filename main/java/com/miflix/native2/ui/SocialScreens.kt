@@ -47,6 +47,22 @@ fun FriendsScreen(state: AppState) {
     var search by remember { mutableStateOf("") }
     var person by remember { mutableStateOf<FriendActivity?>(null) }
     var recommendations by remember { mutableStateOf(false) }
+    var showAllFriends by remember { mutableStateOf(false) }
+    var previewRevision by remember { mutableIntStateOf(0) }
+    var recommendationsPreview by remember(state.session?.userId) { mutableStateOf<List<com.miflix.native2.data.FriendRecommendation>>(emptyList()) }
+    var previewsLoading by remember { mutableStateOf(false) }
+    var previewError by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(state.session?.userId,previewRevision) {
+        val owner=state.session?.userId ?: return@LaunchedEffect
+        previewsLoading=true;previewError=null
+        try {
+            val rows=state.friendRecommendations()
+            if(state.session?.userId==owner) recommendationsPreview=rows
+            state.refreshCalendar()
+        } catch(e: kotlinx.coroutines.CancellationException) { throw e }
+        catch(e: Exception) { previewError=e.message }
+        finally { previewsLoading=false }
+    }
     var manage by remember { mutableStateOf(false) }
     var calendar by remember { mutableStateOf(false) }
     BackHandler { state.screen=Screen.HOME }
@@ -56,12 +72,12 @@ fun FriendsScreen(state: AppState) {
         BoxWithConstraints(Modifier.weight(1f).fillMaxHeight().focusRequester(contentFocus).focusGroup()) {
             val columns=if(maxWidth>=720.dp) 3 else 2
             SocialBackdrop()
-            LazyColumn(Modifier.fillMaxSize().padding(horizontal=34.dp),contentPadding=PaddingValues(vertical=28.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+            LazyColumn(Modifier.fillMaxSize().padding(horizontal=34.dp),contentPadding=PaddingValues(top=16.dp,bottom=32.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 item {
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                         Text(tr("Amigos y salas","Friends & Party"),color=Color.White,fontSize=28.sp, lineHeight=34.sp,modifier=Modifier.weight(1f))
                         FocusButton(tr("Recomendaciones","Recommendations")) { recommendations=true }
-                        FocusButton(if(state.friendsTabLoading) tr("Actualizando…","Refreshing…") else tr("Actualizar","Refresh")) { state.refreshFriendsTab() }
+                        FocusButton(if(state.friendsTabLoading) tr("Actualizando…","Refreshing…") else tr("Actualizar","Refresh")) { state.refreshFriendsTab();previewRevision++ }
                         FocusButton(if(state.watchParty==null) tr("Crear sala","Create Party") else tr("Mi sala","My Party")) { state.screen=Screen.WATCH_PARTY }
                     }
                     Text(tr("Descubre qué están viendo tus amigos.","Discover what your friends are watching."),color=Muted,fontSize=13.sp, lineHeight=16.sp)
@@ -90,12 +106,41 @@ fun FriendsScreen(state: AppState) {
                         item { NativeTextField(search,{ search=it },tr("Buscar amigos","Search friends"),modifier=Modifier.fillMaxWidth()) }
                         val friends=state.friendActivity.filter { (tab==0 || it.room!=null) && it.nickname.contains(search,true) }
                         if(friends.isEmpty()) item { Text(tr("No hay resultados · pulsa Refresh para cargar tus amigos","No results · Select Refresh to load your friends"),color=Muted) }
-                        items(friends.chunked(columns)) { group ->
+                        val displayedFriends=if(showAllFriends || tab!=0 || search.isNotBlank()) friends else friends.take(columns)
+                        items(displayedFriends.chunked(columns)) { group ->
                             Row(horizontalArrangement=Arrangement.spacedBy(16.dp)) {
                                 group.forEach { friend -> FriendTile(friend,Modifier.weight(1f)) { person=friend } }
                                 repeat(columns-group.size) { Spacer(Modifier.weight(1f)) }
                             }
                         }
+                        if(tab==0 && friends.size>columns && search.isBlank()) item { FocusButton(if(showAllFriends) tr("Mostrar menos amigos","Show fewer friends") else tr("Ver todos los amigos","View all friends")+" (${friends.size})") { showAllFriends=!showAllFriends } }
+                    }
+                    if(tab==0) item {
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(22.dp)) {
+                            Column(Modifier.weight(.6f),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                                Text(tr("Tus amigos recomiendan","Friends recommend"),color=Color.White,fontSize=22.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold)
+                                if(previewsLoading) Text(tr("Cargando…","Loading…"),color=Muted)
+                                else if(recommendationsPreview.isEmpty()) Text(tr("Las recomendaciones de tus amigos aparecerán aquí.","Your friends' picks will appear here."),color=Muted,fontSize=13.sp)
+                                Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                                    recommendationsPreview.take(3).forEach { recommendation ->
+                                        FriendPreviewCard(recommendation,Modifier.weight(1f)) {
+                                            state.launch { state.socialAction { state.tmdb.byCloudId(recommendation.cloud)?.let { state.open(it) } } }
+                                        }
+                                    }
+                                }
+                                FocusButton(tr("Ver todas","View all")) { recommendations=true }
+                            }
+                            Column(Modifier.weight(.4f),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                                Text(tr("Próximo evento","Next event"),color=Color.White,fontSize=22.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold)
+                                val now=java.text.SimpleDateFormat("yyyy-MM-dd HH:mm",java.util.Locale.US).format(java.util.Date())
+                                val next=state.calendarEvents.filter { eventLocal(it.starts)>=now }.minByOrNull { eventLocal(it.starts) }
+                                Column(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(16.dp)).border(1.dp,PanelBorder,RoundedCornerShape(16.dp)).padding(18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                                    NextEventSummary(state,next)
+                                    FocusButton(tr("Abrir calendario","Open calendar")) { calendar=true }
+                                }
+                            }
+                        }
+                        previewError?.let { Text(tr("No se pudo actualizar parte de la información. Pulsa Refresh.","Some information could not refresh. Select Refresh."),color=Muted,fontSize=12.sp) }
                     }
                     if(state.partyStatus.isNotBlank()) item { Text(state.partyStatus,color=Muted) }
                 }
@@ -111,11 +156,11 @@ fun FriendsScreen(state: AppState) {
 @Composable
 private fun FriendTile(friend: FriendActivity,modifier: Modifier,onClick: () -> Unit) {
     var focused by remember(friend.id) { mutableStateOf(false) }
-    Row(modifier.height(138.dp).onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
+    Row(modifier.height(112.dp).onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
         .background(if(focused) FocusedPanel else Panel,RoundedCornerShape(16.dp))
         .border(1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(16.dp)).padding(16.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
-        ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(58.dp).clip(androidx.compose.foundation.shape.CircleShape))
+        ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(48.dp).clip(androidx.compose.foundation.shape.CircleShape))
         Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)) {
             Text("@"+friend.nickname,color=Color.White,fontSize=16.sp,lineHeight=20.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             Text(if(friend.online) tr("● En línea","● Online") else tr("Desconectado","Offline"),color=if(friend.online) Color(0xFF8DE5B8) else Muted,fontSize=12.sp)
@@ -261,6 +306,47 @@ fun NotificationsScreen(state: AppState) {
                         Text(notice.message,color=Muted,fontSize=14.sp,maxLines=2)
                     }
                     FocusButton(tr("Ver contenido","View content")) { state.launch { state.open(notice.item) } }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FriendPreviewCard(item: com.miflix.native2.data.FriendRecommendation,modifier: Modifier,onClick: () -> Unit) {
+    var focused by remember(item.cloud) { mutableStateOf(false) }
+    Column(modifier.onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+        Box(Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(12.dp)).background(Panel).border(1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(12.dp))) {
+            coil3.compose.AsyncImage(item.poster,item.title,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+        }
+        Text(item.title,color=Color.White,fontSize=12.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        Text("@"+item.nickname,color=Muted,fontSize=11.sp,maxLines=1)
+    }
+}
+
+@Composable
+private fun NextEventSummary(state: AppState,event: com.miflix.native2.data.CalendarEvent?) {
+    var poster by remember(event?.id) { mutableStateOf<String?>(null) }
+    LaunchedEffect(event?.id,state.session?.userId) {
+        val id=event?.cloud
+        if(id!=null) try { poster=state.tmdb.byCloudId(id)?.poster }
+        catch(e: kotlinx.coroutines.CancellationException) { throw e }
+        catch(_: Exception) { poster=null }
+    }
+    if(event==null) Text(tr("Sin eventos próximos","No upcoming events"),color=Color.White,fontSize=18.sp)
+    else {
+        Row(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
+            if(poster!=null) coil3.compose.AsyncImage(poster,event.title,Modifier.size(56.dp,84.dp).clip(RoundedCornerShape(8.dp)),contentScale=ContentScale.Crop)
+            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                Text(event.title,color=Color.White,fontSize=17.sp,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Text(eventLocal(event.starts),color=Muted,fontSize=12.sp)
+                Text("${event.guests.size} "+tr("amigos invitados","friends invited"),color=Muted,fontSize=11.sp)
+            }
+        }
+        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            event.guests.take(3).forEach { id ->
+                state.friendActivity.firstOrNull { it.id==id }?.let { friend ->
+                    ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(26.dp).clip(androidx.compose.foundation.shape.CircleShape))
                 }
             }
         }

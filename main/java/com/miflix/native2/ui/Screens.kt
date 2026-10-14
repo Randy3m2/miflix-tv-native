@@ -273,7 +273,7 @@ private fun MediaRail(
 
 @Composable
 private fun CollectionRail(title: String, rows: List<CollectionTile>, onClick: (CollectionTile) -> Unit) {
-    Column(Modifier.fillMaxWidth().height(258.dp)) {
+    Column(Modifier.fillMaxWidth().height(228.dp)) {
         Text(title, color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 40.dp,end=40.dp, bottom = 8.dp))
         LazyRow(
             modifier=Modifier.fillMaxWidth().padding(horizontal=32.dp).clipToBounds(),
@@ -439,18 +439,17 @@ fun GenresScreen(state: AppState, onBack: () -> Unit) {
 private fun GenreCard(g: GenreDefinition, onClick: () -> Unit) {
     var focused by remember(g.id) { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) 1.012f else 1f, tween(80), label = "genreScale")
-    Box(
-        Modifier.width(220.dp).height(104.dp).graphicsLayer { scaleX = scale; scaleY = scale }
-            .onFocusChanged { focused = it.isFocused }.focusable().tvClick(onClick).clickable(onClick = onClick)
-            .clip(RoundedCornerShape(14.dp)).background(if (focused) FocusedPanel else Panel)
-            .border(if (focused) 2.dp else 1.dp, if (focused) Accent else PanelBorder, RoundedCornerShape(14.dp)),
-        contentAlignment = Alignment.Center
-    ) {
-        if (g.coverUrl.isNotBlank()) {
-            AsyncImage(g.coverUrl, g.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            Box(Modifier.fillMaxSize().background(Color(0x66000000)))
+    Column(Modifier.width(BrowseTileSlotWidth)) {
+        Box(Modifier.width(BrowseTileSlotWidth).height(BrowseTileSlotHeight),contentAlignment=Alignment.Center) {
+            Box(Modifier.width(BrowseTileWidth).height(BrowseTileHeight).graphicsLayer { scaleX=scale;scaleY=scale }
+                .onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
+                .clip(RoundedCornerShape(14.dp)).background(Panel)
+                .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(14.dp))) {
+                if(g.coverUrl.isNotBlank()) AsyncImage(g.coverUrl,g.title,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+                else Text(g.title,color=Color.White,fontSize=21.sp,fontWeight=FontWeight.Bold,modifier=Modifier.align(Alignment.Center))
+            }
         }
-        Text(g.title, color = Color.White, fontSize = 21.sp, lineHeight=25.sp, fontWeight = FontWeight.Black)
+        Text(g.title,color=Color.White,fontSize=14.sp,lineHeight=17.sp,fontWeight=FontWeight.Medium,modifier=Modifier.padding(start=8.dp,top=2.dp))
     }
 }
 

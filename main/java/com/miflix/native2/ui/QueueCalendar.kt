@@ -143,7 +143,7 @@ fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,close: () -> Unit) {
                                 else -> false
                             }
                         }.onFocusChanged { focused=it.isFocused }.focusable().tvClick(activate).clickable(onClick=activate)
-                        .background(if(focused) Color.White else Color(0xFF252525),RoundedCornerShape(14.dp))
+                        .background(if(focused) Color.White else Panel,RoundedCornerShape(14.dp))
                         .border(2.dp,if(focused) Color.White else Color.Transparent,RoundedCornerShape(14.dp)).padding(14.dp)) {
                         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
                             ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(76.dp))
@@ -180,7 +180,7 @@ fun QueueDialog(state: AppState, close: () -> Unit) {
             LazyColumn(Modifier.weight(1f,false),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 if(state.queueEntries.isEmpty()) item { Text(tr("Cola vacía","Queue is empty"),color=Muted) }
                 items(state.queueEntries,key={it.id}) { entry ->
-                    Column(Modifier.fillMaxWidth().background(Color(0xFF232323),RoundedCornerShape(12.dp)).padding(12.dp)) {
+                    Column(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(12.dp)).padding(12.dp)) {
                         Text(entry.title+if(entry.season>0) " · S${entry.season} E${entry.episode}" else "",color=Color.White,maxLines=2)
                         Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                             if(state.partyRole!=PartyRole.GUEST) FocusButton(if(state.queueStarting) tr("Cargando…","Loading…") else tr("Reproducir","Play")) {
@@ -189,7 +189,7 @@ fun QueueDialog(state: AppState, close: () -> Unit) {
                             }
                             FocusButton("↑") { state.moveQueued(entry.id,-1) }
                             FocusButton("↓") { state.moveQueued(entry.id,1) }
-                            FocusButton(tr("Eliminar","Remove")) { state.removeQueued(entry.id) }
+                            FocusButton(tr("Eliminar","Remove"),destructive=true) { state.removeQueued(entry.id) }
                         }
                     }
                 }
@@ -248,13 +248,13 @@ fun CalendarDialog(state: AppState, close: () -> Unit) {
                 val events=state.calendarEvents.filter { eventLocal(it.starts).startsWith(day ?: prefix) }
                 if(events.isEmpty()) item { Text(tr("No hay eventos en este período","No events in this period"),color=Muted) }
                 items(events,key={it.id}) { event ->
-                    Column(Modifier.background(Color(0xFF252525),RoundedCornerShape(14.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                    Column(Modifier.background(Panel,RoundedCornerShape(14.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                         Text(event.title,color=Color.White,fontSize=20.sp)
                         Text(eventLocal(event.starts)+" · "+event.kind+if(event.season>0) " · S${event.season} E${event.episode}" else "",color=Muted)
                         Text(if(event.owner==state.session?.userId) tr("Organizado por ti","Organized by you")+" · ${event.guests.size} "+tr("invitados","guests") else tr("Te han invitado","You're invited"),color=Muted)
                         Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
                             if(event.cloud!=null || event.channelId.isNotBlank()) FocusButton(tr("Ver contenido","View title")) { state.launch { state.socialAction { state.openCalendarEvent(event);close() } } }
-                            if(event.owner==state.session?.userId) FocusButton(tr("Eliminar evento","Delete event")) { state.launch { state.socialAction { state.deleteCalendarEvent(event.id) } } }
+                            if(event.owner==state.session?.userId) FocusButton(tr("Eliminar evento","Delete event"),destructive=true) { state.launch { state.socialAction { state.deleteCalendarEvent(event.id) } } }
                         }
                     }
                 }
@@ -392,7 +392,7 @@ fun PlayerPartyChatDialog(state: AppState, close: () -> Unit) {
                 items(messages,key={ it.id }) { message ->
                     val author=if(message.userId==state.session?.userId) state.nickname.ifBlank { tr("Tú","You") }
                         else state.friendPeople[message.userId] ?: tr("Participante","Participant")
-                    Column(Modifier.fillMaxWidth().background(Color(0xFF22242B),RoundedCornerShape(10.dp)).padding(12.dp).focusable()) {
+                    Column(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(10.dp)).padding(12.dp).focusable()) {
                         Text(author,color=Muted,fontSize=13.sp)
                         Text(message.body,color=Color.White,fontSize=18.sp)
                     }

@@ -792,7 +792,9 @@ class AppState(context: Context) {
         "disney" to listOf(337),
         "prime" to listOf(9, 119),
         "apple" to listOf(350),
-        "hbo" to listOf(1899, 384)
+        "hbo" to listOf(1899, 384),
+        "hulu" to listOf(15),
+        "crunchyroll" to listOf(283)
     )
 
     fun launch(block: suspend CoroutineScope.() -> Unit) = appScope.launch {

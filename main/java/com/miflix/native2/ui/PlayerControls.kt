@@ -51,7 +51,7 @@ internal fun CompactPlayerControls(
     request: PlayerRequest, paused: Boolean, position: Long, duration: Long, speed: Float,
     maximized: Boolean, playFocus: FocusRequester, onInteraction: () -> Unit, onPlay: () -> Unit,
     onResize: () -> Unit, onMenu: (String) -> Unit, onLinks: () -> Unit, onSeek: (Long) -> Unit,
-    seekable: Boolean, party: Boolean, onParty: () -> Unit, onChat: () -> Unit, onReactions: () -> Unit, onClose: () -> Unit, onMaximize: () -> Unit,
+    seekable: Boolean, party: Boolean, onParty: () -> Unit, onChat: () -> Unit, onReactions: () -> Unit, onQuickReactions: () -> Unit, onClose: () -> Unit, onMaximize: () -> Unit,
     nextAvailable: Boolean, onNext: () -> Unit, onEpisodes: () -> Unit, onQueue: () -> Unit, onInfo: () -> Unit, onPip: () -> Unit, onMultiView: () -> Unit
 ) {
     val seekFocus=remember { FocusRequester() }
@@ -89,7 +89,7 @@ internal fun CompactPlayerControls(
                 PlayerIconButton("links",tr("Enlaces de reproducción","Playback links"),onInteraction=onInteraction,onClick=onLinks,onLabel={ focusedLabel=it })
                 PlayerIconButton("party",if(party) tr("Mi Party","My Party") else tr("Crear Party","Create Party"),onInteraction=onInteraction,onClick=onParty,onLabel={ focusedLabel=it })
                 PlayerIconButton("chat",tr("Chat del Party","Party chat"),onInteraction=onInteraction,onClick=onChat,onLabel={ focusedLabel=it })
-                PlayerIconButton("reactions",tr("Reacciones","Reactions"),onInteraction=onInteraction,onClick=onReactions,onLabel={ focusedLabel=it })
+                PlayerIconButton("reactions",tr("Reacciones · Mantén pulsado para emojis rápidos","Reactions · Hold for quick emojis"),onInteraction=onInteraction,onClick=onReactions,onLongClick=onQuickReactions,onLabel={ focusedLabel=it })
                 PlayerIconButton("queue",tr("Cola","Queue"),onInteraction=onInteraction,onClick=onQueue,onLabel={ focusedLabel=it })
                 Spacer(Modifier.weight(1f))
                 Text(if(duration>0) "${tr("Termina","Ends")} " + java.text.SimpleDateFormat("HH:mm",java.util.Locale.getDefault()).format(java.util.Date(System.currentTimeMillis()+((duration-position).coerceAtLeast(0)/speed.coerceAtLeast(0.1f)).toLong())) else if(request.live) tr("EN VIVO","LIVE") else playbackTime(position),
@@ -100,9 +100,10 @@ internal fun CompactPlayerControls(
 }
 
 @Composable
-private fun PlayerIconButton(icon: String, label: String, modifier: Modifier=Modifier, onInteraction: () -> Unit, onClick: () -> Unit, onLabel: (String) -> Unit = {}, enabled: Boolean=true) {
+private fun PlayerIconButton(icon: String, label: String, modifier: Modifier=Modifier, onInteraction: () -> Unit, onClick: () -> Unit, onLabel: (String) -> Unit = {}, enabled: Boolean=true, onLongClick: (() -> Unit)?=null) {
     var focused by remember { mutableStateOf(false) }
     Box(modifier.size(44.dp).onFocusChanged { focused=it.isFocused; if(it.isFocused) { onInteraction(); onLabel(label) } }
+        .then(if(onLongClick!=null && enabled) Modifier.tvPlaybackClick({ onInteraction();onClick() },{ onInteraction();onLongClick() }) else Modifier)
         .background(if(focused) Color.White else Color.Transparent,CircleShape)
         .semantics { contentDescription=label }
         .clickable(enabled=enabled) { onInteraction(); onClick() },contentAlignment=Alignment.Center) {

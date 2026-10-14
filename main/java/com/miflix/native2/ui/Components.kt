@@ -58,9 +58,12 @@ import com.miflix.native2.model.CollectionTile
 import com.miflix.native2.model.MediaSummary
 
 val Bg = Color(0xFF050505)
-val Panel = Color(0xFF151515)
-val Muted = Color(0xFF9A9A9F)
+val Panel = Color(0xFF141414)
+val Muted = Color(0xFFAAAAAF)
 val SoftWhite = Color(0xFFF3F3F3)
+val Accent = Color(0xFFB792FF)
+val FocusedPanel = Color(0xFF242126)
+val PanelBorder = Color(0xFF303035)
 
 private val FastMotion = tween<Float>(durationMillis = 80, easing = LinearOutSlowInEasing)
 
@@ -117,10 +120,10 @@ fun FocusButton(
     onFocused: ((Boolean) -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
     horizontalPadding: androidx.compose.ui.unit.Dp = 24.dp,
+    destructive: Boolean = false,
     onClick: () -> Unit
 ) {
     var focused by remember { mutableStateOf(false) }
-    val white = focused
     Box(
         modifier
             
@@ -131,15 +134,15 @@ fun FocusButton(
             .focusable()
             .then(if (onLongClick != null) Modifier.tvPlaybackClick(onClick, onLongClick) else Modifier.tvClick(onClick))
             .clickable(onClick = onClick)
-            .background(if (white) SoftWhite else Color(0xE6222222), RoundedCornerShape(24.dp))
-            .border(if (focused) 1.5.dp else if(primary) 1.dp else 0.dp, if(focused) Color.White else Color(0xFF686868), RoundedCornerShape(24.dp))
+            .background(if (focused) FocusedPanel else if(destructive) Color(0xFF251317) else if(primary) Color(0xFF211D28) else Panel, RoundedCornerShape(12.dp))
+            .border(if (focused) 2.dp else 1.dp, if(focused) Accent else if(destructive) Color(0xFF78404B) else if(primary) Color(0xFF74608D) else PanelBorder, RoundedCornerShape(12.dp))
             .padding(horizontal = horizontalPadding, vertical = 12.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text,
-            color = if (white) Color.Black else Color.White,
-            fontSize = 15.sp, lineHeight=18.sp,
+            color = if(destructive) Color(0xFFFFB9C3) else Color.White,
+            fontSize = 15.sp, lineHeight=20.sp,
             fontWeight = FontWeight.Bold, maxLines=1, overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis
         )
     }
@@ -148,7 +151,7 @@ fun FocusButton(
 @Composable
 fun BackIconButton(onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    Box(Modifier.size(44.dp).semantics { contentDescription=tr("Buscar","Search") }.onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick)
+    Box(Modifier.size(44.dp).semantics { contentDescription=tr("Volver","Back") }.onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick)
         .clickable(onClick=onClick).background(if(focused) SoftWhite else Color(0x990C111B),RoundedCornerShape(22.dp))
         .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else Color(0x557D8AA3),RoundedCornerShape(22.dp)),
         contentAlignment=Alignment.Center) {
@@ -168,7 +171,7 @@ fun MediaCard(
 ) {
     var focused by remember(item.cloudId) { mutableStateOf(false) }
     val scale by animateFloatAsState(
-        targetValue = if (focused) 1.025f else 1f,
+        targetValue = if (focused) 1.012f else 1f,
         animationSpec = FastMotion,
         label = "cardScale"
     )
@@ -239,11 +242,17 @@ fun CollectionCard(
 ) {
     var focused by remember(tile.id) { mutableStateOf(false) }
     val scale by animateFloatAsState(
-        targetValue = if (focused) 1.022f else 1f,
+        targetValue = if (focused) 1.012f else 1f,
         animationSpec = FastMotion,
         label = "collectionScale"
     )
-    val model = if (focused && !tile.focusGifUrl.isNullOrBlank()) tile.focusGifUrl else tile.coverUrl
+    var animationReady by remember(tile.id,focused) { mutableStateOf(false) }
+    var animationFailed by remember(tile.id) { mutableStateOf(false) }
+    var coverFailed by remember(tile.id) { mutableStateOf(false) }
+    LaunchedEffect(tile.id,focused) {
+        if(focused && !tile.focusGifUrl.isNullOrBlank()) { delay(160);animationReady=true }
+    }
+    val model = if (focused && animationReady && !animationFailed && !tile.focusGifUrl.isNullOrBlank()) tile.focusGifUrl else tile.coverUrl
 
     Column(Modifier.width(300.dp)) {
         Box(Modifier.width(300.dp).height(178.dp), contentAlignment = Alignment.Center) {
@@ -262,17 +271,22 @@ fun CollectionCard(
                     .background(Color(0xFF191919))
             ) {
                 if(tile.id.startsWith("franchise:")) Box(Modifier.fillMaxSize().background(if(tile.id.endsWith("marvel")) Color(0xFF24080C) else Color(0xFF081B32)),contentAlignment=Alignment.Center) {
-                    Text(if(tile.id.endsWith("marvel")) "MARVEL" else "DC",color=Color.White,fontSize=42.sp,lineHeight=48.sp,fontWeight=FontWeight.Black,
-                        modifier=Modifier.background(if(tile.id.endsWith("marvel")) Color(0xFFD82029) else Color(0xFF146AC2),RoundedCornerShape(8.dp)).padding(horizontal=20.dp,vertical=8.dp))
+                    Image(painterResource(if(tile.id.endsWith("marvel")) R.drawable.franchise_marvel else R.drawable.franchise_dc),tile.title,
+                        modifier=Modifier.fillMaxSize().padding(if(tile.id.endsWith("marvel")) 24.dp else 10.dp),contentScale=ContentScale.Fit)
                 } else if(tile.id=="natgeo") Row(Modifier.fillMaxSize().padding(28.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
                     Box(Modifier.width(44.dp).height(66.dp).border(5.dp,Color(0xFFFFCC00)))
                     Text("NATIONAL\nGEOGRAPHIC",color=Color.White,fontSize=19.sp,lineHeight=23.sp,fontWeight=FontWeight.Bold)
                 } else {
+                if(coverFailed) Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) {
+                    Text(tile.title,color=Color.White,fontSize=25.sp,fontWeight=FontWeight.Bold)
+                }
                 AsyncImage(
                     model = model,
                     contentDescription = tile.title,
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Crop,
+                    onError={ if(model==tile.focusGifUrl) animationFailed=true else coverFailed=true },
+                    onSuccess={ coverFailed=false }
                 )
                 }
                 if (focused) Box(Modifier.fillMaxSize().background(Color(0x0DFFFFFF)))
@@ -295,8 +309,8 @@ fun NativeTextField(
     var editing by remember { mutableStateOf(false) }
     val keyboard=LocalSoftwareKeyboardController.current
     Box(modifier.onFocusChanged { focused=it.isFocused }.focusable().tvClick { editing=true }
-        .clickable { editing=true }.background(if(focused) Color(0xFF263047) else Panel,RoundedCornerShape(12.dp))
-        .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else Color(0xFF343C50),RoundedCornerShape(12.dp)).padding(15.dp)) {
+        .clickable { editing=true }.background(if(focused) FocusedPanel else Panel,RoundedCornerShape(12.dp))
+        .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(12.dp)).padding(15.dp)) {
         Text(if(value.isBlank()) hint else if(password) "•".repeat(value.length.coerceAtMost(24)) else value,
             color=if(value.isBlank()) Muted else Color.White,fontSize=16.sp, lineHeight=19.sp,maxLines=1)
     }
@@ -312,7 +326,7 @@ fun NativeTextField(
                     keyboardActions=androidx.compose.foundation.text.KeyboardActions(onDone={ close() }),
                     textStyle=TextStyle(color=Color.White,fontSize=19.sp, lineHeight=23.sp),cursorBrush=SolidColor(Color.White),
                     visualTransformation=if(password) PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
-                    modifier=Modifier.fillMaxWidth().focusRequester(editorFocus).background(Color(0xFF202A3B),RoundedCornerShape(12.dp)).padding(16.dp))
+                    modifier=Modifier.fillMaxWidth().focusRequester(editorFocus).background(Panel,RoundedCornerShape(12.dp)).padding(16.dp))
                 FocusButton(tr("Listo","Done"),primary=true) { close() }
             }
             LaunchedEffect(Unit) { delay(150); editorFocus.requestFocus(); keyboard?.show() }
@@ -320,7 +334,7 @@ fun NativeTextField(
     }
 }
 
-/** Compact top navigation. White fill belongs only to the control with remote focus. */
+/** Keep the Netflix-style top navigation; focus moves without changing layout bounds. */
 @Composable
 fun Sidebar(screen: Screen, profileName: String, onNavigate: (Screen) -> Unit) {
     Sidebar(screen,profileName,onNavigate,0)
@@ -351,6 +365,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
     }.onFocusChanged { if(it.hasFocus) onHeaderFocused?.invoke() }.focusGroup()
         .background(Color.Black.copy(alpha=backgroundAlpha.coerceIn(0f,1f))).padding(horizontal=24.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)) {
+        Image(painterResource(R.drawable.brunio_icon),"BruniO",Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)))
         var profileFocused by remember { mutableStateOf(false) }
         Row(Modifier.onFocusChanged { profileFocused=it.isFocused }.focusable()
             .tvClick { onNavigate(Screen.PROFILES) }.clickable { onNavigate(Screen.PROFILES) }
@@ -364,8 +379,8 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
         val bounds=remember { mutableStateMapOf<Screen,Pair<Float,Float>>() }
         var target by remember { mutableStateOf<Screen?>(null) }
         var navFocused by remember { mutableStateOf(false) }
-        val x by animateFloatAsState(target?.let { bounds[it] }?.first ?: 0f,tween(150),label="navFocusX")
-        val width by animateFloatAsState(target?.let { bounds[it] }?.second ?: 0f,tween(150),label="navFocusWidth")
+        val x by animateFloatAsState(target?.let { bounds[it] }?.first ?: 0f,tween(100),label="navFocusX")
+        val width by animateFloatAsState(target?.let { bounds[it] }?.second ?: 0f,tween(100),label="navFocusWidth")
         val density=LocalDensity.current
         Box(Modifier.weight(1f).height(60.dp).clipToBounds().onGloballyPositioned { navOrigin=it.positionInRoot().x }) {
             androidx.compose.foundation.lazy.LazyRow(Modifier.fillMaxSize().onFocusChanged { navFocused=it.hasFocus },
@@ -373,9 +388,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
                 contentPadding=PaddingValues(horizontal=4.dp,vertical=6.dp)) {
                 items(navItems,key={it.first}) { (destination,label) ->
                     var focused by remember { mutableStateOf(false) }
-                    val lift by animateFloatAsState(if(focused) -2f else 0f,tween(150),label="navLift")
-                    Box(Modifier.onGloballyPositioned { bounds[destination]=Pair(it.positionInRoot().x-navOrigin,it.size.width.toFloat()) }
-                        .graphicsLayer { translationY=lift }) {
+                                        Box(Modifier.onGloballyPositioned { bounds[destination]=Pair(it.positionInRoot().x-navOrigin,it.size.width.toFloat()) }) {
                         if(destination==Screen.SEARCH) SearchNavigationButton(onFocused={ focused=it; if(it) target=destination }) { onNavigate(destination) }
                         else FocusButton(label,primary=current==destination,horizontalPadding=14.dp,onFocused={ focused=it; if(it) target=destination }) { onNavigate(destination) }
                     }
@@ -383,7 +396,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
             }
             if(navFocused && width>0) Box(Modifier.align(Alignment.BottomStart)
                 .graphicsLayer { translationX=x }.width(with(density) { width.toDp() }).height(2.dp)
-                .background(Color.White,RoundedCornerShape(2.dp)))
+                .background(Accent,RoundedCornerShape(2.dp)))
         }
         NotificationButton(notificationCount) { onNavigate(Screen.NOTIFICATIONS) }
     }

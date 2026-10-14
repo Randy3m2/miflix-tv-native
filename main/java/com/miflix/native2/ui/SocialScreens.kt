@@ -36,10 +36,8 @@ val PartyEmojis = listOf("😂", "❤️", "🔥", "😱", "👏", "🍿")
 
 @Composable
 fun SocialBackdrop() {
-    Image(painterResource(R.drawable.brunio_social_background),null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop,
-        colorFilter=androidx.compose.ui.graphics.ColorFilter.colorMatrix(
-            androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0f) }))
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x55414141),Color(0xAA161616)))))
+    // A solid dark surface avoids decoding a full-screen bitmap and applying a color matrix.
+    Box(Modifier.fillMaxSize().background(Bg))
 }
 
 @Composable
@@ -83,7 +81,7 @@ fun FriendsScreen(state: AppState) {
                         items(state.friendRows.filter { it.status=="pending" }) { row ->
                             val me=state.session?.userId; val other=if(row.sender==me) row.receiver else row.sender
                             val name=state.friendPeople[other] ?: "Friend"
-                            Row(Modifier.fillMaxWidth().background(Color(0x99172032),RoundedCornerShape(16.dp)).padding(18.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
+                            Row(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(16.dp)).padding(18.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
                                 Text("@$name",color=Color.White,modifier=Modifier.weight(1f))
                                 if(row.receiver==me) FocusButton(tr("Aceptar amistad","Accept friend request")) { state.launch { state.addFriend(other) } }
                                 else Text(tr("Solicitud enviada","Request sent"),color=Muted)
@@ -115,8 +113,8 @@ fun FriendsScreen(state: AppState) {
 private fun FriendTile(friend: FriendActivity,modifier: Modifier,onClick: () -> Unit) {
     var focused by remember(friend.id) { mutableStateOf(false) }
     Column(modifier.height(225.dp).onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
-        .background(if(focused) Color(0xDD27364E) else Color(0x99131C2C),RoundedCornerShape(18.dp))
-        .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else Color(0x335F5F5F),RoundedCornerShape(18.dp)).padding(16.dp),
+        .background(if(focused) FocusedPanel else Panel,RoundedCornerShape(18.dp))
+        .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(18.dp)).padding(16.dp),
         horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)) {
         ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(84.dp))
         Text(friend.nickname,color=Color.White,fontSize=18.sp, lineHeight=22.sp,maxLines=1)

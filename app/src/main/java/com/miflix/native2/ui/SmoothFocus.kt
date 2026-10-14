@@ -24,7 +24,7 @@ internal fun Modifier.contentFocusBorder(radius: Dp=12.dp): Modifier = composed 
         // Remove the previous tile's highlight immediately; only the focused tile animates in.
         if(focused && width>0f) {
             val inset=2.dp.toPx()
-            drawRoundRect(Color.White,Offset(-inset,-inset),Size(size.width+2*inset,size.height+2*inset),
+            drawRoundRect(Accent,Offset(-inset,-inset),Size(size.width+2*inset,size.height+2*inset),
                 CornerRadius(radius.toPx()),style=Stroke(width.dp.toPx()))
         }
     }

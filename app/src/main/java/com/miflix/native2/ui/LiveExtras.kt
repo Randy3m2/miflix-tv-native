@@ -66,16 +66,12 @@ internal object LiveLibrary {
         if(next!=null) Text(tr("Después: ","Next: ")+next.title,color=color,fontSize=12.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
     }
 }
-@Composable internal fun ChannelExtras(state: AppState,provider: String,channel: LiveChannel,guide: EpgGuide,compact: Boolean=false) {
+@Composable internal fun ChannelExtras(state: AppState,provider: String,channel: LiveChannel,compact: Boolean=false) {
     val context=LocalContext.current;val revision=LiveLibrary.revision
     val favorite=remember(revision,provider,channel.id,state.session?.userId,state.activeProfile.id) { LiveLibrary.favorites(context,state).any { it.provider==provider && it.channel.id==channel.id } }
-    var showGuide by remember(channel.id) { mutableStateOf(false) }
     Row(horizontalArrangement=Arrangement.spacedBy(8.dp),modifier=(if(compact) Modifier else Modifier.fillMaxWidth()).padding(top=6.dp,bottom=8.dp)) {
         FocusButton(if(favorite) "★" else "☆",horizontalPadding=16.dp) { LiveLibrary.toggle(context,state,provider,channel) }
-        if(!compact) Box(Modifier.weight(1f)) { ChannelSchedule(provider,channel,guide) }
-        FocusButton(tr("Guía","Guide"),horizontalPadding=16.dp) { showGuide=true }
     }
-    if(showGuide) LiveGuideDialog(provider,channel) { showGuide=false }
 }
 @Composable internal fun LiveGuideDialog(provider: String="",channel: LiveChannel?=null,close:()->Unit) {
     val context=LocalContext.current;val prefs=LiveLibrary.prefs(context);val scope=rememberCoroutineScope()
@@ -121,7 +117,7 @@ internal object LiveLibrary {
     }
 }
 @Composable internal fun FavoriteChannelsDialog(state: AppState,select:(PlayerRequest)->Unit,close:()->Unit) {
-    val context=LocalContext.current;val revision=LiveLibrary.revision;val guide=rememberLiveGuide()
+    val context=LocalContext.current;val revision=LiveLibrary.revision
     val rows=remember(revision,state.session?.userId,state.activeProfile.id) { LiveLibrary.favorites(context,state) }
     val scope=rememberCoroutineScope();var busy by remember { mutableStateOf(false) };var message by remember { mutableStateOf("") }
     Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
@@ -142,7 +138,7 @@ internal object LiveLibrary {
                                 select(PlayerRequest(item,stream,0,0,0,true,c.id,provider,liveType=c.type))
                             } catch(e: Exception) { if(e is CancellationException) throw e;message=e.message.orEmpty() } finally { busy=false }
                         } }
-                        ChannelExtras(state,provider,c,guide)
+                        ChannelExtras(state,provider,c)
                     }
                 }
             }

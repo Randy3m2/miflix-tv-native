@@ -40,8 +40,6 @@ fun LiveScreen(state: AppState) {
     val scope = rememberCoroutineScope()
     var provider by remember { mutableStateOf(state.liveProviderTab) }
     var showFavorites by remember { mutableStateOf(false) }
-    var showGuideSettings by remember { mutableStateOf(false) }
-    val guide=rememberLiveGuide()
     val sports=provider=="sports"
     val iptv=provider.startsWith("iptv")
     var refreshVersion by remember { mutableStateOf(0) }
@@ -124,14 +122,13 @@ fun LiveScreen(state: AppState) {
     Column(Modifier.fillMaxSize().background(Bg)) {
         Sidebar(Screen.LIVE_TV, state.activeProfile.name, { state.screen = it },state.notifications.size,state.activeProfile,onMoveDown={ contentFocus.requestFocus(); Unit })
         Column(Modifier.weight(1f).fillMaxHeight().padding(horizontal=34.dp,vertical=16.dp).focusRequester(contentFocus).focusGroup()) {
-            Text(tr("TV en vivo","Live TV"), color=Color.White,fontSize=22.sp,lineHeight=26.sp)
+            Text(tr("TV en vivo","Live TV"), color=Color.White,fontSize=30.sp,lineHeight=36.sp)
             Spacer(Modifier.height(8.dp))
             LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                 item { FocusButton(tr("Canales de TV","TV Channels"),primary=provider=="nauta") { provider="nauta";state.liveProviderTab=provider;state.liveCategoryId=null } }
                 item { FocusButton(tr("Deportes en vivo","Live Sports"),primary=sports) { provider="sports";state.liveProviderTab=provider;state.liveCategoryId=null } }
                 item { FocusButton(tr("Canales","Channels"),primary=iptv) { provider="iptv:do";state.liveProviderTab=provider;state.liveCategoryId=null } }
                 item { FocusButton(tr("★ Favoritos","★ Favorites")) { showFavorites=true } }
-                item { FocusButton("EPG") { showGuideSettings=true } }
                 if(iptv) item { FocusButton(tr("Actualizar","Refresh")) { if(!loading) scope.launch {
                     loading=true
                     try { IptvRepository.refresh(manifest);refreshVersion++ } catch(e: Exception) { if(e is CancellationException) throw e;message=e.message.orEmpty() } finally { loading=false }
@@ -153,8 +150,8 @@ fun LiveScreen(state: AppState) {
                 }
                 items(visible, key = { it.id }) { channel ->
                     Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                        Box(Modifier.weight(1f)) { LiveChannelRow(channel,channelNumber(channel),{ openChannel(channel,false) },{ openChannel(channel,true) }) { color -> ChannelSchedule(provider,channel,guide,color) } }
-                        ChannelExtras(state,provider,channel,guide,compact=true)
+                        Box(Modifier.weight(1f)) { LiveChannelRow(channel,channelNumber(channel),{ openChannel(channel,false) },{ openChannel(channel,true) }) }
+                        ChannelExtras(state,provider,channel,compact=true)
                     }
                 }
                 if (!loading && channels.isNotEmpty() && visible.isEmpty()) item {
@@ -185,7 +182,6 @@ fun LiveScreen(state: AppState) {
         }
     }
     if(showFavorites) FavoriteChannelsDialog(state,{ showFavorites=false;state.openLivePlayer(it) }) { showFavorites=false }
-    if(showGuideSettings) LiveGuideDialog { showGuideSettings=false }
     if (editManifest) Dialog(onDismissRequest = { editManifest = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         var draft by remember { mutableStateOf(sportsManifest) }
         Column(Modifier.fillMaxWidth().background(Panel).padding(30.dp)) {

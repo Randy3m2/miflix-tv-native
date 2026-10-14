@@ -61,7 +61,7 @@ fun LiveChannelPicker(state: AppState, initialProvider: String, select: (PlayerR
     val scope=rememberCoroutineScope()
     var provider by remember { mutableStateOf(initialProvider) }
     var showFavorites by remember { mutableStateOf(false) }
-    val guide=rememberLiveGuide()
+    
     val manifest=state.calendarLiveManifest(provider)
     var categories by remember { mutableStateOf<List<LiveCategory>>(emptyList()) }
     var category by remember { mutableStateOf<LiveCategory?>(null) }
@@ -124,7 +124,7 @@ fun LiveChannelPicker(state: AppState, initialProvider: String, select: (PlayerR
                         }
                     }
                 }
-                    ChannelExtras(state,provider,channel,guide)
+                    ChannelExtras(state,provider,channel)
                     }
                 }
                 if(visible.isEmpty() && !busy) item { Text(tr("No hay canales en esta búsqueda","No channels for this search"),color=Muted) }

@@ -14,6 +14,8 @@ import java.util.Locale
 import java.util.TimeZone
 
 class SupabaseRepository(private val url: String, private val key: String) {
+    private val favoriteBaselines = mutableMapOf<String, Set<String>>()
+    private val syncMutex = kotlinx.coroutines.sync.Mutex()
     private fun headers(session: CloudSession? = null) = buildMap {
         put("apikey", key)
         put("Content-Type", "application/json")
@@ -113,7 +115,7 @@ class SupabaseRepository(private val url: String, private val key: String) {
     }
 
     suspend fun profileState(session: CloudSession, profileId: String): Pair<Set<String>, MutableMap<String, PlaybackProgress>> {
-        val row = readRow(session, profileId) ?: return emptySet<String>() to mutableMapOf()
+        val row = readRow(session, profileId) ?: run { favoriteBaselines["${session.userId}:$profileId"] = emptySet(); return emptySet<String>() to mutableMapOf() }
         val state = row.optJSONObject("state") ?: JSONObject()
         val fav = state.optJSONArray("favorites")?.let { a -> (0 until a.length()).map { a.optString(it) }.filter { it.isNotBlank() }.toSet() } ?: emptySet()
         val progress = mutableMapOf<String, PlaybackProgress>()
@@ -126,18 +128,30 @@ class SupabaseRepository(private val url: String, private val key: String) {
                 p.optLong("duration", 0L).let { if (it < 1_000_000) it * 1000 else it }, p.optLong("updatedAt", 0L), p.optInt("season", 0), p.optInt("episode", 0)
             )
         }
+        favoriteBaselines["${session.userId}:$profileId"] = fav
         return fav to progress
     }
 
-    suspend fun upsertProfile(session: CloudSession, profileId: String, favorites: Set<String>, progress: Map<String, PlaybackProgress>) {
+    suspend fun upsertProfile(session: CloudSession, profileId: String, favorites: Set<String>, progress: Map<String, PlaybackProgress>): Set<String> {
+        syncMutex.lock()
+        try {
+        val owner = "${session.userId}:$profileId"
+        val baseline = favoriteBaselines[owner] ?: profileState(session, profileId).first
         val po = JSONObject()
         progress.forEach { (k, p) ->
             po.put(k, JSONObject().put("percent", p.percent).put("position", p.position / 1000.0).put("duration", p.duration / 1000.0)
                 .put("updatedAt", p.updatedAt).put("season", p.season).put("episode", p.episode))
         }
-        val state = JSONObject().put("favorites", JSONArray(favorites.toList())).put("progress", po).put("updatedAt", System.currentTimeMillis())
-        val body = JSONObject().put("user_id", session.userId).put("profile_id", profileId).put("state", state).put("updated_at", isoNow()).toString()
-        Http.text("$url/rest/v1/miflix_user_state?on_conflict=user_id,profile_id", "POST", headers(session) + ("Prefer" to "resolution=merge-duplicates,return=minimal"), body)
+        val body = JSONObject().put("p_profile", profileId)
+            .put("p_adds", JSONArray((favorites - baseline).toList()))
+            .put("p_removes", JSONArray((baseline - favorites).toList()))
+            .put("p_progress", po).toString()
+        val result = JSONObject(Http.text("$url/rest/v1/rpc/brunio_sync_profile", "POST", headers(session), body))
+        val array = result.optJSONArray("favorites") ?: JSONArray()
+        val merged = (0 until array.length()).map { array.getString(it) }.toSet()
+        favoriteBaselines[owner] = merged
+        return merged
+        } finally { syncMutex.unlock() }
     }
 
     suspend fun createWatchParty(session: CloudSession, party: WatchParty) {

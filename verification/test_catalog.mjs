@@ -1,0 +1,14 @@
+import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';import {stripTypeScriptTypes} from 'node:module';
+let handler,calls=0;const env={TMDB_TOKEN:'private-token',SUPABASE_URL:'https://test.supabase.co',SUPABASE_ANON_KEY:'public'};
+const context={Deno:{env:{get:k=>env[k]},serve:h=>handler=h},Response,Request,URL,AbortSignal,Map,Date,console,fetch:async url=>{if(String(url).includes('/auth/v1/user'))return Response.json({id:'owner'});calls++;return Response.json({results:[{id:1,media_type:'movie',title:'Film',adult:false},{id:2,media_type:'person',name:'Person'},{id:3,media_type:'movie',adult:true}],total_pages:2,id:1,title:'Film'});}};
+vm.runInNewContext(stripTypeScriptTypes(fs.readFileSync('supabase/functions/brunio-catalog/index.ts','utf8')),context);
+const req=(body,auth=true)=>new Request('https://test/catalog',{method:'POST',headers:{'Content-Type':'application/json',...(auth?{Authorization:'Bearer valid'}:{})},body:JSON.stringify(body)});
+assert.equal((await handler(req({action:'discover'},false))).status,401);
+let r=await handler(req({action:'discover'}));let data=await r.json();assert.equal(data.items.length,1);assert.equal(data.items[0].cloudId,'tmdb:movie:1');assert.equal(JSON.stringify(data).includes('private-token'),false);assert.equal(data.hasMore,true);
+await handler(req({action:'discover'}));assert.equal(calls,1);
+assert.equal((await handler(req({action:'titles',ids:['../../private']}))).status,400);
+assert.equal((await handler(req({action:'titles',ids:Array(21).fill('tmdb:movie:1')}))).status,400);
+assert.equal((await handler(req({action:'search',query:'x'}))).status,200);
+assert.equal((await handler(req({action:'search',query:'film',page:-1}))).status,400);
+assert.equal((await handler(new Request('https://test/catalog',{method:'OPTIONS'}))).headers.get('Access-Control-Allow-Origin'),'*');
+console.log('PASS: auth required, catalog cache, adult/person filtering, safe title IDs, batch/page limits, no token in response, CORS.');

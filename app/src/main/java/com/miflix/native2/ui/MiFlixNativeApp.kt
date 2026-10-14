@@ -188,10 +188,12 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
 @Composable
 private fun MyListScreen(state: AppState, onBack: () -> Unit) {
     val owner="${state.session?.userId}:${state.activeProfile.id}"
+    LaunchedEffect(owner) { runCatching { state.pushCloud() } }
     val ids=state.favorites.toList()
     LaunchedEffect(owner,ids,state.myListLimit) { state.loadMyListPage(owner,ids) }
     CatalogScreen(state,tr("Mi lista","My List"),state.myListTitles,onBack,footer={
         Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        FocusButton(tr("Actualizar lista","Refresh list")) { state.launch { runCatching { state.pushCloud() }.onFailure { state.myListMessage = it.message ?: "Error" } } }
         if(state.myListLoading) Text(tr("Cargando…","Loading…"),color=Color.White)
         else {
             if(state.myListMessage.isNotBlank()) Text(state.myListMessage,color=Color.White)

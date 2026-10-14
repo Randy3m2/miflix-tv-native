@@ -975,8 +975,20 @@ class AppState(context: Context) {
         if(owner!=null) profile.avatarValue?.let { old -> runCatching { avatarRepo.remove(owner,old) } }
     }
 
+    private val profileSyncMutex = kotlinx.coroutines.sync.Mutex()
     suspend fun pushCloud() {
-        session?.let { cloud.upsertProfile(it, activeProfile.id, favorites.toSet(), progress.toMap()) }
+        profileSyncMutex.lock()
+        try {
+        val owner = session ?: return
+        val profile = activeProfile.id
+        val snapshot = favorites.toSet()
+        val server = cloud.upsertProfile(owner, profile, snapshot, progress.toMap())
+        if (session?.userId == owner.userId && activeProfile.id == profile) {
+            val current = favorites.toSet()
+            val merged = (server + (current - snapshot)) - (snapshot - current)
+            if (merged != current) { favorites.clear(); favorites.addAll(merged) }
+        }
+        } finally { profileSyncMutex.unlock() }
     }
 
     suspend fun addAddonManifest(url: String) {

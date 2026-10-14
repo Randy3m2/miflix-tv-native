@@ -4,3 +4,6 @@ verify_jwt = false
 
 [functions.brunio-episode-reminders]
 verify_jwt = false
+
+[functions.brunio-catalog]
+verify_jwt = false

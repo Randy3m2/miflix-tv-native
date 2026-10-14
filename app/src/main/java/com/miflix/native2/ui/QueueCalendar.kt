@@ -121,7 +121,7 @@ fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,close: () -> Unit) {
             if(state.watchParty!=null) Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
                 Text("Party · ${state.watchParty?.roomCode}",color=Color.White)
                 FocusButton(tr("Chat","Chat"),modifier=enterList) { chat=true }
-                FocusButton(tr("Reacciones / Chat QR","Reactions / Chat QR")) { reactions=true }
+                FocusButton(tr("Reacciones","Reactions")) { reactions=true }
                 FocusButton(tr("Salir de sala","Leave Party"),modifier=enterList) { state.launch { state.leaveWatchParty();close() } }
             } else FocusButton(tr("Crear sala con este contenido","Create Party with this title"),modifier=enterList) { onCreate() }
             LazyColumn(Modifier.weight(1f),state=listState,contentPadding=PaddingValues(6.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -369,6 +369,7 @@ private fun CreateEventDialog(state: AppState, day: String?, close: () -> Unit) 
 @Composable
 fun PlayerPartyChatDialog(state: AppState, close: () -> Unit) {
     val room=state.watchParty?.roomCode
+    var showQr by remember(room) { mutableStateOf(false) }
     var draft by remember(room) { mutableStateOf("") }
     var sending by remember(room) { mutableStateOf(false) }
     val closeFocus=remember { FocusRequester() }
@@ -380,6 +381,10 @@ fun PlayerPartyChatDialog(state: AppState, close: () -> Unit) {
         Column(Modifier.width(850.dp).heightIn(max=570.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                 Text("${tr("Chat del Party","Party chat")} · ${room.orEmpty()}",color=Color.White,fontSize=26.sp,modifier=Modifier.weight(1f))
+                if(room!=null) {
+                    FocusButton(tr("Chat QR","Chat QR")) { showQr=true }
+                    Spacer(Modifier.width(10.dp))
+                }
                 FocusButton(tr("Cerrar","Close"),modifier=Modifier.focusRequester(closeFocus)) { close() }
             }
             LazyColumn(state=listState,modifier=Modifier.weight(1f,false).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -413,4 +418,15 @@ fun PlayerPartyChatDialog(state: AppState, close: () -> Unit) {
             state.error?.let { Text(it,color=Color.White,fontSize=13.sp,maxLines=2) }
         }
     }
+    if(showQr && room!=null) Dialog(onDismissRequest={ showQr=false },properties=DialogProperties(usePlatformDefaultWidth=false)) {
+        val qrClose=remember { FocusRequester() }
+        LaunchedEffect(Unit) { withFrameNanos { };runCatching { qrClose.requestFocus() } }
+        Column(Modifier.width(440.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+            Text("Chat · $room",color=Color.White,fontSize=24.sp)
+            QrCode("https://randy3m2.github.io/miflix-tv-native/party/?room=$room",220.dp)
+            Text(tr("Escanea para usar el chat desde tu celular.","Scan to chat from your phone."),color=Muted)
+            FocusButton(tr("Volver al chat","Back to chat"),modifier=Modifier.focusRequester(qrClose)) { showQr=false }
+        }
+    }
+
 }

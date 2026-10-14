@@ -65,7 +65,7 @@ internal fun SpotlightRail(
     var active by remember { mutableStateOf(false) }
     var settledId by remember { mutableStateOf(selectedId) }
     val bring=remember { BringIntoViewRequester() }
-    LaunchedEffect(selectedId,active) { if(active) { delay(110); settledId=selectedId } }
+    LaunchedEffect(selectedId,active) { if(active) { delay(60); settledId=selectedId } }
     LaunchedEffect(active) { if(active) { delay(50); bring.bringIntoView() } }
     val infoVisibility by animateFloatAsState(if(active) 1f else 0f,tween(150),label="railInfo")
     val selected=rows.firstOrNull { it.cloudId==settledId } ?: rows.first()
@@ -100,13 +100,13 @@ internal fun SpotlightRail(
 private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolean,progress: Double?,onFocused: () -> Unit,onClick: () -> Unit) {
     var focused by remember(item.cloudId) { mutableStateOf(false) }
     val cardBring=remember { BringIntoViewRequester() }
-    LaunchedEffect(expanded) { if(expanded) { delay(230);cardBring.bringIntoView() } }
+    LaunchedEffect(expanded) { if(expanded) { delay(170);cardBring.bringIntoView() } }
     // Width animates only inside this bounded LazyRow, never the whole screen.
     val width by animateFloatAsState(if(expanded) 322f else if(landscape) 240f else 132f,
-        tween(210,easing=LinearOutSlowInEasing),label="spotlightWidth")
+        tween(150,easing=LinearOutSlowInEasing),label="spotlightWidth")
     var showBackdrop by remember(item.cloudId) { mutableStateOf(landscape) }
     LaunchedEffect(expanded,landscape) {
-        if(expanded) { delay(100); showBackdrop=true } else showBackdrop=landscape
+        if(expanded) { delay(60); showBackdrop=true } else showBackdrop=landscape
     }
     Box(Modifier.width(width.dp).fillMaxHeight().padding(horizontal=6.dp).bringIntoViewRequester(cardBring)
         .onFocusChanged { focused=it.isFocused; if(it.isFocused) onFocused() }.focusable()

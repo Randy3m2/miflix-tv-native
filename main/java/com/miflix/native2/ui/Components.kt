@@ -356,17 +356,14 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
             profile: com.miflix.native2.model.Profile? = null, backgroundAlpha: Float = 0f, onHeaderFocused: (() -> Unit)? = null, onMoveDown: (() -> Unit)? = null) {
     val current=when(screen) {
         Screen.WATCH_PARTY -> Screen.FRIENDS
-        Screen.FRANCHISE,Screen.CUSTOM_FILTER,Screen.GENRES,Screen.GENRE_DETAIL,Screen.YEAR_DETAIL,Screen.PLATFORM_DETAIL,Screen.COLLECTION_DETAIL -> Screen.COLLECTIONS
+        Screen.COLLECTIONS,Screen.FRANCHISE,Screen.CUSTOM_FILTER,Screen.GENRES,Screen.GENRE_DETAIL,Screen.YEAR_DETAIL,Screen.PLATFORM_DETAIL,Screen.COLLECTION_DETAIL -> Screen.HOME
         else -> screen
     }
     val navItems=listOf(
         Screen.HOME to tr("Inicio","Home"),
         Screen.SEARCH to tr("Buscar","Search"),
-        Screen.COLLECTIONS to tr("Colecciones","Collections"),
         Screen.FRIENDS to tr("Amigos y salas","Friends & Party"),
-        Screen.LIVE_TV to tr("TV en vivo","Live TV"),
-        Screen.MY_LIST to tr("Mi lista","My List"),
-        Screen.SETTINGS to tr("Ajustes","Settings")
+        Screen.LIVE_TV to tr("TV en vivo","Live TV")
     )
     Row(Modifier.fillMaxWidth().height(76.dp).onPreviewKeyEvent { event ->
         if(event.key==Key.DirectionDown && onMoveDown!=null) {
@@ -378,13 +375,32 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)) {
         Image(painterResource(R.drawable.brunio_icon),"BruniO",Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)))
         var profileFocused by remember { mutableStateOf(false) }
-        Row(Modifier.onFocusChanged { profileFocused=it.isFocused }.focusable()
-            .tvClick { onNavigate(Screen.PROFILES) }.clickable { onNavigate(Screen.PROFILES) }
-            .background(if(profileFocused) Color.White else Color(0xFF242426),RoundedCornerShape(14.dp)).padding(7.dp),
+        var profileMenu by remember { mutableStateOf(false) }
+        val profileAnchor=remember { FocusRequester() }
+        Box {
+        Row(Modifier.focusRequester(profileAnchor).onFocusChanged { profileFocused=it.isFocused }.focusable()
+            .tvClick { profileMenu=true }.clickable { profileMenu=true }
+            .background(Color.Black,RoundedCornerShape(14.dp))
+            .border(if(profileFocused) 2.dp else 0.dp,Accent,RoundedCornerShape(14.dp)).padding(7.dp),
             verticalAlignment=Alignment.CenterVertically) {
             if(profile!=null) ProfileAvatar(profile,Modifier.size(34.dp))
-            else Box(Modifier.size(34.dp),contentAlignment=Alignment.Center) { Text(profileName.take(1),color=if(profileFocused) Color.Black else Color.White) }
-            Text("⌄",color=if(profileFocused) Color.Black else Color.White,modifier=Modifier.padding(start=6.dp),fontSize=16.sp)
+            else Box(Modifier.size(34.dp),contentAlignment=Alignment.Center) { Text(profileName.take(1),color=Color.White) }
+            Text("⌄",color=Color.White,modifier=Modifier.padding(start=6.dp),fontSize=16.sp)
+        }
+        if(profileMenu) androidx.compose.ui.window.Popup(
+            alignment=Alignment.TopStart,offset=androidx.compose.ui.unit.IntOffset(0,with(LocalDensity.current) { 58.dp.roundToPx() }),
+            onDismissRequest={ profileMenu=false;runCatching { profileAnchor.requestFocus() } },
+            properties=androidx.compose.ui.window.PopupProperties(focusable=true)) {
+            val menuFocus=remember { FocusRequester() }
+            LaunchedEffect(Unit) { withFrameNanos { };runCatching { menuFocus.requestFocus() } }
+            Column(Modifier.width(230.dp).background(Color.Black,RoundedCornerShape(14.dp))
+                .border(1.dp,PanelBorder,RoundedCornerShape(14.dp)).padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                Text(profileName,color=Muted,fontSize=13.sp,modifier=Modifier.padding(8.dp))
+                FocusButton(tr("Mi lista","My List"),modifier=Modifier.fillMaxWidth().focusRequester(menuFocus)) { profileMenu=false;onNavigate(Screen.MY_LIST) }
+                FocusButton(tr("Ajustes","Settings"),modifier=Modifier.fillMaxWidth()) { profileMenu=false;onNavigate(Screen.SETTINGS) }
+                FocusButton(tr("Cambiar perfil","Switch profile"),modifier=Modifier.fillMaxWidth()) { profileMenu=false;onNavigate(Screen.PROFILES) }
+            }
+        }
         }
         var navOrigin by remember { mutableStateOf(0f) }
         val bounds=remember { mutableStateMapOf<Screen,Pair<Float,Float>>() }
@@ -417,8 +433,9 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
 private fun NotificationButton(count: Int,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     Box(Modifier.size(46.dp).semantics { contentDescription="${tr("Avisos","Alerts")}: $count" }.onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
-        .background(if(focused) Color.White else Color(0xFF242426),RoundedCornerShape(16.dp)),contentAlignment=Alignment.Center) {
-        BellIcon(if(focused) Color.Black else Color.White,Modifier.size(25.dp))
+        .background(Color.Black,RoundedCornerShape(16.dp))
+        .border(if(focused) 2.dp else 0.dp,Accent,RoundedCornerShape(16.dp)),contentAlignment=Alignment.Center) {
+        BellIcon(Color.White,Modifier.size(25.dp))
         if(count>0) Text(if(count>9) "9+" else count.toString(),color=if(focused) Color.White else Color.Black,fontSize=10.sp,lineHeight=12.sp,
             modifier=Modifier.align(Alignment.TopEnd).background(if(focused) Color(0xFF292929) else Color(0xFFCCCCCC),RoundedCornerShape(8.dp)).padding(horizontal=4.dp,vertical=2.dp))
     }

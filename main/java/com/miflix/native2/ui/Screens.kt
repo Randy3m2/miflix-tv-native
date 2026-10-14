@@ -159,9 +159,15 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                     LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=32.dp).clipToBounds(),contentPadding=PaddingValues(horizontal=8.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
                         items(state.genres,key={it.id}) { genre -> GenreCard(genre.copy(coverUrl=state.genreCovers[genre.id] ?: genre.coverUrl)) { state.launch { state.openGenre(genre) } } }
                     }
+                    FocusButton(tr("Todas las colecciones →","All collections →"),modifier=Modifier.padding(start=40.dp,top=12.dp)) { onNavigate(Screen.COLLECTIONS) }
                     Spacer(Modifier.height(24.dp))
                 } }
                 if(state.forYou.isNotEmpty()) item(key="for_you") { SpotlightRail(title=tr("Para ti · tus puntuaciones","For you · Your ratings"),rows=state.forYou,onClick=openItem) }
+                item(key="franchises_home") {
+                    CollectionRail(tr("Franquicias","Franchises"),listOf(CollectionTile("franchise:marvel","Marvel",""),CollectionTile("franchise:dc","DC",""))) { tile ->
+                        state.launch { state.openFranchise(tile.id.substringAfter(":")) }
+                    }
+                }
                 if(state.seasonalItems.isNotEmpty()) item(key="seasonal") {
                     SpotlightRail(seasonalTitle(state.seasonalTheme),state.seasonalItems,onClick=openItem,
                         eyebrow=tr("SELECCIÓN DE TEMPORADA","SEASONAL SPOTLIGHT"))
@@ -176,7 +182,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 item(key="comedy") { SpotlightRail(tr("Algo para reír","Time for a comedy"),state.comedy,onClick=openItem) }
                 item(key="thrillers") { SpotlightRail(tr("Suspenso y misterio","Thrillers & mystery"),state.thrillers,onClick=openItem) }
                 if(state.comingMovies.isNotEmpty() || state.comingSeries.isNotEmpty()) item(key="coming_soon_home") {
-                    SpotlightRail(tr("Próximamente","Coming soon"),(state.comingMovies+state.comingSeries).distinctBy { it.cloudId }.take(30),onClick=openItem)
+                    SpotlightRail(tr("Próximamente","Coming soon"),(state.comingMovies+state.comingSeries).distinctBy { it.cloudId }.take(30),onClick={ state.launch { state.open(it,upcoming=true) } })
                 }
             }
         }
@@ -271,20 +277,7 @@ private fun MediaRail(
     progressFor: (MediaSummary) -> Double? = { null },
     onClick: (MediaSummary) -> Unit
 ) {
-    if (rows.isEmpty()) return
-    val h = if(compact) { if(landscape) 194.dp else 324.dp } else if (landscape) 210.dp else 346.dp
-    Column(Modifier.fillMaxWidth().height(h)) {
-        Text(title, color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 40.dp,end=40.dp, bottom = 8.dp))
-        LazyRow(
-            modifier = Modifier.fillMaxWidth().padding(horizontal=32.dp).clipToBounds(),
-            contentPadding = PaddingValues(horizontal=8.dp,vertical=8.dp),
-            horizontalArrangement = Arrangement.spacedBy(0.dp)
-        ) {
-            items(rows, key = { it.cloudId }, contentType = { if (landscape) "landscape" else "poster" }) { item ->
-                MediaCard(item, landscape = landscape,compact=compact, progressPercent = progressFor(item), onClick = { onClick(item) })
-            }
-        }
-    }
+    SpotlightRail(title,rows,landscape,progressFor,onClick=onClick)
 }
 
 @Composable
@@ -359,8 +352,8 @@ fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
                 }
                 Spacer(Modifier.height(24.dp))
             } }
-            if(state.comingMovies.isNotEmpty()) item { MediaRail(tr("Próximamente · Películas","Coming Soon · Movies"),state.comingMovies,onClick={ state.launch { state.open(it) } }) }
-            if(state.comingSeries.isNotEmpty()) item { MediaRail(tr("Próximamente · Series","Coming Soon · Series"),state.comingSeries,onClick={ state.launch { state.open(it) } }) }
+            if(state.comingMovies.isNotEmpty()) item { MediaRail(tr("Próximamente · Películas","Coming Soon · Movies"),state.comingMovies,onClick={ state.launch { state.open(it,upcoming=true) } }) }
+            if(state.comingSeries.isNotEmpty()) item { MediaRail(tr("Próximamente · Series","Coming Soon · Series"),state.comingSeries,onClick={ state.launch { state.open(it,upcoming=true) } }) }
             item { DirectorRail(state) }
             item { CollectionRail(tr("Plataformas","Streaming"), StreamingTiles) { tile -> state.launch { state.openCollection(tile.id, tile.title) } } }
             listOf("series" to tr("Series por año","Series by Year"),"documentary" to tr("Documentales por año","Documentaries by Year")).forEach { (category,label) ->
@@ -458,7 +451,13 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
     var showQueue by remember { mutableStateOf(false) }
     val detailScroll=rememberLazyListState()
     val playFocus = remember(item.cloudId) { FocusRequester() }
-    LaunchedEffect(item.cloudId) { delay(150); playFocus.requestFocus(); detailScroll.scrollToItem(0) }
+    val entrance=remember(item.cloudId) { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(item.cloudId) {
+        withFrameNanos { }
+        runCatching { playFocus.requestFocus() }
+        detailScroll.scrollToItem(0)
+        entrance.animateTo(1f,tween(120,easing=LinearOutSlowInEasing))
+    }
     BackHandler(onBack = onBack)
     if(showRecommend) RecommendTitleDialog(state,item) { showRecommend=false }
     if(showRating) RatingDialog(state,item) { showRating=false }
@@ -486,8 +485,8 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
         LaunchedEffect(Unit) { withFrameNanos { };runCatching { moreFocus.requestFocus() } }
         Column(Modifier.widthIn(max=520.dp).background(Panel,RoundedCornerShape(18.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Text(tr("Más opciones","More options"),color=Color.White,fontSize=24.sp)
-            FocusButton(tr("Desde el principio","Play from beginning"),modifier=Modifier.focusRequester(moreFocus)) { showMore=false;state.launch { if(item.type=="movie") state.playMovie(true) else state.playSeriesFromStart() } }
-            FocusButton(tr("Añadir a cola","Add to queue")) { showMore=false;if(item.type=="series") showQueueAdd=true else state.enqueue(item) }
+            if(!state.selectedUpcoming) FocusButton(tr("Desde el principio","Play from beginning"),modifier=Modifier.focusRequester(moreFocus)) { showMore=false;state.launch { if(item.type=="movie") state.playMovie(true) else state.playSeriesFromStart() } }
+            FocusButton(tr("Añadir a cola","Add to queue"),modifier=if(state.selectedUpcoming) Modifier.focusRequester(moreFocus) else Modifier) { showMore=false;if(item.type=="series") showQueueAdd=true else state.enqueue(item) }
             FocusButton(tr("Ver cola","View queue")+" · ${state.queueEntries.size}") { showMore=false;showQueue=true }
             FocusButton(tr("Recomendar a amigos","Recommend to friends")) { showMore=false;showRecommend=true }
             FocusButton("★ "+(state.ratings[item.cloudId]?.let { "$it/10" } ?: tr("Puntuar","Rate"))) { showMore=false;showRating=true }
@@ -496,7 +495,10 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
     }
 
     AppShell(state,state.detailsReturnScreen,{ state.screen=it }) {
-    Box(Modifier.fillMaxSize().background(Bg).clipToBounds()) {
+    Box(Modifier.fillMaxSize().background(Bg).clipToBounds().graphicsLayer {
+        alpha=.65f+.35f*entrance.value
+        translationY=(1f-entrance.value)*6.dp.toPx()
+    }) {
         AsyncImage(item.backdrop, null, Modifier.fillMaxWidth().height(430.dp).align(Alignment.TopCenter), contentScale = ContentScale.Crop)
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x22000000), Color(0x66000000), Bg), startY = 150f)))
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xF7050505), Color(0xA8050505), Color.Transparent), endX = 980f)))
@@ -523,11 +525,20 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                         Spacer(Modifier.height(7.dp))
                         Text(details?.genres?.take(4)?.joinToString("  ·  ").orEmpty(), color = Color(0xFFB9B9BD), fontSize = 13.sp, lineHeight=16.sp)
                     }
+                    if(state.selectedUpcoming && !details?.releaseDate.isNullOrBlank()) {
+                        Text(tr("Próximamente","Coming soon")+" · ${details?.releaseDate}",color=Accent,fontSize=14.sp,modifier=Modifier.padding(top=8.dp))
+                    }
                     Spacer(Modifier.height(14.dp))
                     Text(item.overview, color = Color(0xFFE8E8EB), fontSize = 16.sp, lineHeight=22.sp, maxLines = 3, modifier = Modifier.fillMaxWidth(.72f))
                     Spacer(Modifier.height(24.dp))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                        if (item.type == "movie") {
+                        if(state.selectedUpcoming) {
+                            val watching=state.favorites.contains(item.cloudId)
+                            FocusButton(if(watching) tr("✓ Te avisaremos","✓ Reminder set") else tr("Avisarme","Notify me"),primary=true,
+                                modifier=Modifier.focusRequester(playFocus).width(220.dp)) {
+                                state.remindMe(item);state.launch { runCatching { state.pushCloud() } }
+                            }
+                        } else if (item.type == "movie") {
                             val label = if ((saved?.percent ?: 0.0) in 1.0..95.0) "▶  ${tr("Reanudar","Resume")} ${formatPosition(saved?.position ?: 0)}" else tr("▶  Reproducir","▶  Play")
                             FocusButton(label, onLongClick = { state.launch { state.chooseCurrentSources() } }, primary = true, modifier = Modifier.focusRequester(playFocus).width(220.dp)) {
                                 state.launch { runCatching { state.playMovie() }.onFailure { state.error = it.message } }

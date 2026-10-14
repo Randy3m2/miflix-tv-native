@@ -236,6 +236,10 @@ class AppState(context: Context) {
             }
             if(ownerKey != noticesKey()) return
             notifications.clear(); notifications.addAll(existing.take(100))
+            // Preserve subscriptions added while this check was awaiting TMDB.
+            val fresh=org.json.JSONObject(playbackPrefs.getString(knownOwner,"{}"))
+            val keys=fresh.keys()
+            while(keys.hasNext()) { val key=keys.next();if(!known.has(key)) known.put(key,fresh.optString(key)) }
             playbackPrefs.edit().putString(knownOwner,known.toString()).apply(); persistNotices()
         } finally { checkingNotices = false }
     }
@@ -1219,17 +1223,39 @@ class AppState(context: Context) {
 
     var detailsReturnScreen by mutableStateOf(Screen.HOME)
         private set
-    suspend fun open(item: MediaSummary) {
+    var selectedUpcoming by mutableStateOf(false)
+        private set
+    private var detailsEpoch=0L
+    private val detailsCache=linkedMapOf<String,Pair<Long,MediaDetails>>()
+    suspend fun open(item: MediaSummary,upcoming: Boolean=false) {
+        val ticket=++detailsEpoch
+        val language=tmdb.language
+        val cacheKey="$language:${item.cloudId}"
         if(screen!=Screen.DETAILS && screen!=Screen.PLAYER) detailsReturnScreen=screen
-        selected = item
-        details = null
-        episodes.clear()
-        currentSeason = 1
-        screen = Screen.DETAILS
-        runCatching { tmdb.details(item) }.onSuccess {
-            details = it
-            if (item.type == "series" && it.seasonCount > 0) loadSeason(1)
-        }.onFailure { error = it.message }
+        selected=item
+        selectedUpcoming=upcoming || (comingMovies+comingSeries).any { it.cloudId==item.cloudId }
+        details=detailsCache[cacheKey]?.takeIf { System.currentTimeMillis()-it.first<15*60*1000L }?.second
+        episodes.clear();currentSeason=1
+        screen=Screen.DETAILS
+        try {
+            val loaded=details ?: tmdb.details(item)
+            if(ticket!=detailsEpoch || selected?.cloudId!=item.cloudId || language!=tmdb.language) return
+            if(detailsCache.size>=12) detailsCache.remove(detailsCache.keys.first())
+            detailsCache[cacheKey]=System.currentTimeMillis() to loaded
+            details=loaded
+            val today=java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US).format(java.util.Date())
+            if(loaded.releaseDate.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))  ) selectedUpcoming=loaded.releaseDate>today
+            if(item.type=="series" && loaded.seasonCount>0) loadSeason(1)
+        } catch(e: CancellationException) { throw e }
+        catch(e: Exception) { if(ticket==detailsEpoch) error=e.message }
+    }
+
+    fun remindMe(item: MediaSummary) {
+        if(!favorites.contains(item.cloudId)) favorites.add(item.cloudId)
+        val key=knownKey()
+        val known=org.json.JSONObject(playbackPrefs.getString(key,"{}"))
+        if(!known.has(item.cloudId)) known.put(item.cloudId,"pending")
+        playbackPrefs.edit().putString(key,known.toString()).apply()
     }
 
     suspend fun loadSeason(season: Int) {

@@ -334,6 +334,7 @@ class TmdbRepository(var token: String) {
             genres = genres,
             seasonCount = j.optInt("number_of_seasons", 0),
             releaseInfo = release.take(4).ifBlank { item.year },
+            releaseDate = release,
             originCountry = origin,
             originalLanguage = originalLanguage,
             cast = cast,

@@ -159,7 +159,7 @@ private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seek
         .pointerInput(duration,enabled) { detectDragGestures { change,_ -> if(enabled && size.width>0) { change.consume();onInteraction();onSeek((change.position.x/size.width*duration).toLong().coerceIn(0,duration)) } } },contentAlignment=Alignment.Center) {
         Canvas(Modifier.fillMaxWidth().height(if(focused) 8.dp else 5.dp)) {
             drawRoundRect(Color(0xFF555555),cornerRadius=androidx.compose.ui.geometry.CornerRadius(size.height))
-            if(fraction>0) drawRoundRect(if(focused) Color.White else Color(0xFFE50914),size=Size(size.width*fraction,size.height),cornerRadius=androidx.compose.ui.geometry.CornerRadius(size.height))
+            if(fraction>0) drawRoundRect(Color.White,size=Size(size.width*fraction,size.height),cornerRadius=androidx.compose.ui.geometry.CornerRadius(size.height))
             if(focused && enabled) drawCircle(Color.White,7.dp.toPx(),Offset(size.width*fraction,size.height/2))
         }
     }

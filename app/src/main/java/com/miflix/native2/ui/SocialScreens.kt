@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.*
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -53,26 +54,24 @@ fun FriendsScreen(state: AppState) {
     Column(Modifier.fillMaxSize()) {
         Sidebar(Screen.FRIENDS,state.activeProfile.name,{ state.screen=it },state.notifications.size,state.activeProfile,onMoveDown={ contentFocus.requestFocus(); Unit })
         BoxWithConstraints(Modifier.weight(1f).fillMaxHeight().focusRequester(contentFocus).focusGroup()) {
-            val columns=if(maxWidth>=720.dp) 4 else 3
+            val columns=if(maxWidth>=720.dp) 3 else 2
             SocialBackdrop()
             LazyColumn(Modifier.fillMaxSize().padding(horizontal=34.dp),contentPadding=PaddingValues(vertical=28.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
                 item {
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                         Text(tr("Amigos y salas","Friends & Party"),color=Color.White,fontSize=28.sp, lineHeight=34.sp,modifier=Modifier.weight(1f))
+                        FocusButton(tr("Recomendaciones","Recommendations")) { recommendations=true }
                         FocusButton(if(state.friendsTabLoading) tr("Actualizando…","Refreshing…") else tr("Actualizar","Refresh")) { state.refreshFriendsTab() }
                         FocusButton(if(state.watchParty==null) tr("Crear sala","Create Party") else tr("Mi sala","My Party")) { state.screen=Screen.WATCH_PARTY }
                     }
-                    Text(tr("La actividad se actualiza al pulsar Amigos y salas. También puedes actualizar manualmente.","Activity refreshes when you select Friends & Party. You can also refresh manually."),color=Muted,fontSize=13.sp, lineHeight=16.sp)
+                    Text(tr("Descubre qué están viendo tus amigos.","Discover what your friends are watching."),color=Muted,fontSize=13.sp, lineHeight=16.sp)
                 }
                 item {
                     Row(horizontalArrangement=Arrangement.spacedBy(16.dp)) {
-                        listOf(tr("Amigos","Friends"),tr("Salas","Parties"),tr("Solicitudes","Requests")).forEachIndexed { index,label -> FocusButton(label,primary=tab==index) { tab=index } }
-                        FocusButton(tr("Calendario","Calendar")) { calendar=true }
-                        FocusButton(tr("Mi nickname / frases","My nickname / Phrases")) { manage=true }
+                        listOf(tr("Amigos","Friends"),tr("Salas","Parties"),tr("Solicitudes","Requests")).forEachIndexed { index,label -> NavigationTab(label,selected=tab==index) { tab=index } }
+                        NavigationTab(tr("Calendario","Calendar"),selected=false) { calendar=true }
+                        FocusButton(tr("Administrar perfil","Manage profile")) { manage=true }
                     }
-                }
-                item {
-                    FocusButton(tr("Recomendaciones de amigos","Friends' recommendations")) { recommendations=true }
                 }
                 if(state.session==null) item { FocusButton(tr("Iniciar sesión","Sign in")) { state.screen=Screen.SETTINGS } }
                 else {
@@ -88,7 +87,7 @@ fun FriendsScreen(state: AppState) {
                             }
                         }
                     } else {
-                        item { NativeTextField(search,{ search=it },tr("Buscar amigos","Search friends"),modifier=Modifier.width(320.dp)) }
+                        item { NativeTextField(search,{ search=it },tr("Buscar amigos","Search friends"),modifier=Modifier.fillMaxWidth()) }
                         val friends=state.friendActivity.filter { (tab==0 || it.room!=null) && it.nickname.contains(search,true) }
                         if(friends.isEmpty()) item { Text(tr("No hay resultados · pulsa Refresh para cargar tus amigos","No results · Select Refresh to load your friends"),color=Muted) }
                         items(friends.chunked(columns)) { group ->
@@ -112,14 +111,17 @@ fun FriendsScreen(state: AppState) {
 @Composable
 private fun FriendTile(friend: FriendActivity,modifier: Modifier,onClick: () -> Unit) {
     var focused by remember(friend.id) { mutableStateOf(false) }
-    Column(modifier.height(225.dp).onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
-        .background(if(focused) FocusedPanel else Panel,RoundedCornerShape(18.dp))
-        .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(18.dp)).padding(16.dp),
-        horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)) {
-        ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(84.dp))
-        Text(friend.nickname,color=Color.White,fontSize=18.sp, lineHeight=22.sp,maxLines=1)
-        Text(if(friend.title.isNotBlank()) "${tr("Viendo","Watching")} ${friend.title}" else if(friend.online) tr("En línea","Online") else tr("Desconectado","Offline"),color=if(friend.online) Color(0xFF8DE5B8) else Muted,fontSize=13.sp, lineHeight=16.sp,maxLines=2)
-        if(friend.room!=null) Text(tr("Sala · Solicitar acceso","Party · Request access"),color=Color(0xFF9DD4FF),fontSize=12.sp, lineHeight=15.sp)
+    Row(modifier.height(138.dp).onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
+        .background(if(focused) FocusedPanel else Panel,RoundedCornerShape(16.dp))
+        .border(1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(16.dp)).padding(16.dp),
+        verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
+        ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(58.dp).clip(androidx.compose.foundation.shape.CircleShape))
+        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+            Text("@"+friend.nickname,color=Color.White,fontSize=16.sp,lineHeight=20.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(if(friend.online) tr("● En línea","● Online") else tr("Desconectado","Offline"),color=if(friend.online) Color(0xFF8DE5B8) else Muted,fontSize=12.sp)
+            if(friend.title.isNotBlank()) Text(tr("Viendo ","Watching ")+friend.title,color=Muted,fontSize=12.sp,lineHeight=15.sp,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            if(friend.room!=null) Text(tr("Solicitar acceso","Request access"),color=Accent,fontSize=11.sp,maxLines=1)
+        }
     }
 }
 
@@ -237,20 +239,27 @@ fun NotificationsScreen(state: AppState) {
     val contentFocus=remember { FocusRequester() }
     Column(Modifier.fillMaxSize().background(Bg)) {
         Sidebar(Screen.NOTIFICATIONS,state.activeProfile.name,{state.screen=it},state.notifications.size,state.activeProfile,onMoveDown={ contentFocus.requestFocus(); Unit })
-        LazyColumn(Modifier.weight(1f).padding(30.dp).focusRequester(contentFocus).focusGroup(),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+        LazyColumn(Modifier.weight(1f).padding(horizontal=34.dp).focusRequester(contentFocus).focusGroup(),contentPadding=PaddingValues(top=24.dp,bottom=40.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             item {
                 Text("${tr("Notificaciones","Notifications")} · ${state.notifications.size}",color=Color.White,fontSize=30.sp, lineHeight=36.sp)
+                Spacer(Modifier.height(14.dp))
                 Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     FocusButton(tr("Revisar ahora","Check now")) { state.launch { runCatching { state.checkNotifications() }.onFailure { state.error=it.message } } }
                     FocusButton(tr("Limpiar notificaciones","Clear notifications")) { state.clearNotifications() }
                 }
-                Text(tr("Nuevos estrenos de tus favoritos. Se revisan al abrir MiFlix y cada 30 minutos mientras está abierta.","New releases from your favorites. Checked when you open BruniO and every 30 minutes while it's open."),color=Muted)
+                Spacer(Modifier.height(12.dp))
+                Text(tr("Nuevos episodios y estrenos de tus favoritos.","New episodes and releases from your favorites."),color=Muted,fontSize=14.sp)
             }
             if(state.notifications.isEmpty()) item { Text(tr("No hay notificaciones nuevas","No new notifications"),color=Color.White) }
             items(state.notifications.toList(),key={it.id}) { notice ->
-                Column {
-                    Text(notice.item.title,color=Color.White,fontSize=22.sp, lineHeight=26.sp)
-                    Text(notice.message,color=Muted)
+                Row(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(16.dp)).border(1.dp,PanelBorder,RoundedCornerShape(16.dp)).padding(18.dp),
+                    horizontalArrangement=Arrangement.spacedBy(20.dp),verticalAlignment=Alignment.CenterVertically) {
+                    coil3.compose.AsyncImage(notice.item.poster ?: notice.item.backdrop,notice.item.title,Modifier.size(72.dp,108.dp).clip(RoundedCornerShape(10.dp)),contentScale=ContentScale.Crop)
+                    Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                        Text(tr("NUEVO EN TU LISTA","NEW IN YOUR LIST"),color=Accent,fontSize=10.sp)
+                        Text(notice.item.title,color=Color.White,fontSize=22.sp,lineHeight=26.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold)
+                        Text(notice.message,color=Muted,fontSize=14.sp,maxLines=2)
+                    }
                     FocusButton(tr("Ver contenido","View content")) { state.launch { state.open(notice.item) } }
                 }
             }

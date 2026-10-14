@@ -124,7 +124,6 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     val heroFocus=remember { FocusRequester() }
     val contentFocus=remember { FocusRequester() }
     val scope=rememberCoroutineScope()
-    var heroBackdrop by remember { mutableStateOf(state.trending.firstOrNull()?.backdrop) }
     val headerShade by remember { derivedStateOf { if(scroll.firstVisibleItemIndex>0) .88f else (scroll.firstVisibleItemScrollOffset/320f).coerceIn(0f,.88f) } }
     LaunchedEffect(Unit) { delay(550); state.loadHomeExtras() }
     LaunchedEffect(Unit) { state.loadDiscoveryArt() }
@@ -132,8 +131,6 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     val openCollection: (CollectionTile) -> Unit={ tile -> state.launch { state.openCollection(tile.id,tile.title) } }
     val returnToTop: () -> Unit={ scope.launch { scroll.scrollToItem(0) }; Unit }
     Box(Modifier.fillMaxSize().background(Bg)) {
-        AsyncImage(heroBackdrop,null,Modifier.fillMaxWidth().height(420.dp),contentScale=ContentScale.Crop)
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x44000000),Bg),endY=650f)))
         CompositionLocalProvider(LocalBringIntoViewSpec provides object : BringIntoViewSpec {
             override fun calculateScrollDistance(offset: Float,size: Float,containerSize: Float): Float = when {
                 offset<0 -> offset
@@ -141,8 +138,8 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 else -> 0f
             }
         }) {
-            LazyColumn(Modifier.fillMaxSize().padding(top=108.dp,bottom=32.dp).focusRequester(contentFocus).focusGroup(),state=scroll,contentPadding=PaddingValues(bottom=32.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                item(key="hero") { TopTenHero(state.trending.take(10),openItem,onFocused={ if(it) returnToTop() },onBackdrop={ heroBackdrop=it },buttonModifier=Modifier.focusRequester(heroFocus),randomChoosing=state.randomChoosing,onRandom={ if(!state.randomChoosing) state.launch { state.playRandomMovie() } }) }
+            LazyColumn(Modifier.fillMaxSize().padding(top=84.dp,bottom=20.dp).focusRequester(contentFocus).focusGroup(),state=scroll,contentPadding=PaddingValues(bottom=32.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                item(key="hero") { TopTenHero(state.trending.take(10),openItem,onFocused={ if(it) returnToTop() },buttonModifier=Modifier.focusRequester(heroFocus),randomChoosing=state.randomChoosing,onRandom={ if(!state.randomChoosing) state.launch { state.playRandomMovie() } }) }
                 if(state.continueWatching.isNotEmpty()) item(key="continue") {
                     MediaRail(compact=true,title=tr("Seguir viendo","Continue Watching"),rows=state.continueWatching,landscape=true,
                         progressFor={ state.progress[it.cloudId]?.percent },onClick=openItem)
@@ -214,20 +211,20 @@ private fun TopTenHero(rows: List<MediaSummary>, onOpen: (MediaSummary) -> Unit,
         }
     }
 
-    Box(Modifier.fillMaxWidth().padding(horizontal=32.dp).height(320.dp).clip(RoundedCornerShape(22.dp))) {
+    Box(Modifier.fillMaxWidth().height(250.dp)) {
         Crossfade(hero, animationSpec = tween(260, easing = LinearOutSlowInEasing), label = "topHero") { item ->
             AsyncImage(item.backdrop, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         }
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x08000000), Color(0x2C000000), Bg), startY = 120f)))
-        Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xF8050505), Color(0xA0050505), Color.Transparent), endX = 860f)))
-        Column(Modifier.align(Alignment.CenterStart).padding(start = 16.dp,end=16.dp).widthIn(max = 720.dp)) {
+        Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xF8050505), Color(0xB0050505), Color.Transparent), endX = 1000f)))
+        Column(Modifier.align(Alignment.CenterStart).padding(start=34.dp,end=24.dp).fillMaxWidth(.64f)) {
             Text(tr("TOP 10 · TENDENCIAS DE LA SEMANA","TOP 10  ·  TRENDING THIS WEEK"), color = Color(0xFFB8B8BC), fontSize = 12.sp, lineHeight=15.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(10.dp))
-            Text(hero.title, color = Color.White, fontSize = 35.sp, lineHeight=42.sp, fontWeight = FontWeight.Black, maxLines = 2)
+            Text(hero.title, color = Color.White, fontSize = 30.sp, lineHeight=35.sp, fontWeight = FontWeight.Black, maxLines = 2)
             Spacer(Modifier.height(10.dp))
             Text("${hero.year}  ·  ★ ${"%.1f".format(hero.rating)}", color = Color(0xFFE0E0E0), fontSize = 14.sp, lineHeight=17.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(12.dp))
-            Text(hero.overview, color = Color(0xFFE7E7EA), fontSize = 15.sp, lineHeight=18.sp, maxLines = 2, modifier = Modifier.widthIn(max = 690.dp))
+            Text(hero.overview, color = Color(0xFFE7E7EA), fontSize = 15.sp, lineHeight=18.sp, maxLines = 2, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(20.dp))
             FlowRow(horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                 FocusButton(tr("Ver detalles","View Details"),primary=true,onFocused=onFocused,modifier=buttonModifier) { onOpen(hero) }
@@ -259,7 +256,7 @@ private fun MediaRail(
     onClick: (MediaSummary) -> Unit
 ) {
     if (rows.isEmpty()) return
-    val h = if(compact) { if(landscape) 208.dp else 282.dp } else if (landscape) 210.dp else 304.dp
+    val h = if(compact) { if(landscape) 194.dp else 324.dp } else if (landscape) 210.dp else 346.dp
     Column(Modifier.fillMaxWidth().height(h)) {
         Text(title, color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 40.dp,end=40.dp, bottom = 8.dp))
         LazyRow(
@@ -294,7 +291,11 @@ fun CatalogScreen(state: AppState, title: String, catalog: List<MediaSummary>, o
     val catalogScroll=androidx.compose.runtime.saveable.rememberSaveable(title,saver=androidx.compose.foundation.lazy.grid.LazyGridState.Saver) { androidx.compose.foundation.lazy.grid.LazyGridState() }
     AppShell(state, state.screen, { state.screen = it }) {
         Column(Modifier.fillMaxSize().padding(start = 34.dp, top = 30.dp, end = 34.dp)) {
-            Text(title, color = Color.White, fontSize = 31.sp, lineHeight=37.sp, fontWeight = FontWeight.Black)
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                Text(title,color=Color.White,fontSize=31.sp,lineHeight=37.sp,fontWeight=FontWeight.Black,modifier=Modifier.weight(1f))
+                Text("${catalog.size} "+tr("cargados","loaded"),color=Muted,fontSize=12.sp)
+            }
+            Text(tr("Elige tu próxima historia.","Choose your next story."),color=Muted,fontSize=14.sp,modifier=Modifier.padding(top=6.dp))
             Spacer(Modifier.height(18.dp))
             LazyVerticalGrid(columns=GridCells.Adaptive(168.dp),state=catalogScroll,modifier=Modifier.weight(1f).fillMaxWidth(),
                 horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(bottom=48.dp,top=8.dp)) {
@@ -441,15 +442,15 @@ private fun GenreCard(g: GenreDefinition, onClick: () -> Unit) {
     Box(
         Modifier.width(220.dp).height(104.dp).graphicsLayer { scaleX = scale; scaleY = scale }
             .onFocusChanged { focused = it.isFocused }.focusable().tvClick(onClick).clickable(onClick = onClick)
-            .clip(RoundedCornerShape(14.dp)).background(if (focused) Color.White else Color(0xFF171717))
-            .border(if (focused) 2.dp else 1.dp, if (focused) Color.White else Color(0xFF292929), RoundedCornerShape(14.dp)),
+            .clip(RoundedCornerShape(14.dp)).background(if (focused) FocusedPanel else Panel)
+            .border(if (focused) 2.dp else 1.dp, if (focused) Accent else PanelBorder, RoundedCornerShape(14.dp)),
         contentAlignment = Alignment.Center
     ) {
         if (g.coverUrl.isNotBlank()) {
             AsyncImage(g.coverUrl, g.title, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             Box(Modifier.fillMaxSize().background(Color(0x66000000)))
         }
-        Text(g.title, color = if (focused && g.coverUrl.isBlank()) Color.Black else Color.White, fontSize = 21.sp, lineHeight=25.sp, fontWeight = FontWeight.Black)
+        Text(g.title, color = Color.White, fontSize = 21.sp, lineHeight=25.sp, fontWeight = FontWeight.Black)
     }
 }
 

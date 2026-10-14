@@ -167,6 +167,7 @@ fun MediaCard(
     compact: Boolean = false,
     progressPercent: Double? = null,
     onFocused: (MediaSummary) -> Unit = {},
+    showCaption: Boolean = true,
     onClick: () -> Unit
 ) {
     var focused by remember(item.cloudId) { mutableStateOf(false) }
@@ -176,13 +177,15 @@ fun MediaCard(
         label = "cardScale"
     )
     val outerW = if(compact) { if(landscape) 230.dp else 144.dp } else if (landscape) 260.dp else 168.dp
+    val captionHeight=if(landscape || !showCaption) 0.dp else 42.dp
     val outerH = if(compact) { if(landscape) 146.dp else 220.dp } else if (landscape) 160.dp else 252.dp
     val innerW = outerW-14.dp
     val innerH = if(compact) { if(landscape) 126.dp else 198.dp } else if (landscape) 140.dp else 230.dp
 
-    Box(modifier.width(outerW).height(outerH), contentAlignment = Alignment.Center) {
+    Box(modifier.width(outerW).height(outerH+captionHeight), contentAlignment = Alignment.TopCenter) {
         Box(
             Modifier
+                .padding(top=7.dp)
                 .width(innerW)
                 .height(innerH)
                 .graphicsLayer {
@@ -231,6 +234,10 @@ fun MediaCard(
                 }
             }
             if (focused) Box(Modifier.matchParentSize().background(Color(0x0AFFFFFF)))
+        }
+        if(!landscape && showCaption) Column(Modifier.align(Alignment.BottomCenter).width(innerW).padding(bottom=4.dp),verticalArrangement=Arrangement.spacedBy(3.dp)) {
+            Text(item.title,color=Color.White,fontSize=12.sp,lineHeight=15.sp,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(listOf(item.year,if(item.type=="series") tr("Serie","Series") else tr("Película","Movie")).filter { it.isNotBlank() }.joinToString(" · "),color=Muted,fontSize=10.sp,lineHeight=12.sp,maxLines=1)
         }
     }
 }
@@ -363,7 +370,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
             true
         } else false
     }.onFocusChanged { if(it.hasFocus) onHeaderFocused?.invoke() }.focusGroup()
-        .background(Color.Black.copy(alpha=backgroundAlpha.coerceIn(0f,1f))).padding(horizontal=24.dp),
+        .background(Color.Black.copy(alpha=backgroundAlpha.coerceIn(.92f,1f))).padding(horizontal=24.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)) {
         Image(painterResource(R.drawable.brunio_icon),"BruniO",Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)))
         var profileFocused by remember { mutableStateOf(false) }
@@ -390,7 +397,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
                     var focused by remember { mutableStateOf(false) }
                                         Box(Modifier.onGloballyPositioned { bounds[destination]=Pair(it.positionInRoot().x-navOrigin,it.size.width.toFloat()) }) {
                         if(destination==Screen.SEARCH) SearchNavigationButton(onFocused={ focused=it; if(it) target=destination }) { onNavigate(destination) }
-                        else FocusButton(label,primary=current==destination,horizontalPadding=14.dp,onFocused={ focused=it; if(it) target=destination }) { onNavigate(destination) }
+                        else NavigationTab(label,selected=current==destination,onFocused={ focused=it; if(it) target=destination }) { onNavigate(destination) }
                     }
                 }
             }
@@ -439,5 +446,16 @@ private fun SearchNavigationButton(onFocused: (Boolean) -> Unit = {},onClick: ()
             drawLine(ink,androidx.compose.ui.geometry.Offset(size.width*.62f,size.height*.62f),
                 androidx.compose.ui.geometry.Offset(size.width*.94f,size.height*.94f),2.dp.toPx(),androidx.compose.ui.graphics.StrokeCap.Round)
         }
+    }
+}
+
+@Composable
+internal fun NavigationTab(text: String,selected: Boolean,onFocused: (Boolean) -> Unit = {},onClick: () -> Unit) {
+    var focused by remember { mutableStateOf(false) }
+    Column(Modifier.onFocusChanged { focused=it.isFocused;onFocused(it.isFocused) }.focusable().tvClick(onClick).clickable(onClick=onClick)
+        .background(if(focused) Color(0xFF1B191F) else Color.Transparent,RoundedCornerShape(8.dp)).padding(horizontal=10.dp,vertical=10.dp),
+        horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(7.dp)) {
+        Text(text,color=if(focused || selected) Color.White else Muted,fontSize=15.sp,lineHeight=18.sp,fontWeight=if(focused || selected) FontWeight.Bold else FontWeight.Medium,maxLines=1)
+        Box(Modifier.height(2.dp).width(28.dp).background(if(selected) Accent else Color.Transparent,RoundedCornerShape(2.dp)))
     }
 }

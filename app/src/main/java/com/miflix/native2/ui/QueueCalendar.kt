@@ -312,7 +312,7 @@ private fun CreateEventDialog(state: AppState, day: String?, close: () -> Unit) 
                 items(results.chunked(3)) { row ->
                     Row(Modifier.fillMaxWidth().padding(horizontal=8.dp,vertical=12.dp),horizontalArrangement=Arrangement.spacedBy(22.dp)) {
                         row.forEach { result -> Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                            MediaCard(result,modifier=Modifier.fillMaxWidth()) { item=result;title=result.title }
+                            MediaCard(result,modifier=Modifier.fillMaxWidth(),showCaption=false) { item=result;title=result.title }
                             Text(result.title+" · "+result.year,color=if(item?.cloudId==result.cloudId) Color.White else Muted,maxLines=2)
                         } }
                         repeat(3-row.size) { Spacer(Modifier.weight(1f)) }

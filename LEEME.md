@@ -1,14 +1,17 @@
-BruniO Web · Mi lista y Amigos
+BruniO Web · Catálogo, idioma y calendario
 
-1. En Supabase SQL Editor ejecuta supabase_web_favorites.sql.
-2. Copia supabase/functions/brunio-catalog/index.ts y la sección brunio-catalog de supabase/config.toml al repositorio. Despliega:
-   supabase functions deploy brunio-catalog --no-verify-jwt
-   La función verifica la sesión del usuario internamente. Usa el secreto TMDB_TOKEN existente; no pongas tokens privados en la web. Supabase entrega SUPABASE_URL y SUPABASE_ANON_KEY al runtime.
-3. Aplica los archivos Android del hotfix RC45 y genera el APK en GitHub Actions. Instálalo en las TVs que usarán la lista compartida. Versiones anteriores pueden sobrescribir favoritos web al guardar su estado completo.
-4. Abre la web, entra con el correo/contraseña de BruniO y elige el perfil. Guarda un título y abre Mi lista en TV (o pulsa Actualizar lista). Comprueba también quitarlo.
+1. Reemplaza web/index.html, web/app.js y web/style.css en GitHub. Conserva web/brunio-logo.png. Vercel desplegará el cambio. Los archivos usan v=5 para renovar la caché.
+2. Supabase > Edge Functions > brunio-catalog > Code: reemplaza TODO index.ts por supabase/functions/brunio-catalog/index.ts y pulsa Deploy. Mantén Verify JWT desactivado; la función valida la sesión internamente. Usa tu secreto TMDB_TOKEN existente.
+3. Recarga la web. No se necesita otro APK. No vuelvas a ejecutar el SQL de favoritos.
 
-Amigos muestra tus amigos, estado/actividad, recomendaciones y solicitudes. Las solicitudes se gestionan desde TV. No abre salas ni reproduce video. La actividad proviene de la TV y se consulta al entrar o pulsar Actualizar; no hay polling. Usa las tablas/RPC sociales existentes, con sus políticas RLS.
+Idioma: selector muestra el idioma actual. Interfaz, títulos, sinopsis, géneros y solicitudes al catálogo usan ES/EN; las cachés incluyen el idioma y los resultados antiguos no sustituyen los nuevos. Los nombres propios y títulos de eventos escritos por usuarios no se traducen automáticamente. TMDB puede carecer de una traducción y devolver un título original o sinopsis vacía.
 
-Hosting Vercel: sube el contenido de web/ como proyecto estático (sin comando build). No necesita secretos en Vercel. La clave publishable de Supabase es pública; las políticas RLS y la sesión protegen los datos. Para cambiar proyecto edita BASE y KEY en app.js. La sesión se conserva en sessionStorage por pestaña; no se guarda la contraseña.
+Catálogo: Próximamente muestra películas/series con fecha de estreno posterior a hoy, según TMDB; no significa que estén disponibles para reproducción. Explorar permite género, año, tipo, puntuación/popularidad/fecha y personas (reparto/equipo). En Mi lista se filtra género/año/tipo y se ordenan los títulos cargados; usa Ver más para cargar el resto. Selecciona un resultado de la búsqueda de personas para activar ese filtro.
 
-Pruebas locales: sintaxis JavaScript y pruebas de la función de catálogo con HTTP simulado. No se compiló el APK (no hay Android SDK/Gradle aquí) ni se probó con credenciales reales. Ejecuta el workflow Android y la comprobación de sincronización después de configurar Supabase.
+Plataformas: Netflix, Apple TV (suscripción), Prime Video, HBO Max, Disney+ y Crunchyroll. Logos desde TMDB; disponibilidad desde JustWatch según región seleccionada (US por defecto, igual que TV). Usa los mismos filtros dentro de cada colección. Los catálogos pueden variar por país y no equivalen a contenido exclusivo de la marca.
+
+Eventos: botón Eventos > Crear evento, o desde detalles de un título. Elige película/serie, fecha y hora, temporada/episodio cuando corresponda, y amigos (máximo 20). La hora se interpreta en la zona horaria del dispositivo, indicada en el formulario, y se guarda en UTC. Supabase aplica las políticas de amigos aceptados. El evento aparece en el calendario de TV del creador y de sus invitados al actualizarlo. No se envían correos. Solo el creador puede eliminar un evento, previa confirmación.
+
+Se reutiliza miflix_calendar_events y las políticas existentes RC22/RC23. Si ya funciona el calendario de TV, no ejecutes SQL adicional. Si la web informa que falta la tabla, ejecuta primero optional_sql/SUPABASE_RC22_CALENDAR.sql y después optional_sql/SUPABASE_RC23_CALENDAR.sql.
+
+Validación: pruebas con HTTP simulado de idiomas/caché, filtros, próximas fechas, personas; pruebas de controles web y datos de eventos. No se probaron cuentas reales ni el navegador desplegado. Comprueba guardar un favorito y un evento desde la web y actualizar Mi lista/Calendario en TV.

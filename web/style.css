@@ -7,3 +7,13 @@ body{background:radial-gradient(ellipse at 88% 0%,#55247a33,transparent 50%),rad
 .brand{display:flex;align-items:center;gap:12px}.brand img{width:54px;height:54px;object-fit:contain;border-radius:14px}.brand span{color:#c4a2ff}.brand small{margin-top:4px}
 .panel{background:linear-gradient(145deg,#302046,#1a1129);border-color:#9b69e62b}.primary{background:linear-gradient(110deg,#c4a2ff,#b3b7ff);color:#211032}.primary:hover{background:linear-gradient(110deg,#d8bfff,#c6d5ff)}.tags span{border-color:#9b69e633}.eyebrow{color:#c4a2ff}.avatar{background:#9c65e52b;color:#d8bfff}.friend{border-color:#9b69e626}
 @media(max-width:640px){.brand img{width:44px;height:44px}.brand{gap:9px}}
+.header-tools{display:flex;align-items:center;gap:16px}.preferences{display:flex;gap:8px}.preferences button{font-size:12px;padding:10px 12px;white-space:nowrap}
+html[data-theme="black"]{--bg:#000;--panel:#111;--muted:#b5b5bd;--accent:#c4a2ff}
+html[data-theme="black"] body{background:#000}
+html[data-theme="black"] .panel{background:linear-gradient(145deg,#191919,#080808);border-color:#ffffff24}
+html[data-theme="black"] input,html[data-theme="black"] select,html[data-theme="black"] .poster{background:#111}
+html[data-theme="black"] .quiet{background:#111}
+html[data-theme="black"] button:hover{background:#292929}
+html[data-theme="black"] .primary:hover{background:#d8bfff}
+html[data-theme="black"] .friend{background:#111;border-color:#ffffff24}
+@media(max-width:640px){header{flex-wrap:wrap;gap:16px}.header-tools{flex:1;justify-content:flex-end;flex-wrap:wrap;gap:10px}.preferences{gap:6px}.preferences button{padding:9px 10px}#account{justify-content:flex-end}.brand{flex-shrink:0}}

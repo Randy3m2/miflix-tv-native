@@ -124,15 +124,23 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     val heroFocus=remember { FocusRequester() }
     val contentFocus=remember { FocusRequester() }
     val scope=rememberCoroutineScope()
+    val density=androidx.compose.ui.platform.LocalDensity.current
+    val railThreshold=with(density) { 260.dp.toPx() }
+    val focusInset=with(density) { 12.dp.toPx() }
     val headerShade by remember { derivedStateOf { if(scroll.firstVisibleItemIndex>0) .88f else (scroll.firstVisibleItemScrollOffset/320f).coerceIn(0f,.88f) } }
-    LaunchedEffect(Unit) { delay(550); state.loadHomeExtras() }
+    LaunchedEffect(state.interfaceLanguage) { delay(550); state.loadHomeExtras(); runCatching { state.loadComingSoon() } }
     LaunchedEffect(Unit) { state.loadDiscoveryArt() }
+    // Refresh the calendar policy on foreground entry; no periodic catalog polling.
+    LaunchedEffect(state.appForeground,state.interfaceLanguage) {
+        if(state.appForeground) state.loadSeasonalProgramming()
+    }
     val openItem: (MediaSummary) -> Unit={ item -> state.launch { state.open(item) } }
     val openCollection: (CollectionTile) -> Unit={ tile -> state.launch { state.openCollection(tile.id,tile.title) } }
-    val returnToTop: () -> Unit={ scope.launch { scroll.scrollToItem(0) }; Unit }
+    val returnToTop: () -> Unit={ scope.launch { scroll.animateScrollToItem(0) }; Unit }
     Box(Modifier.fillMaxSize().background(Bg)) {
         CompositionLocalProvider(LocalBringIntoViewSpec provides object : BringIntoViewSpec {
             override fun calculateScrollDistance(offset: Float,size: Float,containerSize: Float): Float = when {
+                size>=railThreshold && size<=containerSize-2*focusInset -> offset-focusInset
                 offset<0 -> offset
                 offset+size>containerSize -> offset+size-containerSize
                 else -> 0f
@@ -141,7 +149,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
             LazyColumn(Modifier.fillMaxSize().padding(top=84.dp,bottom=20.dp).focusRequester(contentFocus).focusGroup(),state=scroll,contentPadding=PaddingValues(bottom=32.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 item(key="hero") { TopTenHero(state.trending.take(10),openItem,onFocused={ if(it) returnToTop() },buttonModifier=Modifier.focusRequester(heroFocus),randomChoosing=state.randomChoosing,onRandom={ if(!state.randomChoosing) state.launch { state.playRandomMovie() } }) }
                 if(state.continueWatching.isNotEmpty()) item(key="continue") {
-                    MediaRail(compact=true,title=tr("Seguir viendo","Continue Watching"),rows=state.continueWatching,landscape=true,
+                    SpotlightRail(title=tr("Seguir viendo","Continue Watching"),rows=state.continueWatching,landscape=true,
                         progressFor={ state.progress[it.cloudId]?.percent },onClick=openItem)
                 }
                 item(key="streaming") { CollectionRail(tr("Plataformas","Streaming"),StreamingTiles,openCollection) }
@@ -153,16 +161,23 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                     }
                     Spacer(Modifier.height(24.dp))
                 } }
-                if(state.forYou.isNotEmpty()) item(key="for_you") { MediaRail(compact=true,title=tr("Para ti · tus puntuaciones","For you · Your ratings"),rows=state.forYou,onClick=openItem) }
-                item(key="movies") { MediaRail(compact=true,title=tr("Películas populares","Popular · Movies"),rows=state.movies,onClick=openItem) }
-                item(key="series") { MediaRail(compact=true,title=tr("Series populares","Popular · Series"),rows=state.series,onClick=openItem) }
-                item(key="top") { MediaRail(compact=true,title=tr("Mejor valorados","Top Rated"),rows=state.topRated,onClick=openItem) }
-                item(key="now_playing") { MediaRail(tr("Estrenos en cartelera","Now playing"),state.newMovies,compact=true,onClick=openItem) }
-                item(key="best_series") { MediaRail(tr("Series mejor valoradas","Top rated series"),state.bestSeries,compact=true,onClick=openItem) }
-                item(key="action") { MediaRail(tr("Acción para esta noche","Action tonight"),state.action,compact=true,onClick=openItem) }
-                item(key="scifi") { MediaRail(tr("Ciencia ficción","Science fiction"),state.sciFi,compact=true,onClick=openItem) }
-                item(key="comedy") { MediaRail(tr("Algo para reír","Time for a comedy"),state.comedy,compact=true,onClick=openItem) }
-                item(key="thrillers") { MediaRail(tr("Suspenso y misterio","Thrillers & mystery"),state.thrillers,compact=true,onClick=openItem) }
+                if(state.forYou.isNotEmpty()) item(key="for_you") { SpotlightRail(title=tr("Para ti · tus puntuaciones","For you · Your ratings"),rows=state.forYou,onClick=openItem) }
+                if(state.seasonalItems.isNotEmpty()) item(key="seasonal") {
+                    SpotlightRail(seasonalTitle(state.seasonalTheme),state.seasonalItems,onClick=openItem,
+                        eyebrow=tr("SELECCIÓN DE TEMPORADA","SEASONAL SPOTLIGHT"))
+                }
+                item(key="movies") { SpotlightRail(title=tr("Películas populares","Popular · Movies"),rows=state.movies,onClick=openItem) }
+                item(key="series") { SpotlightRail(title=tr("Series populares","Popular · Series"),rows=state.series,onClick=openItem) }
+                item(key="top") { SpotlightRail(title=tr("Mejor valorados","Top Rated"),rows=state.topRated,onClick=openItem) }
+                item(key="now_playing") { SpotlightRail(tr("Estrenos en cartelera","Now playing"),state.newMovies,onClick=openItem) }
+                item(key="best_series") { SpotlightRail(tr("Series mejor valoradas","Top rated series"),state.bestSeries,onClick=openItem) }
+                item(key="action") { SpotlightRail(tr("Acción para esta noche","Action tonight"),state.action,onClick=openItem) }
+                item(key="scifi") { SpotlightRail(tr("Ciencia ficción","Science fiction"),state.sciFi,onClick=openItem) }
+                item(key="comedy") { SpotlightRail(tr("Algo para reír","Time for a comedy"),state.comedy,onClick=openItem) }
+                item(key="thrillers") { SpotlightRail(tr("Suspenso y misterio","Thrillers & mystery"),state.thrillers,onClick=openItem) }
+                if(state.comingMovies.isNotEmpty() || state.comingSeries.isNotEmpty()) item(key="coming_soon_home") {
+                    SpotlightRail(tr("Próximamente","Coming soon"),(state.comingMovies+state.comingSeries).distinctBy { it.cloudId }.take(30),onClick=openItem)
+                }
             }
         }
         Sidebar(Screen.HOME,state.activeProfile.name,onNavigate,state.notifications.size,state.activeProfile,
@@ -200,6 +215,7 @@ private fun TopTenHero(rows: List<MediaSummary>, onOpen: (MediaSummary) -> Unit,
         return
     }
     var index by remember(rows.map { it.cloudId }) { mutableIntStateOf(0) }
+    var heroFocused by remember { mutableStateOf(false) }
     val safeIndex = index.coerceIn(0, rows.lastIndex)
     val hero = rows[safeIndex]
     LaunchedEffect(hero.backdrop) { onBackdrop(hero.backdrop) }
@@ -207,11 +223,11 @@ private fun TopTenHero(rows: List<MediaSummary>, onOpen: (MediaSummary) -> Unit,
     LaunchedEffect(rows.map { it.cloudId }) {
         while (true) {
             delay(6500)
-            index = (index + 1) % rows.size
+            if(!heroFocused) index = (index + 1) % rows.size
         }
     }
 
-    Box(Modifier.fillMaxWidth().height(250.dp)) {
+    Box(Modifier.fillMaxWidth().height(290.dp)) {
         Crossfade(hero, animationSpec = tween(260, easing = LinearOutSlowInEasing), label = "topHero") { item ->
             AsyncImage(item.backdrop, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         }
@@ -227,8 +243,8 @@ private fun TopTenHero(rows: List<MediaSummary>, onOpen: (MediaSummary) -> Unit,
             Text(hero.overview, color = Color(0xFFE7E7EA), fontSize = 15.sp, lineHeight=18.sp, maxLines = 2, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(20.dp))
             FlowRow(horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                FocusButton(tr("Ver detalles","View Details"),primary=true,onFocused=onFocused,modifier=buttonModifier) { onOpen(hero) }
-                onRandom?.let { play -> FocusButton(if(randomChoosing) tr("Eligiendo…","Choosing…") else tr("Reproducir aleatorio","Play random"),onFocused=onFocused) { play() } }
+                FocusButton(tr("Ver detalles","View Details"),primary=true,onFocused={ heroFocused=it; onFocused(it) },modifier=buttonModifier) { onOpen(hero) }
+                onRandom?.let { play -> FocusButton(if(randomChoosing) tr("Eligiendo…","Choosing…") else tr("Reproducir aleatorio","Play random"),onFocused={ heroFocused=it; onFocused(it) }) { play() } }
             }
         }
         Row(
@@ -307,52 +323,7 @@ fun CatalogScreen(state: AppState, title: String, catalog: List<MediaSummary>, o
 }
 
 @Composable
-fun SearchScreen(state: AppState, onBack: () -> Unit) {
-    var query by remember { mutableStateOf(state.searchQuery) }
-    var results by remember { mutableStateOf<List<MediaSummary>>(emptyList()) }
-    var searching by remember { mutableStateOf(false) }
-    val historyOwner=state.searchHistoryOwner()
-    var history by remember(historyOwner) { mutableStateOf(state.searchHistory()) }
-    fun rememberQuery() { state.rememberSearch(query); history=state.searchHistory() }
-    BackHandler(onBack = onBack)
-    LaunchedEffect(query) {
-        if (query.trim().length < 2) { results = emptyList(); searching=false }
-        else {
-            delay(400)
-            searching = true
-            val found = runCatching { state.searchFlexible(query.trim()) }.onFailure { if(it is kotlinx.coroutines.CancellationException) throw it }.getOrDefault(emptyList())
-            results=found
-            searching = false
-        }
-    }
-    AppShell(state, Screen.SEARCH, { state.screen = it }) {
-        Column(Modifier.fillMaxSize().padding(34.dp)) {
-            Text(tr("Buscar","Search"), color = Color.White, fontSize = 32.sp, lineHeight=38.sp, fontWeight = FontWeight.Black)
-            Spacer(Modifier.height(16.dp))
-            NativeTextField(query, { query = it; state.searchQuery=it }, tr("Películas, series…","Movies, series…"), modifier = Modifier.widthIn(max=620.dp).fillMaxWidth(), onSubmit={ rememberQuery() })
-            Spacer(Modifier.height(12.dp))
-            // History and results share a scroll viewport so history cannot consume the poster area.
-            LazyVerticalGrid(columns=GridCells.Adaptive(168.dp),modifier=Modifier.weight(1f).fillMaxWidth(),
-                horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp),
-                contentPadding=PaddingValues(bottom=40.dp,top=8.dp)) {
-                if(history.isNotEmpty()) item(key="search_history",span={ androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                    Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                        Text(tr("Búsquedas recientes","Recent searches"),color=Muted,fontSize=14.sp,lineHeight=17.sp)
-                        LazyRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(vertical=8.dp)) {
-                            items(history,key={it}) { previous -> FocusButton(previous) {
-                                query=previous; state.searchQuery=previous; rememberQuery()
-                            } }
-                        }
-                    }
-                }
-                if(searching) item(key="search_loading",span={ androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                    Text(tr("Buscando…","Searching…"),color=Muted,fontSize=14.sp,lineHeight=17.sp)
-                }
-                gridItems(results,key={it.cloudId}) { item -> MediaCard(item) { state.launch { state.open(item) } } }
-            }
-        }
-    }
-}
+fun SearchScreen(state: AppState, onBack: () -> Unit) = CinematicSearchScreen(state,onBack)
 
 @Composable
 fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
@@ -981,6 +952,10 @@ fun PairDeviceScreen(state: AppState, onBack: () -> Unit) {
 
 @Composable
 fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
+    var managing by remember { mutableStateOf(false) }
+    var picking by remember { mutableStateOf(false) }
+    val firstProfile=remember { FocusRequester() }
+    LaunchedEffect(Unit) { delay(150); runCatching { firstProfile.requestFocus() } }
     var newName by remember { mutableStateOf("") }
     var newAvatar by remember { mutableStateOf("ai:astronaut") }
     var editingAvatar by remember { mutableStateOf<Profile?>(null) }
@@ -988,36 +963,42 @@ fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
     var choosingNewAvatar by remember { mutableStateOf(false) }
     var renamingProfile by remember { mutableStateOf<Profile?>(null) }
     var profileName by remember { mutableStateOf("") }
-    BackHandler(onBack = onBack)
-    Box(Modifier.fillMaxSize()) {
-    SocialBackdrop()
+    BackHandler { if(managing) managing=false else onBack() }
+    Box(Modifier.fillMaxSize().background(Bg)) {
+    ProfileLandscape(state.appForeground)
     LazyColumn(Modifier.fillMaxSize().padding(horizontal=50.dp),contentPadding=PaddingValues(vertical=32.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
         item { Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Text(tr("¿Quién está viendo?","Who's watching?"),color=Color.White,fontSize=38.sp, lineHeight=45.sp,fontWeight=FontWeight.Black)
-            Text(tr("Los avatares se guardan con tu perfil. Favoritos y progreso siguen separados.","Avatars are saved with your profile. Favorites and progress stay separate."),color=Muted,fontSize=14.sp, lineHeight=17.sp)
+            Text(if(picking) tr("Preparando tu perfil…","Preparing your profile…") else tr("Tu próxima historia empieza aquí.","Your next story starts here."),color=Muted,fontSize=16.sp,lineHeight=20.sp)
+            FocusButton(if(managing) tr("Listo","Done") else tr("Administrar perfiles","Manage profiles")) { managing=!managing }
         } }
         item {
             LazyRow(horizontalArrangement=Arrangement.spacedBy(20.dp),contentPadding=PaddingValues(8.dp)) {
                 items(state.profiles,key={it.id}) { profile ->
                     var focused by remember { mutableStateOf(false) }
+                    val avatarScale by animateFloatAsState(if(focused) 1.05f else 1f,tween(160),label="profileFocus")
                     Column(Modifier.width(180.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(14.dp)) {
-                        Column(Modifier.onFocusChanged { focused=it.isFocused }.focusable()
-                            .tvClick { state.launch { state.selectProfile(profile) } }
-                            .clickable { state.launch { state.selectProfile(profile) } },horizontalAlignment=Alignment.CenterHorizontally) {
-                            Box(Modifier.border(if(focused) 3.dp else 0.dp,Color.White,RoundedCornerShape(22.dp)).padding(5.dp)) {
+                        Column(Modifier.then(if(profile.id==state.profiles.firstOrNull()?.id) Modifier.focusRequester(firstProfile) else Modifier)
+                            .onFocusChanged { focused=it.isFocused }.focusable()
+                            .tvClick { if(!picking) { picking=true; state.launch { try { state.selectProfile(profile) } finally { picking=false } } } }
+                            .clickable { if(!picking) { picking=true; state.launch { try { state.selectProfile(profile) } finally { picking=false } } } },horizontalAlignment=Alignment.CenterHorizontally) {
+                            Box(Modifier.graphicsLayer { scaleX=avatarScale;scaleY=avatarScale }
+                                .border(if(focused) 3.dp else 0.dp,Color.White,RoundedCornerShape(22.dp)).padding(5.dp)) {
                                 ProfileAvatar(profile,Modifier.size(120.dp))
                             }
                             Text(profile.name,color=Color.White,fontSize=17.sp, lineHeight=21.sp)
                         }
+                        if(managing) {
                         FocusButton(tr("Cambiar nombre","Rename")) { profileName=profile.name; renamingProfile=profile }
                         FocusButton("Avatar") { editingAvatar=profile }
                         FocusButton(tr("Subir desde celular","Upload from phone")) { state.launch { state.socialAction { state.startAvatarUpload(profile) } } }
                         if(state.profiles.size>1) FocusButton(tr("Eliminar perfil","Delete profile")) { deletingProfile=profile }
+                        }
                     }
                 }
             }
         }
-        item { Column {
+        if(managing) item { Column {
             Text(tr("Crear perfil","Create profile"),color=Color.White,fontSize=22.sp, lineHeight=26.sp,fontWeight=FontWeight.Bold)
             Spacer(Modifier.height(18.dp))
             Row(horizontalArrangement=Arrangement.spacedBy(22.dp),verticalAlignment=Alignment.CenterVertically) {

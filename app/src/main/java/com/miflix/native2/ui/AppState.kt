@@ -72,6 +72,7 @@ class AppState(context: Context) {
         tmdb.language=if(code=="es") "es-ES" else "en-US"
         extrasLoaded=false
         comingMovies.clear(); comingSeries.clear(); forYou.clear()
+        seasonalItems.clear(); seasonalKey=""; seasonalRetryAt=0L; comingSoonKey=""
         if(tmdb.token.isNotBlank()) loadHome()
     }
     private val playbackWork = PlaybackWorkGate()
@@ -340,10 +341,23 @@ class AppState(context: Context) {
         val rows=if(revision.values.any { it>=6 }) recommendationsFor() else emptyList()
         if(owner==ratingsKey() && revision==ratings.toMap()) { forYou.clear(); forYou.addAll(rows) }
     }
-    suspend fun loadComingSoon() = coroutineScope {
-        val movies=async { tmdb.comingSoon("movie") }; val shows=async { tmdb.comingSoon("series") }
-        comingMovies.clear(); comingMovies.addAll(movies.await())
-        comingSeries.clear(); comingSeries.addAll(shows.await())
+    private val comingSoonMutex=Mutex()
+    private var comingSoonKey=""
+    suspend fun loadComingSoon() = comingSoonMutex.withLock {
+        if(tmdb.token.isBlank()) return@withLock
+        val language=tmdb.language
+        val date=java.util.Calendar.getInstance()
+        val key="$language:${date.get(java.util.Calendar.YEAR)}:${date.get(java.util.Calendar.DAY_OF_YEAR)}"
+        if(comingSoonKey==key) return@withLock
+        coroutineScope {
+            val movies=async { tmdb.comingSoon("movie") }; val shows=async { tmdb.comingSoon("series") }
+            val movieRows=movies.await();val showRows=shows.await()
+            if(language==tmdb.language) {
+                comingMovies.clear();comingMovies.addAll(movieRows)
+                comingSeries.clear();comingSeries.addAll(showRows)
+                comingSoonKey=key
+            }
+        }
     }
     private val livePrefs = context.getSharedPreferences("miflix_live", Context.MODE_PRIVATE)
     private val social = SocialRepository(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY)
@@ -680,6 +694,33 @@ class AppState(context: Context) {
         } finally { busyMessage=null }
     }
 
+    val seasonalItems = mutableStateListOf<MediaSummary>()
+    var seasonalTheme by mutableStateOf("discovery")
+        private set
+    private val seasonalMutex=Mutex()
+    private var seasonalKey=""
+    private var seasonalRetryAt=0L
+    suspend fun loadSeasonalProgramming() = seasonalMutex.withLock {
+        if(tmdb.token.isBlank()) return@withLock
+        val date=java.util.Calendar.getInstance()
+        val theme=SeasonalProgramming.theme(date.get(java.util.Calendar.MONTH)+1,date.get(java.util.Calendar.DAY_OF_MONTH))
+        val language=tmdb.language
+        val key="$language:${date.get(java.util.Calendar.YEAR)}:${date.get(java.util.Calendar.DAY_OF_YEAR)}:$theme"
+        if(key==seasonalKey || System.currentTimeMillis()<seasonalRetryAt) return@withLock
+        if(theme!=seasonalTheme) seasonalItems.clear()
+        seasonalTheme=theme
+        try {
+            val rows=tmdb.seasonal(theme)
+            // A language switch may finish while the request is in flight.
+            if(language==tmdb.language) {
+                val offset=if(rows.isEmpty()) 0 else date.get(java.util.Calendar.DAY_OF_YEAR)%rows.size
+                seasonalItems.replaceWith(rows.drop(offset)+rows.take(offset))
+                seasonalKey=key
+            }
+        } catch(e: CancellationException) { throw e }
+        catch(_: Exception) { seasonalRetryAt=System.currentTimeMillis()+5*60*1000L }
+    }
+
     val trending = mutableStateListOf<MediaSummary>()
     val movies = mutableStateListOf<MediaSummary>()
     val series = mutableStateListOf<MediaSummary>()
@@ -825,7 +866,7 @@ class AppState(context: Context) {
                 }
             }
         }
-        screen = if (tmdb.token.isNotBlank()) Screen.HOME else Screen.SETTINGS
+        screen = if (tmdb.token.isNotBlank()) Screen.PROFILES else Screen.SETTINGS
     }
 
     suspend fun login(email: String, password: String) {
@@ -841,7 +882,7 @@ class AppState(context: Context) {
             local.saveSession(it)
             syncFromCloud()
             loadHome()
-            screen = Screen.HOME
+            screen = Screen.PROFILES
         }.onFailure { error = it.message }
             .also { busyMessage = null }
     }
@@ -1339,16 +1380,22 @@ class AppState(context: Context) {
         if(playbackWork.current(ticket)) playResolved(selection.item,selection.imdb,selection.season,selection.episode,selection.resumeMs,stream)
     }
 
+    private val searchResultCache=linkedMapOf<String,Pair<Long,List<MediaSummary>>>()
     suspend fun searchFlexible(query: String): List<MediaSummary> = supervisorScope {
         val normalized=com.miflix.native2.data.FlexibleSearch.normalize(query)
         if(normalized.length<2) return@supervisorScope emptyList()
+        val cacheKey="${tmdb.language}:$normalized"
+        searchResultCache[cacheKey]?.takeIf { System.currentTimeMillis()-it.first<5*60*1000L }?.let { return@supervisorScope it.second }
         val local=(trending+movies+series+topRated+continueWatching+forYou+collectionItems+directorItems)
             .distinctBy { it.cloudId }.filter { com.miflix.native2.data.FlexibleSearch.score(it.title,normalized)>=650 }
         val remote=runCatching { tmdb.search(normalized) }.onFailure { if(it is CancellationException) throw it }.getOrDefault(emptyList())
         val extra=if(remote.size<5) com.miflix.native2.data.FlexibleSearch.variants(normalized).map { variant -> async {
             runCatching { tmdb.search(variant) }.onFailure { if(it is CancellationException) throw it }.getOrDefault(emptyList()).filter { com.miflix.native2.data.FlexibleSearch.score(it.title,normalized)>=650 }
         } }.awaitAll().flatten() else emptyList()
-        com.miflix.native2.data.FlexibleSearch.rank(local+remote+extra,normalized).take(60)
+        val ranked=com.miflix.native2.data.FlexibleSearch.rank(local+remote+extra,normalized).take(60)
+        if(searchResultCache.size>=12) searchResultCache.remove(searchResultCache.keys.first())
+        searchResultCache[cacheKey]=System.currentTimeMillis() to ranked
+        ranked
     }
 
     private val playbackSubtitleJobs = mutableMapOf<String, Deferred<List<SubtitleChoice>>>()

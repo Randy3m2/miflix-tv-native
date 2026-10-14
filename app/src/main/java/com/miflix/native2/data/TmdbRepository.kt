@@ -144,6 +144,23 @@ class TmdbRepository(var token: String) {
         return JSONObject(Http.text("$base$path?$query", headers = headers))
     }
 
+    // Theme keywords describe the subject, unlike title searches for "Christmas".
+    suspend fun seasonal(theme: String): List<MediaSummary> {
+        val keyword=when(theme) { "halloween" -> "halloween"; "christmas" -> "christmas"; else -> null }
+        if(keyword!=null) {
+            val matches=get("/search/keyword",mapOf("query" to keyword)).optJSONArray("results")
+            val ids=(0 until (matches?.length() ?: 0)).mapNotNull { i -> matches?.optJSONObject(i) }
+                .filter { it.optString("name").equals(keyword,ignoreCase=true) }.map { it.optInt("id") }.filter { it>0 }
+            if(ids.isNotEmpty()) {
+                val rows=parseList(get("/discover/movie",mapOf("with_keywords" to ids.joinToString("|"),
+                    "include_adult" to "false","sort_by" to "popularity.desc")),"movie",20)
+                if(rows.isNotEmpty()) return rows
+            }
+        }
+        if(theme=="christmas") return emptyList()
+        return discoverMovieGenre(SeasonalProgramming.genre(theme),pages=1,limit=20)
+    }
+
     suspend fun trending(): List<MediaSummary> = parseList(get("/trending/all/week"), limit = 20)
     suspend fun popularMovies(): List<MediaSummary> = parseList(get("/movie/popular"), "movie", 20)
     suspend fun popularSeries(): List<MediaSummary> = parseList(get("/tv/popular"), "series", 20)

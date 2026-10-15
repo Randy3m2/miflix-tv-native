@@ -158,6 +158,12 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 Text(notice,color=Color.White,fontSize=18.sp,modifier=Modifier.padding(32.dp).background(Color(0xEE272727),RoundedCornerShape(16.dp)).padding(20.dp))
             }
         }
+        state.profilePhotoEditor?.let { profile ->
+            AvatarPickerDialog(profile.avatarValue,choose={ avatar ->
+                state.launch { state.socialAction { state.setProfileAvatar(profile,avatar);state.profilePhotoEditor=null } }
+            },close={state.profilePhotoEditor=null},hidden=state.hiddenAvatars,remove=state::hideAvatar,restore=state::restoreAvatars,
+                customUpload={ state.profilePhotoEditor=null;state.launch { state.socialAction { state.startAvatarUpload(profile) } } })
+        }
         AvatarUploadDialog(state)
         PartyRequestPopup(state)
         if(state.partyClosedNotice) {

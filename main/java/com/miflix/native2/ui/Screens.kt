@@ -112,7 +112,7 @@ internal fun AppShell(state: AppState, screen: Screen, onNavigate: (Screen) -> U
     val contentFocus=remember { FocusRequester() }
     Column(Modifier.fillMaxSize().background(Bg)) {
         Sidebar(screen, state.activeProfile.name, onNavigate, state.notifications.size, state.activeProfile,
-            onMoveDown={ contentFocus.requestFocus(); Unit })
+            onMoveDown={ contentFocus.requestFocus(); Unit },onEditPicture={ state.profilePhotoEditor=state.activeProfile })
         Box(Modifier.weight(1f).fillMaxWidth().padding(bottom=24.dp).focusRequester(contentFocus).focusGroup(), content = content)
     }
 }
@@ -187,7 +187,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
             }
         }
         Sidebar(Screen.HOME,state.activeProfile.name,onNavigate,state.notifications.size,state.activeProfile,
-            backgroundAlpha=headerShade,onHeaderFocused=returnToTop,
+            backgroundAlpha=headerShade,onHeaderFocused=returnToTop,onEditPicture={ state.profilePhotoEditor=state.activeProfile },
             onMoveDown=({ scope.launch {
                 scroll.scrollToItem(0)
                 androidx.compose.runtime.withFrameNanos { }
@@ -1001,7 +1001,7 @@ fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
                         }
                         if(managing) {
                         FocusButton(tr("Cambiar nombre","Rename")) { profileName=profile.name; renamingProfile=profile }
-                        FocusButton("Avatar") { editingAvatar=profile }
+                        FocusButton(tr("Editar foto","Edit picture")) { editingAvatar=profile }
                         FocusButton(tr("Subir desde celular","Upload from phone")) { state.launch { state.socialAction { state.startAvatarUpload(profile) } } }
                         if(state.profiles.size>1) FocusButton(tr("Eliminar perfil","Delete profile")) { deletingProfile=profile }
                         }
@@ -1053,7 +1053,7 @@ fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
     editingAvatar?.let { profile ->
         AvatarPickerDialog(profile.avatarValue,hidden=state.hiddenAvatars,remove=state::hideAvatar,restore=state::restoreAvatars,choose={ avatar ->
             state.launch { state.socialAction { state.setProfileAvatar(profile,avatar); editingAvatar=null } }
-        },close={ editingAvatar=null })
+        },close={ editingAvatar=null },customUpload={ editingAvatar=null;state.launch { state.socialAction { state.startAvatarUpload(profile) } } })
     }
 }
 

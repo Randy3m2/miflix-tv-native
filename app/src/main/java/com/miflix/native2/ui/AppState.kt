@@ -982,8 +982,9 @@ class AppState(context: Context) {
         return true
     }
 
+    var profilePhotoEditor by mutableStateOf<Profile?>(null)
     suspend fun setProfileAvatar(profile: Profile, avatar: String) {
-        require(avatar=="none" || ProfileAvatars.any { it.key==avatar } || session?.let { avatarRepo.owns(avatar,it.userId) }==true) { tr("Elige un avatar disponible","Choose an available avatar") }
+        require(avatar=="none" || ProfileAvatars.any { it.key==avatar } || characterAvatar(avatar)!=null || session?.let { avatarRepo.owns(avatar,it.userId) }==true) { tr("Elige un avatar disponible","Choose an available avatar") }
         val owner=session
         val changed=profile.copy(avatarValue=avatar)
         val next=profiles.map { if(it.id==profile.id) changed else it }

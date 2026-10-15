@@ -353,7 +353,7 @@ fun Sidebar(screen: Screen, profileName: String, onNavigate: (Screen) -> Unit) {
 
 @Composable
 fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,notificationCount: Int,
-            profile: com.miflix.native2.model.Profile? = null, backgroundAlpha: Float = 0f, onHeaderFocused: (() -> Unit)? = null, onMoveDown: (() -> Unit)? = null) {
+            profile: com.miflix.native2.model.Profile? = null, backgroundAlpha: Float = 0f, onHeaderFocused: (() -> Unit)? = null, onMoveDown: (() -> Unit)? = null,onEditPicture: (() -> Unit)? = null) {
     val current=when(screen) {
         Screen.WATCH_PARTY -> Screen.FRIENDS
         Screen.COLLECTIONS,Screen.FRANCHISE,Screen.CUSTOM_FILTER,Screen.GENRES,Screen.GENRE_DETAIL,Screen.YEAR_DETAIL,Screen.PLATFORM_DETAIL,Screen.COLLECTION_DETAIL -> Screen.HOME
@@ -398,6 +398,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
                 Text(profileName,color=Muted,fontSize=13.sp,modifier=Modifier.padding(8.dp))
                 FocusButton(tr("Mi lista","My List"),modifier=Modifier.fillMaxWidth().focusRequester(menuFocus)) { profileMenu=false;onNavigate(Screen.MY_LIST) }
                 FocusButton(tr("Ajustes","Settings"),modifier=Modifier.fillMaxWidth()) { profileMenu=false;onNavigate(Screen.SETTINGS) }
+                onEditPicture?.let { edit -> FocusButton(tr("Editar foto","Edit picture"),modifier=Modifier.fillMaxWidth()) { profileMenu=false;edit() } }
                 FocusButton(tr("Cambiar perfil","Switch profile"),modifier=Modifier.fillMaxWidth()) { profileMenu=false;onNavigate(Screen.PROFILES) }
             }
         }

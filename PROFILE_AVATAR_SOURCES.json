@@ -1,0 +1,812 @@
+{
+  "description": "Internet-sourced profile portrait atlas catalog; each tile is 256x256, left to right.",
+  "usage": "Sources retain copyright. These are not official licensed BruniO packs. Alpha Coders labels its images for private/personal use; internet availability is not a commercial redistribution license. Preserve source credits and review permissions before public/commercial distribution.",
+  "packs": [
+    {
+      "id": "got",
+      "title": "Game of Thrones",
+      "sheet": "app/src/main/res/drawable-nodpi/brunio_pack_got.webp",
+      "portraits": [
+        {
+          "key": "pack:got:0",
+          "name": "Jon Snow",
+          "url": "https://www.arageek.com/_next/image?q=75&url=https%3A%2F%2Fcdn.arageek.com%2Fmagazine%2F2018%2F05%2F250116GOTJonSnow_SYK_250116-1-920x610-e1527406931583.jpg&w=3840",
+          "source": "https://www.arageek.com/bio/robb-stark",
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "size": 600
+          }
+        },
+        {
+          "key": "pack:got:1",
+          "name": "Daenerys",
+          "url": "https://i.pinimg.com/originals/05/ee/84/05ee842112b48d5495131317bfb4ee4c.jpg",
+          "source": "https://www.pinterest.com/pin/emilia-clarke-stars-as-daenerys-stormborn--294985844348433548/",
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "size": 547
+          }
+        },
+        {
+          "key": "pack:got:2",
+          "name": "Tyrion",
+          "url": "https://hips.hearstapps.com/hmg-prod/images/tyrion-lannister-1558383353.jpg?crop=1.00xw%3A0.421xh%3B0%2C0.174xh&resize=980%3A%2A",
+          "source": "https://www.fotogramas.es/series-tv-noticias/g27532862/juego-tronos-mejores-personajes-serie/",
+          "crop": {
+            "left": 213,
+            "top": 0,
+            "size": 553
+          }
+        },
+        {
+          "key": "pack:got:3",
+          "name": "Arya",
+          "url": "https://i.pinimg.com/originals/f0/0e/c3/f00ec30ea27b17b511b0a0ac77cba985.jpg",
+          "source": "https://www.artofit.org/image-gallery/949344796424716767/arya-stark-maisie-williams-game-of-thrones-tv-show-950x1534-wallpaper/",
+          "crop": {
+            "left": 45,
+            "top": 64,
+            "size": 660
+          }
+        },
+        {
+          "key": "pack:got:4",
+          "name": "Cersei",
+          "url": "https://hips.hearstapps.com/hmg-prod/images/collage-1556213631.png?crop=0.495xw%3A0.990xh%3B0%2C0&resize=1200%3A%2A",
+          "source": "https://www.elle.com/tw/entertainment/voice/g27214144/about-cersei-lena-headey/",
+          "crop": {
+            "left": 49,
+            "top": 0,
+            "size": 891
+          }
+        }
+      ]
+    },
+    {
+      "id": "lanterns",
+      "title": "Lanterns",
+      "sheet": "app/src/main/res/drawable-nodpi/brunio_pack_lanterns.webp",
+      "portraits": [
+        {
+          "key": "pack:lanterns:0",
+          "name": "Hal Jordan",
+          "url": "https://s.yimg.com/ny/api/res/1.2/rUkqDCM26XeUGJfw8lz.Ww--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02NzQ-/https%3A/media.zenfs.com/en/aol_tvline_com_892/57a2c18380dfb122c611ebd6620df8ac",
+          "source": "https://www.aol.com/entertainment/lanterns-rural-usa-setting-explained-131200826.html",
+          "crop": {
+            "left": 280,
+            "top": 34,
+            "size": 471
+          }
+        },
+        {
+          "key": "pack:lanterns:1",
+          "name": "John Stewart",
+          "url": "https://www.looper.com/img/gallery/green-lantern-hbo-series-predictions/l-intro-1784251038.jpg",
+          "source": "https://www.looper.com/2217214/green-lantern-hbo-series-predictions/",
+          "crop": {
+            "left": 485,
+            "top": 45,
+            "size": 630
+          }
+        },
+        {
+          "key": "pack:lanterns:2",
+          "name": "Sinestro",
+          "url": "https://www.tvline.com/img/gallery/sinestro-lanterns-actor-ulrich-thomsen/intro-1787582241.jpg",
+          "source": "https://tvline.com/2241732/sinestro-lanterns-actor-ulrich-thomsen/",
+          "crop": {
+            "left": 246,
+            "top": 44,
+            "size": 350
+          }
+        },
+        {
+          "key": "pack:lanterns:3",
+          "name": "Sheriff Kerry",
+          "url": "https://www.tvline.com/img/gallery/why-sheriff-kerry-from-lanterns-looks-so-familiar/l-intro-1787137837.jpg",
+          "source": "https://tvline.com/2239795/sheriff-kelly-lanterns-actress-kelly-macdonald/",
+          "crop": {
+            "left": 463,
+            "top": 40,
+            "size": 674
+          }
+        },
+        {
+          "key": "pack:lanterns:4",
+          "name": "William Macon",
+          "url": "https://www.syfy.com/sites/syfy/files/2026/09/article-kpromotes-1825x1217_0.jpg",
+          "source": "https://www.syfy.com/syfy-wire/garret-dillahunt-on-william-macon-nude-scene-in-lanterns-episode-4-exclusive",
+          "crop": {
+            "left": 809,
+            "top": 67,
+            "size": 571
+          }
+        }
+      ]
+    },
+    {
+      "id": "snyder",
+      "title": "Justice League · Snyder Cut",
+      "sheet": "app/src/main/res/drawable-nodpi/brunio_pack_snyder.webp",
+      "portraits": [
+        {
+          "key": "pack:snyder:0",
+          "name": "Superman",
+          "url": "https://img.asmedia.epimg.net/resizer/v2/C6M5WE5VD5I3DKLJV3ZH56MGTA.jpg?auth=f42c72a0e00bfa088881eaa68ebd8436d81494d4b7a45869ea3646605384b992&height=1200&smart=true&width=1200",
+          "source": "https://as.com/meristation/2019/12/13/noticias/1576238215_116085.html",
+          "crop": {
+            "left": 90,
+            "top": 0,
+            "size": 1020
+          }
+        },
+        {
+          "key": "pack:snyder:1",
+          "name": "Batman",
+          "url": "https://cdn.mos.cms.futurecdn.net/v2/t%3A0%2Cl%3A200%2Ccw%3A800%2Cch%3A600%2Cq%3A80%2Cw%3A800/DrksEFgPtuZ2giArHJ4qC7.jpg",
+          "source": "https://www.cinemablend.com/news/2565833/ben-afflecks-batman-and-dc-characters-i-would-love-to-see-in-james-gunns-the-suicide-squad",
+          "crop": {
+            "left": 160,
+            "top": 0,
+            "size": 480
+          }
+        },
+        {
+          "key": "pack:snyder:2",
+          "name": "Wonder Woman",
+          "url": "https://i.pinimg.com/736x/16/a2/b4/16a2b4ef110cc7b2d4bad4b4b99a471f.jpg",
+          "source": "https://ca.pinterest.com/pin/1196337387676006/",
+          "crop": {
+            "left": 66,
+            "top": 0,
+            "size": 603
+          }
+        },
+        {
+          "key": "pack:snyder:3",
+          "name": "Aquaman",
+          "url": "https://conteudo.imguol.com.br/c/entretenimento/e4/2017/11/10/jason-momoa-como-aquaman-em-liga-da-justica-1510347271238_v2_1x1.jpg",
+          "source": "https://cinema.uol.com.br/noticias/redacao/2017/11/13/de-amigo-dos-peixes-a-bad-boy-jason-momoa-salva-aquaman-do-ridiculo.htm",
+          "crop": {
+            "left": 81,
+            "top": 0,
+            "size": 916
+          }
+        },
+        {
+          "key": "pack:snyder:4",
+          "name": "Cyborg",
+          "url": "https://hips.hearstapps.com/hmg-prod/images/cyborg-liga-de-la-justicia-ray-fisher-fotogramas-1616403471.jpg?crop=0.563xw%3A1.00xh%3B0.224xw%2C0&resize=1200%3A%2A",
+          "source": "https://www.fotogramas.es/noticias-cine/a35898133/zack-snyder-arrepentido-pelicula-cyborg/",
+          "crop": {
+            "left": 51,
+            "top": 0,
+            "size": 573
+          }
+        }
+      ]
+    },
+    {
+      "id": "avengers",
+      "title": "Avengers",
+      "sheet": "app/src/main/res/drawable-nodpi/brunio_pack_avengers.webp",
+      "portraits": [
+        {
+          "key": "pack:avengers:0",
+          "name": "Iron Man",
+          "url": "https://img.asmedia.epimg.net/resizer/v2/GSD6TJSOXFO33B6UHC7PQPSKZE.jpg?auth=402c77841f2d9bd7ebf16642b0ae163916f2b097585da55b22070a4ef222281f&height=1200&smart=true&width=1200",
+          "source": "https://as.com/us/us/2019/07/27/tikitakas/1564241753_445841.html",
+          "crop": {
+            "left": 90,
+            "top": 0,
+            "size": 1020
+          }
+        },
+        {
+          "key": "pack:avengers:1",
+          "name": "Captain America",
+          "url": "https://i.pinimg.com/originals/d4/5f/f1/d45ff16c9e6cfb0d5a505d66b42226eb.jpg",
+          "source": "https://in.pinterest.com/pin/921408405007633652/",
+          "crop": {
+            "left": 108,
+            "top": 27,
+            "size": 864
+          }
+        },
+        {
+          "key": "pack:avengers:2",
+          "name": "Thor",
+          "url": "https://s1.cdn.autoevolution.com/images/news/acura-to-advertise-thor-34495_1.jpg",
+          "source": "https://www.autoevolution.com/news/acura-to-advertise-thor-34495.html",
+          "crop": {
+            "left": 77,
+            "top": 27,
+            "size": 870
+          }
+        },
+        {
+          "key": "pack:avengers:3",
+          "name": "Black Widow",
+          "url": "https://static4.wikia.nocookie.net/__cb20131202081633/shipping/images/b/b9/Marvel_-_Avengers_-_Natasha_Romanoff_%28The_Avengers%29.jpg",
+          "source": "https://shipping.wikia.com/wiki/Natasha_Romanoff",
+          "crop": {
+            "left": 102,
+            "top": 0,
+            "size": 610
+          }
+        },
+        {
+          "key": "pack:avengers:4",
+          "name": "Hulk",
+          "url": "https://www.inquirer.com/resizer/v2/4WGQMK6ZR5CF5PQEYIM63ELEEI.jpg?auth=2751f8af6cff6ca83315b90fc1d9f2df1c706981fc848fb41d2e5e218b899585&smart=true&width=760",
+          "source": "https://www.inquirer.com/health/avengers-endgame-diagnosing-medical-conditions-marvel-20190430.html",
+          "crop": {
+            "left": 123,
+            "top": 0,
+            "size": 513
+          }
+        }
+      ]
+    },
+    {
+      "id": "tlou",
+      "title": "The Last of Us",
+      "sheet": "app/src/main/res/drawable-nodpi/brunio_pack_tlou.webp",
+      "portraits": [
+        {
+          "key": "pack:tlou:0",
+          "name": "Joel",
+          "url": "https://i.pinimg.com/736x/19/b4/93/19b49335bf986a1b1ff01858e4c939a0.jpg",
+          "source": "https://www.pinterest.com/pin/800937114982123725/",
+          "crop": {
+            "left": 105,
+            "top": 6,
+            "size": 525
+          }
+        },
+        {
+          "key": "pack:tlou:1",
+          "name": "Ellie",
+          "url": "https://store.playstation.com/store/api/chihiro/00_09_000/container/GB/en/19/EP9000-CUSA10249_00-AV00000000000002/1553559935000/image",
+          "source": "https://www.resetera.com/threads/the-last-of-us-2-ps4-icon-revealed-also-a-mini-rant-of-how-much-game-icons-suck-this-gen.121855/page-2",
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "size": 1024
+          }
+        },
+        {
+          "key": "pack:tlou:2",
+          "name": "Tommy",
+          "url": "https://static.wikia.nocookie.net/thelastofus/images/f/f0/Part_II_Tommy_infobox.png/revision/latest?cb=20230216035810",
+          "source": "https://thelastofus.fandom.com/wiki/Tommy_Miller",
+          "crop": {
+            "left": 215,
+            "top": 0,
+            "size": 764
+          }
+        },
+        {
+          "key": "pack:tlou:3",
+          "name": "Abby",
+          "url": "https://static.wikia.nocookie.net/thelastofus/images/8/8b/Abby_TLOU2_remaster.PNG/revision/latest/scale-to-width-down/1200?cb=20240701200745",
+          "source": "https://thelastofus.fandom.com/wiki/Abby_Anderson",
+          "crop": {
+            "left": 216,
+            "top": 0,
+            "size": 768
+          }
+        },
+        {
+          "key": "pack:tlou:4",
+          "name": "Dina",
+          "url": "https://image.api.playstation.com/cdn/UP9000/CUSA07820_00/wvJCTO4Ez6oxbTOLRK8HAHU4I9lo2rlo.png",
+          "source": "https://psprices.com/region-us/game/2469072/the-last-of-us-part-ii-dina-avatar",
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "size": 1024
+          }
+        }
+      ]
+    },
+    {
+      "id": "gt",
+      "title": "Gran Turismo",
+      "sheet": "app/src/main/res/drawable-nodpi/brunio_pack_gt.webp",
+      "portraits": [
+        {
+          "key": "pack:gt:0",
+          "name": "Jann",
+          "url": "https://www.looper.com/img/gallery/was-the-gran-turismo-movie-really-based-on-a-true-story/l-intro-1691519419.jpg",
+          "source": "https://www.looper.com/1359445/is-gran-turismo-movie-based-on-true-story/",
+          "crop": {
+            "left": 440,
+            "top": 0,
+            "size": 720
+          }
+        },
+        {
+          "key": "pack:gt:1",
+          "name": "Jack Salter",
+          "url": "https://hips.hearstapps.com/hmg-prod/images/david-harbour-gran-turismo-64c7c5009f1ad.jpg?crop=0.172xw%3A0.305xh%3B0.245xw%2C0.0436xh&resize=1200%3A%2A",
+          "source": "https://www.menshealth.com/entertainment/a44919580/gran-turismo-post-credits-scene/",
+          "crop": {
+            "left": 78,
+            "top": 0,
+            "size": 875
+          }
+        },
+        {
+          "key": "pack:gt:2",
+          "name": "Danny Moore",
+          "url": "https://i0.wp.com/www.thewrap.com/wp-content/uploads/2023/08/GranTurismo-Orlando-Bloom-Danny-Moore.jpg?ssl=1&w=1200",
+          "source": "https://www.thewrap.com/gran-turismo-movie-cast-characters/",
+          "crop": {
+            "left": 484,
+            "top": 54,
+            "size": 472
+          }
+        },
+        {
+          "key": "pack:gt:3",
+          "name": "Matty Davis",
+          "url": "https://images.gram.pl/news/nzlh20220920112618144ulan.jpg",
+          "source": "https://www.gram.pl/news/gwiazda-netflixa-dolacza-do-gran-turismo-obsada-filmu-sony-zaczyna-robic-wrazenie",
+          "crop": {
+            "left": 480,
+            "top": 15,
+            "size": 600
+          }
+        },
+        {
+          "key": "pack:gt:4",
+          "name": "Audrey",
+          "url": "https://www.dexerto.com/cdn-cgi/image/width%3D3840%2Cquality%3D75%2Cformat%3Dauto/https%3A/editors.dexerto.com/wp-content/uploads/2023/08/08/maeve-courtier-lilley-gran-turismo-cast-characters-1024x575.jpeg",
+          "source": "https://www.dexerto.com/tv-movies/gran-turismo-cast-characters-2241407/",
+          "crop": {
+            "left": 315,
+            "top": 11,
+            "size": 414
+          }
+        }
+      ]
+    },
+    {
+      "id": "wwe",
+      "title": "WWE",
+      "sheet": "app/src/main/res/drawable-nodpi/brunio_pack_wwe.webp",
+      "portraits": [
+        {
+          "key": "pack:wwe:0",
+          "name": "Roman Reigns",
+          "url": "https://freepngimg.com/thumb/wwe/24058-5-roman-reigns-picture.png",
+          "source": "https://freepngimg.com/png/24058-roman-reigns-picture",
+          "crop": {
+            "left": 270,
+            "top": 0,
+            "size": 459
+          }
+        },
+        {
+          "key": "pack:wwe:1",
+          "name": "Cody Rhodes",
+          "url": "https://www.wwe.com/f/styles/talent_champion_lg/public/2025/08/CODY_04262024gd_0100_headSawp_Profile.png",
+          "source": "https://www.wwe.com/superstars/cody-rhodes",
+          "crop": {
+            "left": 270,
+            "top": 0,
+            "size": 459
+          }
+        },
+        {
+          "key": "pack:wwe:2",
+          "name": "John Cena",
+          "url": "https://www.wwe.com/f/styles/wwe_1_1_540/public/all/2025/04/Cena_04212025rf_575_Profile--88403e6e6a9851a9491e454258bd0d44.png",
+          "source": "https://www.wwe.com/superstars",
+          "crop": {
+            "left": 40,
+            "top": 0,
+            "size": 459
+          }
+        },
+        {
+          "key": "pack:wwe:3",
+          "name": "Rhea Ripley",
+          "url": "https://www.wwe.com/f/styles/talent_champion_lg/public/2026/04/Rhea_04242026ca_037_Profile.png",
+          "source": "https://www.wwe.com/superstars/rhea-ripley",
+          "crop": {
+            "left": 270,
+            "top": 0,
+            "size": 459
+          }
+        },
+        {
+          "key": "pack:wwe:4",
+          "name": "Undertaker",
+          "url": "https://www.wwe.com/f/styles/talent_champion_lg/public/all/2020/01/Undertaker_Pro--e73c07b669f8d823088cf8de4cebfde8.png",
+          "source": "https://www.wwe.com/superstars/undertaker",
+          "crop": {
+            "left": 270,
+            "top": 0,
+            "size": 459
+          }
+        }
+      ]
+    },
+    {
+      "id": "gow",
+      "title": "God of War",
+      "sheet": "app/src/main/res/drawable-nodpi/brunio_pack_gow.webp",
+      "portraits": [
+        {
+          "key": "pack:gow:0",
+          "name": "Kratos",
+          "url": "https://assetsio.gnwcdn.com/god-of-war-aktor-headline.jpg?auto=webp&enable=upscale&fit=crop&format=png&height=1200&quality=100&width=1200",
+          "source": "https://www.eurogamer.pl/kratos-mial-zginac-na-poczatku-god-of-war-ragnarok-ujawnia-deweloper",
+          "crop": {
+            "left": 60,
+            "top": 0,
+            "size": 1080
+          }
+        },
+        {
+          "key": "pack:gow:1",
+          "name": "Atreus",
+          "url": "https://staticg.sportskeeda.com/editor/2022/11/b7341-16680004231592-1920.jpg?w=840",
+          "source": "https://www.sportskeeda.com/esports/god-war-ragnarok-travelling-jotunheim",
+          "crop": {
+            "left": 42,
+            "top": 0,
+            "size": 756
+          }
+        },
+        {
+          "key": "pack:gow:2",
+          "name": "Freya",
+          "url": "https://staticg.sportskeeda.com/editor/2022/11/db7c5-16687924488177-1920.jpg",
+          "source": "https://www.sportskeeda.com/esports/why-freya-enemy-god-war-ragnarok",
+          "crop": {
+            "left": 540,
+            "top": 36,
+            "size": 840
+          }
+        },
+        {
+          "key": "pack:gow:3",
+          "name": "Mimir",
+          "url": "https://www.zbrushcentral.com/uploads/default/original/4X/6/6/e/66e5068947223ff73ca53d923de97fd81c18f480.jpeg",
+          "source": "https://www.zbrushcentral.com/t/god-of-war-mimir/448391",
+          "crop": {
+            "left": 0,
+            "top": 472,
+            "size": 2250
+          }
+        },
+        {
+          "key": "pack:gow:4",
+          "name": "Thor",
+          "url": "https://cdn.mos.cms.futurecdn.net/v2/t%3A0%2Cl%3A420%2Ccw%3A1080%2Cch%3A1080%2Cq%3A80%2Cw%3A1080/AVjisjv2U39mb4Layq6BqD.jpg",
+          "source": "https://www.gamesradar.com/god-of-war-ragnarok-character-designs-show-off-ryan-hursts-beefy-thor/",
+          "crop": {
+            "left": 54,
+            "top": 0,
+            "size": 972
+          }
+        }
+      ]
+    },
+    {
+      "id": "ghost",
+      "title": "Ghost of Tsushima",
+      "sheet": "app/src/main/res/drawable-nodpi/brunio_pack_ghost.webp",
+      "portraits": [
+        {
+          "key": "pack:ghost:0",
+          "name": "Jin Sakai",
+          "url": "https://psn-rsc.prod.dl.playstation.net/psn-rsc/avatar/EP9000/CUSA13323_00-AV00000000000001_62CCBEC7437D02076B02_xl.png",
+          "source": "https://store.playstation.com/de-de/product/UP9000-PPSA26344_00-GHOST2DDEBUNDLE0",
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "size": 440
+          }
+        },
+        {
+          "key": "pack:ghost:1",
+          "name": "Yuna",
+          "url": "https://i.pinimg.com/736x/9d/ec/63/9dec63f94904651f0737cf58c1f69d8d.jpg",
+          "source": "https://br.pinterest.com/pin/yuna-ghost-of-tsushima--636485359853102930/",
+          "crop": {
+            "left": 55,
+            "top": 55,
+            "size": 625
+          }
+        },
+        {
+          "key": "pack:ghost:2",
+          "name": "Lord Shimura",
+          "url": "https://gamenews.es/wp-content/uploads/2020/12/kill-or-spare-shimura-in-ghost-of-tsushima-guide.jpg",
+          "source": "https://gamenews.es/fantasma-de-tsushima-quien-es-lord-shimura/",
+          "crop": {
+            "left": 475,
+            "top": 36,
+            "size": 610
+          }
+        },
+        {
+          "key": "pack:ghost:3",
+          "name": "Ryuzo",
+          "url": "https://uploads.worldanvil.com/uploads/images/9258e9d8b862a05f9a78c0e97287e538.jpg",
+          "source": "https://www.worldanvil.com/hero/2c27b2d9-1ed2-4793-b36f-70597583e711",
+          "crop": {
+            "left": 94,
+            "top": 0,
+            "size": 770
+          }
+        },
+        {
+          "key": "pack:ghost:4",
+          "name": "Khotun Khan",
+          "url": "https://vignette.wikia.nocookie.net/ghostoftsushima/images/c/cd/TheKhan2.jpeg/revision/latest?cb=20200305230206",
+          "source": "https://ghostoftsushima.fandom.com/wiki/Khotun_Khan",
+          "crop": {
+            "left": 148,
+            "top": 0,
+            "size": 655
+          }
+        }
+      ]
+    },
+    {
+      "id": "rdr2",
+      "title": "Red Dead Redemption 2",
+      "sheet": "app/src/main/res/drawable-nodpi/brunio_pack_rdr2.webp",
+      "portraits": [
+        {
+          "key": "pack:rdr2:0",
+          "name": "Arthur Morgan",
+          "url": "https://avatarfiles.alphacoders.com/140/140579.png",
+          "source": "https://avatars.alphacoders.com/avatars/view/140579",
+          "crop": {
+            "left": 172,
+            "top": 0,
+            "size": 602
+          }
+        },
+        {
+          "key": "pack:rdr2:1",
+          "name": "John Marston",
+          "url": "https://i.pinimg.com/originals/b3/4a/f9/b34af9e2188dab7c6a0bfa4b527b7449.jpg",
+          "source": "https://fr.pinterest.com/pin/31806741113928401/",
+          "crop": {
+            "left": 81,
+            "top": 5,
+            "size": 918
+          }
+        },
+        {
+          "key": "pack:rdr2:2",
+          "name": "Dutch",
+          "url": "https://i.pinimg.com/736x/92/6e/35/926e35c089075232566f5e83f093a804.jpg",
+          "source": "https://www.pinterest.com/pin/pinterest--292663675797414474/",
+          "crop": {
+            "left": 44,
+            "top": 0,
+            "size": 647
+          }
+        },
+        {
+          "key": "pack:rdr2:3",
+          "name": "Sadie Adler",
+          "url": "https://vignette.wikia.nocookie.net/reddeadredemption/images/c/c2/Sadie_adler.png/revision/latest?cb=20180503164459",
+          "source": "https://chrism227.wordpress.com/2019/01/09/video-games-in-review-red-dead-redemption-2-some-spoilers/",
+          "crop": {
+            "left": 47,
+            "top": 0,
+            "size": 586
+          }
+        },
+        {
+          "key": "pack:rdr2:4",
+          "name": "Charles Smith",
+          "url": "https://media-rockstargames-com.akamaized.net/rockstargames-newsite/img/global/downloads/wallpapers/games/rdr2_charles_smith_tablet.jpg",
+          "source": "https://www.rockstargames.com/reddeadredemption2/downloads",
+          "crop": {
+            "left": 614,
+            "top": 266,
+            "size": 819
+          }
+        }
+      ]
+    },
+    {
+      "id": "dcu",
+      "title": "DCU",
+      "sheet": "app/src/main/res/drawable-nodpi/brunio_pack_dcu.webp",
+      "portraits": [
+        {
+          "key": "pack:dcu:0",
+          "name": "Superman",
+          "url": "https://media.assettype.com/gulfnews%2F2025-07-09%2F83ash0jp%2FSuperman-STOCK?ar=40%3A21&auto=format%2Ccompress&enlarge=true&mode=crop&ogImage=true&overlay=false&overlay_position=bottom&overlay_width=100&w=1200",
+          "source": "https://gulfnews.com/entertainment/hollywood/1st-ld-writethru-880-1.500191586",
+          "crop": {
+            "left": 217,
+            "top": 0,
+            "size": 765
+          }
+        },
+        {
+          "key": "pack:dcu:1",
+          "name": "Krypto",
+          "url": "https://cdn.mos.cms.futurecdn.net/v2/t%3A0%2Cl%3A280%2Ccw%3A720%2Cch%3A720%2Cq%3A80%2Cw%3A720/Qv2ub4N2Nscp5eUM9Kc4AP.jpg",
+          "source": "https://www.cinemablend.com/superheroes/superman/superman-krypto-actor-reveals-one-question-she-keeps-getting-touching-david-corenswet",
+          "crop": {
+            "left": 0,
+            "top": 0,
+            "size": 720
+          }
+        },
+        {
+          "key": "pack:dcu:2",
+          "name": "Mister Terrific",
+          "url": "https://imgix.bustle.com/uploads/image/2025/7/14/509fb509/mr-terrific.jpg?crop=faces&fit=crop&fm=jpg&h=1200&w=1200",
+          "source": "https://www.inverse.com/entertainment/mr-terrific-spinoff-james-gunn-formula",
+          "crop": {
+            "left": 90,
+            "top": 66,
+            "size": 1020
+          }
+        },
+        {
+          "key": "pack:dcu:3",
+          "name": "Hawkgirl",
+          "url": "https://img.cinematoday.jp/a/Qx_P2dEccGdI/_size_r1200x630/_v_1752221421/main.jpg",
+          "source": "https://www.cinematoday.jp/news/N0149789",
+          "crop": {
+            "left": 243,
+            "top": 129,
+            "size": 472
+          }
+        },
+        {
+          "key": "pack:dcu:4",
+          "name": "Guy Gardner",
+          "url": "https://www.superherohype.com/wp-content/uploads/sites/4/2024/12/Superman-Nathan-Fillion.jpg?resize=768",
+          "source": "https://www.superherohype.com/guides/589770-superman-guy-gardner-nathan-fillion-dc-green-lantern-explained",
+          "crop": {
+            "left": 397,
+            "top": 3,
+            "size": 573
+          }
+        }
+      ]
+    },
+    {
+      "id": "power",
+      "title": "Power",
+      "sheet": "app/src/main/res/drawable-nodpi/brunio_pack_power.webp",
+      "portraits": [
+        {
+          "key": "pack:power:0",
+          "name": "Ghost",
+          "url": "https://hips.hearstapps.com/hmg-prod/images/omari-hardwick-ghost-power-1572962156.jpg?crop=1xw%3A0.84375xh%3Bcenter%2Ctop&resize=1200%3A%2A",
+          "source": "https://www.digitalspy.com/tv/ustv/a30853263/power-courtney-kemp-alternate-scenes-final-episode-ghost-killer/",
+          "crop": {
+            "left": 210,
+            "top": 13,
+            "size": 540
+          }
+        },
+        {
+          "key": "pack:power:1",
+          "name": "Tommy",
+          "url": "https://m.media-amazon.com/images/M/MV5BNTc5NjNmZTktOWI5ZS00YWVjLTgxOTUtNTBhYWIzMDE3MTIxXkEyXkFqcGc%40._V1_.jpg",
+          "source": "https://www.imdb.com/name/nm7034048/news/",
+          "crop": {
+            "left": 141,
+            "top": 0,
+            "size": 618
+          }
+        },
+        {
+          "key": "pack:power:2",
+          "name": "Tasha",
+          "url": "https://www.tvinsider.com/wp-content/uploads/2018/08/10cb2369-ef78-4426-9a53-46c5fb26d3cc-855x570.jpg",
+          "source": "https://www.tvinsider.com/708590/power-season-5-interview-naturi-naughton/",
+          "crop": {
+            "left": 228,
+            "top": 17,
+            "size": 399
+          }
+        },
+        {
+          "key": "pack:power:3",
+          "name": "Tariq",
+          "url": "https://bilder.fernsehserien.de/gfx/pics/1200/Michael-Rainey-Jr-In-Power-Book-Ii-Ghost.jpg.jpg",
+          "source": "https://www.fernsehserien.de/news/power-book-ii-ghost-endet-mit-vierter-staffel",
+          "crop": {
+            "left": 52,
+            "top": 0,
+            "size": 935
+          }
+        },
+        {
+          "key": "pack:power:4",
+          "name": "Kanan",
+          "url": "https://hips.hearstapps.com/digitalspyuk.cdnds.net/18/27/1530535151-50-cent-kanan-power.jpg?resize=640%3A%2A",
+          "source": "https://www.digitalspy.com/tv/ustv/a860752/power-season-5-spoilers-huge-deaths-series-boss-warns-no-one-safe/",
+          "crop": {
+            "left": 130,
+            "top": 0,
+            "size": 469
+          }
+        }
+      ]
+    },
+    {
+      "id": "ds",
+      "title": "Death Stranding",
+      "sheet": "app/src/main/res/drawable-nodpi/brunio_pack_ds.webp",
+      "portraits": [
+        {
+          "key": "pack:ds:0",
+          "name": "Sam",
+          "url": "https://gcp-na-images.contentstack.com/v3/assets/bltea6093859af6183b/bltc01edb8da0884d6d/698a053309208f37f7415c7b/death-stranding-review.png?auto=webp&branch=production&crop=3%3A2&quality=75&width=3840",
+          "source": "https://time.com/5716354/death-stranding-review/",
+          "crop": {
+            "left": 716,
+            "top": 140,
+            "size": 2176
+          }
+        },
+        {
+          "key": "pack:ds:1",
+          "name": "Fragile",
+          "url": "https://d1lss44hh2trtw.cloudfront.net/assets/article/2020/03/03/death-stranding-on-pc-will-be-saddled-with-denuvo-drm_feature.jpg",
+          "source": "https://www.shacknews.com/article/116674/death-stranding-on-pc-will-be-saddled-with-denuvo-drm",
+          "crop": {
+            "left": 206,
+            "top": 3,
+            "size": 612
+          }
+        },
+        {
+          "key": "pack:ds:2",
+          "name": "Higgs",
+          "url": "https://www.presse-citron.net/app/uploads/2019/12/Death-Stranding-Higgs.jpg",
+          "source": "https://www.presse-citron.net/test-de-death-stranding-est-il-reellement-le-chef-doeuvre-de-2019/",
+          "crop": {
+            "left": 443,
+            "top": 59,
+            "size": 918
+          }
+        },
+        {
+          "key": "pack:ds:3",
+          "name": "Cliff",
+          "url": "https://cdn.mos.cms.futurecdn.net/7ZHHxEMwhhDHa8aYNAfBSS.jpg",
+          "source": "https://www.gamesradar.com/death-stranding-ending-story-explained-meaning/",
+          "crop": {
+            "left": 512,
+            "top": 0,
+            "size": 972
+          }
+        },
+        {
+          "key": "pack:ds:4",
+          "name": "Die-Hardman",
+          "url": "https://cdn.mos.cms.futurecdn.net/YS38DbcLbTPnw3FZVvdneQ.jpg",
+          "source": "https://www.gamesradar.com/death-stranding-ending-story-explained-meaning/",
+          "crop": {
+            "left": 341,
+            "top": 0,
+            "size": 648
+          }
+        }
+      ]
+    }
+  ]
+}

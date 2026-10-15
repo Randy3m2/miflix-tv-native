@@ -112,7 +112,7 @@ internal fun AppShell(state: AppState, screen: Screen, onNavigate: (Screen) -> U
     val contentFocus=remember { FocusRequester() }
     Column(Modifier.fillMaxSize().background(Bg)) {
         Sidebar(screen, state.activeProfile.name, onNavigate, state.notifications.size, state.activeProfile,
-            onMoveDown={ contentFocus.requestFocus(); Unit },onEditPicture={ state.profilePhotoEditor=state.activeProfile })
+            onMoveDown={ contentFocus.requestFocus(); Unit },onEditPicture={ state.profilePhotoEditor=state.activeProfile },kids=state.kidsMode)
         Box(Modifier.weight(1f).fillMaxWidth().padding(bottom=24.dp).focusRequester(contentFocus).focusGroup(), content = content)
     }
 }
@@ -120,7 +120,10 @@ internal fun AppShell(state: AppState, screen: Screen, onNavigate: (Screen) -> U
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
+    val genreScroll=rememberLazyListState()
+    val firstGenre=remember {FocusRequester()}
     val scroll=rememberLazyListState()
+    LaunchedEffect(state.activeProfile.id,state.interfaceLanguage) {if(state.trending.isEmpty()) state.loadHome()}
     val heroFocus=remember { FocusRequester() }
     val contentFocus=remember { FocusRequester() }
     val scope=rememberCoroutineScope()
@@ -156,8 +159,8 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 item(key="genres_home") { Column {
                     Text(tr("Explora por género","Browse by genre"),color=Color.White,fontSize=24.sp,lineHeight=29.sp,fontWeight=FontWeight.Bold,
                         modifier=Modifier.padding(start=40.dp,end=40.dp,top=16.dp,bottom=16.dp))
-                    LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=32.dp).clipToBounds(),contentPadding=PaddingValues(horizontal=8.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
-                        items(state.genres,key={it.id}) { genre -> GenreCard(genre.copy(coverUrl=state.genreCovers[genre.id] ?: genre.coverUrl)) { state.launch { state.openGenre(genre) } } }
+                    LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=32.dp).clipToBounds().smoothHorizontalDpad().firstCardOnDown(genreScroll,firstGenre),state=genreScroll,contentPadding=PaddingValues(horizontal=8.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
+                        items(state.genres,key={it.id}) { genre -> GenreCard(genre.copy(coverUrl=state.genreCovers[genre.id] ?: genre.coverUrl),modifier=if(genre.id==state.genres.firstOrNull()?.id) Modifier.focusRequester(firstGenre) else Modifier) { state.launch { state.openGenre(genre) } } }
                     }
                     FocusButton(tr("Todas las colecciones →","All collections →"),modifier=Modifier.padding(start=40.dp,top=12.dp)) { onNavigate(Screen.COLLECTIONS) }
                     Spacer(Modifier.height(24.dp))
@@ -187,7 +190,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
             }
         }
         Sidebar(Screen.HOME,state.activeProfile.name,onNavigate,state.notifications.size,state.activeProfile,
-            backgroundAlpha=headerShade,onHeaderFocused=returnToTop,onEditPicture={ state.profilePhotoEditor=state.activeProfile },
+            backgroundAlpha=headerShade,onHeaderFocused=returnToTop,onEditPicture={ state.profilePhotoEditor=state.activeProfile },kids=state.kidsMode,
             onMoveDown=({ scope.launch {
                 scroll.scrollToItem(0)
                 androidx.compose.runtime.withFrameNanos { }
@@ -282,14 +285,21 @@ private fun MediaRail(
 
 @Composable
 private fun CollectionRail(title: String, rows: List<CollectionTile>, onClick: (CollectionTile) -> Unit) {
+    val railScroll=rememberLazyListState()
+    val firstCard=remember {FocusRequester()}
     Column(Modifier.fillMaxWidth().height(228.dp)) {
         Text(title, color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 40.dp,end=40.dp, bottom = 8.dp))
         LazyRow(
-            modifier=Modifier.fillMaxWidth().padding(horizontal=32.dp).clipToBounds(),
+            modifier=Modifier.fillMaxWidth().padding(horizontal=32.dp).clipToBounds().smoothHorizontalDpad().firstCardOnDown(railScroll,firstCard),
+            state=railScroll,
             contentPadding = PaddingValues(horizontal=8.dp,vertical=8.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            items(rows, key = { it.id }) { tile -> CollectionCard(tile) { onClick(tile) } }
+            items(rows, key = { it.id }) { tile ->
+                Box(if(tile.id==rows.firstOrNull()?.id) Modifier.focusRequester(firstCard) else Modifier) {
+                    CollectionCard(tile) { onClick(tile) }
+                }
+            }
         }
     }
 }
@@ -320,6 +330,8 @@ fun SearchScreen(state: AppState, onBack: () -> Unit) = CinematicSearchScreen(st
 
 @Composable
 fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
+    val genreScroll=rememberLazyListState()
+    val firstGenre=remember {FocusRequester()}
     BackHandler(onBack = onBack)
     LaunchedEffect(Unit) { state.loadDiscoveryArt(); state.loadHomeExtras(); runCatching { state.loadComingSoon() }.onFailure { state.error=it.message } }
     val years = (java.util.Calendar.getInstance().get(java.util.Calendar.YEAR) downTo 1990).map { year -> CollectionTile("year:$year", year.toString(), "") }
@@ -347,8 +359,8 @@ fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
             item { Column {
                 Text(tr("Géneros","Genres"),color=Color.White,fontSize=24.sp,lineHeight=29.sp,fontWeight=FontWeight.Bold,
                     modifier=Modifier.padding(start=34.dp,bottom=16.dp))
-                LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=26.dp),contentPadding=PaddingValues(horizontal=8.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
-                    items(state.genres,key={it.id}) { genre -> GenreCard(genre.copy(coverUrl=state.genreCovers[genre.id] ?: genre.coverUrl)) { state.launch { state.openGenre(genre) } } }
+                LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=26.dp).firstCardOnDown(genreScroll,firstGenre),state=genreScroll,contentPadding=PaddingValues(horizontal=8.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
+                    items(state.genres,key={it.id}) { genre -> GenreCard(genre.copy(coverUrl=state.genreCovers[genre.id] ?: genre.coverUrl),modifier=if(genre.id==state.genres.firstOrNull()?.id) Modifier.focusRequester(firstGenre) else Modifier) { state.launch { state.openGenre(genre) } } }
                 }
                 Spacer(Modifier.height(24.dp))
             } }
@@ -400,10 +412,10 @@ fun GenresScreen(state: AppState, onBack: () -> Unit) {
 }
 
 @Composable
-private fun GenreCard(g: GenreDefinition, onClick: () -> Unit) {
+private fun GenreCard(g: GenreDefinition,modifier: Modifier=Modifier,onClick: () -> Unit) {
     var focused by remember(g.id) { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) 1.012f else 1f, tween(80), label = "genreScale")
-    Column(Modifier.width(BrowseTileSlotWidth)) {
+    Column(modifier.width(BrowseTileSlotWidth)) {
         Box(Modifier.width(BrowseTileSlotWidth).height(BrowseTileSlotHeight),contentAlignment=Alignment.Center) {
             Box(Modifier.width(BrowseTileWidth).height(BrowseTileHeight).graphicsLayer { scaleX=scale;scaleY=scale }
                 .onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
@@ -552,8 +564,8 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                         FocusButton(if (state.favorites.contains(item.cloudId)) tr("✓ Mi lista","✓ My List") else tr("+ Mi lista","+ My List")) {
                             state.toggleFavorite(item); state.launch { runCatching { state.pushCloud() } }
                         }
-                        FocusButton(tr("Sala compartida","Watch Party")) { state.screen = Screen.WATCH_PARTY }
-                        FocusButton(tr("Más","More")) { showMore=true }
+                        if(!state.kidsMode) FocusButton(tr("Sala compartida","Watch Party")) { state.screen = Screen.WATCH_PARTY }
+                        if(!state.kidsMode) FocusButton(tr("Más","More")) { showMore=true }
                     }
                     Spacer(Modifier.height(38.dp))
                 }
@@ -581,7 +593,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                 }
             }
 
-            item(key="cast-reviews") {
+            if(!state.kidsMode) item(key="cast-reviews") {
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(24.dp)) {
                     Column(Modifier.weight(1f)) {
                         Text(tr("Reparto","Cast"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
@@ -595,7 +607,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                 Spacer(Modifier.height(24.dp))
             }
 
-            if (!details?.trailers.isNullOrEmpty()) {
+            if (!state.kidsMode && !details?.trailers.isNullOrEmpty()) {
                 item(key = "trailers") {
                     Text(tr("Tráilers","Trailers"), color = Color.White, fontSize = 27.sp, lineHeight=32.sp, fontWeight = FontWeight.Black)
                     Spacer(Modifier.height(14.dp))
@@ -1003,7 +1015,7 @@ fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
                         FocusButton(tr("Cambiar nombre","Rename")) { profileName=profile.name; renamingProfile=profile }
                         FocusButton(tr("Editar foto","Edit picture")) { editingAvatar=profile }
                         FocusButton(tr("Subir desde celular","Upload from phone")) { state.launch { state.socialAction { state.startAvatarUpload(profile) } } }
-                        if(state.profiles.size>1) FocusButton(tr("Eliminar perfil","Delete profile")) { deletingProfile=profile }
+                        if(state.profiles.size>1 && !profile.isKids && profile.id!=com.miflix.native2.data.KidsContentPolicy.PROFILE_ID) FocusButton(tr("Eliminar perfil","Delete profile")) { deletingProfile=profile }
                         }
                     }
                 }

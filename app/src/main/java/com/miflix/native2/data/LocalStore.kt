@@ -22,11 +22,11 @@ class LocalStore(context: Context) {
 
     fun offlineProfiles(): List<Profile> = runCatching {
         val a=JSONArray(p.getString("offline_profiles","[]"))
-        (0 until a.length()).map { a.getJSONObject(it).let { x -> Profile(x.getString("id"),x.getString("name"),x.optString("avatarValue").takeUnless { it.isBlank() || it=="null" },x.optBoolean("primary")) } }
+        (0 until a.length()).map { a.getJSONObject(it).let { x -> Profile(x.getString("id"),x.getString("name"),x.optString("avatarValue").takeUnless { it.isBlank() || it=="null" },x.optBoolean("primary"),x.optBoolean("isKids") || x.optString("id")==KidsContentPolicy.PROFILE_ID) } }
     }.getOrDefault(emptyList())
     fun saveOfflineProfiles(profiles: List<Profile>) {
         val a=JSONArray()
-        profiles.forEach { a.put(JSONObject().put("id",it.id).put("name",it.name).put("avatarValue",it.avatarValue).put("primary",it.primary)) }
+        profiles.forEach { a.put(JSONObject().put("id",it.id).put("name",it.name).put("avatarValue",it.avatarValue).put("primary",it.primary).put("isKids",it.isKids)) }
         p.edit().putString("offline_profiles",a.toString()).apply()
     }
     fun saveProfileId(id: String) = p.edit().putString("profile", id).apply()

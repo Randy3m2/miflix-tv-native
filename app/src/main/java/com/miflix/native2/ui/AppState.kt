@@ -188,6 +188,7 @@ class AppState(context: Context) {
         else -> "https://stremio-addon-wheat.vercel.app/manifest.json"
     }
     suspend fun openCalendarEvent(event: CalendarEvent) {
+        require(!kidsMode) {"Calendar playback is not available in Kids."}
         if(event.kind=="live" || event.kind=="sports") {
             require(partyRole!=PartyRole.GUEST) { tr("El anfitrión elige el contenido de la sala","The host chooses the room content") }
             val owner=session?.userId;val epoch=partyEpoch
@@ -225,6 +226,7 @@ class AppState(context: Context) {
             val known = org.json.JSONObject(playbackPrefs.getString(knownOwner,"{}"))
             for(id in ids) {
                 val item = runCatching { tmdb.byCloudId(id) }.getOrNull() ?: continue
+                if(kidsMode && !tmdb.kidsAllowed(item)) continue
                 val releaseResult = runCatching { tmdb.latestRelease(item) }
                 if(releaseResult.isFailure) continue
                 val release = releaseResult.getOrNull()
@@ -341,6 +343,7 @@ class AppState(context: Context) {
             .sortedWith(compareByDescending<MediaSummary> { ranking[it.cloudId] ?: 0.0 }.thenByDescending { it.rating }).take(30)
     }
     suspend fun refreshForYou() {
+        if(kidsMode) {forYou.clear();return}
         val owner=ratingsKey(); val revision=ratings.toMap()
         val rows=if(revision.values.any { it>=6 }) recommendationsFor() else emptyList()
         if(owner==ratingsKey() && revision==ratings.toMap()) { forYou.clear(); forYou.addAll(rows) }
@@ -654,7 +657,9 @@ class AppState(context: Context) {
             } } }.awaitAll().filterNotNull()
             if(myListOwner!=owner || generation!=myListGeneration || owner!="${session?.userId}:${activeProfile.id}") return@coroutineScope
             rows.forEach { myListCache[it.cloudId]=it };myListCache.keys.retainAll(ids.toSet())
-            myListTitles.clear();myListTitles.addAll(rows)
+            val visible=if(kidsMode) tmdb.kidsFilter(rows) else rows
+            if(myListOwner!=owner || generation!=myListGeneration || owner!="${session?.userId}:${activeProfile.id}") return@coroutineScope
+            myListTitles.clear();myListTitles.addAll(visible)
             if(rows.size<desired.size) myListMessage=tr("Algunos títulos no pudieron cargar.","Some titles could not load.")
         } finally { if(generation==myListGeneration) myListLoading=false }
     }
@@ -767,11 +772,13 @@ class AppState(context: Context) {
     var miniPlayer by mutableStateOf(false)
     val multiViewRequests = mutableStateListOf<PlayerRequest>()
     fun openLivePlayer(req: PlayerRequest) {
+        require(!kidsMode) {tr("TV en vivo no está disponible en Kids.","Live TV is not available in Kids.") }
         invalidatePlaybackWork()
         if(req.liveProvider.isNotBlank() && liveProviderTab!=req.liveProvider) { liveProviderTab=req.liveProvider;liveCategoryId=null }
         miniPlayer=false;selected=req.item;playerRequest=req;screen=Screen.PLAYER
     }
     fun beginMultiView(req: PlayerRequest) {
+        require(!kidsMode) {"Multiview is not available in Kids."}
         require(req.live)
         if(req.liveProvider.isNotBlank()) liveProviderTab=req.liveProvider
         miniPlayer=false;multiViewRequests.clear();multiViewRequests.add(req)
@@ -846,8 +853,51 @@ class AppState(context: Context) {
         try { block() } catch(e: CancellationException) { throw e } catch(e: Exception) { error=e.message ?: tr("No se pudo completar la operación","Could not complete the operation") }
     }
 
+    val kidsMode: Boolean get()=activeProfile.isKids || activeProfile.id==KidsContentPolicy.PROFILE_ID
+    val kidsMovies=mutableStateListOf<MediaSummary>()
+    val kidsSeries=mutableStateListOf<MediaSummary>()
+    val kidsContinue=mutableStateListOf<MediaSummary>()
+    var kidsLoading by mutableStateOf(false)
+        private set
+    var kidsMessage by mutableStateOf("")
+        private set
+    private val kidsCatalogMutex=Mutex()
+    private var kidsCatalogKey=""
+    private var kidsCatalogAt=0L
+    suspend fun loadKidsHome()=kidsCatalogMutex.withLock {
+        if(!kidsMode || tmdb.token.isBlank()) return@withLock
+        val owner=ratingsKey();val language=tmdb.language
+        val key="$owner:$language"
+        if(key==kidsCatalogKey && System.currentTimeMillis()-kidsCatalogAt<6*60*60*1000L) return@withLock
+        kidsLoading=true;kidsMessage=""
+        try {
+            coroutineScope {
+                val films=async {tmdb.kidsCatalog(false)};val shows=async {tmdb.kidsCatalog(true)}
+                val movieRows=films.await();val showRows=shows.await()
+                if(kidsMode && owner==ratingsKey() && language==tmdb.language) {
+                    kidsMovies.replaceWith(movieRows);kidsSeries.replaceWith(showRows)
+                    kidsCatalogKey=key;kidsCatalogAt=System.currentTimeMillis()
+                    if(movieRows.isEmpty() && showRows.isEmpty()) kidsMessage=tr("No hay títulos infantiles verificados disponibles.","No verified kids titles are available.")
+                }
+            }
+        } catch(e: CancellationException) {throw e}
+        catch(_: Exception) {kidsMessage=tr("No pudimos cargar Kids. Intenta de nuevo.","Could not load Kids. Try again.")}
+        finally {kidsLoading=false}
+    }
+    suspend fun loadKidsContinue() {
+        val owner=ratingsKey()
+        val rows=tmdb.kidsFilter(resolveContinueWatching())
+        if(kidsMode && owner==ratingsKey()) kidsContinue.replaceWith(rows)
+    }
+    private fun ensureKidsProfile() {
+        if(profiles.none {it.isKids || it.id==KidsContentPolicy.PROFILE_ID}) {
+            profiles.add(Profile(KidsContentPolicy.PROFILE_ID,"Kids","ai:fox",isKids=true))
+        }
+    }
+
     private fun loadOfflineProfiles() {
         profiles.clear(); profiles.addAll(local.offlineProfiles().ifEmpty { listOf(Profile("default","Main",primary=true)) })
+        ensureKidsProfile();local.saveOfflineProfiles(profiles.toList())
         activeProfile=profiles.firstOrNull { it.id==local.profileId() } ?: profiles.first()
     }
     suspend fun bootstrap() {
@@ -856,6 +906,8 @@ class AppState(context: Context) {
             runCatching { sessionRenewal.valid(s.userId) }
             runCatching { syncFromCloud() }
         }
+        if(profiles.isEmpty()) profiles.add(Profile("default","Main",primary=true))
+        ensureKidsProfile()
         if (tmdb.token.isNotBlank()) {
             runCatching { loadHome() }.onFailure { error = it.message }
         }
@@ -863,7 +915,7 @@ class AppState(context: Context) {
             runCatching { trakt.call(account,"status").optBoolean("connected") }.onSuccess { traktConnected=it }
             runCatching { nickname = social.nickname(account) }
             val room = socialPrefs.getString("room_${account.userId}", "").orEmpty()
-            if (room.isNotBlank()) runCatching {
+            if (room.isNotBlank() && !kidsMode) runCatching {
                 cloud.readWatchParty(account, room)?.let { party ->
                     watchParty = party; partyRole = if (party.hostUserId == account.userId) PartyRole.HOST else PartyRole.GUEST
                     social.join(account, room)
@@ -906,7 +958,9 @@ class AppState(context: Context) {
 
         profiles.clear()
         profiles.addAll(if (remoteProfiles.isEmpty()) listOf(Profile("default", "Main", primary = true)) else remoteProfiles)
-        if (remoteProfiles.isEmpty()) runCatching { cloud.upsertProfiles(s, profiles.toList()) }
+        val neededKids=profiles.none {it.isKids || it.id==KidsContentPolicy.PROFILE_ID}
+        ensureKidsProfile()
+        if (remoteProfiles.isEmpty() || neededKids) runCatching { cloud.upsertProfiles(s, profiles.toList()) }
         val wanted = local.profileId()
         activeProfile = profiles.firstOrNull { it.id == wanted }
             ?: profiles.firstOrNull { it.primary }
@@ -921,7 +975,10 @@ class AppState(context: Context) {
 
     suspend fun selectProfile(p: Profile) {
         invalidatePlaybackWork()
+        playerRequest=null;sourceSelection=null;miniPlayer=false;selected=null;details=null;profilePhotoEditor=null
+        favorites.clear();progress.clear();continueWatching.clear();kidsContinue.clear();notifications.clear()
         activeProfile = p
+        if(kidsMode) detachParty()
         local.saveProfileId(p.id)
         session?.let {
             val (fav, prog) = cloud.profileState(it, p.id)
@@ -1010,6 +1067,7 @@ class AppState(context: Context) {
     }
 
     suspend fun deleteProfile(profile: Profile) {
+        require(!profile.isKids && profile.id!=KidsContentPolicy.PROFILE_ID) {tr("El perfil Kids se conserva.","The Kids profile is kept by default.") }
         if(avatarUploadProfile?.id==profile.id) closeAvatarUpload()
         require(profiles.size>1) { tr("Conserva al menos un perfil","Keep at least one profile") }
         val owner=session
@@ -1057,6 +1115,7 @@ class AppState(context: Context) {
     }
 
     suspend fun loadHome() = supervisorScope {
+        if(kidsMode) return@supervisorScope
         val a = async { runCatching { tmdb.trending() } }
         val b = async { runCatching { tmdb.popularMovies() } }
         val c = async { runCatching { tmdb.popularSeries() } }
@@ -1069,7 +1128,7 @@ class AppState(context: Context) {
     }
 
     suspend fun loadHomeExtras() {
-        if (extrasLoaded || extrasLoading || tmdb.token.isBlank()) return
+        if (kidsMode || extrasLoaded || extrasLoading || tmdb.token.isBlank()) return
         extrasLoading = true
         try {
             supervisorScope {
@@ -1229,6 +1288,7 @@ class AppState(context: Context) {
     private var detailsEpoch=0L
     private val detailsCache=linkedMapOf<String,Pair<Long,MediaDetails>>()
     suspend fun open(item: MediaSummary,upcoming: Boolean=false) {
+        if(kidsMode && !tmdb.kidsAllowed(item)) {error=tr("Este título no está disponible en Kids.","This title is not available in Kids.");return}
         val ticket=++detailsEpoch
         val language=tmdb.language
         val cacheKey="$language:${item.cloudId}"
@@ -1411,15 +1471,16 @@ class AppState(context: Context) {
     suspend fun searchFlexible(query: String): List<MediaSummary> = supervisorScope {
         val normalized=com.miflix.native2.data.FlexibleSearch.normalize(query)
         if(normalized.length<2) return@supervisorScope emptyList()
-        val cacheKey="${tmdb.language}:$normalized"
+        val cacheKey="${tmdb.language}:$kidsMode:$normalized"
         searchResultCache[cacheKey]?.takeIf { System.currentTimeMillis()-it.first<5*60*1000L }?.let { return@supervisorScope it.second }
-        val local=(trending+movies+series+topRated+continueWatching+forYou+collectionItems+directorItems)
+        val local=(if(kidsMode) kidsMovies+kidsSeries else trending+movies+series+topRated+continueWatching+forYou+collectionItems+directorItems)
             .distinctBy { it.cloudId }.filter { com.miflix.native2.data.FlexibleSearch.score(it.title,normalized)>=650 }
         val remote=runCatching { tmdb.search(normalized) }.onFailure { if(it is CancellationException) throw it }.getOrDefault(emptyList())
         val extra=if(remote.size<5) com.miflix.native2.data.FlexibleSearch.variants(normalized).map { variant -> async {
             runCatching { tmdb.search(variant) }.onFailure { if(it is CancellationException) throw it }.getOrDefault(emptyList()).filter { com.miflix.native2.data.FlexibleSearch.score(it.title,normalized)>=650 }
         } }.awaitAll().flatten() else emptyList()
-        val ranked=com.miflix.native2.data.FlexibleSearch.rank(local+remote+extra,normalized).take(60)
+        val all=com.miflix.native2.data.FlexibleSearch.rank(local+remote+extra,normalized).take(if(kidsMode) 20 else 60)
+        val ranked=if(kidsMode) tmdb.kidsFilter(all) else all
         if(searchResultCache.size>=12) searchResultCache.remove(searchResultCache.keys.first())
         searchResultCache[cacheKey]=System.currentTimeMillis() to ranked
         ranked
@@ -1435,6 +1496,7 @@ class AppState(context: Context) {
     }
 
     private suspend fun playResolved(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeOverride: Long? = null, selectedStream: StreamChoice? = null, onStarted: ((PlayerRequest) -> Unit)? = null) = coroutineScope {
+        if(kidsMode) require(tmdb.kidsAllowed(item)) { tr("Este título no está disponible en Kids.","This title is not available in Kids.") }
         val ticket=playbackWork.begin()
         val playbackOwner=session?.userId; val playbackProfile=activeProfile.id
         fun valid()=playbackWork.current(ticket) && session?.userId==playbackOwner && activeProfile.id==playbackProfile
@@ -1536,6 +1598,7 @@ class AppState(context: Context) {
     }
 
     suspend fun joinWatchParty(code: String) {
+        require(!kidsMode) {tr("Watch Party no está disponible en Kids.","Watch Party is not available in Kids.") }
         val s = session ?: run { error = tr("Inicia sesión antes de unirte a una sala","Sign in before joining a Watch Party"); return }
         require(code.trim().matches(Regex("[0-9]{6}"))) { tr("Usa el código de 6 dígitos","Use the 6-digit code") }
         if(watchParty!=null && watchParty?.roomCode!=code.trim()) { error=tr("Sal del party actual antes de solicitar otra sesión","Leave your current party before requesting another session"); return }
@@ -1591,6 +1654,7 @@ class AppState(context: Context) {
     }
 
     suspend fun switchToPartyState(remote: WatchParty) {
+        if(kidsMode) return
         val owner=session?.userId ?: return; val epoch=partyEpoch
         fun valid()=sameParty(epoch,owner,remote.roomCode)
         if(!valid() || switchingPartyEpoch==epoch) return

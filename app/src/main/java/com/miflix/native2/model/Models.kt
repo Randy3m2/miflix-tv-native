@@ -89,7 +89,8 @@ data class Profile(
     val id: String,
     val name: String,
     val avatarValue: String? = null,
-    val primary: Boolean = false
+    val primary: Boolean = false,
+    val isKids: Boolean = false
 )
 
 data class CloudSession(

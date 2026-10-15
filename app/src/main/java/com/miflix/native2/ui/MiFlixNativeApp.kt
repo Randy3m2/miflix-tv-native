@@ -71,9 +71,11 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         val navigationState=androidx.compose.runtime.saveable.rememberSaveableStateHolder()
         Box(Modifier.fillMaxSize()) {
         navigationState.SaveableStateProvider("${state.session?.userId}:${state.activeProfile.id}:${state.screen.name}") {
-        when (state.screen) {
+        val destination=if(state.kidsMode && state.screen !in setOf(Screen.HOME,Screen.SEARCH,Screen.MY_LIST,Screen.DETAILS,Screen.PROFILES,Screen.NOTIFICATIONS,Screen.PLAYER)) Screen.HOME else state.screen
+        LaunchedEffect(destination,state.screen) {if(destination!=state.screen) state.screen=destination}
+        when (destination) {
             Screen.SPLASH -> BruniOSplashScreen()
-            Screen.HOME -> HomeScreen(state) { state.screen = it }
+            Screen.HOME -> if(state.kidsMode) KidsHomeScreen(state) else HomeScreen(state) { state.screen = it }
             Screen.FRIENDS -> FriendsScreen(state)
             Screen.TRAKT -> TraktScreen(state)
             Screen.NOTIFICATIONS -> NotificationsScreen(state)

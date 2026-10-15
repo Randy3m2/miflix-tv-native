@@ -59,7 +59,7 @@ class SupabaseRepository(private val url: String, private val key: String) {
         val profiles = (0 until pa.length()).mapNotNull { i ->
             val p = pa.optJSONObject(i) ?: return@mapNotNull null
             val id = p.optString("id").takeIf { it.isNotBlank() } ?: return@mapNotNull null
-            Profile(id, p.optString("name", "Profile"), p.optString("avatarValue"), p.optBoolean("primary", false))
+            Profile(id, p.optString("name", "Profile"), p.optString("avatarValue"), p.optBoolean("primary", false),p.optBoolean("isKids") || id==KidsContentPolicy.PROFILE_ID)
         }
         return profiles to setup
     }
@@ -68,7 +68,7 @@ class SupabaseRepository(private val url: String, private val key: String) {
         val body=JSONObject().put("target_profile",profileId).toString()
         val rows=JSONArray(Http.text("$url/rest/v1/rpc/miflix_delete_profile","POST",headers(session),body))
         return (0 until rows.length()).map { i -> rows.getJSONObject(i).let { p ->
-            Profile(p.getString("id"),p.getString("name"),p.optString("avatarValue").takeUnless { it.isBlank() || it=="null" },p.optBoolean("primary"))
+            Profile(p.getString("id"),p.getString("name"),p.optString("avatarValue").takeUnless { it.isBlank() || it=="null" },p.optBoolean("primary"),p.optBoolean("isKids") || p.optString("id")==KidsContentPolicy.PROFILE_ID)
         } }
     }
 
@@ -76,7 +76,7 @@ class SupabaseRepository(private val url: String, private val key: String) {
         val existing = readRow(session, "__account__")?.optJSONObject("state") ?: JSONObject()
         val arr = JSONArray()
         profiles.forEach { p ->
-            arr.put(JSONObject().put("id", p.id).put("name", p.name).put("avatarValue", p.avatarValue).put("primary", p.primary))
+            arr.put(JSONObject().put("id", p.id).put("name", p.name).put("avatarValue", p.avatarValue).put("primary", p.primary).put("isKids",p.isKids))
         }
         existing.put("profiles", arr)
         if (!existing.has("privateSetup")) existing.put("privateSetup", JSONObject())

@@ -6,6 +6,9 @@ import com.miflix.native2.model.MediaDetails
 import com.miflix.native2.model.MediaSummary
 import com.miflix.native2.model.TrailerSummary
 import com.miflix.native2.model.ReleaseNotice
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -159,6 +162,48 @@ class TmdbRepository(var token: String) {
         }
         if(theme=="christmas") return emptyList()
         return discoverMovieGenre(SeasonalProgramming.genre(theme),pages=1,limit=20)
+    }
+
+    private val kidsChecks=linkedMapOf<String,Pair<Long,Boolean>>()
+    private val kidsPermits=Semaphore(4)
+    suspend fun kidsAllowed(item: MediaSummary): Boolean {
+        val key=item.cloudId
+        kidsChecks[key]?.takeIf { System.currentTimeMillis()-it.first<24*60*60*1000L }?.let { return it.second }
+        return kidsPermits.withPermit {
+            kidsChecks[key]?.takeIf { System.currentTimeMillis()-it.first<24*60*60*1000L }?.let { return@withPermit it.second }
+            try {
+                val series=item.type=="series"
+                if(!series && item.type!="movie") return@withPermit false
+                val j=get("/${if(series) "tv" else "movie"}/${item.id}",mapOf("append_to_response" to if(series) "content_ratings" else "release_dates"))
+                val g=j.optJSONArray("genres")
+                val genres=(0 until (g?.length() ?: 0)).map { g!!.getJSONObject(it).optInt("id") }.toIntArray()
+                val ratings=mutableListOf<String>()
+                val all=j.optJSONObject(if(series) "content_ratings" else "release_dates")?.optJSONArray("results")
+                for(i in 0 until (all?.length() ?: 0)) {
+                    val country=all!!.getJSONObject(i)
+                    if(country.optString("iso_3166_1")!="US") continue
+                    if(series) country.optString("rating").takeIf {it.isNotBlank()}?.let {ratings.add(it)}
+                    else {
+                        val dates=country.optJSONArray("release_dates")
+                        for(n in 0 until (dates?.length() ?: 0)) dates!!.getJSONObject(n).optString("certification").takeIf {it.isNotBlank()}?.let {ratings.add(it)}
+                    }
+                }
+                val allowed=KidsContentPolicy.allows(j.optBoolean("adult"),series,genres,ratings.toTypedArray())
+                if(kidsChecks.size>=200) kidsChecks.remove(kidsChecks.keys.first())
+                kidsChecks[key]=System.currentTimeMillis() to allowed
+                allowed
+            } catch(e: CancellationException) { throw e }
+            catch(_: Exception) { false } // Missing/unavailable rating never admits a title.
+        }
+    }
+    suspend fun kidsFilter(rows: List<MediaSummary>): List<MediaSummary> = coroutineScope {
+        rows.distinctBy {it.cloudId}.map { item -> async { if(kidsAllowed(item)) item else null } }.awaitAll().filterNotNull()
+    }
+    suspend fun kidsCatalog(series: Boolean): List<MediaSummary> {
+        val params=linkedMapOf("include_adult" to "false","sort_by" to "popularity.desc","with_genres" to if(series) "10762" else "16|10751")
+        if(!series) {params["certification_country"]="US";params["certification.lte"]="PG"}
+        val rows=parseList(get("/discover/${if(series) "tv" else "movie"}",params),if(series) "series" else "movie",20)
+        return kidsFilter(rows)
     }
 
     suspend fun trending(): List<MediaSummary> = parseList(get("/trending/all/week"), limit = 20)

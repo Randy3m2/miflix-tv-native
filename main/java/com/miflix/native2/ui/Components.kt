@@ -353,18 +353,18 @@ fun Sidebar(screen: Screen, profileName: String, onNavigate: (Screen) -> Unit) {
 
 @Composable
 fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,notificationCount: Int,
-            profile: com.miflix.native2.model.Profile? = null, backgroundAlpha: Float = 0f, onHeaderFocused: (() -> Unit)? = null, onMoveDown: (() -> Unit)? = null,onEditPicture: (() -> Unit)? = null) {
+            profile: com.miflix.native2.model.Profile? = null, backgroundAlpha: Float = 0f, onHeaderFocused: (() -> Unit)? = null, onMoveDown: (() -> Unit)? = null,onEditPicture: (() -> Unit)? = null,kids: Boolean=false) {
     val current=when(screen) {
         Screen.WATCH_PARTY -> Screen.FRIENDS
         Screen.COLLECTIONS,Screen.FRANCHISE,Screen.CUSTOM_FILTER,Screen.GENRES,Screen.GENRE_DETAIL,Screen.YEAR_DETAIL,Screen.PLATFORM_DETAIL,Screen.COLLECTION_DETAIL -> Screen.HOME
         else -> screen
     }
-    val navItems=listOf(
+    val navItems=(if(kids) listOf(Screen.HOME to "Kids",Screen.SEARCH to tr("Buscar","Search")) else listOf(
         Screen.HOME to tr("Inicio","Home"),
         Screen.SEARCH to tr("Buscar","Search"),
         Screen.FRIENDS to tr("Amigos y salas","Friends & Party"),
         Screen.LIVE_TV to tr("TV en vivo","Live TV")
-    )
+    ))
     Row(Modifier.fillMaxWidth().height(76.dp).onPreviewKeyEvent { event ->
         if(event.key==Key.DirectionDown && onMoveDown!=null) {
             if(event.type==KeyEventType.KeyDown) onMoveDown()
@@ -397,7 +397,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
                 .border(1.dp,PanelBorder,RoundedCornerShape(14.dp)).padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Text(profileName,color=Muted,fontSize=13.sp,modifier=Modifier.padding(8.dp))
                 FocusButton(tr("Mi lista","My List"),modifier=Modifier.fillMaxWidth().focusRequester(menuFocus)) { profileMenu=false;onNavigate(Screen.MY_LIST) }
-                FocusButton(tr("Ajustes","Settings"),modifier=Modifier.fillMaxWidth()) { profileMenu=false;onNavigate(Screen.SETTINGS) }
+                if(!kids) FocusButton(tr("Ajustes","Settings"),modifier=Modifier.fillMaxWidth()) { profileMenu=false;onNavigate(Screen.SETTINGS) }
                 onEditPicture?.let { edit -> FocusButton(tr("Editar foto","Edit picture"),modifier=Modifier.fillMaxWidth()) { profileMenu=false;edit() } }
                 FocusButton(tr("Cambiar perfil","Switch profile"),modifier=Modifier.fillMaxWidth()) { profileMenu=false;onNavigate(Screen.PROFILES) }
             }

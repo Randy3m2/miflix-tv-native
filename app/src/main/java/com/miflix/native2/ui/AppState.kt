@@ -1241,17 +1241,47 @@ class AppState(context: Context) {
         }
     }
 
+    var genreLoading by mutableStateOf(false)
+        private set
+    var genreHasMore by mutableStateOf(true)
+        private set
+    var genreMessage by mutableStateOf("")
+        private set
+    private var currentGenre: GenreDefinition?=null
+    private var genrePageNumber=0
+    private var genreRemoteMore=true
+    private var genreGeneration=0L
+    private val genreBacklog=UniquePageBuffer<MediaSummary>()
+    private val genreMutex=Mutex()
     suspend fun openGenre(g: GenreDefinition) {
-        busyMessage = "${tr("Cargando","Loading")} ${g.title}…"
-        error = null
-        runCatching { tmdb.discoverGenreMixed(g.movieGenreId, g.tvGenreId, 50) }
-            .onSuccess {
-                genreTitle = g.title
-                genreItems.replaceWith(it)
-                screen = Screen.GENRE_DETAIL
+        if(kidsMode) return
+        genreGeneration++;currentGenre=g;genreTitle=g.title
+        genreItems.clear();genreBacklog.clear();genrePageNumber=0;genreRemoteMore=true;genreHasMore=true
+        genreMessage="";screen=Screen.GENRE_DETAIL
+        loadMoreGenre()
+    }
+    suspend fun loadMoreGenre()=genreMutex.withLock {
+        val g=currentGenre ?: return@withLock
+        if(kidsMode || !genreHasMore) return@withLock
+        val generation=genreGeneration;val language=tmdb.language
+        genreLoading=true;genreMessage=""
+        fun current()=generation==genreGeneration && language==tmdb.language && !kidsMode
+        try {
+            var batches=0
+            while(genreBacklog.pendingCount()<25 && genreRemoteMore && batches<2) {
+                val page=genrePageNumber+1
+                val slice=tmdb.genrePage(g.movieGenreId,g.tvGenreId,page)
+                if(!current()) return@withLock
+                genreBacklog.offer(slice.rows) {it.cloudId}
+                genrePageNumber=page;genreRemoteMore=slice.hasMore;batches++
             }
-            .onFailure { error = it.message }
-        busyMessage = null
+            if(!current()) return@withLock
+            val next=genreBacklog.take(25)
+            genreItems.addAll(next)
+            genreHasMore=genreBacklog.pendingCount()>0 || genreRemoteMore
+        } catch(e: CancellationException) {throw e}
+        catch(e: Exception) {if(current()) genreMessage=e.message ?: tr("No se pudo cargar.","Could not load.")}
+        finally {if(generation==genreGeneration) genreLoading=false}
     }
 
     suspend fun openYear(year: Int, category: String="movie") {
@@ -1468,18 +1498,21 @@ class AppState(context: Context) {
     }
 
     private val searchResultCache=linkedMapOf<String,Pair<Long,List<MediaSummary>>>()
+    fun localSearch(query: String): List<MediaSummary> {
+        val normalized=FlexibleSearch.normalize(query)
+        if(normalized.length<2) return emptyList()
+        val rows=if(kidsMode) kidsMovies+kidsSeries else trending+movies+series+topRated+continueWatching+forYou+collectionItems+directorItems+myListTitles+comingMovies+comingSeries
+        return FlexibleSearch.rank(rows.distinctBy {it.cloudId}.filter {FlexibleSearch.score(it.title,normalized)>=650},normalized).take(30)
+    }
     suspend fun searchFlexible(query: String): List<MediaSummary> = supervisorScope {
-        val normalized=com.miflix.native2.data.FlexibleSearch.normalize(query)
+        val normalized=FlexibleSearch.normalize(query)
         if(normalized.length<2) return@supervisorScope emptyList()
         val cacheKey="${tmdb.language}:$kidsMode:$normalized"
-        searchResultCache[cacheKey]?.takeIf { System.currentTimeMillis()-it.first<5*60*1000L }?.let { return@supervisorScope it.second }
-        val local=(if(kidsMode) kidsMovies+kidsSeries else trending+movies+series+topRated+continueWatching+forYou+collectionItems+directorItems)
-            .distinctBy { it.cloudId }.filter { com.miflix.native2.data.FlexibleSearch.score(it.title,normalized)>=650 }
-        val remote=runCatching { tmdb.search(normalized) }.onFailure { if(it is CancellationException) throw it }.getOrDefault(emptyList())
-        val extra=if(remote.size<5) com.miflix.native2.data.FlexibleSearch.variants(normalized).map { variant -> async {
-            runCatching { tmdb.search(variant) }.onFailure { if(it is CancellationException) throw it }.getOrDefault(emptyList()).filter { com.miflix.native2.data.FlexibleSearch.score(it.title,normalized)>=650 }
-        } }.awaitAll().flatten() else emptyList()
-        val all=com.miflix.native2.data.FlexibleSearch.rank(local+remote+extra,normalized).take(if(kidsMode) 20 else 60)
+        searchResultCache[cacheKey]?.takeIf {System.currentTimeMillis()-it.first<5*60*1000L}?.let {return@supervisorScope it.second}
+        val local=localSearch(normalized)
+        // One remote title search; do not wait for multiple speculative spelling variants.
+        val remote=tmdb.search(normalized)
+        val all=FlexibleSearch.rank(local+remote,normalized).take(if(kidsMode) 20 else 60)
         val ranked=if(kidsMode) tmdb.kidsFilter(all) else all
         if(searchResultCache.size>=12) searchResultCache.remove(searchResultCache.keys.first())
         searchResultCache[cacheKey]=System.currentTimeMillis() to ranked

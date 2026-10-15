@@ -308,6 +308,19 @@ private fun CollectionRail(title: String, rows: List<CollectionTile>, onClick: (
 fun CatalogScreen(state: AppState, title: String, catalog: List<MediaSummary>, onBack: () -> Unit, footer: (@Composable () -> Unit)? = null) {
     BackHandler(onBack = onBack)
     val catalogScroll=androidx.compose.runtime.saveable.rememberSaveable(title,saver=androidx.compose.foundation.lazy.grid.LazyGridState.Saver) { androidx.compose.foundation.lazy.grid.LazyGridState() }
+    var previousCount by remember(title) {mutableIntStateOf(catalog.size)}
+    var newBatchStart by remember(title) {mutableIntStateOf(-1)}
+    val newBatchFocus=remember {FocusRequester()}
+    LaunchedEffect(catalog.size,title) {
+        val before=previousCount
+        previousCount=catalog.size
+        if(state.screen==Screen.GENRE_DETAIL && before>0 && catalog.size>before) {
+            newBatchStart=before
+            catalogScroll.scrollToItem(before)
+            withFrameNanos { }
+            runCatching {newBatchFocus.requestFocus()}
+        }
+    }
     AppShell(state, state.screen, { state.screen = it }) {
         Column(Modifier.fillMaxSize().padding(start = 34.dp, top = 30.dp, end = 34.dp)) {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
@@ -318,7 +331,8 @@ fun CatalogScreen(state: AppState, title: String, catalog: List<MediaSummary>, o
             Spacer(Modifier.height(18.dp))
             LazyVerticalGrid(columns=GridCells.Adaptive(168.dp),state=catalogScroll,modifier=Modifier.weight(1f).fillMaxWidth(),
                 horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(bottom=48.dp,top=8.dp)) {
-                gridItems(catalog,key={it.cloudId}) { item -> MediaCard(item,modifier=Modifier.fillMaxWidth(),progressPercent=state.progress[item.cloudId]?.percent) { state.launch { state.open(item) } } }
+                gridItems(catalog,key={it.cloudId}) { item -> MediaCard(item,modifier=Modifier.fillMaxWidth()
+                    .then(if(item.cloudId==catalog.getOrNull(newBatchStart)?.cloudId) Modifier.focusRequester(newBatchFocus) else Modifier),progressPercent=state.progress[item.cloudId]?.percent) { state.launch { state.open(item) } } }
                 if(footer!=null) item(span={ androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { footer() }
             }
         }

@@ -234,6 +234,20 @@ class TmdbRepository(var token: String) {
             limit = limit
         )
 
+    data class GenreSlice(val rows: List<MediaSummary>,val hasMore: Boolean)
+    suspend fun genrePage(movieGenreId: Int,tvGenreId: Int,page: Int): GenreSlice = coroutineScope {
+        require(page in 1..500)
+        suspend fun part(series: Boolean,genre: Int): Pair<List<MediaSummary>,Boolean> {
+            if(genre<=0) return emptyList<MediaSummary>() to false
+            val j=get("/discover/${if(series) "tv" else "movie"}",mapOf("with_genres" to genre.toString(),
+                "sort_by" to "popularity.desc","include_adult" to "false","page" to page.toString()))
+            return parseList(j,if(series) "series" else "movie",20) to (page<j.optInt("total_pages",page).coerceAtMost(500))
+        }
+        val movies=async {part(false,movieGenreId)};val shows=async {part(true,tvGenreId)}
+        val m=movies.await();val t=shows.await()
+        GenreSlice((m.first+t.first).distinctBy {it.cloudId}.sortedByDescending {it.popularity},m.second || t.second)
+    }
+
     suspend fun discoverGenreMixed(movieGenreId: Int, tvGenreId: Int, limit: Int = 50): List<MediaSummary> = coroutineScope {
         val movies = async { discoverMovieGenre(movieGenreId, pages = 2, limit = 35) }
         val tv = async { discoverTvGenre(tvGenreId, pages = 2, limit = 35) }

@@ -1,6 +1,8 @@
 package com.miflix.native2.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -153,6 +155,7 @@ fun MultiViewScreen(state: AppState) {
     DisposableEffect(players) { onDispose { players.releaseAll() } }
     var selected by remember { mutableStateOf<String?>(null) }
     var replacing by remember { mutableStateOf<String?>(null) }
+    var sourceTarget by remember {mutableStateOf<PlayerRequest?>(null)}
     var picker by remember { mutableStateOf(false) }
     var sound by remember { mutableStateOf(state.multiViewRequests.firstOrNull()?.playbackId) }
     var hd by remember { mutableStateOf(false) }
@@ -192,12 +195,9 @@ fun MultiViewScreen(state: AppState) {
         if(req!=null) Dialog(onDismissRequest={ selected=null }) {
             val focus=remember { FocusRequester() }
             LaunchedEffect(Unit) { withFrameNanos { };focus.requestFocus() }
-            Column(Modifier.width(440.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+            Column(Modifier.width(440.dp).heightIn(max=440.dp).verticalScroll(rememberScrollState()).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                 Text(req.item.title,color=Color.White,fontSize=23.sp)
-                FocusButton(tr("Escuchar este canal","Listen to this channel"),modifier=Modifier.focusRequester(focus)) { sound=id;selected=null }
-                FocusButton(tr("Cambiar canal","Change channel")) { replacing=id;selected=null;picker=true }
-                FocusButton(tr("Pantalla completa","Full screen")) { players.releaseAll();state.multiViewRequests.clear();state.openLivePlayer(req.copy(playbackId=java.util.UUID.randomUUID().toString())) }
-                FocusButton(tr("Reintentar","Retry")) {
+                FocusButton(tr("Reintentar","Retry"),modifier=Modifier.focusRequester(focus)) {
                     val replacement=req.copy(playbackId=java.util.UUID.randomUUID().toString())
                     val i=state.multiViewRequests.indexOfFirst { it.playbackId==id }
                     players.release(id)
@@ -205,6 +205,10 @@ fun MultiViewScreen(state: AppState) {
                     if(sound==id) sound=replacement.playbackId
                     selected=null
                 }
+                FocusButton(tr("Escuchar este canal","Listen to this channel")) { sound=id;selected=null }
+                FocusButton(tr("Cambiar fuente","Change source")) {sourceTarget=req;selected=null}
+                FocusButton(tr("Cambiar canal","Change channel")) { replacing=id;selected=null;picker=true }
+                FocusButton(tr("Pantalla completa","Full screen")) { players.releaseAll();state.multiViewRequests.clear();state.openLivePlayer(req.copy(playbackId=java.util.UUID.randomUUID().toString())) }
                 FocusButton(tr("Quitar","Remove")) {
                     players.release(id)
                     state.multiViewRequests.removeAll { it.playbackId==id }
@@ -216,12 +220,63 @@ fun MultiViewScreen(state: AppState) {
             }
         }
     }
+    sourceTarget?.let { target ->
+        MultiViewSourceDialog(state,target,choose={ stream ->
+            val i=state.multiViewRequests.indexOfFirst {it.playbackId==target.playbackId}
+            if(i>=0) {
+                val replacement=target.copy(stream=stream,playbackId=java.util.UUID.randomUUID().toString())
+                players.release(target.playbackId)
+                state.multiViewRequests[i]=replacement
+                if(sound==target.playbackId) sound=replacement.playbackId
+            }
+            sourceTarget=null
+        },close={sourceTarget=null})
+    }
     if(picker) LiveChannelPicker(state,state.liveProviderTab,select={ req ->
         val i=state.multiViewRequests.indexOfFirst { it.playbackId==replacing }
         if(i>=0) { replacing?.let { players.release(it) };if(sound==replacing) sound=req.playbackId;state.multiViewRequests[i]=req }
         else if(state.multiViewRequests.size<4) { state.multiViewRequests.add(req);if(sound==null) sound=req.playbackId }
         picker=false
     },close={ picker=false })
+}
+
+@Composable
+private fun MultiViewSourceDialog(state: AppState,req: PlayerRequest,choose: (com.miflix.native2.model.StreamChoice) -> Unit,close: () -> Unit) {
+    val repo=remember {LiveRepository()}
+    var rows by remember(req.playbackId) {mutableStateOf<List<com.miflix.native2.model.StreamChoice>>(emptyList())}
+    var loading by remember {mutableStateOf(true)}
+    var message by remember {mutableStateOf("")}
+    var revision by remember {mutableIntStateOf(0)}
+    val first=remember {FocusRequester()}
+    val firstLink=remember {FocusRequester()}
+    LaunchedEffect(rows) {if(rows.isNotEmpty()) {withFrameNanos { };runCatching {firstLink.requestFocus()}}}
+    LaunchedEffect(req.playbackId,revision) {
+        loading=true;message=""
+        try {
+            val provider=req.liveProvider.ifBlank {state.liveProviderTab}
+            rows=repo.streams(state.calendarLiveManifest(provider),LiveChannel(req.liveChannelId,req.liveType.ifBlank {"tv"},req.item.title,req.item.poster,req.item.overview))
+            if(rows.isEmpty()) message=tr("El proveedor no devolvió fuentes alternativas.","The provider returned no alternative sources.")
+        } catch(e: CancellationException) {throw e}
+        catch(e: Exception) {message=e.message ?: tr("No se pudieron cargar las fuentes.","Could not load sources.")}
+        finally {loading=false}
+    }
+    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+        Column(Modifier.widthIn(max=650.dp).fillMaxWidth(.85f).heightIn(max=430.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            Text(tr("Fuente del canal","Channel source")+" · "+req.item.title,color=Color.White,fontSize=22.sp,maxLines=2)
+            if(loading) Text(tr("Buscando fuentes…","Finding sources…"),color=Muted)
+            if(message.isNotBlank()) Text(message,color=Muted,fontSize=14.sp,maxLines=3)
+            LazyColumn(Modifier.weight(1f,false),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                items(rows,key={it.url}) {stream ->
+                    FocusButton((if(stream.url==req.stream.url) "✓ " else "")+stream.name+" · "+stream.title,modifier=Modifier.fillMaxWidth().then(if(stream.url==rows.firstOrNull()?.url) Modifier.focusRequester(firstLink) else Modifier)) {choose(stream)}
+                }
+            }
+            Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                FocusButton(tr("Actualizar fuentes","Refresh sources")) {if(!loading) revision++}
+                FocusButton(tr("Cerrar","Close"),modifier=Modifier.focusRequester(first)) {close()}
+            }
+        }
+        LaunchedEffect(Unit) {withFrameNanos { };runCatching {first.requestFocus()}}
+    }
 }
 
 @Composable

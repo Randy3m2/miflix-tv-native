@@ -824,7 +824,7 @@ class AppState(context: Context) {
     }
     var searchQuery by mutableStateOf("")
     var playerRequest by mutableStateOf<PlayerRequest?>(null)
-    var playbackLoading by mutableStateOf<PlaybackLoading?>(null)
+    internal var playbackLoading by mutableStateOf<PlaybackLoading?>(null)
         private set
     fun beginPlaybackLoading(item: MediaSummary,season: Int=0,episode: Int=0,art: String?=null) {
         playbackLoading=PlaybackLoading(item,season,episode,art ?: episodes.firstOrNull {it.season==season && it.episode==episode}?.still ?: item.backdrop ?: item.poster)

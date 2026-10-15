@@ -137,15 +137,26 @@ fun FriendActionsDialog(state: AppState, friend: FriendActivity, close: () -> Un
                 item { FocusButton(tr("Cancelar","Cancel"),modifier=Modifier.focusRequester(first)) { if(!busy) confirmLeave=false } }
                 item { FocusButton(if(busy) tr("Abriendo…","Opening…") else tr("Continuar","Continue")) { watch() } }
             } else {
-                if(canWatch) item { FocusButton(if(busy) tr("Abriendo…","Opening…") else tr("Ver por mi cuenta","Watch"),modifier=Modifier.focusRequester(first)) {
-                    if(!busy) { if(state.watchParty!=null || state.pendingPartyCode!=null) confirmLeave=true else watch() }
-                } }
-                friend.room?.let { code -> item {
-                    FocusButton(if(state.pendingPartyCode==code) tr("Esperando aprobación","Waiting for approval") else tr("Solicitar acceso","Request Access")) {
-                        if(!busy) { busy=true;state.launch { try { state.socialAction { state.joinWatchParty(code);close() } } finally { busy=false } } }
+                item { FocusButton(if(busy) tr("Abriendo…","Opening…") else tr("Ver","Watch"),modifier=Modifier.focusRequester(first)) {
+                    if(!busy) {
+                        if(!canWatch) state.error=tr("Este amigo no está viendo un título disponible ahora.","This friend is not watching an available title right now.")
+                        else if(state.watchParty!=null || state.pendingPartyCode!=null) confirmLeave=true else watch()
                     }
                 } }
-                item { FocusButton(tr("Ver recomendaciones","View recommendations"),modifier=if(!canWatch) Modifier.focusRequester(first) else Modifier) { if(!busy) recommendations=true } }
+                item { FocusButton(tr("Ver detalles","View Details")) {
+                    if(!busy) {
+                        if(!friend.cloudId.matches(Regex("^tmdb:(movie|series):[0-9]+$"))) state.error=tr("No hay detalles disponibles para esta actividad.","No title details are available for this activity.")
+                        else {
+                            busy=true
+                            state.launch {try {state.socialAction {
+                                val title=state.tmdb.byCloudId(friend.cloudId) ?: error(tr("Título no disponible","Title unavailable"))
+                                state.open(title)
+                                if(state.selected?.cloudId==title.cloudId && state.screen==Screen.DETAILS) onContentOpened()
+                            }} finally {busy=false} }
+                        }
+                    }
+                } }
+                item { FocusButton(tr("Recomendaciones","Recommendations")) {if(!busy) recommendations=true} }
                 item { FocusButton(tr("Cerrar","Close")) { if(!busy) close() } }
             }
             state.error?.let { error -> item { Text(error,color=Color.White,maxLines=3) } }

@@ -849,13 +849,13 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                             var customColor by remember {mutableStateOf("#B792FF")}
                             NativeTextField(customColor,{customColor=it.take(7)},tr("Color personalizado · #RRGGBB","Custom color · #RRGGBB"))
                             FocusButton(tr("Aplicar color","Apply color")) {
-                                if(customColor.matches(Regex("#[0-9a-fA-F]{6}"))) state.setFocusColor(android.graphics.Color.parseColor(customColor))
+                                if(customColor.matches(Regex("#[0-9a-fA-F]{6}"))) state.saveFocusColor(android.graphics.Color.parseColor(customColor))
                                 else state.error=tr("Usa # y seis dígitos hexadecimales.","Use # followed by six hexadecimal digits.")
                             }
                             Spacer(Modifier.height(12.dp))
                             FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                                 listOf(0xFFFFFFFF.toInt() to "White",0xFFB792FF.toInt() to "Purple",0xFF65BFFF.toInt() to "Blue",0xFF66E6A0.toInt() to "Green",0xFFFFBB66.toInt() to "Amber",0xFFFF8FB6.toInt() to "Rose").forEach {(color,label) ->
-                                    FocusButton("● $label",primary=state.focusColor==color) {state.setFocusColor(color)}
+                                    FocusButton("● $label",primary=state.focusColor==color) {state.saveFocusColor(color)}
                                 }
                             }
                         }

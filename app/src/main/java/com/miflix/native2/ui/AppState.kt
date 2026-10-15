@@ -75,7 +75,7 @@ class AppState(context: Context) {
     var rememberLastProfile by mutableStateOf(playbackPrefs.getBoolean("remember_last_profile",false))
         private set
     init { FocusTheme.argb=focusColor }
-    fun setFocusColor(value: Int) { focusColor=value;FocusTheme.argb=value;playbackPrefs.edit().putInt("focus_color",value).apply() }
+    fun saveFocusColor(value: Int) { focusColor=value;FocusTheme.argb=value;playbackPrefs.edit().putInt("focus_color",value).apply() }
     fun setRememberProfile(value: Boolean) { rememberLastProfile=value;playbackPrefs.edit().putBoolean("remember_last_profile",value).apply() }
     private fun readNoticesKey()="read_"+noticesKey()
     var noticesRevision by mutableIntStateOf(0)

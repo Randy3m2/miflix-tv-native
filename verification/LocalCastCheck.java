@@ -24,6 +24,10 @@ public final class LocalCastCheck {
         check(!LocalCastServer.sameSubnet(new byte[16],ip(10,0,0,1),24),"IPv6 not silently accepted");
         final long[] clock={1000L};LocalCastAccess access=new LocalCastAccess("123456",()->clock[0]);
         check(access.connect("bad", "https://brunio.example","192.168.1.2")==null,"wrong code rejected");
+        check(access.getLinkTicket().length()==48 && access.validLink(access.getLinkTicket()),"unpredictable QR capability");
+        check(access.connectLink("wrong","http://192.168.1.20:8765","192.168.1.8")==null,"wrong QR link rejected");
+        String linked=access.connectLink(access.getLinkTicket(),"http://192.168.1.20:8765","192.168.1.8");
+        check(linked!=null && access.authenticated(linked,"http://192.168.1.20:8765"),"QR pairs without numeric code");
         String sessionToken=access.connect("123456","https://brunio.example","192.168.1.2");
         check(sessionToken!=null && sessionToken.length()==48,"random session sessionToken");
         check(access.authenticated(sessionToken,"https://brunio.example"),"valid origin accepted");
@@ -33,10 +37,10 @@ public final class LocalCastCheck {
         clock[0]+=90001;check(!access.duplicate(sessionToken,"request123"),"dedupe expires");
         for(int i=0;i<5;i++)access.connect("bad","https://brunio.example","192.168.1.3");
         check(access.connect("123456","https://brunio.example","192.168.1.3")==null,"pairing rate limit");
-        clock[0]=121000;check(access.connect("123456","https://brunio.example","192.168.1.4")==null,"pair code expires after two minutes");
+        clock[0]=121000;check(!access.validLink(access.getLinkTicket()),"QR link expires");check(access.connect("123456","https://brunio.example","192.168.1.4")==null,"pair code expires after two minutes");
         check(access.authenticated(sessionToken,"https://brunio.example"),"paired session outlives pairing code");
         clock[0]=1801000;check(!access.authenticated(sessionToken,"https://brunio.example"),"session expires after thirty minutes");
-        clock[0]=1000;access.clear();check(!access.authenticated(sessionToken,"https://brunio.example"),"disconnect revokes sessions");
+        clock[0]=1000;access.clear();check(!access.validLink(access.getLinkTicket()),"disconnect revokes QR capability");check(!access.authenticated(sessionToken,"https://brunio.example"),"disconnect revokes sessions");
         Inet4Address address=null;int prefix=24;
         for(java.util.Enumeration<NetworkInterface> n=NetworkInterface.getNetworkInterfaces();n.hasMoreElements();) {
             for(InterfaceAddress a:n.nextElement().getInterfaceAddresses())if(a.getAddress() instanceof Inet4Address && LocalCastServer.isPrivate(a.getAddress().getAddress())){address=(Inet4Address)a.getAddress();prefix=a.getNetworkPrefixLength();}
@@ -44,7 +48,7 @@ public final class LocalCastCheck {
         if(address==null){System.out.println("PASS: subnet boundaries, pairing, origin-bound auth, deduplication, rate limit, expiry and revocation. SKIP socket transport: no private interface in this runtime.");return;}
         AtomicInteger sent=new AtomicInteger();String origin="https://brunio.example";
         try(LocalCastServer s=new LocalCastServer(address,prefix,"local controller".getBytes(StandardCharsets.UTF_8),(cloud,action,season,episode)->sent.incrementAndGet())) {
-            check(call(s,address,"GET","/","","",origin).contains("local controller"),"controller served");
+            check(call(s,address,"GET",s.getCatalogUrl().substring(s.getUrl().length()),"","","").contains("local controller"),"controller served");
             check(call(s,address,"POST","/send","cloud=tmdb%3Amovie%3A1&action=play&request=abcdefgh","",origin).contains("401"),"no token rejected");
             check(call(s,address,"POST","/connect","code=000000x","",origin).contains("403"),"wrong code rejected");
             String paired=call(s,address,"POST","/connect","code="+s.getCode(),"",origin);

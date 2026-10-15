@@ -168,7 +168,9 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         state.contextTitle?.let {title -> TitleActionsDialog(state,title,state.contextContinue) {state.contextTitle=null} }
         state.sourceSelection?.let { SourcePickerOverlay(state, it) }
 
-        state.busyMessage?.let { LoadingOverlay(it) }
+        if(state.playbackLoading==null) state.busyMessage?.let {LoadingOverlay(it)}
+        LaunchedEffect(state.error) {if(state.error!=null) state.abortPlaybackLoading()}
+        state.playbackLoading?.let {PlaybackLoadingCover(it,onCancel={state.cancelPlaybackStart()})}
 
         state.partyJoinedNotice?.let { notice ->
             Box(Modifier.fillMaxSize(),contentAlignment=Alignment.TopEnd) {
@@ -230,14 +232,18 @@ private fun MyListScreen(state: AppState, onBack: () -> Unit) {
     val owner="${state.session?.userId}:${state.activeProfile.id}"
     LaunchedEffect(owner) { runCatching { state.pushCloud() } }
     var listType by androidx.compose.runtime.saveable.rememberSaveable(owner) {mutableStateOf("all")}
-    val ids=state.favorites.filter {listType=="all" || it.startsWith("tmdb:$listType:")}
+    var listOrder by androidx.compose.runtime.saveable.rememberSaveable(owner) {mutableStateOf("last_added")}
+    val filteredIds=state.favorites.filter {listType=="all" || it.startsWith("tmdb:$listType:")}
+    val ids=if(listOrder=="oldest") filteredIds.reversed() else filteredIds
     LaunchedEffect(owner,ids,state.myListLimit) {state.loadMyListPage(owner,ids)}
     val titles=state.myListTitles.filter {listType=="all" || it.type==listType}
     CatalogScreen(state,tr("Mi lista","My List"),titles,onBack,header={
-        Row(Modifier.padding(top=14.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+        FlowRow(Modifier.padding(top=14.dp),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             listOf("all" to tr("Todo","All"),"movie" to tr("Películas","Movies"),"series" to tr("Series","Series")).forEach {(type,label) ->
                 FocusButton(label,primary=listType==type) {state.myListLimit=25;listType=type}
             }
+            FocusButton(tr("Últimos añadidos","Last Added"),primary=listOrder=="last_added") {state.myListLimit=25;listOrder="last_added"}
+            FocusButton(tr("Más antiguos","Oldest Added"),primary=listOrder=="oldest") {state.myListLimit=25;listOrder="oldest"}
         }
     },footer={
         Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {

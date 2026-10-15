@@ -42,14 +42,14 @@ internal fun TitleActionsDialog(state: AppState,item: MediaSummary,continuing: B
 }
 
 @Composable
-internal fun EpisodeActionsDialog(state: AppState,item: MediaSummary,ep: EpisodeSummary,close: ()->Unit) {
+internal fun EpisodeActionsDialog(state: AppState,item: MediaSummary,ep: EpisodeSummary,beforePlayback: ()->Unit = {},close: ()->Unit) {
     val first=remember {FocusRequester()}
     LaunchedEffect(Unit) {withFrameNanos {};runCatching {first.requestFocus()} }
     Dialog(onDismissRequest=close) {
         Column(Modifier.consumeOpeningPress().widthIn(max=510.dp).background(Panel,RoundedCornerShape(24.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Text("S${ep.season} E${ep.episode}",color=Color.White,fontSize=24.sp)
-            FocusButton(tr("Elegir enlace","Play manually"),modifier=Modifier.focusRequester(first)) {close();state.launch {state.socialAction {state.chooseEpisodeSources(ep)} } }
-            FocusButton(tr("Desde el principio","Play from beginning")) {close();state.launch {state.socialAction {state.playEpisode(ep,true)} } }
+            FocusButton(tr("Elegir enlace","Play manually"),modifier=Modifier.focusRequester(first)) {close();beforePlayback();state.launch {state.socialAction {state.chooseEpisodeSources(ep)} } }
+            FocusButton(tr("Desde el principio","Play from beginning")) {close();beforePlayback();state.launch {state.socialAction {state.stopRandomEpisodes();state.playEpisode(ep,true)} } }
             FocusButton(tr("Marcar como visto","Mark as watched")) {state.markWatched(item,ep.season,ep.episode);close()}
             FocusButton(tr("Cerrar","Close"),onClick=close)
         }

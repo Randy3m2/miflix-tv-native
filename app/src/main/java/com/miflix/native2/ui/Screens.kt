@@ -503,8 +503,8 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                 if(hidden) FocusButton(tr("Mostrar detalles (spoilers)","Reveal details (spoilers)")) { reveal=true }
                 if(reveal && ep.overview.isNotBlank()) Text(ep.overview,color=Muted,fontSize=15.sp,maxLines=5)
                 val resume=state.progress["${item.cloudId}:s${ep.season}e${ep.episode}"]
-                if((resume?.position ?: 0L)>0 && (resume?.percent ?: 0.0)<96) FocusButton(tr("Continuar viendo","Continue watching")) { state.launch { state.socialAction { state.playEpisode(ep);episodeChoice=null } } }
-                FocusButton(tr("Desde el principio","Play from beginning")) { state.launch { state.socialAction { state.playEpisode(ep,true);episodeChoice=null } } }
+                if((resume?.position ?: 0L)>0 && (resume?.percent ?: 0.0)<96) FocusButton(tr("Continuar viendo","Continue watching")) { episodeChoice=null;state.launch {state.socialAction {state.playEpisode(ep)} } }
+                FocusButton(tr("Desde el principio","Play from beginning")) { episodeChoice=null;state.launch {state.socialAction {state.playEpisode(ep,true)} } }
                 FocusButton(tr("Añadir a cola","Add to queue")) { state.enqueue(item,ep.season,ep.episode);episodeChoice=null }
                 FocusButton(tr("Elegir enlace","Play manually")) { episodeChoice=null;state.launch {state.chooseEpisodeSources(ep)} }
                 FocusButton(tr("Marcar como visto","Mark as watched")) { state.markWatched(item,ep.season,ep.episode);episodeChoice=null }
@@ -589,6 +589,9 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                         }
                         FocusButton(if (state.favorites.contains(item.cloudId)) tr("✓ Mi lista","✓ My List") else tr("+ Mi lista","+ My List")) {
                             state.toggleFavorite(item); state.launch { runCatching { state.pushCloud() } }
+                        }
+                        if(item.type=="series" && !state.selectedUpcoming) FocusButton(if(state.randomEpisodeBusy) tr("Eligiendo…","Choosing…") else tr("🎲 Episodio aleatorio","🎲 Random episode")) {
+                            state.launch {state.playRandomEpisode(item)}
                         }
                         if(!state.kidsMode) FocusButton(tr("Sala compartida","Watch Party")) { state.screen = Screen.WATCH_PARTY }
                         if(!state.kidsMode) FocusButton("★ "+(state.ratings[item.cloudId]?.let {"$it/10"} ?: tr("Puntuar","Rate"))) {showRating=true}
@@ -1183,15 +1186,18 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     val playbackView = LocalView.current
     var quickReactions by remember(request.playbackId) { mutableStateOf(false) }
     var firstFrame by remember(request.playbackId) {mutableStateOf(false)}
+    var hadPlaybackError by remember(request.playbackId) {mutableStateOf(false)}
     var controlsVisible by remember(request.playbackId) { mutableStateOf(true) }
     var controlInteraction by remember { mutableStateOf(0) }
     val surfaceFocus = remember { FocusRequester() }
+    LaunchedEffect(firstFrame) {if(firstFrame) {withFrameNanos {};runCatching {surfaceFocus.requestFocus()} }}
     val playFocus = remember { FocusRequester() }
     var playerMenu by remember(request.playbackId) { mutableStateOf<String?>(null) }
     var resizeMode by remember { mutableStateOf(androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT) }
     var maximized by remember { mutableStateOf(true) }
     var speed by remember(request.playbackId) { mutableStateOf(1f) }
     var playbackError by remember(request.playbackId) { mutableStateOf<String?>(null) }
+    LaunchedEffect(playbackError) {if(playbackError!=null) {hadPlaybackError=true;state.finishPlaybackLoading(request.playbackId)}}
     var externalSubtitles by remember(request.playbackId) { mutableStateOf<List<SubtitleChoice>>(emptyList()) }
     var subtitleLoading by remember(request.playbackId) { mutableStateOf(false) }
     var pendingSubtitleLabel by remember(request.playbackId) { mutableStateOf<String?>(null) }
@@ -1295,6 +1301,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         pauseSynopsis = false
         if(paused) { delay(5000); if(!pauseInfoDismissed) pauseSynopsis = true }
     }
+    val randomMode=state.randomEpisodeCloud==request.item.cloudId && request.item.type=="series"
     val queueNext=state.queueEntries.firstOrNull()
     var queueSynopsis by remember(queueNext?.id) { mutableStateOf("") }
     LaunchedEffect(queueNext?.id) {
@@ -1303,13 +1310,17 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             if(entry.season>0) state.tmdb.episodeInfo(nextItem,entry.season,entry.episode)?.overview.orEmpty() else nextItem.overview
         }.getOrDefault("") }
     }
-    LaunchedEffect(ended,upcoming,queueNext?.id,cancelAutoplay,state.autoplayNext,rateAtEnd) {
-        if(ended && !rateAtEnd && !cancelAutoplay && state.partyRole!=PartyRole.GUEST && (queueNext!=null || upcoming!=null && state.autoplayNext)) {
+    LaunchedEffect(ended,upcoming,queueNext?.id,cancelAutoplay,state.autoplayNext,rateAtEnd,randomMode) {
+        if(ended && !rateAtEnd && !cancelAutoplay && state.partyRole!=PartyRole.GUEST && (queueNext!=null || (randomMode || upcoming!=null) && state.autoplayNext)) {
             countdown=10
             while(countdown>0) { delay(1000);countdown-- }
             cancelAutoplay=true
-            state.launch { runCatching { if(queueNext!=null) state.playQueued(request,queueNext) else upcoming?.let { state.playNext(request,it) } }.onFailure { state.error=it.message } }
+            state.launch { runCatching { if(queueNext!=null) state.playQueued(request,queueNext) else if(randomMode) state.playRandomEpisode(request.item) else upcoming?.let { state.playNext(request,it) } }.onFailure { state.error=it.message } }
         }
+    }
+    LaunchedEffect(state.playbackLoading,player) {
+        val pending=state.playbackLoading
+        if(pending!=null && pending.playbackId!=request.playbackId) player.pause()
     }
     LaunchedEffect(player) { showEpisodes = false }
     LaunchedEffect(playerMenu,request.playbackId) {
@@ -1357,7 +1368,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 updateScreenAwake()
             }
 
-            override fun onRenderedFirstFrame() {firstFrame=true}
+            override fun onRenderedFirstFrame() {firstFrame=true;state.finishPlaybackLoading(request.playbackId)}
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_ENDED) {
                     ended = true; paused = false
@@ -1439,8 +1450,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }
     }
 
-    LaunchedEffect(controlsVisible, showEpisodes, showQueue, showPartyActions, showAccessRequests, playerMenu, state.sourceSelection, pauseSynopsis, pauseInfoDismissed, ended, playbackError, mini) {
-        if(!mini && playbackError==null && controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !ended && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu == null && !quickReactions && state.sourceSelection == null) {
+    LaunchedEffect(firstFrame,controlsVisible, showEpisodes, showQueue, showPartyActions, showAccessRequests, playerMenu, state.sourceSelection, pauseSynopsis, pauseInfoDismissed, ended, playbackError, mini) {
+        if(firstFrame && !mini && playbackError==null && controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !ended && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu == null && !quickReactions && state.sourceSelection == null) {
             withFrameNanos { }; runCatching { playFocus.requestFocus() }
         }
     }
@@ -1464,7 +1475,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         } else requestExit()
     }
 
-    Box(Modifier.fillMaxSize().background(Color.Black).focusRequester(surfaceFocus).onPreviewKeyEvent { event ->
+    Box(Modifier.fillMaxSize().consumeOpeningPress().background(Color.Black).focusRequester(surfaceFocus).onPreviewKeyEvent { event ->
         if(mini || quickReactions) return@onPreviewKeyEvent false
         val code = event.nativeKeyEvent.keyCode
         if(code!=android.view.KeyEvent.KEYCODE_BACK && event.type==KeyEventType.KeyDown && code !in listOf(android.view.KeyEvent.KEYCODE_DPAD_CENTER,android.view.KeyEvent.KEYCODE_ENTER)) exitArmedAt=0L
@@ -1527,7 +1538,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             },
             modifier = if(maximized) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(horizontal=40.dp,vertical=24.dp)
         ) }
-        if(!firstFrame && playbackError==null) PlaybackArtwork(state,request)
+        if(!firstFrame && playbackError==null && state.playbackLoading==null) PlaybackArtwork(state,request)
         if(mini) {
             Row(Modifier.align(Alignment.BottomCenter).background(Color(0xEE171717)).padding(6.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                 FocusButton(if(paused) "▶" else "Ⅱ",horizontalPadding=12.dp) { player.playWhenReady=!player.playWhenReady }
@@ -1539,7 +1550,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 } }
                 FocusButton(tr("Cerrar","Close"),horizontalPadding=14.dp) { state.miniPlayer=false;state.playerRequest=null }
             }
-        } else {
+        } else if(firstFrame || hadPlaybackError || playbackError!=null) {
         if(playbackError!=null) {
             val errorMessage=playbackError
             LaunchedEffect(errorMessage) {
@@ -1609,7 +1620,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 FocusButton(tr("Continuar","Continue")) { state.launch { state.leaveWatchParty();state.beginMultiView(request) } }
             }
         }
-        if(controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !showEpisodes && !showPartyActions && !ended) {
+        if((firstFrame || hadPlaybackError) && controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !showEpisodes && !showPartyActions && !ended) {
             CompactPlayerControls(request, paused, positionMs, durationMs, speed, maximized, playFocus,
                 onInteraction={ controlInteraction++ },
                 onPlay={ player.playWhenReady=!player.playWhenReady },
@@ -1620,8 +1631,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 onChat={ if(state.watchParty==null) openPlayerParty() else playerMenu="party-chat" },
                 onReactions={ if(state.watchParty==null) openPlayerParty() else playerMenu="party-reactions" },
                 onQuickReactions={ if(state.watchParty==null) openPlayerParty() else { quickReactions=true;controlsVisible=false;controlInteraction++ } },onClose={ requestExit() }, onMaximize={ maximized=!maximized },
-                nextAvailable=upcoming!=null && state.partyRole!=PartyRole.GUEST,
-                onNext={ upcoming?.let { next -> cancelAutoplay=true; state.launch { runCatching { state.playNext(request,next) }.onFailure { state.error=it.message } } } },
+                nextAvailable=(randomMode || upcoming!=null) && state.partyRole!=PartyRole.GUEST,
+                onNext={cancelAutoplay=true;state.launch {state.socialAction {if(randomMode) state.playRandomEpisode(request.item) else upcoming?.let {state.playNext(request,it)} } }},
                 onEpisodes={ if(request.live) playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else "channels" else { episodesResumeAfterClose=false;showEpisodes=true } },onQueue={ showQueue=true },
                 onInfo={ playerMenu="info" },onPip={ playerMenu=null;controlsVisible=false;state.miniPlayer=true;state.screen=Screen.HOME },
                 onMultiView={ if(state.watchParty!=null || state.pendingPartyCode!=null) confirmMulti=true else state.beginMultiView(request) })
@@ -1679,7 +1690,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
         }
         if(rateAtEnd) RatingDialog(state,request.item) { rateAtEnd=false; state.launch { recommendations=state.recommendationsFor(request.item) } }
-        if(ended && state.partyRole != PartyRole.GUEST && !rateAtEnd && !showQueue && !showPartyActions) {
+        if(ended && state.playbackLoading==null && state.partyRole != PartyRole.GUEST && !rateAtEnd && !showQueue && !showPartyActions) {
             Dialog(onDismissRequest={ cancelAutoplay=true; onClose() },properties=DialogProperties(usePlatformDefaultWidth=false)) {
                 Column(Modifier.width(850.dp).heightIn(max=600.dp).background(Color(0xF00B0B0B),RoundedCornerShape(20.dp)).padding(25.dp)) {
                     Text("${tr("Terminaste","You finished")} ${request.item.title}",color=Color.White,fontSize=26.sp, lineHeight=31.sp)
@@ -1692,7 +1703,14 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                             FocusButton(tr("Editar cola","Edit queue")) { cancelAutoplay=true;showQueue=true }
                         }
                     }
-                    if(queueNext==null) upcoming?.let { next ->
+                    if(queueNext==null && randomMode) {
+                        Text(tr("Siguiente episodio aleatorio","Next random episode"),color=Muted,fontSize=20.sp)
+                        Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                            FocusButton(tr("Reproducir aleatorio","Play random")+if(!cancelAutoplay && state.autoplayNext) " · ${countdown}s" else "") {cancelAutoplay=true;state.launch {state.playRandomEpisode(request.item)}}
+                            FocusButton(tr("Detener aleatorio","Stop shuffle")) {cancelAutoplay=true;state.stopRandomEpisodes()}
+                        }
+                    }
+                    if(queueNext==null && !randomMode) upcoming?.let { next ->
                         val hidden=!state.episodeWatched(request.item,next)
                         Text("${tr("Siguiente","Next")}: S${next.season} E${next.episode} · ${if(hidden) tr("No visto","Not watched") else next.title}",color=Muted)
                         Text(if(hidden) tr("Sinopsis oculta para evitar spoilers","Synopsis hidden to avoid spoilers") else next.overview,color=Color.White,fontSize=15.sp,lineHeight=20.sp,maxLines=4)
@@ -1772,6 +1790,7 @@ private fun EpisodePickerOverlay(state: AppState, request: PlayerRequest, onClos
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(tr("Episodios","Episodes"), color = Color.White, fontSize = 29.sp, lineHeight=35.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.weight(1f))
+                if(state.partyRole!=PartyRole.GUEST) FocusButton(tr("🎲 Aleatorio","🎲 Random")) {onClose();state.launch {state.playRandomEpisode(request.item)}}
                 FocusButton(tr("Cerrar","Close"),modifier=Modifier.focusRequester(closeFocus)) { onClose() }
             }
             Spacer(Modifier.height(12.dp))
@@ -1783,17 +1802,15 @@ private fun EpisodePickerOverlay(state: AppState, request: PlayerRequest, onClos
                 items(state.episodes, key = { "${it.season}:${it.episode}" }) { ep ->
                     val active = ep.season == request.season && ep.episode == request.episode
                     EpisodeListRow(ep, active, hidden=!state.episodeWatched(request.item,ep), modifier=if(state.episodes.indexOf(ep)==focusIndex) Modifier.focusRequester(episodeFocus) else Modifier, onLongClick = { episodeActions=ep }) {
-                        state.launch {
-                            runCatching { state.playEpisode(ep) }.onFailure { state.error = it.message }
-                            onClose()
-                        }
+                        onClose()
+                        state.launch {runCatching {state.stopRandomEpisodes();state.playEpisode(ep)}.onFailure {state.error=it.message}}
                     }
                 }
             }
         }
     }
     }
-    episodeActions?.let {ep -> EpisodeActionsDialog(state,request.item,ep) {episodeActions=null} }
+    episodeActions?.let {ep -> EpisodeActionsDialog(state,request.item,ep,beforePlayback=onClose) {episodeActions=null} }
 }
 
 @Composable

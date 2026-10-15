@@ -323,8 +323,8 @@ fun NotificationsScreen(state: AppState) {
 private fun FriendPreviewCard(item: com.miflix.native2.data.FriendRecommendation,modifier: Modifier,onClick: () -> Unit) {
     var focused by remember(item.cloud) { mutableStateOf(false) }
     Column(modifier.onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-        Box(Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(12.dp)).background(Panel).border(1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(12.dp))) {
-            coil3.compose.AsyncImage(item.poster,item.title,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+        Box(Modifier.fillMaxWidth().aspectRatio(2f/3f).clip(RoundedCornerShape(12.dp)).background(Panel).border(1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(12.dp))) {
+            coil3.compose.AsyncImage(item.poster,item.title,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
         }
         Text(item.title,color=Color.White,fontSize=12.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         Text("@"+item.nickname,color=Muted,fontSize=11.sp,maxLines=1)

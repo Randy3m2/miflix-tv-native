@@ -406,6 +406,35 @@ class TmdbRepository(var token: String) {
         }
     }
 
+    private val randomSeasons=linkedMapOf<Int,Pair<Long,List<Pair<Int,Int>>>>()
+    suspend fun randomEpisode(item: MediaSummary,exclude: Pair<Int,Int>?=null): EpisodeSummary {
+        require(item.type=="series")
+        val now=System.currentTimeMillis()
+        val today=java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US).format(java.util.Date())
+        val seasons=randomSeasons[item.id]?.takeIf {now-it.first<6*60*60*1000L}?.second ?: run {
+            val all=get("/tv/${item.id}").optJSONArray("seasons") ?: org.json.JSONArray()
+            val available=(0 until all.length()).mapNotNull {index ->
+                val row=all.optJSONObject(index) ?: return@mapNotNull null
+                val number=row.optInt("season_number");val count=row.optInt("episode_count");val date=row.optString("air_date")
+                if(RandomEpisodePolicy.season(number,count,date,today)) number to count else null
+            }
+            if(randomSeasons.size>=12) randomSeasons.remove(randomSeasons.keys.first())
+            randomSeasons[item.id]=now to available;available
+        }
+        val remaining=seasons.toMutableList()
+        while(remaining.isNotEmpty()) {
+            val total=remaining.sumOf {it.second}
+            val draw=kotlin.random.Random.nextInt(total)
+            val pickedSeason=remaining[RandomEpisodePolicy.indexForDraw(remaining.map {it.second}.toIntArray(),draw)].first
+            val aired=season(item.id,pickedSeason).filter {RandomEpisodePolicy.aired(it.airDate,today)}
+            val choices=aired.filterNot {it.season==exclude?.first && it.episode==exclude?.second}
+            if(choices.isNotEmpty()) return choices.random()
+            remaining.removeAll {it.first==pickedSeason}
+            if(remaining.isEmpty() && aired.isNotEmpty()) return aired.random()
+        }
+        error(if(language.startsWith("es")) "No hay episodios estrenados disponibles" else "No aired episodes available")
+    }
+
     suspend fun byCloudId(cloudId: String): MediaSummary? {
         val m = Regex("^tmdb:(movie|series):(\\d+)$").find(cloudId) ?: return null
         val type = m.groupValues[1]

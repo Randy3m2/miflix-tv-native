@@ -29,6 +29,7 @@ public final class LocalCastServer implements AutoCloseable {
         Thread thread=new Thread(this::accept,"brunio-local-cast");thread.setDaemon(true);thread.start();
     }
     public String getCode(){return code;}
+    public String getCatalogUrl(){return getUrl()+"/catalog/"+access.getLinkTicket();}
     public String getUrl(){return "http://"+address.getHostAddress()+":"+server.getLocalPort();}
     public long getPairUntil(){return access.pairUntil;}
     public static boolean isPrivate(byte[] ip){return ip.length==4 && ((ip[0]&255)==10 || (ip[0]&255)==172 && (ip[1]&255)>=16 && (ip[1]&255)<=31 || (ip[0]&255)==192 && (ip[1]&255)==168);}
@@ -47,14 +48,21 @@ public final class LocalCastServer implements AutoCloseable {
         if(!host.equals(address.getHostAddress()+":"+server.getLocalPort())){reply(s,403,"{}",origin);return;}
         if(!origin.isEmpty() && !origin.equals(getUrl()) && !origin.startsWith("https://")){reply(s,403,"{}",origin);return;}
         if(request[0].equals("OPTIONS")){reply(s,204,"",origin);return;}
-        if(request[0].equals("GET") && request[1].equals("/")){write(s,200,"text/html; charset=utf-8",page,origin);return;}
+        if(request[0].equals("GET") && request[1].startsWith("/catalog/")){
+            if(!access.validLink(request[1].substring(9))){reply(s,403,"{\"error\":\"Link expired. Open Connect phone / PC on the TV for a new link.\"}",origin);return;}
+            // The page contains a pairing capability: only a same-origin top-level navigation may read it.
+            if(!origin.isEmpty() && !origin.equals(getUrl())){reply(s,403,"{}",origin);return;}
+            String html=new String(page,StandardCharsets.UTF_8).replace("__BRUNIO_ENDPOINT__",getUrl()).replace("__BRUNIO_LINK_TICKET__",access.getLinkTicket());
+            write(s,200,"text/html; charset=utf-8",html.getBytes(StandardCharsets.UTF_8),"");return;
+        }
+        if(request[0].equals("GET") && request[1].equals("/")){write(s,200,"text/html; charset=utf-8","<p>Open Connect phone / PC on your TV and use its complete link or QR.</p>".getBytes(StandardCharsets.UTF_8),"");return;}
         if(!request[0].equals("POST") || h.containsKey("transfer-encoding")){reply(s,405,"{}",origin);return;}
         int length=Integer.parseInt(value(h,"content-length","0"));if(length<=0||length>4096){reply(s,413,"{}",origin);return;}
         byte[] bytes=new byte[length];int read=0;while(read<length){int n=in.read(bytes,read,length-read);if(n<0)throw new EOFException();read+=n;}
         // URL encoded fields keep the protocol independently testable without Android JSON.
         Map<String,String> form=new HashMap<>();for(String field:new String(bytes,StandardCharsets.UTF_8).split("&")){String[] pair=field.split("=",2);if(pair.length==2)form.put(URLDecoder.decode(pair[0],"UTF-8"),URLDecoder.decode(pair[1],"UTF-8"));}
         if(request[1].equals("/connect")){
-            String token=access.connect(value(form,"code",""),origin,s.getInetAddress().getHostAddress());
+            String token=form.containsKey("ticket")?access.connectLink(value(form,"ticket",""),origin,s.getInetAddress().getHostAddress()):access.connect(value(form,"code",""),origin,s.getInetAddress().getHostAddress());
             reply(s,token==null?403:200,token==null?"{\"ok\":false}":"{\"ok\":true,\"token\":\""+token+"\"}",origin);return;
         }
         String auth=value(h,"authorization","");String token=auth.startsWith("Bearer ")?auth.substring(7):"";

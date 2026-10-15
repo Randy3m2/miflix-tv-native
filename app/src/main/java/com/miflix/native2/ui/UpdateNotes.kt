@@ -12,6 +12,15 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val changes=listOf(
+        "Friends & Party del player: panel compacto, actualización automática al abrir, sin Refresh ni Calendar." to "Player Friends & Party: compact panel, automatic refresh on opening, no Refresh or Calendar buttons.",
+        "Carga de reproducción con imagen del episodio/póster hasta el primer fotograma, sin mensajes intermedios." to "Episode artwork/poster stays visible until the first video frame, with no intermediate loading messages.",
+        "Tiempo de destino visible al adelantar, retroceder o arrastrar; el arrastre se aplica al soltar." to "Live seek timestamp while moving forward/backward or dragging; drag seeks commit on release.",
+        "Portadas completas en recomendaciones y My List en la navegación superior, junto a Live TV." to "Full recommendation posters and My List in the top navigation beside Live TV.",
+        "Episodio aleatorio desde la ficha de una serie o el selector de episodios; continúa en modo aleatorio con Autoplay." to "Random episode from series details or the episode picker; continues in shuffle mode with Autoplay.",
+        "My List: Last Added y Oldest Added, con paginación de 25. Last Added también en la web." to "My List: Last Added and Oldest Added with 25-title paging. Last Added is also available on the web.",
+        "Connect phone / PC abre tu catálogo de Vercel conectado a la TV: QR/enlace sin código manual y botón Play on TV." to "Connect phone / PC opens your Vercel catalog connected to the TV: QR/link with no manual code and a Play on TV button."
+    )
+    val previousChanges=listOf(
         "Menú de amigos: Watch, View Details, Recommendations y Close; detalles abre la ficha sin iniciar reproducción." to "Friend menu: Watch, View Details, Recommendations and Close; details opens the title without starting playback.",
         "Enlaces de Comet y Torrentio con texto ordenado e insignias de Dolby/HDR según sus metadatos." to "Clean Comet and Torrentio link metadata with small Dolby/HDR badges when reported by the source.",
         "Envío local a TV por Wi-Fi, con enlace y código de conexión; sin reproducción web." to "Send titles to TV over local Wi-Fi with a connection link and code; no web playback.",
@@ -44,6 +53,8 @@ internal fun ChangelogDialog(state: AppState,close: ()->Unit) {
             androidx.tv.material3.Text("Changelog / Details · ${BuildConfig.VERSION_NAME}",color=androidx.compose.ui.graphics.Color.White,fontSize=24.sp)
             androidx.compose.foundation.lazy.LazyColumn(androidx.compose.ui.Modifier.weight(1f,false),verticalArrangement=androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
                 items(UpdateNotes.changes.size) {index -> val change=UpdateNotes.changes[index];androidx.tv.material3.Text("• "+tr(change.first,change.second),color=Muted,fontSize=15.sp,modifier=androidx.compose.ui.Modifier.fillMaxWidth().contentFocusBorder().focusable().padding(10.dp)) }
+                item {androidx.tv.material3.Text("RC57–RC58",color=Accent,fontSize=20.sp)}
+                items(UpdateNotes.previousChanges.size) {index -> val change=UpdateNotes.previousChanges[index];androidx.tv.material3.Text("• "+tr(change.first,change.second),color=Muted,fontSize=15.sp,modifier=androidx.compose.ui.Modifier.fillMaxWidth().contentFocusBorder().focusable().padding(10.dp)) }
             }
             FocusButton(tr("Cerrar","Close"),modifier=androidx.compose.ui.Modifier.focusRequester(focus)) {state.markNoticesRead(UpdateNotes.id);close()}
         }

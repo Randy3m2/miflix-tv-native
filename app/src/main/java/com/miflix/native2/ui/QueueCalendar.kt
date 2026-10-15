@@ -85,7 +85,7 @@ fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,close: () -> Unit) {
     var parties by remember { mutableStateOf(false) }
     var reactions by remember { mutableStateOf(false) }
     var chat by remember { mutableStateOf(false) }
-    var calendar by remember { mutableStateOf(false) }
+    LaunchedEffect(state.session?.userId) {state.refreshFriendsTab()}
     val closeFocus=remember { FocusRequester() }
     val listState=rememberLazyListState()
     val scope=rememberCoroutineScope()
@@ -110,13 +110,11 @@ fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,close: () -> Unit) {
         } else false
     }
     Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
-        Column(Modifier.width(780.dp).heightIn(max=530.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+        Column(Modifier.width(570.dp).heightIn(max=440.dp).background(Panel,RoundedCornerShape(22.dp)).padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Text(tr("Amigos y Party","Friends & Party"),color=Color.White,fontSize=26.sp)
             Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 FocusButton(tr("Amigos","Friends"),primary=!parties,modifier=Modifier.focusRequester(first)) { parties=false }
                 FocusButton(tr("Salas","Parties"),primary=parties) { parties=true }
-                FocusButton(tr("Actualizar","Refresh")) { state.launch { state.refreshFriendsDirectory() } }
-                FocusButton(tr("Calendario","Calendar")) { calendar=true }
             }
             if(state.watchParty!=null) Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
                 Text("Party · ${state.watchParty?.roomCode}",color=Color.White)
@@ -125,7 +123,7 @@ fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,close: () -> Unit) {
                 FocusButton(tr("Salir de sala","Leave Party"),modifier=enterList) { state.launch { state.leaveWatchParty();close() } }
             } else FocusButton(tr("Crear sala con este contenido","Create Party with this title"),modifier=enterList) { onCreate() }
             LazyColumn(Modifier.weight(1f),state=listState,contentPadding=PaddingValues(6.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                if(friends.isEmpty()) item { Text(tr("Pulsa Actualizar para ver la actividad","Select Refresh to see activity"),color=Muted) }
+                if(friends.isEmpty()) item { Text(tr("No hay actividad disponible","No activity available"),color=Muted) }
                 items(friends,key={it.id}) { friend ->
                     var focused by remember(friend.id) { mutableStateOf(false) }
                     val ink=if(focused) FocusInk else Color.White
@@ -146,18 +144,18 @@ fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,close: () -> Unit) {
                         .background(if(focused) Accent else Panel,RoundedCornerShape(14.dp))
                         .border(2.dp,if(focused) Color.White else Color.Transparent,RoundedCornerShape(14.dp)).padding(14.dp)) {
                         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
-                            ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(76.dp))
+                            ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(48.dp))
                             Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                                Text("@${friend.nickname}",color=ink,fontSize=20.sp)
-                                Text(if(friend.title.isNotBlank()) tr("Viendo ","Watching ")+friend.title+(if(friend.season>0) " · S${friend.season} E${friend.episode}" else "") else if(friend.online) tr("En línea","Online") else tr("Desconectado","Offline"),color=secondary,maxLines=3)
+                                Text("@${friend.nickname}",color=ink,fontSize=16.sp)
+                                Text(if(friend.title.isNotBlank()) tr("Viendo ","Watching ")+friend.title+(if(friend.season>0) " · S${friend.season} E${friend.episode}" else "") else if(friend.online) tr("En línea","Online") else tr("Desconectado","Offline"),color=secondary,maxLines=2)
                             }
                         }
-                        Text(tr("OK · Ver opciones","OK · View options"),color=secondary,fontSize=14.sp)
+                        Text(tr("OK · Ver opciones","OK · View options"),color=secondary,fontSize=11.sp)
                     }
                 }
             }
             Text(state.partyStatus,color=Muted)
-            state.error?.let { Text(it,color=Color.White,maxLines=3) }
+            state.error?.let { Text(it,color=Color.White,maxLines=2) }
             FocusButton(tr("Cerrar","Close"),modifier=Modifier.focusRequester(closeFocus).onPreviewKeyEvent { event ->
                 if(event.key==Key.DirectionUp && friends.isNotEmpty()) { if(event.type==KeyEventType.KeyDown) moveTo(friends.lastIndex);true } else false
             }) { close() }
@@ -166,7 +164,6 @@ fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,close: () -> Unit) {
     person?.let { friend -> FriendActionsDialog(state,friend,close={ person=null },onContentOpened={ person=null;close() }) }
     if(chat) PlayerPartyChatDialog(state) { chat=false }
     if(reactions) PartyActionsDialog(state) { reactions=false }
-    if(calendar) CalendarDialog(state) { calendar=false }
 }
 
 @Composable

@@ -84,7 +84,7 @@ fun FriendRecommendationsDialog(state: AppState, owner: String?=null, ownerName:
                 if(!busy && visible.isEmpty()) item { Text(tr("Aún no hay recomendaciones. Puedes agregar una desde la ficha de una película o serie.","No recommendations yet. Add one from a movie or series details page."),color=Muted) }
                 items(visible,key={it.owner+":"+it.cloud}) { row ->
                     Row(Modifier.fillMaxWidth().background(Color(0xFF303030),RoundedCornerShape(16.dp)).padding(16.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
-                        AsyncImage(row.poster,null,Modifier.size(76.dp,114.dp),contentScale=ContentScale.Crop)
+                        AsyncImage(row.poster,null,Modifier.size(76.dp,114.dp),contentScale=ContentScale.Fit)
                         Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                             Text(row.title,color=Color.White,fontSize=20.sp,maxLines=2)
                             Text(if(row.owner==account) tr("Recomendado por ti","Recommended by you") else tr("Recomendado por @","Recommended by @")+row.nickname,color=Muted)
@@ -123,7 +123,8 @@ fun FriendActionsDialog(state: AppState, friend: FriendActivity, close: () -> Un
     fun watch() {
         if(busy) return
         busy=true
-        state.launch { try { state.socialAction { state.watchFriendIndependently(friend);onContentOpened() } } finally { busy=false } }
+        onContentOpened()
+        state.launch {try {state.socialAction {state.watchFriendIndependently(friend)}} finally {busy=false} }
     }
     Dialog(onDismissRequest={ if(!busy) close() }) {
         LazyColumn(Modifier.width(520.dp).heightIn(max=510.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {

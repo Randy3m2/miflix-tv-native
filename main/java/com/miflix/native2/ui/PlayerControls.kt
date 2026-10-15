@@ -85,7 +85,7 @@ internal fun CompactPlayerControls(
                 PlayerIconButton("cc",tr("Subtítulos","Subtitles"),onInteraction=onInteraction,onClick={onMenu("subtitles")},onLabel={ focusedLabel=it })
                 PlayerIconButton("audio",tr("Pista de audio","Audio track"),onInteraction=onInteraction,onClick={onMenu("audio")},onLabel={ focusedLabel=it })
                 PlayerIconButton("links",tr("Enlaces de reproducción","Playback links"),onInteraction=onInteraction,onClick=onLinks,onLabel={ focusedLabel=it })
-                PlayerIconButton("party",if(party) tr("Mi Party","My Party") else tr("Crear Party","Create Party"),onInteraction=onInteraction,onClick=onParty,onLabel={ focusedLabel=it })
+                PlayerIconButton("party","Friends & Party",onInteraction=onInteraction,onClick=onParty,onLabel={ focusedLabel=it })
                 PlayerIconButton("chat",tr("Chat del Party","Party chat"),onInteraction=onInteraction,onClick=onChat,onLabel={ focusedLabel=it })
                 PlayerIconButton("reactions",tr("Emojis · Mantén pulsado para frases","Emojis · Hold for phrases"),onInteraction=onInteraction,onClick=onQuickReactions,onLongClick=onReactions,onLabel={ focusedLabel=it })
                 PlayerIconButton("queue",tr("Cola","Queue"),onInteraction=onInteraction,onClick=onQueue,onLabel={ focusedLabel=it })
@@ -143,22 +143,42 @@ private fun PlayerGlyph(icon: String, color: Color, modifier: Modifier) {
 /** Left/right seeks ten seconds while this bar has focus; up/down uses normal TV navigation. */
 @Composable
 private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seekFocus: FocusRequester, playFocus: FocusRequester, onInteraction: () -> Unit, onSeek: (Long) -> Unit) {
-    var focused by remember { mutableStateOf(false) }
-    val fraction=if(duration>0) (position.toFloat()/duration).coerceIn(0f,1f) else 0f
-    Box(Modifier.fillMaxWidth().height(30.dp).focusRequester(seekFocus).focusProperties { down=playFocus }.onFocusChanged { focused=it.isFocused; if(it.isFocused) onInteraction() }
-        .semantics { contentDescription=tr("Barra de reproducción: izquierda o derecha para avanzar diez segundos","Playback bar: left or right to seek ten seconds") }
-        .onPreviewKeyEvent { event ->
+    var focused by remember {mutableStateOf(false)}
+    var dragging by remember {mutableStateOf(false)}
+    var preview by remember {mutableStateOf<Long?>(null)}
+    val latestSeek by rememberUpdatedState(onSeek)
+    val interaction by rememberUpdatedState(onInteraction)
+    val shown=(preview ?: position).coerceIn(0L,duration.coerceAtLeast(0L))
+    val fraction=if(duration>0) (shown.toFloat()/duration).coerceIn(0f,1f) else 0f
+    LaunchedEffect(position,dragging) {if(!dragging && preview?.let {kotlin.math.abs(position-it)<1000L}==true) preview=null}
+    LaunchedEffect(preview,dragging) {if(preview!=null && !dragging) {kotlinx.coroutines.delay(1500);preview=null} }
+    Box(Modifier.fillMaxWidth().height(48.dp).focusRequester(seekFocus).focusProperties {down=playFocus}
+        .onFocusChanged {focused=it.isFocused;if(it.isFocused) interaction()}
+        .semantics {contentDescription=playbackTime(shown)+" / "+playbackTime(duration)}
+        .onPreviewKeyEvent {event ->
             val code=event.nativeKeyEvent.keyCode
             if(code==android.view.KeyEvent.KEYCODE_DPAD_LEFT || code==android.view.KeyEvent.KEYCODE_DPAD_RIGHT) {
-                if(event.type==KeyEventType.KeyDown) { onInteraction(); if(enabled) onSeek((position+if(code==android.view.KeyEvent.KEYCODE_DPAD_LEFT) -10000 else 10000).coerceIn(0,duration)) }; true
+                if(event.type==KeyEventType.KeyDown && enabled) {
+                    interaction();val target=((preview ?: position)+if(code==android.view.KeyEvent.KEYCODE_DPAD_LEFT) -10000L else 10000L).coerceIn(0L,duration)
+                    preview=target;latestSeek(target)
+                };true
             } else false
         }.focusable()
-        .pointerInput(duration,enabled) { detectTapGestures { if(enabled && size.width>0) { onInteraction();onSeek((it.x/size.width*duration).toLong().coerceIn(0,duration)) } } }
-        .pointerInput(duration,enabled) { detectDragGestures { change,_ -> if(enabled && size.width>0) { change.consume();onInteraction();onSeek((change.position.x/size.width*duration).toLong().coerceIn(0,duration)) } } },contentAlignment=Alignment.Center) {
-        Canvas(Modifier.fillMaxWidth().height(if(focused) 8.dp else 5.dp)) {
+        .pointerInput(duration,enabled) {detectTapGestures {if(enabled && size.width>0) {interaction();val target=(it.x/size.width*duration).toLong().coerceIn(0L,duration);preview=target;latestSeek(target)} } }
+        .pointerInput(duration,enabled) {
+            detectDragGestures(
+                onDragStart={dragging=true;interaction()},
+                onDragCancel={dragging=false;preview=null},
+                onDragEnd={if(enabled) preview?.let {latestSeek(it)};dragging=false},
+                onDrag={change,_ -> if(enabled && size.width>0) {change.consume();interaction();preview=(change.position.x/size.width*duration).toLong().coerceIn(0L,duration)}}
+            )
+        }) {
+        Text(playbackTime(shown)+" / "+playbackTime(duration),color=Color.White,fontSize=12.sp,lineHeight=16.sp,
+            modifier=Modifier.align(Alignment.TopEnd).background(Color(0xA0000000),RoundedCornerShape(5.dp)).padding(horizontal=7.dp,vertical=2.dp))
+        Canvas(Modifier.align(Alignment.BottomCenter).padding(bottom=6.dp).fillMaxWidth().height(if(focused || dragging) 8.dp else 5.dp)) {
             drawRoundRect(Color(0xFF555555),cornerRadius=androidx.compose.ui.geometry.CornerRadius(size.height))
             if(fraction>0) drawRoundRect(Color.White,size=Size(size.width*fraction,size.height),cornerRadius=androidx.compose.ui.geometry.CornerRadius(size.height))
-            if(focused && enabled) drawCircle(Color.White,7.dp.toPx(),Offset(size.width*fraction,size.height/2))
+            if((focused || dragging) && enabled) drawCircle(Color.White,7.dp.toPx(),Offset(size.width*fraction,size.height/2))
         }
     }
 }

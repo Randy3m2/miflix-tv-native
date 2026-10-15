@@ -111,7 +111,7 @@ class AppState(context: Context) {
         invalidatePlaybackWork()
     }
     private fun invalidatePlaybackWork() {
-        playbackWork.invalidate(); sourceSelection=null; busyMessage=null
+        playbackWork.invalidate(); sourceSelection=null; busyMessage=null;playbackLoading=null
         playbackSubtitleJobs.values.forEach { it.cancel() }; playbackSubtitleJobs.clear()
     }
     private fun sameParty(epoch: Long, owner: String, room: String): Boolean =
@@ -824,6 +824,14 @@ class AppState(context: Context) {
     }
     var searchQuery by mutableStateOf("")
     var playerRequest by mutableStateOf<PlayerRequest?>(null)
+    var playbackLoading by mutableStateOf<PlaybackLoading?>(null)
+        private set
+    fun beginPlaybackLoading(item: MediaSummary,season: Int=0,episode: Int=0,art: String?=null) {
+        playbackLoading=PlaybackLoading(item,season,episode,art ?: episodes.firstOrNull {it.season==season && it.episode==episode}?.still ?: item.backdrop ?: item.poster)
+    }
+    fun abortPlaybackLoading() {playbackLoading=null}
+    fun cancelPlaybackStart() {invalidatePlaybackWork();playerRequest=null;miniPlayer=false;screen=if(selected!=null) Screen.DETAILS else Screen.HOME}
+    fun finishPlaybackLoading(id: String) {if(playbackLoading?.playbackId==id) playbackLoading=null}
     var busyMessage by mutableStateOf<String?>(null)
     var error by mutableStateOf<String?>(null)
 
@@ -873,7 +881,7 @@ class AppState(context: Context) {
     )
 
     fun launch(block: suspend CoroutineScope.() -> Unit) = appScope.launch {
-        try { block() } catch(e: CancellationException) { throw e } catch(e: Exception) { error=e.message ?: tr("No se pudo completar la operación","Could not complete the operation") }
+        try { block() } catch(e: CancellationException) { throw e } catch(e: Exception) {playbackLoading=null; error=e.message ?: tr("No se pudo completar la operación","Could not complete the operation") }
     }
 
     val kidsMode: Boolean get()=activeProfile.isKids || activeProfile.id==KidsContentPolicy.PROFILE_ID
@@ -1001,6 +1009,7 @@ class AppState(context: Context) {
         playerRequest=null;sourceSelection=null;miniPlayer=false;selected=null;details=null;profilePhotoEditor=null
         favorites.clear();progress.clear();continueWatching.clear();kidsContinue.clear();notifications.clear()
         activeProfile = p
+        randomEpisodeCloud=null
         contextTitle=null;socialProfileEditor=false;localCastPairing=false
         if(kidsMode) detachParty()
         local.saveProfileId(p.id)
@@ -1366,7 +1375,7 @@ class AppState(context: Context) {
     }
 
     fun remindMe(item: MediaSummary) {
-        if(!favorites.contains(item.cloudId)) favorites.add(item.cloudId)
+        if(!favorites.contains(item.cloudId)) favorites.add(0,item.cloudId)
         val key=knownKey()
         val known=org.json.JSONObject(playbackPrefs.getString(key,"{}"))
         if(!known.has(item.cloudId)) known.put(item.cloudId,"pending")
@@ -1386,7 +1395,40 @@ class AppState(context: Context) {
     }
 
     fun toggleFavorite(item: MediaSummary) {
-        if (favorites.contains(item.cloudId)) favorites.remove(item.cloudId) else favorites.add(item.cloudId)
+        if (favorites.contains(item.cloudId)) favorites.remove(item.cloudId) else favorites.add(0,item.cloudId)
+    }
+
+    var randomEpisodeCloud by mutableStateOf<String?>(null)
+        private set
+    var randomEpisodeBusy by mutableStateOf(false)
+        private set
+    fun stopRandomEpisodes() {randomEpisodeCloud=null}
+    suspend fun playRandomEpisode(item: MediaSummary) {
+        if(randomEpisodeBusy) return
+        check(partyRole!=PartyRole.GUEST) {tr("El host elige el episodio.","The host chooses the episode.")}
+        randomEpisodeBusy=true
+        val owner=activeProfile.id;val account=session?.userId;val generation=playbackWork.generation
+        beginPlaybackLoading(item)
+        try {
+            val previous=playerRequest?.takeIf {it.item.cloudId==item.cloudId}?.let {it.season to it.episode}
+            val episode=tmdb.randomEpisode(item,previous)
+            if(owner!=activeProfile.id || account!=session?.userId || generation!=playbackWork.generation) return
+            if(selected?.cloudId!=item.cloudId || details?.summary?.cloudId!=item.cloudId) open(item)
+            if(owner!=activeProfile.id || account!=session?.userId || generation!=playbackWork.generation) return
+            check(selected?.cloudId==item.cloudId && details?.summary?.cloudId==item.cloudId) {tr("Serie no disponible","Series unavailable")}
+            randomEpisodeCloud=item.cloudId
+            playEpisode(episode,true)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if(owner==activeProfile.id && account==session?.userId) {
+                randomEpisodeCloud=null
+                playbackLoading=null
+            }
+            throw e
+        } finally {
+            randomEpisodeBusy=false
+        }
     }
 
     suspend fun playRandomMovie() {
@@ -1432,14 +1474,20 @@ class AppState(context: Context) {
 
     suspend fun playMovie(fromStart: Boolean=false) {
         val item = selected ?: return
-        val d = details ?: tmdb.details(item).also { details = it }
+        beginPlaybackLoading(item)
+        val generation=playbackWork.generation
+        val d = details ?:  tmdb.details(item).also { details = it }
+        if(generation!=playbackWork.generation || selected?.cloudId!=item.cloudId) return
         val imdb = d.imdbId ?: throw IllegalStateException(tr("IMDb ID no disponible","IMDb ID unavailable"))
         playResolved(item, imdb, 0, 0,if(fromStart) 0L else null)
     }
 
     suspend fun playEpisode(ep: EpisodeSummary, fromStart: Boolean=false) {
         val item = selected ?: return
-        val d = details ?: tmdb.details(item).also { details = it }
+        beginPlaybackLoading(item,ep.season,ep.episode,ep.still)
+        val generation=playbackWork.generation
+        val d = details ?:  tmdb.details(item).also { details = it }
+        if(generation!=playbackWork.generation || selected?.cloudId!=item.cloudId) return
         val imdb = d.imdbId ?: throw IllegalStateException(tr("IMDb ID no disponible","IMDb ID unavailable"))
         playResolved(item, imdb, ep.season, ep.episode,if(fromStart) 0L else null)
     }
@@ -1554,9 +1602,11 @@ class AppState(context: Context) {
 
     private suspend fun playResolved(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeOverride: Long? = null, selectedStream: StreamChoice? = null, onStarted: ((PlayerRequest) -> Unit)? = null) = coroutineScope {
         if(kidsMode) require(tmdb.kidsAllowed(item)) { tr("Este título no está disponible en Kids.","This title is not available in Kids.") }
+        if(randomEpisodeCloud!=item.cloudId) randomEpisodeCloud=null
         val ticket=playbackWork.begin()
         val playbackOwner=session?.userId; val playbackProfile=activeProfile.id
         fun valid()=playbackWork.current(ticket) && session?.userId==playbackOwner && activeProfile.id==playbackProfile
+        if(playbackLoading?.let {it.item.cloudId==item.cloudId && it.season==season && it.episode==episode}!=true) beginPlaybackLoading(item,season,episode)
         busyMessage = tr("Buscando el mejor enlace…","Finding the best source…")
         error = null
         val streamsJob = async { if (selectedStream != null) listOf(selectedStream).filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) } else resolvePlaybackSources(item,imdb,season,episode) }
@@ -1587,9 +1637,10 @@ class AppState(context: Context) {
             val key = if (item.type == "series") "${item.cloudId}:s${season}e${episode}" else item.cloudId
             val saved = progress[key] ?: progress[item.cloudId]
             playerRequest = PlayerRequest(item, enriched, season, episode, resumeOverride ?: saved?.position ?: 0L)
+            playbackLoading=playbackLoading?.copy(playbackId=playerRequest?.playbackId)
             screen = Screen.PLAYER
             playerRequest?.let { onStarted?.invoke(it) }
-        }.onFailure { if(it is CancellationException) throw it; if(valid()) error=it.message }
+        }.onFailure { if(it is CancellationException) throw it; if(valid()) {playbackLoading=null;error=it.message} }
         if(valid()) busyMessage=null
     }
 

@@ -31,19 +31,26 @@ internal object MenuActivity {
     fun touch() {lastInput=SystemClock.elapsedRealtime()}
 }
 
+internal data class PlaybackLoading(val item: com.miflix.native2.model.MediaSummary,val season: Int,val episode: Int,val artwork: String?,val playbackId: String?=null)
+
+@Composable
+internal fun PlaybackLoadingCover(load: PlaybackLoading,onCancel: (() -> Unit)?=null) {
+    val focus=remember {FocusRequester()}
+    if(onCancel!=null) {
+        BackHandler {onCancel()}
+        LaunchedEffect(Unit) {withFrameNanos {};runCatching {focus.requestFocus()} }
+    }
+    Box(Modifier.fillMaxSize().background(Color.Black).then(if(onCancel!=null) Modifier.focusRequester(focus).onPreviewKeyEvent {it.nativeKeyEvent.keyCode!=android.view.KeyEvent.KEYCODE_BACK}.focusable() else Modifier),contentAlignment=Alignment.Center) {
+        AsyncImage(load.item.poster ?: load.item.backdrop,null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+        if(load.artwork!=null) AsyncImage(load.artwork,null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+    }
+}
+
 @Composable
 internal fun PlaybackArtwork(state: AppState,request: PlayerRequest) {
-    val details=state.details?.takeIf {it.summary.cloudId==request.item.cloudId}
-    Box(Modifier.fillMaxSize().background(Bg),contentAlignment=Alignment.Center) {
-        AsyncImage(request.item.backdrop ?: request.item.poster,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x77000000),Color(0xC0000000)))))
-        Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(18.dp)) {
-            if(details?.logo!=null) AsyncImage(details.logo,request.item.title,Modifier.width(380.dp).height(150.dp),contentScale=ContentScale.Fit)
-            else Text(request.item.title,color=Color.White,fontSize=32.sp,fontWeight=FontWeight.Black)
-            Text(if(request.item.type=="series") "S${request.season} E${request.episode}" else "BruniO",color=Color.White,fontSize=16.sp)
-            Text(tr("Preparando reproducción…","Preparing playback…"),color=Color(0xFFC5C5CA),fontSize=13.sp)
-        }
-    }
+    val art=state.playbackLoading?.takeIf {it.item.cloudId==request.item.cloudId}
+        ?: PlaybackLoading(request.item,request.season,request.episode,request.item.backdrop ?: request.item.poster)
+    PlaybackLoadingCover(art)
 }
 
 @Composable

@@ -39,13 +39,21 @@ internal fun LocalCastHost(state: AppState) {
     var message by remember {mutableStateOf("")}
     var command by remember {mutableStateOf<Job?>(null)}
     var networkRevision by remember {mutableIntStateOf(0)}
+    fun wifiSignature(): String = manager.allNetworks.mapNotNull {network ->
+        val caps=manager.getNetworkCapabilities(network)
+        if(caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)!=true || caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) null
+        else manager.getLinkProperties(network)?.linkAddresses?.filter {it.address is Inet4Address && LocalCastServer.isPrivate(it.address.address)}?.joinToString {"${network}:${it.address.hostAddress}/${it.prefixLength}"}
+    }.sorted().joinToString("|")
+    var lastNetwork by remember {mutableStateOf(wifiSignature())}
+    fun networkChanged() {main.post {val signature=wifiSignature();if(lastNetwork!=signature) {lastNetwork=signature;networkRevision++}}}
     LaunchedEffect(state.localCastPairing) {if(state.localCastPairing) enabled=true}
     DisposableEffect(enabled,state.appForeground) {
         val callback=object: ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {main.post {networkRevision++}}
-            override fun onLost(network: Network) {main.post {networkRevision++}}
-            override fun onLinkPropertiesChanged(network: Network,properties: android.net.LinkProperties) {main.post {networkRevision++}}
+            override fun onAvailable(network: Network) {networkChanged()}
+            override fun onLost(network: Network) {networkChanged()}
+            override fun onLinkPropertiesChanged(network: Network,properties: android.net.LinkProperties) {networkChanged()}
         }
+        lastNetwork=wifiSignature()
         if(enabled && state.appForeground) runCatching {manager.registerNetworkCallback(NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build(),callback)}
         onDispose {runCatching {manager.unregisterNetworkCallback(callback)}}
     }
@@ -99,15 +107,15 @@ internal fun LocalCastHost(state: AppState) {
                 receiver?.let {server ->
                     val expired=now>server.pairUntil
                     if(!expired) {
-                        QrCode(server.url+"/#code="+server.code,170.dp)
-                        Text(server.url,color=Color.White,fontSize=17.sp)
-                        Text(tr("Código: ","Code: ")+server.code+" · "+((server.pairUntil-now)/1000).coerceAtLeast(0)+"s",color=Accent,fontSize=24.sp)
-                    } else Text(tr("Código caducado. Genera uno nuevo.","Code expired. Generate a new one."),color=Muted)
-                    Text(tr("Escanea el QR o introduce la dirección y el código en Send to TV de la web. La conexión dura hasta 30 minutos.","Scan the QR or enter the address and code in the website's Send to TV. Connection lasts up to 30 minutes."),color=Muted,fontSize=13.sp)
+                        QrCode(server.catalogUrl,190.dp)
+                        Text(server.catalogUrl,color=Color.White,fontSize=12.sp)
+                        Text(tr("Enlace válido: ","Link valid: ")+((server.pairUntil-now)/1000).coerceAtLeast(0)+"s",color=Accent,fontSize=16.sp)
+                    } else Text(tr("Enlace caducado. Genera uno nuevo.","Link expired. Generate a new one."),color=Muted)
+                    Text(tr("Escanea el QR o abre el enlace completo. El catálogo se conecta automáticamente: elige contenido y pulsa Play on TV. No necesitas código.","Scan the QR or open the complete link. The catalog connects automatically: choose a title and press Play on TV. No code needed."),color=Muted,fontSize=13.sp)
                 }
                 if(message.isNotBlank()) Text(message,color=Color.White)
                 Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                    FocusButton(tr("Nuevo código","New code"),modifier=Modifier.focusRequester(first)) {revision++}
+                    FocusButton(tr("Nuevo enlace","New link"),modifier=Modifier.focusRequester(first)) {revision++}
                     FocusButton(tr("Desconectar","Disconnect")) {enabled=false;state.localCastPairing=false}
                     FocusButton(tr("Cerrar","Close")) {state.localCastPairing=false}
                 }

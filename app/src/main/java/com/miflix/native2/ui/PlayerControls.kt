@@ -61,8 +61,6 @@ internal fun CompactPlayerControls(
             PlayerIconButton("info",tr("Información técnica","Playback info"),onInteraction=onInteraction,onClick=onInfo,onLabel={ focusedLabel=it })
             PlayerIconButton("pip",tr("Ventana flotante","Picture in Picture"),onInteraction=onInteraction,onClick=onPip,onLabel={ focusedLabel=it })
             if(request.live) PlayerIconButton("grid",tr("Hasta 4 canales","Up to 4 channels"),onInteraction=onInteraction,onClick=onMultiView,onLabel={ focusedLabel=it })
-            PlayerIconButton("close",tr("Salir","Exit"),onInteraction=onInteraction,onClick=onClose,onLabel={ focusedLabel=it })
-            PlayerIconButton("maximize",if(maximized) tr("Restaurar tamaño","Restore size") else tr("Maximizar","Maximize"),onInteraction=onInteraction,onClick=onMaximize,onLabel={ focusedLabel=it })
         }
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
             .background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xE6000000))))
@@ -89,7 +87,7 @@ internal fun CompactPlayerControls(
                 PlayerIconButton("links",tr("Enlaces de reproducción","Playback links"),onInteraction=onInteraction,onClick=onLinks,onLabel={ focusedLabel=it })
                 PlayerIconButton("party",if(party) tr("Mi Party","My Party") else tr("Crear Party","Create Party"),onInteraction=onInteraction,onClick=onParty,onLabel={ focusedLabel=it })
                 PlayerIconButton("chat",tr("Chat del Party","Party chat"),onInteraction=onInteraction,onClick=onChat,onLabel={ focusedLabel=it })
-                PlayerIconButton("reactions",tr("Reacciones · Mantén pulsado para emojis rápidos","Reactions · Hold for quick emojis"),onInteraction=onInteraction,onClick=onReactions,onLongClick=onQuickReactions,onLabel={ focusedLabel=it })
+                PlayerIconButton("reactions",tr("Emojis · Mantén pulsado para frases","Emojis · Hold for phrases"),onInteraction=onInteraction,onClick=onQuickReactions,onLongClick=onReactions,onLabel={ focusedLabel=it })
                 PlayerIconButton("queue",tr("Cola","Queue"),onInteraction=onInteraction,onClick=onQueue,onLabel={ focusedLabel=it })
                 Spacer(Modifier.weight(1f))
                 Text(if(duration>0) "${tr("Termina","Ends")} " + java.text.SimpleDateFormat("HH:mm",java.util.Locale.getDefault()).format(java.util.Date(System.currentTimeMillis()+((duration-position).coerceAtLeast(0)/speed.coerceAtLeast(0.1f)).toLong())) else if(request.live) tr("EN VIVO","LIVE") else playbackTime(position),

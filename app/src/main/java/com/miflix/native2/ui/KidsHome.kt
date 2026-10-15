@@ -30,7 +30,7 @@ internal fun KidsHomeScreen(state: AppState) {
             }
             if(state.kidsContinue.isNotEmpty()) item(key="kids_continue") {
                 SpotlightRail(tr("Seguir viendo","Continue Watching"),state.kidsContinue,landscape=true,
-                    progressFor={state.progress[it.cloudId]?.percent}) {state.launch {state.open(it)} }
+                    progressFor={state.progress[it.cloudId]?.percent},onLongClick={state.titleActions(it,true)}) {state.launch {state.open(it)} }
             }
             if(state.kidsMovies.isNotEmpty()) item(key="kids_movies") {
                 SpotlightRail(tr("Películas · Kids","Movies · Kids"),state.kidsMovies) {state.launch {state.open(it)} }

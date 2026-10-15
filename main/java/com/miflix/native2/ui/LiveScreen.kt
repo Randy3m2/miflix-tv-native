@@ -125,7 +125,7 @@ fun LiveScreen(state: AppState) {
     BackHandler { state.screen = Screen.HOME }
     val contentFocus=remember { FocusRequester() }
     Column(Modifier.fillMaxSize().background(Bg)) {
-        Sidebar(Screen.LIVE_TV, state.activeProfile.name, { state.screen = it },state.notifications.size,state.activeProfile,onMoveDown={ contentFocus.requestFocus(); Unit })
+        Sidebar(Screen.LIVE_TV, state.activeProfile.name, { state.screen = it },state.unreadNoticeCount,state.activeProfile,onMoveDown={ contentFocus.requestFocus(); Unit })
         Column(Modifier.weight(1f).fillMaxHeight().padding(horizontal=34.dp,vertical=16.dp).focusRequester(contentFocus).focusGroup()) {
             Text(tr("TV en vivo","Live TV"), color=Color.White,fontSize=30.sp,lineHeight=36.sp)
             Spacer(Modifier.height(8.dp))
@@ -229,9 +229,9 @@ private fun LiveChannelRow(channel: LiveChannel, number: Int, onClick: () -> Uni
     var focused by remember(channel.id) { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().onFocusChanged { focused = it.hasFocus }
         .tvPlaybackClick(onClick, onLongClick).focusable().clickable(onClick = onClick)
-        .background(if (focused) Color.White else Panel, RoundedCornerShape(14.dp)).padding(12.dp),
+        .background(if (focused) Accent else Panel, RoundedCornerShape(14.dp)).padding(12.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-        Text(number.toString().padStart(3, '0'), color = if (focused) Color.Black else Color.White,
+        Text(number.toString().padStart(3, '0'), color = if (focused) FocusInk else Color.White,
             fontSize = 18.sp, lineHeight=22.sp, modifier = Modifier.width(58.dp))
         Box(Modifier.size(62.dp).clip(RoundedCornerShape(9.dp)).background(Color(0xFF303030)),
             contentAlignment = androidx.compose.ui.Alignment.Center) {
@@ -240,15 +240,15 @@ private fun LiveChannelRow(channel: LiveChannel, number: Int, onClick: () -> Uni
         }
         Spacer(Modifier.width(18.dp))
         Column(Modifier.weight(1f)) {
-            Text(channel.name,color=if(focused) Color.Black else Color.White,fontSize=16.sp,lineHeight=19.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(channel.name,color=if(focused) FocusInk else Color.White,fontSize=16.sp,lineHeight=19.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             schedule(if(focused) Color.DarkGray else Muted)
         }
-        Text(tr("EN VIVO","LIVE"), color = if (focused) Color.Black else Color.White, fontSize = 12.sp, lineHeight=15.sp)
+        Text(tr("EN VIVO","LIVE"), color = if (focused) FocusInk else Color.White, fontSize = 12.sp, lineHeight=15.sp)
     }
 }
 
 @Composable
-private fun LiveChannelTile(channel: LiveChannel,number: Int,favorite: Boolean,onClick: () -> Unit,onLongClick: () -> Unit) {
+internal fun LiveChannelTile(channel: LiveChannel,number: Int,favorite: Boolean,onClick: () -> Unit,onLongClick: () -> Unit) {
     var focused by remember(channel.id) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().height(156.dp).onFocusChanged { focused=it.isFocused }.focusable()
         .tvPlaybackClick(onClick,onLongClick).clickable(onClick=onClick)

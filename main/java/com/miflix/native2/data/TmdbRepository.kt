@@ -329,7 +329,7 @@ class TmdbRepository(var token: String) {
 
     suspend fun details(item: MediaSummary): MediaDetails {
         val kind = if (item.type == "series") "tv" else "movie"
-        val j = get("/$kind/${item.id}", mapOf("append_to_response" to "external_ids,credits,videos"))
+        val j = get("/$kind/${item.id}", mapOf("append_to_response" to "external_ids,credits,images", "include_image_language" to "${language.substringBefore('-')},en,null"))
         val ext = j.optJSONObject("external_ids")
         val imdb = if (kind == "movie") j.optString("imdb_id") else ext?.optString("imdb_id")
         val genres = j.optJSONArray("genres")?.let { a ->
@@ -369,22 +369,9 @@ class TmdbRepository(var token: String) {
             }
         } ?: emptyList()
 
-        val trailers = j.optJSONObject("videos")?.optJSONArray("results")?.let { a ->
-            val rows = (0 until a.length()).mapNotNull { i ->
-                val x = a.optJSONObject(i) ?: return@mapNotNull null
-                val key = x.optString("key").takeIf { it.isNotBlank() } ?: return@mapNotNull null
-                val site = x.optString("site")
-                if (!site.equals("YouTube", ignoreCase = true)) return@mapNotNull null
-                TrailerSummary(
-                    name = x.optString("name", "Trailer"),
-                    key = key,
-                    site = site,
-                    type = x.optString("type", "Trailer"),
-                    official = x.optBoolean("official", false)
-                )
-            }
-            rows.sortedWith(compareByDescending<TrailerSummary> { it.official }.thenBy { if (it.type.equals("Trailer", true)) 0 else 1 }).take(6)
-        } ?: emptyList()
+        val logos=j.optJSONObject("images")?.optJSONArray("logos")
+        val logoRows=(0 until (logos?.length() ?: 0)).mapNotNull {logos?.optJSONObject(it)}
+        val logo=logoRows.sortedBy {if(it.optString("iso_639_1")==language.substringBefore('-')) 0 else 1}.firstOrNull()?.optString("file_path")?.let {image(it,"w500")}
 
         return MediaDetails(
             summary = item,
@@ -397,7 +384,7 @@ class TmdbRepository(var token: String) {
             originCountry = origin,
             originalLanguage = originalLanguage,
             cast = cast,
-            trailers = trailers,
+            logo = logo,
             originalTitle = j.optString(if(kind=="movie") "original_title" else "original_name")
         )
     }

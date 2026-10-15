@@ -10,6 +10,8 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -111,7 +113,7 @@ private val StreamingTiles = listOf(
 internal fun AppShell(state: AppState, screen: Screen, onNavigate: (Screen) -> Unit, content: @Composable BoxScope.() -> Unit) {
     val contentFocus=remember { FocusRequester() }
     Column(Modifier.fillMaxSize().background(Bg)) {
-        Sidebar(screen, state.activeProfile.name, onNavigate, state.notifications.size, state.activeProfile,
+        Sidebar(screen, state.activeProfile.name, onNavigate, state.unreadNoticeCount, state.activeProfile,
             onMoveDown={ contentFocus.requestFocus(); Unit },onEditPicture={ state.profilePhotoEditor=state.activeProfile },kids=state.kidsMode)
         Box(Modifier.weight(1f).fillMaxWidth().padding(bottom=24.dp).focusRequester(contentFocus).focusGroup(), content = content)
     }
@@ -150,10 +152,10 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
             }
         }) {
             LazyColumn(Modifier.fillMaxSize().padding(top=84.dp,bottom=20.dp).focusRequester(contentFocus).focusGroup(),state=scroll,contentPadding=PaddingValues(bottom=32.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                item(key="hero") { TopTenHero(state.trending.take(10),openItem,onFocused={ if(it) returnToTop() },buttonModifier=Modifier.focusRequester(heroFocus),randomChoosing=state.randomChoosing,onRandom={ if(!state.randomChoosing) state.launch { state.playRandomMovie() } }) }
+                item(key="hero") { TopTenHero((state.trending+state.movies).filter {it.type=="movie"}.distinctBy {it.cloudId}.take(10),openItem,onFocused={ if(it) returnToTop() },buttonModifier=Modifier.focusRequester(heroFocus),randomChoosing=state.randomChoosing,onRandom={ if(!state.randomChoosing) state.launch { state.playRandomMovie() } }) }
                 if(state.continueWatching.isNotEmpty()) item(key="continue") {
                     SpotlightRail(title=tr("Seguir viendo","Continue Watching"),rows=state.continueWatching,landscape=true,
-                        progressFor={ state.progress[it.cloudId]?.percent },onClick=openItem)
+                        progressFor={ state.progress[it.cloudId]?.percent },onLongClick={state.titleActions(it,true)},onClick=openItem)
                 }
                 item(key="streaming") { CollectionRail(tr("Plataformas","Streaming"),StreamingTiles,openCollection) }
                 item(key="genres_home") { Column {
@@ -189,7 +191,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 }
             }
         }
-        Sidebar(Screen.HOME,state.activeProfile.name,onNavigate,state.notifications.size,state.activeProfile,
+        Sidebar(Screen.HOME,state.activeProfile.name,onNavigate,state.unreadNoticeCount,state.activeProfile,
             backgroundAlpha=headerShade,onHeaderFocused=returnToTop,onEditPicture={ state.profilePhotoEditor=state.activeProfile },kids=state.kidsMode,
             onMoveDown=({ scope.launch {
                 scroll.scrollToItem(0)
@@ -243,7 +245,7 @@ private fun TopTenHero(rows: List<MediaSummary>, onOpen: (MediaSummary) -> Unit,
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x08000000), Color(0x2C000000), Bg), startY = 120f)))
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xF8050505), Color(0xB0050505), Color.Transparent), endX = 1000f)))
         Column(Modifier.align(Alignment.CenterStart).padding(start=34.dp,end=24.dp).fillMaxWidth(.64f)) {
-            Text(tr("TOP 10 · TENDENCIAS DE LA SEMANA","TOP 10  ·  TRENDING THIS WEEK"), color = Color(0xFFB8B8BC), fontSize = 12.sp, lineHeight=15.sp, fontWeight = FontWeight.Bold)
+            Text(tr("TOP 10 · TENDENCIAS DE LA SEMANA","TOP 10  ·  TRENDING THIS WEEK"), color = Accent, fontSize = 12.sp, lineHeight=15.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(10.dp))
             Text(hero.title, color = Color.White, fontSize = 30.sp, lineHeight=35.sp, fontWeight = FontWeight.Black, maxLines = 2)
             Spacer(Modifier.height(10.dp))
@@ -256,6 +258,7 @@ private fun TopTenHero(rows: List<MediaSummary>, onOpen: (MediaSummary) -> Unit,
                 onRandom?.let { play -> FocusButton(if(randomChoosing) tr("Eligiendo…","Choosing…") else tr("Reproducir aleatorio","Play random"),onFocused={ heroFocused=it; onFocused(it) }) { play() } }
             }
         }
+        Text("#${safeIndex+1}",color=Accent.copy(alpha=.8f),fontSize=104.sp,fontWeight=FontWeight.Black,modifier=Modifier.align(Alignment.CenterEnd).padding(end=42.dp))
         Row(
             Modifier.align(Alignment.BottomEnd).padding(end = 34.dp, bottom = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -278,9 +281,10 @@ private fun MediaRail(
     landscape: Boolean = false,
     compact: Boolean = false,
     progressFor: (MediaSummary) -> Double? = { null },
+    onLongClick: ((MediaSummary) -> Unit)? = null,
     onClick: (MediaSummary) -> Unit
 ) {
-    SpotlightRail(title,rows,landscape,progressFor,onClick=onClick)
+    SpotlightRail(title,rows,landscape,progressFor,onLongClick=onLongClick,onClick=onClick)
 }
 
 @Composable
@@ -305,7 +309,7 @@ private fun CollectionRail(title: String, rows: List<CollectionTile>, onClick: (
 }
 
 @Composable
-fun CatalogScreen(state: AppState, title: String, catalog: List<MediaSummary>, onBack: () -> Unit, footer: (@Composable () -> Unit)? = null) {
+fun CatalogScreen(state: AppState, title: String, catalog: List<MediaSummary>, onBack: () -> Unit, footer: (@Composable () -> Unit)? = null, header: (@Composable () -> Unit)? = null) {
     BackHandler(onBack = onBack)
     val catalogScroll=androidx.compose.runtime.saveable.rememberSaveable(title,saver=androidx.compose.foundation.lazy.grid.LazyGridState.Saver) { androidx.compose.foundation.lazy.grid.LazyGridState() }
     var previousCount by remember(title) {mutableIntStateOf(catalog.size)}
@@ -328,11 +332,12 @@ fun CatalogScreen(state: AppState, title: String, catalog: List<MediaSummary>, o
                 Text("${catalog.size} "+tr("cargados","loaded"),color=Muted,fontSize=12.sp)
             }
             Text(tr("Elige tu próxima historia.","Choose your next story."),color=Muted,fontSize=14.sp,modifier=Modifier.padding(top=6.dp))
+            header?.invoke()
             Spacer(Modifier.height(18.dp))
             LazyVerticalGrid(columns=GridCells.Adaptive(168.dp),state=catalogScroll,modifier=Modifier.weight(1f).fillMaxWidth(),
                 horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(bottom=48.dp,top=8.dp)) {
                 gridItems(catalog,key={it.cloudId}) { item -> MediaCard(item,modifier=Modifier.fillMaxWidth()
-                    .then(if(item.cloudId==catalog.getOrNull(newBatchStart)?.cloudId) Modifier.focusRequester(newBatchFocus) else Modifier),progressPercent=state.progress[item.cloudId]?.percent) { state.launch { state.open(item) } } }
+                    .then(if(item.cloudId==catalog.getOrNull(newBatchStart)?.cloudId) Modifier.focusRequester(newBatchFocus) else Modifier),progressPercent=state.progress[item.cloudId]?.percent,onLongClick={state.titleActions(item)}) { state.launch { state.open(item) } } }
                 if(footer!=null) item(span={ androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { footer() }
             }
         }
@@ -489,7 +494,9 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
     if(showRating) RatingDialog(state,item) { showRating=false }
     episodeChoice?.let { ep ->
         Dialog(onDismissRequest={ episodeChoice=null }) {
-            Column(Modifier.width(530.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+            val first=remember {FocusRequester()}
+            LaunchedEffect(Unit) {withFrameNanos {};runCatching {first.requestFocus()} }
+            Column(Modifier.consumeOpeningPress().focusRequester(first).focusGroup().width(530.dp).heightIn(max=470.dp).background(Panel,RoundedCornerShape(24.dp)).padding(24.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(16.dp)) {
                 var reveal by remember(item.cloudId,ep.season,ep.episode) { mutableStateOf(false) }
                 val hidden=!state.episodeWatched(item,ep) && !reveal
                 Text("S${ep.season} E${ep.episode} · ${if(hidden) tr("No visto","Not watched") else ep.title}",color=Color.White,fontSize=22.sp)
@@ -499,6 +506,8 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                 if((resume?.position ?: 0L)>0 && (resume?.percent ?: 0.0)<96) FocusButton(tr("Continuar viendo","Continue watching")) { state.launch { state.socialAction { state.playEpisode(ep);episodeChoice=null } } }
                 FocusButton(tr("Desde el principio","Play from beginning")) { state.launch { state.socialAction { state.playEpisode(ep,true);episodeChoice=null } } }
                 FocusButton(tr("Añadir a cola","Add to queue")) { state.enqueue(item,ep.season,ep.episode);episodeChoice=null }
+                FocusButton(tr("Elegir enlace","Play manually")) { episodeChoice=null;state.launch {state.chooseEpisodeSources(ep)} }
+                FocusButton(tr("Marcar como visto","Mark as watched")) { state.markWatched(item,ep.season,ep.episode);episodeChoice=null }
                 FocusButton(tr("Cancelar","Cancel")) { episodeChoice=null }
             }
         }
@@ -509,13 +518,16 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
     if(showMore) Dialog(onDismissRequest={ showMore=false }) {
         val moreFocus=remember { FocusRequester() }
         LaunchedEffect(Unit) { withFrameNanos { };runCatching { moreFocus.requestFocus() } }
-        Column(Modifier.widthIn(max=520.dp).background(Panel,RoundedCornerShape(18.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.consumeOpeningPress().widthIn(max=520.dp).heightIn(max=480.dp).background(Panel,RoundedCornerShape(24.dp)).padding(24.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Text(tr("Más opciones","More options"),color=Color.White,fontSize=24.sp)
             if(!state.selectedUpcoming) FocusButton(tr("Desde el principio","Play from beginning"),modifier=Modifier.focusRequester(moreFocus)) { showMore=false;state.launch { if(item.type=="movie") state.playMovie(true) else state.playSeriesFromStart() } }
             FocusButton(tr("Añadir a cola","Add to queue"),modifier=if(state.selectedUpcoming) Modifier.focusRequester(moreFocus) else Modifier) { showMore=false;if(item.type=="series") showQueueAdd=true else state.enqueue(item) }
             FocusButton(tr("Ver cola","View queue")+" · ${state.queueEntries.size}") { showMore=false;showQueue=true }
             FocusButton(tr("Recomendar a amigos","Recommend to friends")) { showMore=false;showRecommend=true }
-            FocusButton("★ "+(state.ratings[item.cloudId]?.let { "$it/10" } ?: tr("Puntuar","Rate"))) { showMore=false;showRating=true }
+            if(!state.selectedUpcoming) {
+                FocusButton(tr("Elegir enlace","Play manually")) { showMore=false;state.launch {state.chooseCurrentSources()} }
+                FocusButton(tr("Marcar como visto","Mark as watched")) { showMore=false;state.markWatched(item) }
+            }
             FocusButton(tr("Cerrar","Close")) { showMore=false }
         }
     }
@@ -566,12 +578,12 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                             }
                         } else if (item.type == "movie") {
                             val label = if ((saved?.percent ?: 0.0) in 1.0..95.0) "▶  ${tr("Reanudar","Resume")} ${formatPosition(saved?.position ?: 0)}" else tr("▶  Reproducir","▶  Play")
-                            FocusButton(label, onLongClick = { state.launch { state.chooseCurrentSources() } }, primary = true, modifier = Modifier.focusRequester(playFocus).width(220.dp)) {
+                            FocusButton(label, onLongClick = { showMore=true }, primary = true, modifier = Modifier.focusRequester(playFocus).width(220.dp)) {
                                 state.launch { runCatching { state.playMovie() }.onFailure { state.error = it.message } }
                             }
                         } else {
                             val canResume = (saved?.season ?: 0) > 0 && (saved?.episode ?: 0) > 0 && (saved?.percent ?: 0.0) < 96.0
-                            FocusButton(if (canResume) "▶  ${tr("Continuar","Continue")} S${saved?.season} E${saved?.episode}" else tr("▶  Reproducir S1 E1","▶  Play S1 E1"), onLongClick = { state.launch { state.chooseCurrentSources() } }, primary = true, modifier = Modifier.focusRequester(playFocus).width(220.dp)) {
+                            FocusButton(if (canResume) "▶  ${tr("Continuar","Continue")} S${saved?.season} E${saved?.episode}" else tr("▶  Reproducir S1 E1","▶  Play S1 E1"), onLongClick = { showMore=true }, primary = true, modifier = Modifier.focusRequester(playFocus).width(220.dp)) {
                                 state.launch { runCatching { if (canResume) state.resumeSeries() else state.playSeriesFromStart() }.onFailure { state.error = it.message } }
                             }
                         }
@@ -579,7 +591,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                             state.toggleFavorite(item); state.launch { runCatching { state.pushCloud() } }
                         }
                         if(!state.kidsMode) FocusButton(tr("Sala compartida","Watch Party")) { state.screen = Screen.WATCH_PARTY }
-                        if(!state.kidsMode) FocusButton(tr("Más","More")) { showMore=true }
+                        if(!state.kidsMode) FocusButton("★ "+(state.ratings[item.cloudId]?.let {"$it/10"} ?: tr("Puntuar","Rate"))) {showRating=true}
                     }
                     Spacer(Modifier.height(38.dp))
                 }
@@ -592,50 +604,28 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                         Spacer(Modifier.width(16.dp))
                         if ((details?.seasonCount ?: 0) > 1) {
                             SeasonSelector(state, details?.seasonCount ?: 0)
-                            FocusButton("‹") { if (state.currentSeason > 1) state.launch { state.loadSeason(state.currentSeason - 1) } }
-                            Spacer(Modifier.width(7.dp))
-                            FocusButton("›") { if (state.currentSeason < (details?.seasonCount ?: 1)) state.launch { state.loadSeason(state.currentSeason + 1) } }
+
                         }
                     }
                     Spacer(Modifier.height(12.dp))
                     LazyRow(modifier = Modifier.fillMaxWidth().height(236.dp), contentPadding = PaddingValues(end = 54.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(state.episodes, key = { "${it.season}:${it.episode}" }) { ep ->
-                            EpisodeCard(ep, hidden=!state.episodeWatched(item,ep), onLongClick = { state.launch { state.chooseEpisodeSources(ep) } }) { episodeChoice=ep }
+                            EpisodeCard(ep, hidden=!state.episodeWatched(item,ep), onLongClick = { episodeChoice=ep }) { episodeChoice=ep }
                         }
                     }
                     Spacer(Modifier.height(28.dp))
                 }
             }
 
-            if(!state.kidsMode) item(key="cast-reviews") {
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(24.dp)) {
-                    Column(Modifier.weight(1f)) {
-                        Text(tr("Reparto","Cast"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
-                        Spacer(Modifier.height(14.dp))
-                        LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(end=12.dp)) {
-                            items(details?.cast.orEmpty(),key={ "${it.id}:${it.name}" }) { CastCard(it,state,compact=true) }
-                        }
-                    }
-                    Column(Modifier.weight(1f)) { TraktCommentsSection(state,item,compact=true) }
+            if(!state.kidsMode) item(key="cast") {
+                Text(tr("Reparto","Cast"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
+                Spacer(Modifier.height(14.dp))
+                LazyRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(16.dp),contentPadding=PaddingValues(end=24.dp)) {
+                    items(details?.cast.orEmpty(),key={"${it.id}:${it.name}"}) { CastCard(it,state) }
                 }
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(28.dp))
             }
-
-            if (!state.kidsMode && !details?.trailers.isNullOrEmpty()) {
-                item(key = "trailers") {
-                    Text(tr("Tráilers","Trailers"), color = Color.White, fontSize = 27.sp, lineHeight=32.sp, fontWeight = FontWeight.Black)
-                    Spacer(Modifier.height(14.dp))
-                    LazyRow(contentPadding = PaddingValues(end = 50.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        items(details?.trailers.orEmpty(), key = { it.key }) { trailer ->
-                            val context = LocalContext.current
-                            TrailerCard(trailer) {
-                                trailer.watchUrl?.let { runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it))) } }
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(28.dp))
-                }
-            }
+            if(!state.kidsMode) item(key="reviews") { TraktCommentsSection(state,item);Spacer(Modifier.height(28.dp)) }
 
             item(key = "info") {
                 Text(if (item.type == "movie") tr("Detalles de la película","Movie Details") else tr("Detalles de la serie","Series Details"), color = Color.White, fontSize = 27.sp, lineHeight=32.sp, fontWeight = FontWeight.Black)
@@ -740,6 +730,8 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 Spacer(Modifier.height(8.dp))
                 Text("BruniO ${BuildConfig.VERSION_NAME}", color = Muted, fontSize = 14.sp, lineHeight=17.sp)
                 Spacer(Modifier.height(12.dp))
+                FocusButton("Changelog / Details") {state.changelogOpen=true}
+                Spacer(Modifier.height(10.dp))
                 FocusButton("${tr("Tiempo de uso", "Usage time")} · $usageLabel") {
                     usageMs=com.miflix.native2.data.AppUsageTracker.totalMs(context)
                     showUsage=true
@@ -848,6 +840,29 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 } } }
                 Spacer(Modifier.height(18.dp))
 
+                        }
+                    }
+                    if(category=="appearance") item(key="focus-theme") {
+                        SettingsSectionCard {
+                            Text(tr("Colores de la app","Color themes"),color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
+                            Text(tr("Elige el color del selector y los contornos.","Choose your focus and outline color."),color=Muted)
+                            var customColor by remember {mutableStateOf("#B792FF")}
+                            NativeTextField(customColor,{customColor=it.take(7)},tr("Color personalizado · #RRGGBB","Custom color · #RRGGBB"))
+                            FocusButton(tr("Aplicar color","Apply color")) {
+                                if(customColor.matches(Regex("#[0-9a-fA-F]{6}"))) state.setFocusColor(android.graphics.Color.parseColor(customColor))
+                                else state.error=tr("Usa # y seis dígitos hexadecimales.","Use # followed by six hexadecimal digits.")
+                            }
+                            Spacer(Modifier.height(12.dp))
+                            FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                                listOf(0xFFFFFFFF.toInt() to "White",0xFFB792FF.toInt() to "Purple",0xFF65BFFF.toInt() to "Blue",0xFF66E6A0.toInt() to "Green",0xFFFFBB66.toInt() to "Amber",0xFFFF8FB6.toInt() to "Rose").forEach {(color,label) ->
+                                    FocusButton("● $label",primary=state.focusColor==color) {state.setFocusColor(color)}
+                                }
+                            }
+                        }
+                    }
+                    if(category=="account") item(key="remember-profile") {
+                        SettingsSectionCard {
+                            FocusButton(tr("Recordar último perfil","Remember last profile")+": "+if(state.rememberLastProfile) "ON" else "OFF") {state.setRememberProfile(!state.rememberLastProfile)}
                         }
                     }
                     if(category=="appearance") item(key="setting-6") {
@@ -1167,6 +1182,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var confirmMulti by remember { mutableStateOf(false) }
     val playbackView = LocalView.current
     var quickReactions by remember(request.playbackId) { mutableStateOf(false) }
+    var firstFrame by remember(request.playbackId) {mutableStateOf(false)}
     var controlsVisible by remember(request.playbackId) { mutableStateOf(true) }
     var controlInteraction by remember { mutableStateOf(0) }
     val surfaceFocus = remember { FocusRequester() }
@@ -1341,6 +1357,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 updateScreenAwake()
             }
 
+            override fun onRenderedFirstFrame() {firstFrame=true}
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_ENDED) {
                     ended = true; paused = false
@@ -1480,7 +1497,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                     // RC5 used a fresh SurfaceView; synchronize it with Compose, without reusing
                     // a previous content's surface. Do not relayout it for every progress tick.
                     setEnableComposeSurfaceSyncWorkaround(true)
-                    setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                    setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
                     setKeepContentOnPlayerReset(false)
                     useController = false
                     isFocusable = false
@@ -1510,6 +1527,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             },
             modifier = if(maximized) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(horizontal=40.dp,vertical=24.dp)
         ) }
+        if(!firstFrame && playbackError==null) PlaybackArtwork(state,request)
         if(mini) {
             Row(Modifier.align(Alignment.BottomCenter).background(Color(0xEE171717)).padding(6.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                 FocusButton(if(paused) "▶" else "Ⅱ",horizontalPadding=12.dp) { player.playWhenReady=!player.playWhenReady }
@@ -1686,7 +1704,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                     Text(tr("También te puede gustar","You may also like"),color=Color.White,fontSize=22.sp, lineHeight=26.sp)
                     LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.weight(1f,false)) {
                         items(recommendations,key={it.cloudId}) { item ->
-                            MediaCard(item) { cancelAutoplay=true; state.launch { state.open(item) } }
+                            MediaCard(item,allowContextMenu=false) { cancelAutoplay=true; state.launch { state.open(item) } }
                         }
                     }
                     Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -1733,16 +1751,18 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
 @Composable
 private fun EpisodePickerOverlay(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     val details = state.details
+    var episodeActions by remember {mutableStateOf<EpisodeSummary?>(null)}
     val closeFocus=remember { FocusRequester() }
     val episodeFocus=remember { FocusRequester() }
     val listState=rememberLazyListState()
     val focusIndex=state.episodes.indexOfFirst { it.season==request.season && it.episode==request.episode }.coerceAtLeast(0)
+    var entered by remember {mutableStateOf(false)}
     LaunchedEffect(state.currentSeason,state.episodes.map { it.season to it.episode }) {
         if(state.episodes.isNotEmpty()) {
             listState.scrollToItem(focusIndex)
             withFrameNanos { }
-            episodeFocus.requestFocus()
-        } else { withFrameNanos { }; closeFocus.requestFocus() }
+            if(!entered) {episodeFocus.requestFocus();entered=true}
+        } else if(!entered) { withFrameNanos { }; closeFocus.requestFocus() }
     }
     Dialog(onDismissRequest=onClose,properties=DialogProperties(usePlatformDefaultWidth=false)) {
     Box(Modifier.fillMaxSize().background(Color(0xB8000000))) {
@@ -1757,15 +1777,12 @@ private fun EpisodePickerOverlay(state: AppState, request: PlayerRequest, onClos
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 SeasonSelector(state, details?.seasonCount ?: 0)
-                            FocusButton("‹") { if (state.currentSeason > 1) state.launch { state.loadSeason(state.currentSeason - 1) } }
-                Text("${tr("Temporada","Season")} ${state.currentSeason}", color = Color.White, fontSize = 18.sp, lineHeight=22.sp, fontWeight = FontWeight.Bold)
-                FocusButton("›") { if (state.currentSeason < (details?.seasonCount ?: 1)) state.launch { state.loadSeason(state.currentSeason + 1) } }
             }
             Spacer(Modifier.height(16.dp))
             LazyColumn(state=listState,modifier=Modifier.weight(1f),contentPadding = PaddingValues(bottom = 30.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(state.episodes, key = { "${it.season}:${it.episode}" }) { ep ->
                     val active = ep.season == request.season && ep.episode == request.episode
-                    EpisodeListRow(ep, active, hidden=!state.episodeWatched(request.item,ep), modifier=if(state.episodes.indexOf(ep)==focusIndex) Modifier.focusRequester(episodeFocus) else Modifier, onLongClick = { state.launch { state.chooseEpisodeSources(ep) } }) {
+                    EpisodeListRow(ep, active, hidden=!state.episodeWatched(request.item,ep), modifier=if(state.episodes.indexOf(ep)==focusIndex) Modifier.focusRequester(episodeFocus) else Modifier, onLongClick = { episodeActions=ep }) {
                         state.launch {
                             runCatching { state.playEpisode(ep) }.onFailure { state.error = it.message }
                             onClose()
@@ -1776,6 +1793,7 @@ private fun EpisodePickerOverlay(state: AppState, request: PlayerRequest, onClos
         }
     }
     }
+    episodeActions?.let {ep -> EpisodeActionsDialog(state,request.item,ep) {episodeActions=null} }
 }
 
 @Composable
@@ -1783,17 +1801,17 @@ private fun EpisodeListRow(ep: EpisodeSummary, active: Boolean, hidden: Boolean,
     var focused by remember(ep.season, ep.episode) { mutableStateOf(false) }
     Row(
         modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused }.tvPlaybackClick(onClick, onLongClick).clickable(onClick = onClick)
-            .background(if (focused) Color.White else if (active) Color(0xFF242424) else Color(0xFF161616), RoundedCornerShape(12.dp))
+            .background(if (focused) Accent else if (active) Color(0xFF242424) else Color(0xFF161616), RoundedCornerShape(12.dp))
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         EpisodeArtwork(ep,hidden,Modifier.width(150.dp).height(84.dp).clip(RoundedCornerShape(8.dp)))
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text("S${ep.season} E${ep.episode} · ${if(hidden) tr("No visto","Not watched") else ep.title}", color = if (focused) Color.Black else Color.White, fontSize = 14.sp, lineHeight=17.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-            Text(if(hidden) tr("Sinopsis oculta para evitar spoilers","Synopsis hidden to avoid spoilers") else ep.overview, color = if (focused) Color(0xFF333333) else Muted, fontSize = 11.sp, lineHeight=13.sp, maxLines = 2)
+            Text("S${ep.season} E${ep.episode} · ${if(hidden) tr("No visto","Not watched") else ep.title}", color = if (focused) FocusInk else Color.White, fontSize = 14.sp, lineHeight=17.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(if(hidden) tr("Sinopsis oculta para evitar spoilers","Synopsis hidden to avoid spoilers") else ep.overview, color = if (focused) FocusInk.copy(alpha=.8f) else Muted, fontSize = 11.sp, lineHeight=13.sp, maxLines = 2)
         }
-        if (active) Text(tr("ACTUAL","NOW"), color = if (focused) Color.Black else Color.White, fontSize = 10.sp, lineHeight=12.sp, fontWeight = FontWeight.Black)
+        if (active) Text(tr("ACTUAL","NOW"), color = if (focused) FocusInk else Color.White, fontSize = 10.sp, lineHeight=12.sp, fontWeight = FontWeight.Black)
     }
 }
 
@@ -1911,70 +1929,54 @@ fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
 
 @Composable
 private fun SourceLinkCard(stream: com.miflix.native2.model.StreamChoice,modifier: Modifier,onClick: () -> Unit) {
-    var focused by remember(stream) { mutableStateOf(false) }
-    val ink=if(focused) Color.Black else Color.White
-    Column(modifier.onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
-        .background(if(focused) Color.White else Color(0xFF252528),RoundedCornerShape(18.dp)).padding(20.dp),
-        verticalArrangement=Arrangement.spacedBy(8.dp)) {
-        Text(listOf(stream.addonName,stream.name).filter { it.isNotBlank() }.distinct().joinToString(" · "),
-            color=ink,fontSize=15.sp,lineHeight=20.sp,fontWeight=FontWeight.Bold)
-        if(stream.title.isNotBlank()) Text(stream.title,color=ink,fontSize=14.sp,lineHeight=20.sp,maxLines=if(focused) Int.MAX_VALUE else 5,
-            overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-        if(stream.videoSize>0) {
-            val gib=stream.videoSize/1073741824.0
-            val weight=if(gib>=1) "%.2f GiB".format(java.util.Locale.US,gib) else "%.1f MiB".format(java.util.Locale.US,stream.videoSize/1048576.0)
-            Text("${tr("Peso","Size")}: $weight",color=ink,fontSize=14.sp,lineHeight=19.sp)
+    var focused by remember(stream) {mutableStateOf(false)}
+    var rawDetails by remember(stream) {mutableStateOf(false)}
+    val info=remember(stream) {com.miflix.native2.data.StreamPresentation.parse(stream.addonName,stream.name,stream.title,stream.filename,stream.videoSize)}
+    val ink=Color.White
+    if(rawDetails) Dialog(onDismissRequest={rawDetails=false}) {
+        val first=remember {FocusRequester()}
+        LaunchedEffect(Unit) {withFrameNanos {};runCatching {first.requestFocus()} }
+        Column(Modifier.consumeOpeningPress().widthIn(max=650.dp).heightIn(max=460.dp).background(Panel,RoundedCornerShape(24.dp)).padding(24.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            Text(info.heading,color=Color.White,fontSize=23.sp)
+            Text(listOf(stream.title,stream.filename).filter {it.isNotBlank()}.distinct().joinToString("\n\n"),color=Muted,fontSize=14.sp,modifier=Modifier.contentFocusBorder().focusable().padding(6.dp))
+            FocusButton(tr("Cerrar","Close"),modifier=Modifier.focusRequester(first)) {rawDetails=false}
         }
-        if(stream.filename.isNotBlank() && !stream.title.contains(stream.filename)) Text(stream.filename,color=ink,fontSize=12.sp,lineHeight=18.sp,
-            maxLines=if(focused) Int.MAX_VALUE else 2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+    }
+    Column(modifier.onFocusChanged {focused=it.isFocused}.focusable().tvPlaybackClick(onClick,{rawDetails=true}).clickable(onClick=onClick)
+        .background(if(focused) FocusedPanel else Color(0xFF252528),RoundedCornerShape(18.dp))
+        .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(18.dp)).padding(20.dp),
+        verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        Text(info.heading,color=ink,fontSize=15.sp,lineHeight=20.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        if(info.technologies.isNotEmpty()) FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+            info.technologies.forEach {TechnologyBadge(it,ink)}
+        }
+        val specs=listOf(info.video,info.audio).filter {it.isNotBlank()}.joinToString("  |  ")
+        if(specs.isNotBlank()) Text(specs,color=Color(0xFFE0DDE6),fontSize=13.sp,lineHeight=18.sp,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        val languages=stream.audioLanguages.map {it.uppercase(java.util.Locale.US)}.distinct().take(5).joinToString(" / ")
+        val source=listOf(info.source,languages).filter {it.isNotBlank()}.joinToString(" · ")
+        if(source.isNotBlank()) Text(source,color=Muted,fontSize=12.sp,lineHeight=17.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        if(info.size.isNotBlank()) Text("${tr("Peso","Size")}  ${info.size}",color=ink,fontSize=11.sp,lineHeight=15.sp,fontWeight=FontWeight.Bold,
+            modifier=Modifier.background(Color(0x80000000),RoundedCornerShape(4.dp)).padding(horizontal=7.dp,vertical=3.dp))
+        if(specs.isBlank() && info.technologies.isEmpty() && source.isBlank()) {
+            val fallback=stream.title.lineSequence().firstOrNull {it.isNotBlank() && !it.equals(stream.name,true) && it!=stream.filename}.orEmpty()
+            if(fallback.isNotBlank()) Text(fallback,color=Muted,fontSize=12.sp,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }
     }
 }
 
 @Composable
 private fun SeasonSelector(state: AppState, count: Int) {
-    var expanded by remember { mutableStateOf(false) }
-    var anchorHeight by remember { mutableStateOf(0) }
-    val anchorFocus = remember { FocusRequester() }
-    val selectedFocus = remember { FocusRequester() }
-    fun dismiss() {
-        expanded = false
-        runCatching { anchorFocus.requestFocus() }
-    }
-    Box {
-        FocusButton("${tr("Temporada", "Season")} ${state.currentSeason} ▾",
-            modifier=Modifier.focusRequester(anchorFocus).onSizeChanged { anchorHeight=it.height }) {
-            if(count > 0) expanded=true
-        }
-        if(expanded) {
-            androidx.compose.ui.window.Popup(
-                alignment=Alignment.TopStart,
-                offset=androidx.compose.ui.unit.IntOffset(0, anchorHeight),
-                onDismissRequest={ dismiss() },
-                properties=androidx.compose.ui.window.PopupProperties(focusable=true)
-            ) {
-                val initialSeason = state.currentSeason.coerceIn(1, count)
-                val listState = rememberLazyListState(initialFirstVisibleItemIndex=initialSeason-1)
-                LaunchedEffect(Unit) {
-                    withFrameNanos { }
-                    runCatching { selectedFocus.requestFocus() }
-                }
-                LazyColumn(
-                    state=listState,
-                    modifier=Modifier.width(260.dp).heightIn(max=360.dp)
-                        .background(Panel, RoundedCornerShape(12.dp))
-                        .border(1.dp, Color(0xFF555555), RoundedCornerShape(12.dp)),
-                    contentPadding=PaddingValues(10.dp),
-                    verticalArrangement=Arrangement.spacedBy(6.dp)
-                ) {
-                    items((1..count).toList(), key={ it }) { season ->
-                        FocusButton("${if(season==state.currentSeason) "✓ " else ""}${tr("Temporada", "Season")} $season",
-                            modifier=Modifier.fillMaxWidth().then(if(season==initialSeason) Modifier.focusRequester(selectedFocus) else Modifier)) {
-                            dismiss()
-                            state.launch { state.loadSeason(season) }
-                        }
-                    }
-                }
-            }
+    val rail=rememberLazyListState(initialFirstVisibleItemIndex=(state.currentSeason-1).coerceAtLeast(0))
+    val scope=rememberCoroutineScope()
+    var pending by remember {mutableStateOf<kotlinx.coroutines.Job?>(null)}
+    DisposableEffect(Unit) {onDispose {pending?.cancel()} }
+    LazyRow(Modifier.widthIn(max=680.dp).smoothHorizontalDpad(),state=rail,horizontalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(4.dp)) {
+        items((1..count).toList(),key={it}) { season ->
+            FocusButton("${tr("Temporada","Season")} $season",primary=state.currentSeason==season,
+                onFocused={ focused ->
+                    if(focused) {pending?.cancel();pending=scope.launch {delay(240);if(state.currentSeason!=season) state.loadSeason(season)}}
+                    else pending?.cancel()
+                }) {pending?.cancel();state.launch {state.loadSeason(season)} }
         }
     }
 }
@@ -1994,11 +1996,10 @@ private fun ActorCreditsDialog(person: CastMember, state: AppState, close: () ->
             FocusButton(tr("Cerrar", "Close")) { close() }
             if(credits==null) Text(failure ?: tr("Cargando…", "Loading…"),color=Color.White)
             if(credits?.isEmpty()==true) Text(tr("Sin títulos disponibles", "No titles available"),color=Muted)
-            LazyColumn(Modifier.weight(1f,false),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                items(credits.orEmpty(),key={ it.cloudId }) { item ->
-                    FocusButton("${item.title} · ${item.year} · ${if(item.type=="series") tr("Serie","Series") else tr("Película","Movie")}") {
-                        close(); state.launch { state.open(item) }
-                    }
+            LazyVerticalGrid(columns=GridCells.Adaptive(140.dp),modifier=Modifier.weight(1f,false),
+                horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(bottom=20.dp)) {
+                gridItems(credits.orEmpty(),key={it.cloudId}) { title ->
+                    MediaCard(title,modifier=Modifier.fillMaxWidth(),showCaption=true,allowContextMenu=false) {close();state.launch {state.open(title)} }
                 }
             }
         }

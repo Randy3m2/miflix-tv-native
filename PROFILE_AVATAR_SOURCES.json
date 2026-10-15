@@ -808,5 +808,37 @@
         }
       ]
     }
+  ],
+  "f1": [
+    {
+      "name": "Lewis Hamilton",
+      "source": "https://www.formula1.com/en/drivers/lewis-hamilton",
+      "image": "https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000001/common/f1/2026/ferrari/lewham01/2026ferrarilewham01right.webp",
+      "key": "pack:f1:0"
+    },
+    {
+      "name": "Max Verstappen",
+      "source": "https://www.formula1.com/en/drivers/max-verstappen",
+      "image": "https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000001/common/f1/2026/redbullracing/maxver01/2026redbullracingmaxver01right.webp",
+      "key": "pack:f1:1"
+    },
+    {
+      "name": "Fernando Alonso",
+      "source": "https://www.formula1.com/en/drivers/fernando-alonso",
+      "image": "https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000001/common/f1/2026/astonmartin/feralo01/2026astonmartinferalo01right.webp",
+      "key": "pack:f1:2"
+    },
+    {
+      "name": "Charles Leclerc",
+      "source": "https://www.formula1.com/en/drivers/charles-leclerc",
+      "image": "https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000001/common/f1/2026/ferrari/chalec01/2026ferrarichalec01right.webp",
+      "key": "pack:f1:3"
+    },
+    {
+      "name": "Lando Norris",
+      "source": "https://www.formula1.com/en/drivers/lando-norris",
+      "image": "https://media.formula1.com/image/upload/c_fill,w_720/q_auto/v1740000001/common/f1/2026/mclaren/lannor01/2026mclarenlannor01right.webp",
+      "key": "pack:f1:4"
+    }
   ]
 }

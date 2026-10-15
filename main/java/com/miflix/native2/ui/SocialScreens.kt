@@ -63,18 +63,16 @@ fun FriendsScreen(state: AppState) {
         catch(e: Exception) { previewError=e.message }
         finally { previewsLoading=false }
     }
-    var manage by remember { mutableStateOf(false) }
     BackHandler { if(tab==3) tab=0 else state.screen=Screen.HOME }
     val contentFocus=remember { FocusRequester() }
     Column(Modifier.fillMaxSize()) {
-        Sidebar(Screen.FRIENDS,state.activeProfile.name,{ state.screen=it },state.notifications.size,state.activeProfile,onMoveDown={ contentFocus.requestFocus(); Unit })
+        Sidebar(Screen.FRIENDS,state.activeProfile.name,{ state.screen=it },state.unreadNoticeCount,state.activeProfile,onMoveDown={ contentFocus.requestFocus(); Unit })
         BoxWithConstraints(Modifier.weight(1f).fillMaxHeight().focusRequester(contentFocus).focusGroup()) {
             val columns=if(maxWidth>=720.dp) 3 else 2
             SocialBackdrop()
             Column(Modifier.fillMaxSize().padding(horizontal=34.dp,vertical=16.dp)) {
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                         Text(tr("Amigos y salas","Friends & Party"),color=Color.White,fontSize=28.sp, lineHeight=34.sp,modifier=Modifier.weight(1f))
-                        FocusButton(tr("Recomendaciones","Recommendations")) { recommendations=true }
                         FocusButton(if(state.friendsTabLoading) tr("Actualizando…","Refreshing…") else tr("Actualizar","Refresh")) { state.refreshFriendsTab();previewRevision++ }
                         FocusButton(if(state.watchParty==null) tr("Crear sala","Create Party") else tr("Mi sala","My Party")) { state.screen=Screen.WATCH_PARTY }
                     }
@@ -82,9 +80,8 @@ fun FriendsScreen(state: AppState) {
 
                 Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement=Arrangement.spacedBy(16.dp)) {
-                        listOf(tr("Amigos","Friends"),tr("Salas","Parties"),tr("Solicitudes","Requests")).forEachIndexed { index,label -> NavigationTab(label,selected=tab==index) { tab=index } }
+                        listOf(0 to tr("Amigos","Friends"),2 to tr("Solicitudes","Requests")).forEach { (index,label) -> NavigationTab(label,selected=tab==index) { tab=index } }
                         NavigationTab(tr("Calendario","Calendar"),selected=tab==3) { tab=3 }
-                        FocusButton(tr("Administrar perfil","Manage profile")) { manage=true }
                     }
 
                 Spacer(Modifier.height(12.dp))
@@ -154,7 +151,6 @@ fun FriendsScreen(state: AppState) {
     }
     person?.let { friend -> FriendActionsDialog(state,friend,close={ person=null }) }
     if(recommendations) FriendRecommendationsDialog(state) { recommendations=false }
-    if(manage) SocialSettingsDialog(state) { manage=false }
 }
 
 @Composable
@@ -175,7 +171,7 @@ private fun FriendTile(friend: FriendActivity,modifier: Modifier,onClick: () -> 
 }
 
 @Composable
-private fun SocialSettingsDialog(state: AppState,close: () -> Unit) {
+internal fun SocialSettingsDialog(state: AppState,close: () -> Unit) {
     var nick by remember { mutableStateOf(state.nickname) }
     var find by remember { mutableStateOf("") }
     var phrases by remember { mutableStateOf(state.partyPhrases.joinToString("|")) }
@@ -209,14 +205,11 @@ fun PartyActionsDialog(state: AppState, close: () -> Unit) {
     val first=remember { FocusRequester() }
     LaunchedEffect(Unit) { delay(100); first.requestFocus() }
     Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
-        Column(Modifier.fillMaxWidth().background(Panel).padding(28.dp)) {
-            Text(tr("Reaccionar en la sala","React to the party"),color=Color.White,fontSize=24.sp, lineHeight=29.sp)
-            LazyRow(horizontalArrangement=Arrangement.spacedBy(16.dp)) {
-                items(PartyEmojis) { emoji -> FocusButton(emoji, modifier=if(emoji==PartyEmojis.first()) Modifier.focusRequester(first) else Modifier) { state.launch { state.sendPartyEvent("emoji",emoji) }; close() } }
-            }
+        Column(Modifier.consumeOpeningPress().widthIn(max=530.dp).background(Panel, RoundedCornerShape(24.dp)).padding(24.dp)) {
+            Text(tr("Frases del Party","Party phrases"),color=Color.White,fontSize=24.sp, lineHeight=29.sp)
             Spacer(Modifier.height(12.dp))
             LazyColumn(Modifier.heightIn(max=240.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                items(state.partyPhrases) { phrase -> FocusButton(phrase,modifier=Modifier.fillMaxWidth()) { state.launch { state.sendPartyEvent("phrase",phrase) }; close() } }
+                items(state.partyPhrases) { phrase -> FocusButton(phrase,modifier=Modifier.fillMaxWidth().then(if(phrase==state.partyPhrases.firstOrNull()) Modifier.focusRequester(first) else Modifier)) { state.launch { state.sendPartyEvent("phrase",phrase) }; close() } }
             }
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -287,29 +280,39 @@ fun NotificationsScreen(state: AppState) {
     BackHandler { state.screen = Screen.HOME }
     val contentFocus=remember { FocusRequester() }
     Column(Modifier.fillMaxSize().background(Bg)) {
-        Sidebar(Screen.NOTIFICATIONS,state.activeProfile.name,{state.screen=it},state.notifications.size,state.activeProfile,onMoveDown={ contentFocus.requestFocus(); Unit })
+        Sidebar(Screen.NOTIFICATIONS,state.activeProfile.name,{state.screen=it},state.unreadNoticeCount,state.activeProfile,onMoveDown={ contentFocus.requestFocus(); Unit })
         LazyColumn(Modifier.weight(1f).padding(horizontal=34.dp).focusRequester(contentFocus).focusGroup(),contentPadding=PaddingValues(top=24.dp,bottom=40.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             item {
-                Text("${tr("Notificaciones","Notifications")} · ${state.notifications.size}",color=Color.White,fontSize=30.sp, lineHeight=36.sp)
+                Text("${tr("Notificaciones","Notifications")} · ${state.unreadNoticeCount}",color=Color.White,fontSize=30.sp, lineHeight=36.sp)
                 Spacer(Modifier.height(14.dp))
                 Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     FocusButton(tr("Revisar ahora","Check now")) { state.launch { runCatching { state.checkNotifications() }.onFailure { state.error=it.message } } }
+                    FocusButton(tr("Marcar como leídas","Mark as read")) {state.markNoticesRead()}
                     FocusButton(tr("Limpiar notificaciones","Clear notifications")) { state.clearNotifications() }
                 }
                 Spacer(Modifier.height(12.dp))
                 Text(tr("Nuevos episodios y estrenos de tus favoritos.","New episodes and releases from your favorites."),color=Muted,fontSize=14.sp)
             }
-            if(state.notifications.isEmpty()) item { Text(tr("No hay notificaciones nuevas","No new notifications"),color=Color.White) }
+            item(key=UpdateNotes.id) {
+                Column(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(20.dp)).border(1.dp,if(state.noticeRead(UpdateNotes.id)) PanelBorder else Accent,RoundedCornerShape(20.dp)).padding(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                    Text("What's new · BruniO ${com.miflix.native2.BuildConfig.VERSION_NAME}",color=Color.White,fontSize=24.sp)
+                    FocusButton(tr("Ver todos los cambios","View all changes")) {state.changelogOpen=true}
+                    UpdateNotes.changes.take(3).forEach {(es,en) -> Text("• "+tr(es,en),color=Muted,fontSize=15.sp) }
+                    if(!state.noticeRead(UpdateNotes.id)) FocusButton(tr("Marcar como leído","Mark as read")) {state.markNoticesRead(UpdateNotes.id)}
+                    else Text(tr("Leído","Read"),color=Muted)
+                }
+            }
+            if(state.notifications.isEmpty() && state.noticeRead(UpdateNotes.id)) item { Text(tr("No hay notificaciones nuevas","No new notifications"),color=Color.White) }
             items(state.notifications.toList(),key={it.id}) { notice ->
                 Row(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(16.dp)).border(1.dp,PanelBorder,RoundedCornerShape(16.dp)).padding(18.dp),
                     horizontalArrangement=Arrangement.spacedBy(20.dp),verticalAlignment=Alignment.CenterVertically) {
                     coil3.compose.AsyncImage(notice.item.poster ?: notice.item.backdrop,notice.item.title,Modifier.size(72.dp,108.dp).clip(RoundedCornerShape(10.dp)),contentScale=ContentScale.Crop)
                     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                        Text(tr("NUEVO EN TU LISTA","NEW IN YOUR LIST"),color=Accent,fontSize=10.sp)
+                        Text(if(state.noticeRead(notice.id)) tr("LEÍDA","READ") else tr("NUEVO EN TU LISTA","NEW IN YOUR LIST"),color=Accent,fontSize=10.sp)
                         Text(notice.item.title,color=Color.White,fontSize=22.sp,lineHeight=26.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold)
                         Text(notice.message,color=Muted,fontSize=14.sp,maxLines=2)
                     }
-                    FocusButton(tr("Ver contenido","View content")) { state.launch { state.open(notice.item) } }
+                    FocusButton(tr("Ver contenido","View content")) { state.launch { state.markNoticesRead(notice.id);state.open(notice.item) } }
                 }
             }
         }

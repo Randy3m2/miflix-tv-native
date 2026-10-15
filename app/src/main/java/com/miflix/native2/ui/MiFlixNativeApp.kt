@@ -1,5 +1,8 @@
 package com.miflix.native2.ui
 
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.res.painterResource
@@ -46,7 +49,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         config.setLocale(java.util.Locale.forLanguageTag(state.interfaceLanguage))
         android.view.ContextThemeWrapper(baseContext,0).apply { applyOverrideConfiguration(config) }
     }
-    CompositionLocalProvider(LocalContext provides localizedContext) {
+    CompositionLocalProvider(LocalContext provides localizedContext,LocalProfileManage provides {state.socialProfileEditor=true},LocalCastPair provides {state.localCastPairing=true},LocalTitleActions provides {item: com.miflix.native2.model.MediaSummary -> state.titleActions(item)}) {
     MaterialTheme {
         var bootstrapped by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) {
@@ -69,7 +72,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             if(state.miniPlayer) { state.miniPlayer=false;state.playerRequest=null }
         }
         val navigationState=androidx.compose.runtime.saveable.rememberSaveableStateHolder()
-        Box(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize().onPreviewKeyEvent {MenuActivity.touch();false}.pointerInput(Unit) {awaitPointerEventScope {while(true) {awaitPointerEvent(PointerEventPass.Initial);MenuActivity.touch()} }}) {
         navigationState.SaveableStateProvider("${state.session?.userId}:${state.activeProfile.id}:${state.screen.name}") {
         val destination=if(state.kidsMode && state.screen !in setOf(Screen.HOME,Screen.SEARCH,Screen.MY_LIST,Screen.DETAILS,Screen.PROFILES,Screen.NOTIFICATIONS,Screen.PLAYER)) Screen.HOME else state.screen
         LaunchedEffect(destination,state.screen) {if(destination!=state.screen) state.screen=destination}
@@ -158,6 +161,11 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 }
             }
         }
+        if(state.changelogOpen) ChangelogDialog(state) {state.changelogOpen=false}
+        MenuScreensaver(state)
+        if(state.socialProfileEditor) SocialSettingsDialog(state) {state.socialProfileEditor=false}
+        LocalCastHost(state)
+        state.contextTitle?.let {title -> TitleActionsDialog(state,title,state.contextContinue) {state.contextTitle=null} }
         state.sourceSelection?.let { SourcePickerOverlay(state, it) }
 
         state.busyMessage?.let { LoadingOverlay(it) }
@@ -221,15 +229,23 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
 private fun MyListScreen(state: AppState, onBack: () -> Unit) {
     val owner="${state.session?.userId}:${state.activeProfile.id}"
     LaunchedEffect(owner) { runCatching { state.pushCloud() } }
-    val ids=state.favorites.toList()
-    LaunchedEffect(owner,ids,state.myListLimit) { state.loadMyListPage(owner,ids) }
-    CatalogScreen(state,tr("Mi lista","My List"),state.myListTitles,onBack,footer={
+    var listType by androidx.compose.runtime.saveable.rememberSaveable(owner) {mutableStateOf("all")}
+    val ids=state.favorites.filter {listType=="all" || it.startsWith("tmdb:$listType:")}
+    LaunchedEffect(owner,ids,state.myListLimit) {state.loadMyListPage(owner,ids)}
+    val titles=state.myListTitles.filter {listType=="all" || it.type==listType}
+    CatalogScreen(state,tr("Mi lista","My List"),titles,onBack,header={
+        Row(Modifier.padding(top=14.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+            listOf("all" to tr("Todo","All"),"movie" to tr("Películas","Movies"),"series" to tr("Series","Series")).forEach {(type,label) ->
+                FocusButton(label,primary=listType==type) {state.myListLimit=25;listType=type}
+            }
+        }
+    },footer={
         Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
         FocusButton(tr("Actualizar lista","Refresh list")) { state.launch { runCatching { state.pushCloud() }.onFailure { state.myListMessage = it.message ?: "Error" } } }
         if(state.myListLoading) Text(tr("Cargando…","Loading…"),color=Color.White)
         else {
             if(state.myListMessage.isNotBlank()) Text(state.myListMessage,color=Color.White)
-            if(ids.size>state.myListLimit) FocusButton(tr("Cargar más","Load more")) { state.myListLimit+=20 }
+            if(ids.size>state.myListLimit) FocusButton(tr("Cargar más · 25","Load more · 25")) {state.myListLimit+=25}
             if(state.myListMessage.isNotBlank()) FocusButton(tr("Reintentar","Retry")) { state.launch { state.loadMyListPage(owner,ids) } }
         }
         }

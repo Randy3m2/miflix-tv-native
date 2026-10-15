@@ -67,18 +67,20 @@ internal fun SpotlightRail(
     landscape: Boolean = false,
     progressFor: (MediaSummary) -> Double? = { null },
     eyebrow: String? = null,
+    onLongClick: ((MediaSummary) -> Unit)? = null,
     onClick: (MediaSummary) -> Unit
 ) {
+    val hold=onLongClick ?: LocalTitleActions.current
     if(rows.isEmpty()) return
     var selectedId by rememberSaveable(title) { mutableStateOf(rows.first().cloudId) }
     var active by remember { mutableStateOf(false) }
-    var settledId by remember { mutableStateOf(selectedId) }
+    var settledId by remember { mutableStateOf<String?>(null) }
     val bring=remember { BringIntoViewRequester() }
     val railScroll=androidx.compose.foundation.lazy.rememberLazyListState()
     val firstCard=remember {FocusRequester()}
-    LaunchedEffect(selectedId,active) { if(active) { delay(110); settledId=selectedId } }
+    LaunchedEffect(selectedId,active) { settledId=null;if(active) { delay(3000);settledId=selectedId } }
     LaunchedEffect(active) { if(active) { delay(50); bring.bringIntoView() } }
-    val infoVisibility by animateFloatAsState(if(active) 1f else 0f,tween(150),label="railInfo")
+    val infoVisibility by animateFloatAsState(if(active && settledId==selectedId) 1f else 0f,tween(150),label="railInfo")
     val horizontalSpec=remember {object: BringIntoViewSpec {
         override fun calculateScrollDistance(offset: Float,size: Float,containerSize: Float): Float=when {
             offset<0 -> offset
@@ -96,16 +98,16 @@ internal fun SpotlightRail(
         CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalSpec) {
         LazyRow(Modifier.fillMaxWidth().height(188.dp).smoothHorizontalDpad().firstCardOnDown(railScroll,firstCard),state=railScroll,contentPadding=PaddingValues(horizontal=34.dp,vertical=6.dp)) {
             items(rows,key={it.cloudId},contentType={"spotlight"}) { item ->
-                SpotlightCard(item,expanded=active && settledId==item.cloudId,landscape=landscape,
+                SpotlightCard(item,expanded=active && selectedId==item.cloudId && settledId==item.cloudId,landscape=landscape,
                     progress=progressFor(item),modifier=if(item.cloudId==rows.first().cloudId) Modifier.focusRequester(firstCard) else Modifier,
-                    onFocused={selectedId=item.cloudId},onClick={onClick(item)})
+                    onFocused={selectedId=item.cloudId},onLongClick=hold?.let {action -> {action(item)}},onClick={onClick(item)})
             }
         }
         }
         // Reserved space prevents neighboring rails from jumping when focus changes.
         Column(Modifier.padding(start=40.dp,end=40.dp,top=4.dp).fillMaxWidth().height(72.dp)
             .graphicsLayer { alpha=infoVisibility;translationY=(1f-infoVisibility)*6.dp.toPx() }) {
-            if(active) {
+            if(active && settledId==selectedId) {
                 Text("${selected.title}  ·  ${selected.year}  ·  ★ ${"%.1f".format(selected.rating)}",
                     color=Color.White,fontSize=14.sp,lineHeight=18.sp,fontWeight=FontWeight.SemiBold,maxLines=1,
                     overflow=TextOverflow.Ellipsis)
@@ -118,7 +120,7 @@ internal fun SpotlightRail(
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolean,progress: Double?,modifier: Modifier=Modifier,onFocused: () -> Unit,onClick: () -> Unit) {
+private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolean,progress: Double?,modifier: Modifier=Modifier,onFocused: () -> Unit,onLongClick: (() -> Unit)? = null,onClick: () -> Unit) {
     var focused by remember(item.cloudId) { mutableStateOf(false) }
     val cardBring=remember { BringIntoViewRequester() }
     LaunchedEffect(expanded) { if(expanded) { delay(170);cardBring.bringIntoView() } }
@@ -131,8 +133,8 @@ private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolea
     }
     Box(modifier.width(width.dp).fillMaxHeight().padding(horizontal=6.dp).bringIntoViewRequester(cardBring)
         .onFocusChanged { focused=it.isFocused; if(it.isFocused) onFocused() }.focusable()
-        .tvClick(onClick).clickable(onClick=onClick)
-        .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(9.dp))
+        .then(if(onLongClick==null) Modifier.tvClick(onClick) else Modifier.tvPlaybackClick(onClick,onLongClick)).clickable(onClick=onClick)
+        .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(9.dp))
         .padding(3.dp).clip(RoundedCornerShape(7.dp)).background(Panel)) {
         AsyncImage(if(showBackdrop) item.backdrop ?: item.poster else item.poster ?: item.backdrop,
             item.title,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
@@ -289,9 +291,9 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
 private fun SearchKey(label: String,modifier: Modifier=Modifier,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     Box(modifier.height(28.dp).onFocusChanged {focused=it.isFocused}.focusable().tvClick(onClick).clickable(onClick=onClick)
-        .background(if(focused) Color.White else Panel,RoundedCornerShape(6.dp))
-        .border(1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(6.dp)).padding(horizontal=4.dp),
+        .background(if(focused) Accent else Panel,RoundedCornerShape(6.dp))
+        .border(1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(6.dp)).padding(horizontal=4.dp),
         contentAlignment=Alignment.Center) {
-        Text(label,color=if(focused) Color.Black else Color.White,fontSize=13.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+        Text(label,color=if(focused) FocusInk else Color.White,fontSize=13.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
     }
 }

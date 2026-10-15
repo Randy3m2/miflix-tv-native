@@ -19,6 +19,7 @@ data class CharacterAvatar(val key: String,val label: String,val pack: Character
 
 // One five-portrait atlas per pack keeps APK asset count and texture decoding small.
 val CharacterAvatarPacks=listOf(
+    CharacterAvatarPack("f1","Formula 1",R.drawable.brunio_pack_f1,listOf("Lewis Hamilton","Max Verstappen","Fernando Alonso","Charles Leclerc","Lando Norris")),
     CharacterAvatarPack("got","Game of Thrones",R.drawable.brunio_pack_got,listOf("Jon Snow","Daenerys","Tyrion","Arya","Cersei")),
     CharacterAvatarPack("lanterns","Lanterns",R.drawable.brunio_pack_lanterns,listOf("Hal Jordan","John Stewart","Sinestro","Sheriff Kerry","William Macon")),
     CharacterAvatarPack("snyder","Justice League · Snyder Cut",R.drawable.brunio_pack_snyder,listOf("Superman","Batman","Wonder Woman","Aquaman","Cyborg")),

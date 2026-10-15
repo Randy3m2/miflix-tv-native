@@ -3,6 +3,9 @@ package com.miflix.native2.ui
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -131,18 +134,17 @@ internal object LiveLibrary {
             if(rows.isEmpty()) Text(tr("Usa ☆ junto a un canal para guardarlo aquí.","Use ☆ beside a channel to save it here."),color=Muted)
             if(busy) Text(tr("Cargando…","Loading…"),color=Muted)
             if(message.isNotBlank()) Text(message,color=Color.White)
-            LazyColumn(Modifier.weight(1f,false),contentPadding=PaddingValues(bottom=20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                items(rows,key={it.provider+":"+it.channel.id}) { (provider,c) ->
+            LazyVerticalGrid(columns=GridCells.Adaptive(180.dp),modifier=Modifier.weight(1f,false),contentPadding=PaddingValues(bottom=20.dp),horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+                gridItems(rows,key={it.provider+":"+it.channel.id}) { (provider,c) ->
                     Column {
-                        FocusButton(c.name,modifier=Modifier.fillMaxWidth(),onLongClick={ removalGate=QuickReactionGestureGate();LiveLibrary.toggle(context,state,provider,c) }) { if(!busy) scope.launch {
+                        LiveChannelTile(c,c.number,true,onLongClick={ removalGate=QuickReactionGestureGate();LiveLibrary.toggle(context,state,provider,c) },onClick= { if(!busy) scope.launch {
                             busy=true;message=""
                             try {
                                 val stream=LiveRepository().streams(state.calendarLiveManifest(provider),c).firstOrNull() ?: error(tr("Canal no disponible","Channel unavailable"))
                                 val item=MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE")
                                 select(PlayerRequest(item,stream,0,0,0,true,c.id,provider,liveType=c.type))
                             } catch(e: Exception) { if(e is CancellationException) throw e;message=e.message.orEmpty() } finally { busy=false }
-                        } }
-                        ChannelExtras(state,provider,c)
+                        } })
                     }
                 }
             }

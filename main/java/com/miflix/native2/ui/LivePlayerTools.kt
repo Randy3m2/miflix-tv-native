@@ -330,7 +330,7 @@ private fun MultiViewTile(req: PlayerRequest, audible: Boolean, hd: Boolean, poo
         }
     }
     Box(modifier.onFocusChanged { focused=it.hasFocus }.tvClick(click).focusable().clickable(onClick=click)
-        .border(if(focused) 3.dp else 1.dp,if(focused) Color.White else Color(0xFF444444)).padding(4.dp).background(Color.Black)) {
+        .border(if(focused) 3.dp else 1.dp,if(focused) Accent else Color(0xFF444444)).padding(4.dp).background(Color.Black)) {
         player?.let { p -> AndroidView(factory={ ctx -> PlayerView(ctx).apply { setEnableComposeSurfaceSyncWorkaround(true);useController=false;isFocusable=false;descendantFocusability=android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS;player=p } },update={ it.player=p },modifier=Modifier.fillMaxSize()) }
         Text((if(audible) "♫  " else "")+req.item.title,color=Color.White,fontSize=15.sp,modifier=Modifier.align(Alignment.BottomStart).background(Color(0xB0000000)).padding(8.dp))
         if(error!=null) Text(tr("No se pudo abrir. OK para cambiar o reintentar.","Unable to play. OK to change or retry.")+"\n"+error,color=Color.White,modifier=Modifier.align(Alignment.Center).background(Color.Black).padding(14.dp))

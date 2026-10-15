@@ -3,6 +3,8 @@ package com.miflix.native2.ui
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -38,6 +40,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
@@ -61,9 +64,17 @@ val Bg = Color(0xFF050505)
 val Panel = Color(0xFF141414)
 val Muted = Color(0xFFAAAAAF)
 val SoftWhite = Color(0xFFF3F3F3)
-val Accent = Color(0xFFB792FF)
+internal object FocusTheme {
+    var argb by mutableIntStateOf(0xFFB792FF.toInt())
+}
+
+val Accent: Color get() = Color(FocusTheme.argb)
+val FocusInk: Color get() = if(Accent.luminance()>.179f) Color.Black else Color.White
 val FocusedPanel = Color(0xFF242126)
 val PanelBorder = Color(0xFF303035)
+internal typealias ProfileMenuAction = () -> Unit
+internal val LocalProfileManage=staticCompositionLocalOf<ProfileMenuAction?> {null}
+internal val LocalCastPair=staticCompositionLocalOf<ProfileMenuAction?> {null}
 val BrowseTileWidth = 240.dp
 val BrowseTileHeight = 136.dp
 val BrowseTileSlotWidth = 254.dp
@@ -75,6 +86,7 @@ fun Modifier.tvClick(onClick: () -> Unit): Modifier = this.onPreviewKeyEvent { e
     val activate = event.key == Key.DirectionCenter ||
         event.key == Key.Enter ||
         event.key == Key.NumPadEnter
+    MenuActivity.touch()
     if (activate && event.type == KeyEventType.KeyUp) {
         onClick()
         true
@@ -95,6 +107,7 @@ fun Modifier.tvPlaybackClick(onClick: () -> Unit, onLongClick: () -> Unit): Modi
     this.onFocusChanged {
         if (!it.hasFocus) { pending?.cancel(); held = false }
     }.onPreviewKeyEvent { event ->
+        MenuActivity.touch()
         val code = event.nativeKeyEvent.keyCode
         val activate = code in listOf(23, 66, 160, 85, 126)
         if (!activate) false else {
@@ -138,8 +151,8 @@ fun FocusButton(
             .focusable()
             .then(if (onLongClick != null) Modifier.tvPlaybackClick(onClick, onLongClick) else Modifier.tvClick(onClick))
             .clickable(onClick = onClick)
-            .background(if (focused) FocusedPanel else if(destructive) Color(0xFF251317) else if(primary) Color(0xFF211D28) else Panel, RoundedCornerShape(12.dp))
-            .border(if (focused) 2.dp else 1.dp, if(focused) Accent else if(destructive) Color(0xFF78404B) else if(primary) Color(0xFF74608D) else PanelBorder, RoundedCornerShape(12.dp))
+            .background(if (focused) FocusedPanel else if(destructive) Color(0xFF251317) else if(primary) Color(0xFF211D28) else Panel, RoundedCornerShape(50))
+            .border(if (focused) 2.dp else 1.dp, if(focused) Accent else if(destructive) Color(0xFF78404B) else if(primary) Color(0xFF74608D) else PanelBorder, RoundedCornerShape(50))
             .padding(horizontal = horizontalPadding, vertical = 12.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -157,9 +170,9 @@ fun BackIconButton(onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     Box(Modifier.size(44.dp).semantics { contentDescription=tr("Volver","Back") }.onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick)
         .clickable(onClick=onClick).background(if(focused) SoftWhite else Color(0x990C111B),RoundedCornerShape(22.dp))
-        .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else Color(0x557D8AA3),RoundedCornerShape(22.dp)),
+        .border(if(focused) 2.dp else 1.dp,if(focused) Accent else Color(0x557D8AA3),RoundedCornerShape(22.dp)),
         contentAlignment=Alignment.Center) {
-        Text("‹",color=if(focused) Color.Black else Color.White,fontSize=32.sp, lineHeight=38.sp)
+        Text("‹",color=if(focused) FocusInk else Color.White,fontSize=32.sp, lineHeight=38.sp)
     }
 }
 
@@ -172,8 +185,12 @@ fun MediaCard(
     progressPercent: Double? = null,
     onFocused: (MediaSummary) -> Unit = {},
     showCaption: Boolean = true,
+    onLongClick: (() -> Unit)? = null,
+    allowContextMenu: Boolean = true,
     onClick: () -> Unit
 ) {
+    val titleActions=LocalTitleActions.current
+    val hold=onLongClick ?: titleActions?.takeIf {allowContextMenu}?.let {action -> {action(item)}}
     var focused by remember(item.cloudId) { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (focused) 1.012f else 1f,
@@ -204,7 +221,7 @@ fun MediaCard(
                     if (it.isFocused) onFocused(item)
                 }
                 .focusable()
-                .tvClick(onClick)
+                .then(if(hold==null) Modifier.tvClick(onClick) else Modifier.tvPlaybackClick(onClick,hold))
                 .clickable(onClick = onClick)
                 .clip(RoundedCornerShape(12.dp))
                 .background(Color(0xFF1A1A1A))
@@ -354,6 +371,8 @@ fun Sidebar(screen: Screen, profileName: String, onNavigate: (Screen) -> Unit) {
 @Composable
 fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,notificationCount: Int,
             profile: com.miflix.native2.model.Profile? = null, backgroundAlpha: Float = 0f, onHeaderFocused: (() -> Unit)? = null, onMoveDown: (() -> Unit)? = null,onEditPicture: (() -> Unit)? = null,kids: Boolean=false) {
+    val manageProfile=LocalProfileManage.current
+    val pairTv=LocalCastPair.current
     val current=when(screen) {
         Screen.WATCH_PARTY -> Screen.FRIENDS
         Screen.COLLECTIONS,Screen.FRANCHISE,Screen.CUSTOM_FILTER,Screen.GENRES,Screen.GENRE_DETAIL,Screen.YEAR_DETAIL,Screen.PLATFORM_DETAIL,Screen.COLLECTION_DETAIL -> Screen.HOME
@@ -393,11 +412,13 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
             properties=androidx.compose.ui.window.PopupProperties(focusable=true)) {
             val menuFocus=remember { FocusRequester() }
             LaunchedEffect(Unit) { withFrameNanos { };runCatching { menuFocus.requestFocus() } }
-            Column(Modifier.width(230.dp).background(Color.Black,RoundedCornerShape(14.dp))
+            Column(Modifier.width(290.dp).heightIn(max=420.dp).verticalScroll(rememberScrollState()).background(Color.Black,RoundedCornerShape(14.dp))
                 .border(1.dp,PanelBorder,RoundedCornerShape(14.dp)).padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Text(profileName,color=Muted,fontSize=13.sp,modifier=Modifier.padding(8.dp))
                 FocusButton(tr("Mi lista","My List"),modifier=Modifier.fillMaxWidth().focusRequester(menuFocus)) { profileMenu=false;onNavigate(Screen.MY_LIST) }
                 if(!kids) FocusButton(tr("Ajustes","Settings"),modifier=Modifier.fillMaxWidth()) { profileMenu=false;onNavigate(Screen.SETTINGS) }
+                if(!kids) manageProfile?.let {manage -> FocusButton(tr("Administrar perfil","Manage profile"),modifier=Modifier.fillMaxWidth()) {profileMenu=false;manage()} }
+                if(!kids) pairTv?.let {pair -> FocusButton(tr("Conectar teléfono / PC","Connect phone / PC"),modifier=Modifier.fillMaxWidth()) {profileMenu=false;pair()} }
                 onEditPicture?.let { edit -> FocusButton(tr("Editar foto","Edit picture"),modifier=Modifier.fillMaxWidth()) { profileMenu=false;edit() } }
                 FocusButton(tr("Cambiar perfil","Switch profile"),modifier=Modifier.fillMaxWidth()) { profileMenu=false;onNavigate(Screen.PROFILES) }
             }
@@ -460,9 +481,9 @@ private fun BellIcon(color: Color,modifier: Modifier) {
 private fun SearchNavigationButton(onFocused: (Boolean) -> Unit = {},onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     Box(Modifier.size(44.dp).semantics { contentDescription=tr("Buscar","Search") }.onFocusChanged { focused=it.isFocused; onFocused(it.isFocused) }.focusable().tvClick(onClick).clickable(onClick=onClick)
-        .background(if(focused) Color.White else Color.Transparent,RoundedCornerShape(16.dp)),contentAlignment=Alignment.Center) {
+        .background(if(focused) Accent else Color.Transparent,RoundedCornerShape(16.dp)),contentAlignment=Alignment.Center) {
         Canvas(Modifier.size(24.dp)) {
-            val ink=if(focused) Color.Black else Color.White
+            val ink=if(focused) FocusInk else Color.White
             val center=androidx.compose.ui.geometry.Offset(size.width*.4f,size.height*.4f)
             drawCircle(ink,size.width*.29f,center,style=androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
             drawLine(ink,androidx.compose.ui.geometry.Offset(size.width*.62f,size.height*.62f),
@@ -479,5 +500,14 @@ internal fun NavigationTab(text: String,selected: Boolean,onFocused: (Boolean) -
         horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(7.dp)) {
         Text(text,color=if(focused || selected) Color.White else Muted,fontSize=15.sp,lineHeight=18.sp,fontWeight=if(focused || selected) FontWeight.Bold else FontWeight.Medium,maxLines=1)
         Box(Modifier.height(2.dp).width(28.dp).background(if(selected) Accent else Color.Transparent,RoundedCornerShape(2.dp)))
+    }
+}
+
+/** A newly opened modal consumes the key-up/repeats that opened it. */
+internal fun Modifier.consumeOpeningPress(): Modifier = composed {
+    val gate=remember {com.miflix.native2.data.QuickReactionGestureGate()}
+    onPreviewKeyEvent {event ->
+        MenuActivity.touch()
+        gate.consume(event.nativeKeyEvent.keyCode,event.type==KeyEventType.KeyDown,event.type==KeyEventType.KeyUp,event.nativeKeyEvent.repeatCount)
     }
 }

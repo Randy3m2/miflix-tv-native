@@ -128,8 +128,8 @@ fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,close: () -> Unit) {
                 if(friends.isEmpty()) item { Text(tr("Pulsa Actualizar para ver la actividad","Select Refresh to see activity"),color=Muted) }
                 items(friends,key={it.id}) { friend ->
                     var focused by remember(friend.id) { mutableStateOf(false) }
-                    val ink=if(focused) Color.Black else Color.White
-                    val secondary=if(focused) Color(0xFF333333) else Muted
+                    val ink=if(focused) FocusInk else Color.White
+                    val secondary=if(focused) FocusInk.copy(alpha=.8f) else Muted
                     val index=ids.indexOf(friend.id)
                     val activate: () -> Unit = { person=friend }
                     Column(Modifier.fillMaxWidth().focusRequester(rowFocus.getValue(friend.id))
@@ -143,7 +143,7 @@ fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,close: () -> Unit) {
                                 else -> false
                             }
                         }.onFocusChanged { focused=it.isFocused }.focusable().tvClick(activate).clickable(onClick=activate)
-                        .background(if(focused) Color.White else Panel,RoundedCornerShape(14.dp))
+                        .background(if(focused) Accent else Panel,RoundedCornerShape(14.dp))
                         .border(2.dp,if(focused) Color.White else Color.Transparent,RoundedCornerShape(14.dp)).padding(14.dp)) {
                         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
                             ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(76.dp))
@@ -312,7 +312,7 @@ private fun CreateEventDialog(state: AppState, day: String?, close: () -> Unit) 
                 items(results.chunked(3)) { row ->
                     Row(Modifier.fillMaxWidth().padding(horizontal=8.dp,vertical=12.dp),horizontalArrangement=Arrangement.spacedBy(22.dp)) {
                         row.forEach { result -> Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                            MediaCard(result,modifier=Modifier.fillMaxWidth(),showCaption=false) { item=result;title=result.title }
+                            MediaCard(result,modifier=Modifier.fillMaxWidth(),showCaption=false,allowContextMenu=false) { item=result;title=result.title }
                             Text(result.title+" · "+result.year,color=if(item?.cloudId==result.cloudId) Color.White else Muted,maxLines=2)
                         } }
                         repeat(3-row.size) { Spacer(Modifier.weight(1f)) }

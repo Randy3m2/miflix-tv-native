@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.miflix.native2.BuildConfig
@@ -62,6 +63,28 @@ class AppState(context: Context) {
     fun restoreAvatars() {
         hiddenAvatars=emptySet()
         playbackPrefs.edit().remove("hidden_avatars").apply()
+    }
+    var changelogOpen by mutableStateOf(false)
+    var localCastPairing by mutableStateOf(false)
+    var socialProfileEditor by mutableStateOf(false)
+    var contextTitle by mutableStateOf<MediaSummary?>(null)
+    var contextContinue by mutableStateOf(false)
+    fun titleActions(item: MediaSummary, continuing: Boolean = false) {contextContinue=continuing;contextTitle=item}
+    var focusColor by mutableIntStateOf(playbackPrefs.getInt("focus_color",0xFFB792FF.toInt()))
+        private set
+    var rememberLastProfile by mutableStateOf(playbackPrefs.getBoolean("remember_last_profile",false))
+        private set
+    init { FocusTheme.argb=focusColor }
+    fun setFocusColor(value: Int) { focusColor=value;FocusTheme.argb=value;playbackPrefs.edit().putInt("focus_color",value).apply() }
+    fun setRememberProfile(value: Boolean) { rememberLastProfile=value;playbackPrefs.edit().putBoolean("remember_last_profile",value).apply() }
+    private fun readNoticesKey()="read_"+noticesKey()
+    var noticesRevision by mutableIntStateOf(0)
+        private set
+    fun noticeRead(id: String): Boolean { noticesRevision;return id in playbackPrefs.getStringSet(readNoticesKey(),emptySet()).orEmpty() }
+    val unreadNoticeCount: Int get() = notifications.count { !noticeRead(it.id) } + if(noticeRead(UpdateNotes.id)) 0 else 1
+    fun markNoticesRead(id: String? = null) {
+        val ids=playbackPrefs.getStringSet(readNoticesKey(),emptySet()).orEmpty().toSet()+(id?.let {setOf(it)} ?: (notifications.map {it.id}.toSet()+UpdateNotes.id))
+        playbackPrefs.edit().putStringSet(readNoticesKey(),ids).apply();noticesRevision++
     }
     var interfaceLanguage by mutableStateOf(playbackPrefs.getString("interface", "en") ?: "en")
     init { UiLanguage.code=interfaceLanguage }
@@ -639,7 +662,7 @@ class AppState(context: Context) {
     var activeProfile by mutableStateOf(Profile("default", "Main", primary = true))
     val profiles = mutableStateListOf<Profile>()
     val favorites = mutableStateListOf<String>()
-    var myListLimit by mutableStateOf(20)
+    var myListLimit by mutableStateOf(25)
     var myListLoading by mutableStateOf(false)
     var myListMessage by mutableStateOf("")
     val myListTitles=mutableStateListOf<MediaSummary>()
@@ -647,7 +670,7 @@ class AppState(context: Context) {
     private var myListGeneration=0
     private val myListCache=mutableMapOf<String,MediaSummary>()
     suspend fun loadMyListPage(owner: String,ids: List<String>) = coroutineScope {
-        if(myListOwner!=owner) { myListOwner=owner;myListLimit=20;myListCache.clear();myListTitles.clear() }
+        if(myListOwner!=owner) { myListOwner=owner;myListLimit=25;myListCache.clear();myListTitles.clear() }
         val generation=++myListGeneration
         myListLoading=true;myListMessage=""
         val desired=ids.take(myListLimit);val permits=Semaphore(4)
@@ -656,7 +679,7 @@ class AppState(context: Context) {
                 try { tmdb.byCloudId(id) } catch(e: CancellationException) { throw e } catch(_: Exception) { null }
             } } }.awaitAll().filterNotNull()
             if(myListOwner!=owner || generation!=myListGeneration || owner!="${session?.userId}:${activeProfile.id}") return@coroutineScope
-            rows.forEach { myListCache[it.cloudId]=it };myListCache.keys.retainAll(ids.toSet())
+            rows.forEach { myListCache[it.cloudId]=it };myListCache.keys.retainAll(favorites.toSet())
             val visible=if(kidsMode) tmdb.kidsFilter(rows) else rows
             if(myListOwner!=owner || generation!=myListGeneration || owner!="${session?.userId}:${activeProfile.id}") return@coroutineScope
             myListTitles.clear();myListTitles.addAll(visible)
@@ -922,7 +945,7 @@ class AppState(context: Context) {
                 }
             }
         }
-        screen = if (tmdb.token.isNotBlank()) Screen.PROFILES else Screen.SETTINGS
+        screen = if (tmdb.token.isBlank()) Screen.SETTINGS else if(rememberLastProfile) Screen.HOME else Screen.PROFILES
     }
 
     suspend fun login(email: String, password: String) {
@@ -978,6 +1001,7 @@ class AppState(context: Context) {
         playerRequest=null;sourceSelection=null;miniPlayer=false;selected=null;details=null;profilePhotoEditor=null
         favorites.clear();progress.clear();continueWatching.clear();kidsContinue.clear();notifications.clear()
         activeProfile = p
+        contextTitle=null;socialProfileEditor=false;localCastPairing=false
         if(kidsMode) detachParty()
         local.saveProfileId(p.id)
         session?.let {
@@ -1569,6 +1593,25 @@ class AppState(context: Context) {
         if(valid()) busyMessage=null
     }
 
+    fun markWatched(item: MediaSummary, season: Int = 0, episode: Int = 0) {
+        val s=if(item.type=="series") season.takeIf {it>0} ?: progress[item.cloudId]?.season?.takeIf {it>0} ?: 1 else 0
+        val e=if(item.type=="series") episode.takeIf {it>0} ?: progress[item.cloudId]?.episode?.takeIf {it>0} ?: 1 else 0
+        val key=if(s>0) "${item.cloudId}:s${s}e${e}" else item.cloudId
+        val old=progress[key] ?: progress[item.cloudId]
+        val duration=old?.duration?.takeIf {it>0} ?: 1L
+        val row=PlaybackProgress(100.0,duration,duration,System.currentTimeMillis(),s,e)
+        progress[key]=row;progress[item.cloudId]=row
+        if(s>0) playbackPrefs.edit().putStringSet(watchedEpisodesKey(),playbackPrefs.getStringSet(watchedEpisodesKey(),emptySet()).orEmpty().toSet()+key).apply()
+        continueWatching.removeAll {it.cloudId==item.cloudId};kidsContinue.removeAll {it.cloudId==item.cloudId}
+        launch {runCatching {pushCloud()}.onFailure {error=it.message}}
+    }
+    fun removeContinue(item: MediaSummary) {
+        // A timestamped zero-progress row survives the cloud merge and hides the title.
+        val old=progress[item.cloudId]
+        progress[item.cloudId]=PlaybackProgress(0.0,0L,old?.duration ?: 0L,System.currentTimeMillis(),old?.season ?: 0,old?.episode ?: 0)
+        continueWatching.removeAll {it.cloudId==item.cloudId};kidsContinue.removeAll {it.cloudId==item.cloudId}
+        launch {runCatching {pushCloud()}.onFailure {error=it.message}}
+    }
     private fun watchedEpisodesKey()="watched_episodes_${session?.userId ?: "local"}_${activeProfile.id}"
     fun episodeWatched(item: MediaSummary, ep: EpisodeSummary): Boolean {
         val key="${item.cloudId}:s${ep.season}e${ep.episode}"

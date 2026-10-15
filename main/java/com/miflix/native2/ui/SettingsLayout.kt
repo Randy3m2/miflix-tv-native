@@ -28,7 +28,7 @@ internal val SettingsCategories = listOf(
 
 /** Outlines do not alter the card's measured size or scroll position. */
 @Composable
-internal fun SettingsSectionCard(onFocused: () -> Unit,content: @Composable ColumnScope.() -> Unit) {
+internal fun SettingsSectionCard(onFocused: () -> Unit = {},content: @Composable ColumnScope.() -> Unit) {
     var focused by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().onFocusChanged {
         focused=it.hasFocus

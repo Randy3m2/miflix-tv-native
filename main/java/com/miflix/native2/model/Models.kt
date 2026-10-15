@@ -51,7 +51,8 @@ data class MediaDetails(
     val cast: List<CastMember> = emptyList(),
     val trailers: List<TrailerSummary> = emptyList(),
     val originalTitle: String = "",
-    val releaseDate: String = ""
+    val releaseDate: String = "",
+    val logo: String? = null
 )
 
 data class EpisodeSummary(

@@ -222,6 +222,9 @@ function appendExternalPlayerActions(row,raw){
  if(isAppleMobile()){
   const vlc=el('a',language==='en'?'▶ Open in VLC':'▶ Abrir en VLC','quiet external-player-link');vlc.href=vlcStreamLink(raw);vlc.target='_top';vlc.rel='noreferrer';actions.append(vlc);
  }
+ if(/Android/i.test(navigator.userAgent||'')){
+  const android=el('a',language==='en'?'▶ Open in external player · online':'▶ Open in external player · online','quiet external-player-link');android.href=androidMediaIntent(raw);android.target='_top';android.rel='noreferrer';actions.append(android);
+ }
  const copy=el('button',language==='en'?'Copy link for another player':'Copiar enlace para otro player','quiet');copy.type='button';copy.onclick=async()=>{
   try{if(!navigator.clipboard)throw Error('Clipboard unavailable');await navigator.clipboard.writeText(raw);toast(t('Enlace copiado'));}
   catch{let field=actions.querySelector?.('input');if(!field){field=el('input');field.type='text';field.readOnly=true;field.value=raw;field.setAttribute('aria-label',language==='en'?'Media link for external player':'Enlace para reproductor externo');actions.append(field);}field.focus();field.select();}
@@ -236,15 +239,25 @@ function isTorBoxMediaHost(host){return ['torbox.app','tb-cdn.cx','tb-cdn.io','t
 function appendLocalFileActions(parent){
  const box=el('section',undefined,'local-file-actions'),pick=el('button',language==='en'?'Open downloaded file':'Abrir archivo descargado','quiet'),input=el('input'),open=el('button','Open in external player','primary');
  input.type='file';input.accept='video/*,audio/*,.mkv,.avi,.mp4,.m4v,.mov,.webm,.ts';input.hidden=true;input.setAttribute('aria-label',language==='en'?'Select downloaded video':'Seleccionar vídeo descargado');open.hidden=true;
- const fallback=language==='en'?'If no player appears, open the video from Files/Downloads and choose Open with or Share → your player. On PC, use File Explorer or Finder.':'Si no aparece tu reproductor, abre el vídeo desde Archivos/Descargas y usa Abrir con o Compartir → tu reproductor. En PC, usa el Explorador de archivos o Finder.';
+ const fallback=language==='en'?'Samsung/Android: My Files → Downloads → video → Open with. iPad: Files → Downloads → Share → player. PC: File Explorer/Finder → Open with.':'Samsung/Android: Mis archivos → Descargas → vídeo → Abrir con. iPad: Archivos → Descargas → Compartir → reproductor. PC: Explorador/Finder → Abrir con.';
  const help=el('p',language==='en'?'Already downloaded? Select the local file, then Open in external player to request the device’s app/share menu. No file is uploaded.':'¿Ya lo descargaste? Selecciona el archivo local, pulsa Open in external player para solicitar el menú de apps del dispositivo. El archivo no se sube.');
  let selectedFile=null;
  pick.type='button';open.type='button';pick.onclick=()=>input.click();
  input.onchange=()=>{selectedFile=input.files?.[0]||null;open.hidden=!selectedFile;help.textContent=selectedFile?selectedFile.name+' · '+fallback:fallback;};
+ function notice(code,text){help.textContent=text+' ['+code+'] '+fallback;help.setAttribute('role','status');help.setAttribute('aria-live','polite');help.scrollIntoView({behavior:'smooth',block:'nearest'});}
  open.onclick=async()=>{
-  if(!selectedFile)return;
-  if(typeof navigator.share!=='function'||typeof navigator.canShare!=='function'||!navigator.canShare({files:[selectedFile]})){help.textContent=fallback;return;}
-  try{await navigator.share({files:[selectedFile]});}catch(e){if(e.name!=='AbortError')help.textContent=fallback;}
+  if(!selectedFile){notice('SELECT_FILE',language==='en'?'Select the downloaded video first.':'Selecciona primero el vídeo descargado.');return;}
+  try{
+   if(window.isSecureContext===false){notice('SECURE_CONTEXT_REQUIRED',language==='en'?'File sharing is blocked in this local/embedded page. Open the HTTPS website directly, or use My Files.':'Compartir archivos está bloqueado en esta página local/incrustada. Abre la web HTTPS directamente o usa Mis archivos.');return;}
+   if(typeof navigator.share!=='function'||typeof navigator.canShare!=='function'){notice('FILE_SHARE_UNSUPPORTED',language==='en'?'This browser cannot request a file app menu.':'Este navegador no permite solicitar el menú de apps para archivos.');return;}
+   if(!navigator.canShare({files:[selectedFile]})){notice('FILE_SHARE_REJECTED',language==='en'?'The browser cannot share this file format or size.':'El navegador no permite compartir este formato o tamaño de archivo.');return;}
+   open.disabled=true;notice('OPEN_REQUESTED',language==='en'?'Requesting the system menu. The browser may show sharing apps instead of video players.':'Solicitando el menú del sistema. El navegador puede mostrar apps para compartir en lugar de reproductores.');
+   await navigator.share({files:[selectedFile]});
+   notice('SHARE_FINISHED',language==='en'?'System share request finished; playback is controlled by the app you selected.':'La solicitud al menú del sistema terminó; la reproducción depende de la app que elegiste.');
+  }catch(e){notice(e.name==='AbortError'?'SHARE_CANCELLED':'FILE_SHARE_FAILED',language==='en'?'The system menu was closed or could not open.':'El menú del sistema se cerró o no pudo abrirse.');}
+  finally{open.disabled=false;}
  };
  box.append(pick,input,open,help);parent.append(box);
 }
+
+function androidMediaIntent(raw){const url=new URL(raw);if(url.protocol!=='https:'||!isTorBoxMediaHost(url.hostname)||url.hostname==='api.torbox.app'||url.username||url.password)throw Error('Invalid media URL');url.hash='';return 'intent:'+url.href.slice('https:'.length)+'#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;type=video/*;end';}

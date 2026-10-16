@@ -49,5 +49,11 @@ class Element {
  const chosen={name:'Downloaded.mkv',size:1000};fileInput.files=[chosen];fileInput.onchange();assert.equal(openWith.hidden,false);
  let shared=null;context.navigator.canShare=data=>data.files[0]===chosen;context.navigator.share=async data=>{shared=data.files[0];};const beforeShare=requests.length;await openWith.onclick();assert.equal(shared,chosen);assert.equal(requests.length,beforeShare,'no cloud request/file upload');
  context.navigator.canShare=()=>false;await openWith.onclick();assert(localBox.children[3].textContent.includes('Archivos'),'unsupported file sharing explains local Files fallback');
+ assert(localBox.children[3].textContent.includes('FILE_SHARE_REJECTED'));
+ context.navigator.canShare=()=>{throw Error('blocked')};await openWith.onclick();assert(localBox.children[3].textContent.includes('FILE_SHARE_FAILED'));
+ context.window.isSecureContext=false;await openWith.onclick();assert(localBox.children[3].textContent.includes('SECURE_CONTEXT_REQUIRED'));context.window.isSecureContext=true;
+ context.navigator.canShare=()=>true;context.navigator.share=async()=>{const e=Error('closed');e.name='AbortError';throw e;};await openWith.onclick();assert(localBox.children[3].textContent.includes('SHARE_CANCELLED'));assert.equal(openWith.disabled,false);
+ run("navigator.userAgent='Mozilla Android Samsung';navigator.platform='Linux arm';navigator.maxTouchPoints=5;const androidRow=el('div');appendExternalPlayerActions(androidRow,'https://store.tb-cdn.io/dld/movie?token=private');globalThis.androidPlayerTest=androidRow;");const androidLink=context.androidPlayerTest.children[0].children[0];assert(androidLink.href.startsWith('intent://store.tb-cdn.io/'));assert(androidLink.href.includes('action=android.intent.action.VIEW'));assert(androidLink.href.includes('type=video/*'));assert(!androidLink.href.includes('package='));
+ assert.throws(()=>run("androidMediaIntent('https://example.com/file')"));
  assert.equal(intervals.length,1);console.log('PASS: short links/deep-link login continuation, 25-title batches, recents sorting/pagination, recommendation upsert, local-only Now Playing and hidden/disconnected polling');
 })().catch(e=>{console.error(e);process.exitCode=1;});

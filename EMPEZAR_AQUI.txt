@@ -1,0 +1,35 @@
+BRUNIO WEB - LIVE TV CAST DIRECTO (v32)
+
+1. Sube los 3 archivos de web/ a la carpeta web/ en GitHub.
+2. Redespliega Vercel y recarga la pagina.
+3. En Chrome, abre Live TV, selecciona el proveedor/canal y pulsa Cast.
+4. Elige tu receptor Google Cast en la misma red Wi-Fi/Ethernet.
+
+No instalar/abrir el servidor Windows, no SQL, funciones ni APK.
+No hace falta aplicar los parches LAN/publico anteriores. Este cambio se puede
+aplicar directamente sobre la version web que ya tenia canales (v29 o posterior).
+La web sigue siendo https://miflix-tv-native-web.vercel.app/
+
+CAMBIOS
+- Selector de canales con icono Google Cast y envio directo al receptor.
+- Conserva el enlace HTTP/HTTPS original: elimina la conversion HTTP -> HTTPS.
+- No crea video web, no descarga manifiestos ni fragmentos para reproducir local.
+- No usa servidor LAN/publico, Vercel ni Supabase como proxy de video.
+- Listado/fuentes se consultan al proveedor directamente, como antes.
+- SDK Google Cast cargado al abrir fuentes. Si el selector no aparece al primer
+  intento mientras carga el SDK, pulsa Cast de nuevo.
+- Peliculas y series mantienen su player/descarga actual: cambio solo Live TV.
+
+COMPATIBILIDAD
+Requiere receptor Google Cast y navegador con soporte del SDK; empezar con Chrome
+Android o PC. No es duplicacion de pantalla ni soporte universal DLNA/Miracast.
+Safari/iPad no tienen implementado AirPlay directo en este flujo sin video web.
+Si un canal requiere cabeceras especiales, se indica que no admite Cast directo.
+El receptor debe poder descargar el medio: pueden fallar CORS, codecs, restricciones
+HTTP o bloqueos del proveedor. Cambiar a Cast no garantiza todos los canales.
+Sports con error 403 al consultar fuentes tampoco queda resuelto por este cambio.
+No hemos probado fisicamente tu receptor: probar Space HD primero.
+
+VERIFICACION
+Sintaxis JavaScript y pruebas simuladas: enlace HTTP intacto, payload LIVE,
+reutilizacion del receptor, rechazo de cabeceras especiales y ausencia de video web.

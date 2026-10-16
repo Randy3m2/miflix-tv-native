@@ -13,6 +13,9 @@ window.addEventListener('message',async event=>{
  if(data.action!=='send'||!/^[-a-z0-9]{8,80}$/i.test(data.id||''))return;
  if(!await connect||!connected){respond({id:data.id,ok:false,error:'TV connection expired. Open a fresh TV link.'});return;}
  const input=data.payload||{};
+ if(input.action==='status'){
+  try{const r=await fetch('/status',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded',Authorization:'Bearer '+token},body:'status=1'});if(!r.ok)throw Error('TV connection expired.');respond({id:data.id,ok:true,status:await r.json()});}catch(e){respond({id:data.id,ok:false,error:e.message});}return;
+ }
  if(!/^tmdb:(movie|series):[1-9][0-9]{0,8}$/.test(input.cloud||'')||!['details','play'].includes(input.action)){respond({id:data.id,ok:false,error:'Invalid title.'});return;}
  try{const r=await fetch('/send',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded',Authorization:'Bearer '+token},body:new URLSearchParams({cloud:input.cloud,action:input.action,season:input.season||'1',episode:input.episode||'1',request:data.id})});if(!r.ok)throw Error('TV connection unavailable. Open a new TV link.');respond({id:data.id,ok:true});}catch(e){respond({id:data.id,ok:false,error:e.message});}
 });

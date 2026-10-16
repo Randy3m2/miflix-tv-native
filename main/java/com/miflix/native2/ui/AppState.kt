@@ -65,6 +65,7 @@ class AppState(context: Context) {
         playbackPrefs.edit().remove("hidden_avatars").apply()
     }
     var changelogOpen by mutableStateOf(false)
+    @Volatile internal var localNowPlaying: String = "{\"active\":false}"
     var localCastPairing by mutableStateOf(false)
     var socialProfileEditor by mutableStateOf(false)
     var contextTitle by mutableStateOf<MediaSummary?>(null)

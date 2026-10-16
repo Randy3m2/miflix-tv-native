@@ -8,7 +8,7 @@ import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.*;
 
-/** Foreground-only, private IPv4 Wi-Fi receiver. No cloud commands, streams or credentials. */
+/** Foreground-only, private IPv4 LAN receiver. No cloud commands, streams or credentials. */
 public final class LocalCastServer implements AutoCloseable {
     public interface Commands { void send(String cloud, String action, int season, int episode); }
     private final Inet4Address address;
@@ -20,8 +20,11 @@ public final class LocalCastServer implements AutoCloseable {
     private final LocalCastAccess access;
     private final ThreadPoolExecutor workers=new ThreadPoolExecutor(2,2,0L,TimeUnit.SECONDS,new ArrayBlockingQueue<>(8));
     private volatile boolean closed;
+    private volatile String statusJson="{\"active\":false}";
+    public void setStatusJson(String json){statusJson=json;}
+    public String getStatusJson(){return statusJson;}
     public LocalCastServer(Inet4Address address,int prefix,byte[] page,Commands commands) throws IOException {
-        if(!isPrivate(address.getAddress()) || prefix<8 || prefix>30) throw new IOException("Private Wi-Fi IPv4 required");
+        if(!isPrivate(address.getAddress()) || prefix<8 || prefix>30) throw new IOException("Private LAN IPv4 required");
         this.address=address;this.prefix=prefix;this.page=page;this.commands=commands;
         code=String.format(Locale.US,"%06d",new SecureRandom().nextInt(1000000));
         access=new LocalCastAccess(code,System::currentTimeMillis);
@@ -67,6 +70,7 @@ public final class LocalCastServer implements AutoCloseable {
         }
         String auth=value(h,"authorization","");String token=auth.startsWith("Bearer ")?auth.substring(7):"";
         if(!access.authenticated(token,origin)){reply(s,401,"{\"ok\":false}",origin);return;}
+        if(request[1].equals("/status")){reply(s,200,statusJson,origin);return;}
         if(request[1].equals("/send")){
             String cloud=value(form,"cloud","");String action=value(form,"action","details");String id=value(form,"request","");
             if(!cloud.matches("tmdb:(movie|series):[1-9][0-9]{0,8}")||!action.matches("details|play")||!id.matches("[a-zA-Z0-9-]{8,80}")){reply(s,400,"{}",origin);return;}

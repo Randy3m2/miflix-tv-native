@@ -39,13 +39,13 @@ internal fun LocalCastHost(state: AppState) {
     var message by remember {mutableStateOf("")}
     var command by remember {mutableStateOf<Job?>(null)}
     var networkRevision by remember {mutableIntStateOf(0)}
-    fun wifiSignature(): String = manager.allNetworks.mapNotNull {network ->
+    fun lanSignature(): String = manager.allNetworks.mapNotNull {network ->
         val caps=manager.getNetworkCapabilities(network)
-        if(caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)!=true || caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) null
+        if((caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)!=true && caps?.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)!=true) || caps?.hasTransport(NetworkCapabilities.TRANSPORT_VPN)==true) null
         else manager.getLinkProperties(network)?.linkAddresses?.filter {it.address is Inet4Address && LocalCastServer.isPrivate(it.address.address)}?.joinToString {"${network}:${it.address.hostAddress}/${it.prefixLength}"}
     }.sorted().joinToString("|")
-    var lastNetwork by remember {mutableStateOf(wifiSignature())}
-    fun networkChanged() {main.post {val signature=wifiSignature();if(lastNetwork!=signature) {lastNetwork=signature;networkRevision++}}}
+    var lastNetwork by remember {mutableStateOf(lanSignature())}
+    fun networkChanged() {main.post {val signature=lanSignature();if(lastNetwork!=signature) {lastNetwork=signature;networkRevision++}}}
     LaunchedEffect(state.localCastPairing) {if(state.localCastPairing) enabled=true}
     DisposableEffect(enabled,state.appForeground) {
         val callback=object: ConnectivityManager.NetworkCallback() {
@@ -53,8 +53,8 @@ internal fun LocalCastHost(state: AppState) {
             override fun onLost(network: Network) {networkChanged()}
             override fun onLinkPropertiesChanged(network: Network,properties: android.net.LinkProperties) {networkChanged()}
         }
-        lastNetwork=wifiSignature()
-        if(enabled && state.appForeground) runCatching {manager.registerNetworkCallback(NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build(),callback)}
+        lastNetwork=lanSignature()
+        if(enabled && state.appForeground) runCatching {manager.registerNetworkCallback(NetworkRequest.Builder().addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN).build(),callback)}
         onDispose {runCatching {manager.unregisterNetworkCallback(callback)}}
     }
     DisposableEffect(enabled,state.appForeground,state.activeProfile.id,state.session?.userId,revision,networkRevision,state.kidsMode) {
@@ -63,12 +63,12 @@ internal fun LocalCastHost(state: AppState) {
         val account=state.session?.userId
         if(enabled && state.appForeground && !state.kidsMode) {
             try {
-                val endpoint=manager.allNetworks.mapNotNull {network ->
+                val endpoint=manager.allNetworks.sortedBy {it!=manager.activeNetwork}.mapNotNull {network ->
                     val caps=manager.getNetworkCapabilities(network)
-                    if(caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)!=true || caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) null
+                    if((caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)!=true && caps?.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)!=true) || caps?.hasTransport(NetworkCapabilities.TRANSPORT_VPN)==true) null
                     else manager.getLinkProperties(network)?.linkAddresses?.firstOrNull {it.address is Inet4Address && LocalCastServer.isPrivate(it.address.address)}
                 }.firstOrNull()
-                if(endpoint==null) message=tr("Conecta la TV al Wi-Fi de tu casa.","Connect the TV to your home Wi-Fi.")
+                if(endpoint==null) message=tr("Conecta la TV por Wi-Fi o Ethernet a tu red de casa.","Connect the TV to your home network over Wi-Fi or Ethernet.")
                 else {
                     val page=context.assets.open("brunio-local-cast.html").use {it.readBytes()}
                     server=LocalCastServer(endpoint.address as Inet4Address,endpoint.prefixLength,page) {cloud,action,season,episode ->
@@ -95,6 +95,13 @@ internal fun LocalCastHost(state: AppState) {
         receiver=server
         onDispose {server?.close();receiver=null;command?.cancel()}
     }
+    LaunchedEffect(receiver) {
+        val server=receiver ?: return@LaunchedEffect
+        while(true) {
+            server.setStatusJson(if(state.screen==Screen.PLAYER || state.miniPlayer) state.localNowPlaying else "{\"active\":false}")
+            delay(500)
+        }
+    }
     if(state.localCastPairing) {
         var now by remember {mutableLongStateOf(System.currentTimeMillis())}
         LaunchedEffect(Unit) {while(true) {delay(1000);now=System.currentTimeMillis()} }
@@ -103,7 +110,7 @@ internal fun LocalCastHost(state: AppState) {
             LaunchedEffect(Unit) {withFrameNanos {};runCatching {first.requestFocus()} }
             Column(Modifier.widthIn(max=620.dp).heightIn(max=510.dp).background(Panel,RoundedCornerShape(24.dp)).padding(24.dp).verticalScroll(rememberScrollState()),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 Text(tr("Conectar teléfono / PC","Connect phone / PC"),color=Color.White,fontSize=24.sp)
-                Text(tr("Solo en el mismo Wi-Fi. BruniO debe permanecer abierto. No disponible durante un Party ni en Kids.","Same Wi-Fi only. Keep BruniO open. Unavailable during a Party or in Kids."),color=Muted,fontSize=14.sp)
+                Text(tr("Solo en la misma red local (Wi-Fi o Ethernet). BruniO debe permanecer abierto. No disponible durante un Party ni en Kids.","Same local network only (Wi-Fi or Ethernet). Keep BruniO open. Unavailable during a Party or in Kids."),color=Muted,fontSize=14.sp)
                 receiver?.let {server ->
                     val expired=now>server.pairUntil
                     if(!expired) {

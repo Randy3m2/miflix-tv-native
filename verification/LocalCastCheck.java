@@ -53,6 +53,9 @@ public final class LocalCastCheck {
             check(call(s,address,"POST","/connect","code=000000x","",origin).contains("403"),"wrong code rejected");
             String paired=call(s,address,"POST","/connect","code="+s.getCode(),"",origin);
             check(paired.contains("200"),"correct pairing code");String token=paired.split("\"token\":\"")[1].split("\"")[0];
+            s.setStatusJson("{\"active\":true,\"title\":\"Movie\"}");
+            check(call(s,address,"POST","/status","status=1","",origin).contains("401"),"status requires auth");
+            check(call(s,address,"POST","/status","status=1",token,origin).contains("Movie"),"authenticated local status");
             String body="cloud=tmdb%3Amovie%3A123&action=play&request=abcdefgh&season=1&episode=1";
             check(call(s,address,"POST","/send",body,token,origin).contains("202"),"authenticated send accepted");
             call(s,address,"POST","/send",body,token,origin);check(sent.get()==1,"duplicate request dispatched once");

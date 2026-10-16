@@ -794,6 +794,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     if(category=="language") item(key="setting-3") {
                         SettingsSectionCard(onFocused={ helpTitle="Audio language";helpDescription="Preferred audio and playback links. Available tracks can also be changed in the player.";helpIndex=3 }) {
                 Text(tr("Preferencias de reproducción","Playback preferences"),color=Color.White,fontSize=22.sp, lineHeight=26.sp)
+                Text(tr("Auriculares: ajuste estéreo automático al conectarlos a la TV. La sincronización depende también de la TV y los auriculares.","Headphones: automatic stereo adjustment when connected to the TV. Sync also depends on your TV and headphones."),color=Muted,fontSize=14.sp)
                 Text("Audio: ${state.audioLanguage.ifBlank { tr("Automático","Automatic") }}",color=Muted)
                 if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(state.audioLanguage)) {
                     Text(tr("Enlaces: español latino y de España primero; inglés como alternativa.",
@@ -1239,6 +1240,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             .setDefaultRequestProperties(request.stream.requestHeaders)
         val dataFactory = DefaultDataSource.Factory(context, httpFactory)
         ExoPlayer.Builder(context, renderers)
+            .setAudioAttributes(androidx.media3.common.AudioAttributes.Builder().setUsage(androidx.media3.common.C.USAGE_MEDIA).setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MOVIE).build(),true)
+            .setHandleAudioBecomingNoisy(true)
             .setMediaSourceFactory(DefaultMediaSourceFactory(dataFactory))
             .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder()
                 .setBufferDurationsMs(15000,50000,1000,1500)
@@ -1290,8 +1293,22 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
         }
     }
+    HeadphoneAudioRouting(player)
     LaunchedEffect(player) {
-        while(true) { positionMs = player.currentPosition; durationMs = player.duration.coerceAtLeast(0); delay(250) }
+        try {
+            while(true) {
+                positionMs=player.currentPosition; durationMs=player.duration.coerceAtLeast(0)
+                // Snapshot contains catalog metadata only, never stream URLs or headers.
+                state.localNowPlaying=org.json.JSONObject().put("active",true)
+                    .put("cloud",request.item.cloudId).put("title",request.item.title)
+                    .put("poster",request.item.poster ?: org.json.JSONObject.NULL)
+                    .put("season",request.season).put("episode",request.episode)
+                    .put("position",positionMs).put("duration",durationMs)
+                    .put("playing",player.isPlaying).put("loading",!firstFrame)
+                    .put("updatedAt",System.currentTimeMillis()).toString()
+                delay(250)
+            }
+        } finally {state.localNowPlaying="{\"active\":false}"}
     }
     LaunchedEffect(paused) {
         if(paused) while(true) { clockNow = System.currentTimeMillis(); delay(1000) }

@@ -16,6 +16,7 @@ const platforms:Record<string,{name:string;ids:number[]}>= {
 function media(x:any,type?:string,language='es') {
  const kind=type||(x.media_type==='tv'?'series':x.media_type==='movie'?'movie':null);if(!kind||x.adult)return null;
  return {id:x.id,type:kind,cloudId:`tmdb:${kind}:${x.id}`,title:x.title||x.name||(language==='en'?'Untitled':'Sin título'),overview:x.overview||'',
+ backdrop:x.backdrop_path?`https://image.tmdb.org/t/p/w1280${x.backdrop_path}`:null,runtime:x.runtime||x.episode_run_time?.[0]||null,
  poster:x.poster_path?`https://image.tmdb.org/t/p/w500${x.poster_path}`:null,year:(x.release_date||x.first_air_date||'').slice(0,4),date:x.release_date||x.first_air_date||'',rating:x.vote_average||0,genres:x.genre_ids||(x.genres||[]).map((g:any)=>g.id)};
 }
 Deno.serve(async(request:Request)=>{
@@ -33,7 +34,7 @@ Deno.serve(async(request:Request)=>{
   }
   if(input.action==='people') {const q=String(input.query||'').trim().slice(0,150);if(q.length<2)return reply({people:[]});const data=await catalog('/search/person',{...lang,query:q,include_adult:'false'});return reply({people:(data.results||[]).filter((x:any)=>!x.adult).slice(0,8).map((x:any)=>({id:x.id,name:x.name,department:x.known_for_department}))});}
   if(input.action==='titles') {
-   if(!Array.isArray(input.ids)||input.ids.length>20||input.ids.some((id:unknown)=>typeof id!=='string'||!/^tmdb:(movie|series):\d+$/.test(id)))return reply({error:'Invalid title batch'},400);
+   if(!Array.isArray(input.ids)||input.ids.length>25||input.ids.some((id:unknown)=>typeof id!=='string'||!/^tmdb:(movie|series):\d+$/.test(id)))return reply({error:'Invalid title batch'},400);
    const items=await Promise.all(input.ids.map(async(id:string)=>{const [,kind,n]=id.split(':');try{return media(await catalog(`/${kind==='series'?'tv':'movie'}/${n}`,lang),kind,language);}catch{return {cloudId:id,id:Number(n),type:kind,title:language==='en'?'Title unavailable':'Título no disponible',poster:null,overview:'',year:'',rating:0,genres:[]};}}));return reply({items:items.filter(Boolean)});
   }
   if(!['search','discover','upcoming'].includes(input.action))return reply({error:'Invalid action'},400);

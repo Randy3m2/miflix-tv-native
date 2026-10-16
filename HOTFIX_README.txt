@@ -1,0 +1,1 @@
+Aplicar sobre RC63/RC63.1: reemplazar los dos archivos conservando las rutas y subir a GitHub. Ejecutar nuevamente el build. No requiere SQL ni Vercel. Corrige campos de WatchParty insertados por error en PlaybackProgress. Verificado el bloque de progreso, los campos del party y la igualdad de ambos archivos. No se ha compilado Android en este entorno.

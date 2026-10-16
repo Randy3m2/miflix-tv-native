@@ -140,10 +140,7 @@ class SupabaseRepository(private val url: String, private val key: String) {
         val po = JSONObject()
         progress.forEach { (k, p) ->
             po.put(k, JSONObject().put("percent", p.percent).put("position", p.position / 1000.0).put("duration", p.duration / 1000.0)
-                .put("updatedAt", p.updatedAt)
-        .put("title",p.title).put("overview",p.overview).put("poster",p.poster ?: JSONObject.NULL).put("logo",p.logo ?: JSONObject.NULL)
-        .put("sourceName",p.sourceName).put("sourceFilename",p.sourceFilename).put("sourceSize",p.sourceSize).put("sourceKey",p.sourceKey)
-        .put("shareStream",p.shareStream).put("hostOnlyControls",p.hostOnlyControls).put("season", p.season).put("episode", p.episode))
+                .put("updatedAt", p.updatedAt).put("season", p.season).put("episode", p.episode))
         }
         val body = JSONObject().put("p_profile", profileId)
             .put("p_adds", JSONArray((favorites - baseline).toList()))

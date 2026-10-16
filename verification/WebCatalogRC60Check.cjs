@@ -3,6 +3,7 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert');
 class Element {
  constructor(tag='div'){this.tagName=tag;this.children=[];this.value='';this.dataset={};this.style={};this.classList={toggle(){}};this.open=false;this.hidden=false;this.selectedOptions=[{textContent:'USA'}];}
  append(...nodes){this.children.push(...nodes);} replaceChildren(...nodes){this.children=nodes;}
+ remove(){} scrollIntoView(){} replaceWith(node){this.replacement=node;}
  setAttribute(){} showModal(){this.open=true;} close(){this.open=false;} focus(){} select(){} reportValidity(){return true;}
 }
 (async()=>{
@@ -36,5 +37,7 @@ class Element {
  requests.length=0;await run('pollNowPlaying()');assert.equal(requests.length,0);assert.equal(get('nowPlaying').hidden,false);
  run('document.hidden=true');get('nowPlaying').hidden=true;await run('pollNowPlaying()');assert.equal(get('nowPlaying').hidden,true,'hidden tab does not poll');
  run("document.hidden=false;castToken='';");await run('pollNowPlaying()');assert.equal(get('nowPlaying').hidden,true,'disconnect hides stale activity');
+ run("api=async(path,method,body)=>body.action==='sources'?{sources:[{name:'Comet 1080p',filename:'Movie.mkv',provider:'Comet',size:1000,ticket:'opaque-ticket'}]}:{url:'https://cdn.torbox.app/download/Movie.mkv',filename:'Movie.mkv'};");
+ await run('openDownloads(currentDetail)');const panel=get('detailBody').children.at(-1),row=panel.children.at(-1),generate=row.children[1];await generate.onclick();assert.equal(generate.replacement.tagName,'a');assert.equal(generate.replacement.href,'https://cdn.torbox.app/download/Movie.mkv');assert.equal(generate.replacement.download,'Movie.mkv');
  assert.equal(intervals.length,1);console.log('PASS: short links/deep-link login continuation, 25-title batches, recents sorting/pagination, recommendation upsert, local-only Now Playing and hidden/disconnected polling');
 })().catch(e=>{console.error(e);process.exitCode=1;});

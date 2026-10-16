@@ -45,7 +45,7 @@ async function catalog(body){body={...body,language};const key=JSON.stringify(bo
 const selected=()=>$('profile').value;
 async function readFavorites(){const owner=session?.user.id,profile=selected();const rows=await api('/rest/v1/miflix_user_state?user_id=eq.'+session.user.id+'&profile_id=eq.'+encodeURIComponent(selected())+'&select=state');if(session?.user.id!==owner||selected()!==profile)throw Error(t('La cuenta cambió'));recentProgress=rows[0]?.state?.progress||{};return new Set((rows[0]?.state?.favorites||[]).filter(x=>/^tmdb:(movie|series):\d+$/.test(x)));}
 function updateCount(){$('count').textContent=favorites.size;}
-async function init(){const ticket=++generation;$('login').hidden=true;$('app').hidden=false;$('account').hidden=false;$('status').textContent=t('Cargando tus perfiles…');try{const rows=await api('/rest/v1/miflix_user_state?user_id=eq.'+session.user.id+'&select=profile_id,state');if(ticket!==generation)return;profiles=rows.find(x=>x.profile_id==='__account__')?.state?.profiles||[];if(!profiles.length)profiles=rows.filter(x=>x.profile_id!=='__account__').map(x=>({id:x.profile_id,name:t('Mi perfil')}));if(!profiles.length)throw Error(t('Crea primero un perfil en BruniO TV.'));$('profile').replaceChildren(...profiles.map(p=>{const n=el('option',p.name);n.value=p.id;return n;}));await loadConfig();await changeProfile();}catch(e){$('status').textContent=e.message;}}
+async function init(){const ticket=++generation;$('login').hidden=true;$('app').hidden=false;$('account').hidden=false;$('status').textContent=t('Cargando tus perfiles…');try{const rows=await api('/rest/v1/miflix_user_state?user_id=eq.'+session.user.id+'&select=profile_id,profiles:state->profiles');if(ticket!==generation)return;profiles=rows.find(x=>x.profile_id==='__account__')?.profiles||[];if(!profiles.length)profiles=rows.filter(x=>x.profile_id!=='__account__').map(x=>({id:x.profile_id,name:t('Mi perfil')}));if(!profiles.length)throw Error(t('Crea primero un perfil en BruniO TV.'));$('profile').replaceChildren(...profiles.map(p=>{const n=el('option',p.name);n.value=p.id;return n;}));await loadConfig();await changeProfile();}catch(e){$('status').textContent=e.message;}}
 async function changeProfile(){const ticket=++generation;try{const next=await readFavorites();if(ticket!==generation)return;favorites=next;updateCount();$('profileName').textContent=t('EL ESPACIO DE ')+(profiles.find(p=>p.id===selected())?.name||t('TU PERFIL')).toUpperCase();if(view==='calendar')await loadCalendar();else if(view==='friends')await loadFriends();else await load(true);await openSharedTitle();}catch(e){if(ticket===generation)$('status').textContent=e.message;}}
 async function toggle(item,button){if(button.disabled)return;button.disabled=true;const profile=selected(),uid=session?.user.id,remove=favorites.has(item.cloudId);try{const data=await api('/rest/v1/rpc/brunio_sync_profile','POST',{p_profile:profile,p_adds:remove?[]:[item.cloudId],p_removes:remove?[item.cloudId]:[],p_progress:null});if(selected()!==profile||session?.user.id!==uid)return;favorites=new Set(data.favorites||[]);updateCount();render();toast(remove?t('Quitado de Mi lista'):t('Guardado para tu próxima noche de cine'));if($('detail').open)showDetail(item);}catch(e){toast(e.message);}finally{button.disabled=false;}}
 function safeImage(url){try{const u=new URL(url);return u.protocol==='https:'&&u.hostname==='image.tmdb.org'?u.href:null;}catch{return null;}}
@@ -65,7 +65,7 @@ function showDetail(item){
  const actions=el('div',undefined,'detail-actions');
  const play=el('button',t('Reproducir en TV'),'primary');play.onclick=()=>{if(!castToken){openCast(item);return;}castItem=item;play.disabled=true;castSend('play').finally(()=>play.disabled=false);};actions.append(play);
  const list=el('button',favorites.has(item.cloudId)?t('✓ En Mi lista · Quitar'):t('+ Agregar a Mi lista'),'quiet');list.onclick=()=>toggle(item,list);actions.append(list);
- for(const [label,handler] of [['Compartir',()=>shareTitle(item)],['Recomendar a amigos',()=>recommendTitle(item)],['Crear evento',()=>openEvent(item)],['Enviar a TV',()=>openCast(item)]]){const b=el('button',t(label),'quiet');b.onclick=handler;actions.append(b);}
+ for(const [label,handler] of [['Compartir',()=>shareTitle(item)],['Recomendar a amigos',()=>recommendTitle(item)],['Crear evento',()=>openEvent(item)],['Enviar a TV',()=>openCast(item)],['Download',()=>openDownloads(item)]]){const b=el('button',t(label),'quiet');b.onclick=handler;actions.append(b);}
  if(item.type==='series'){
   const fields=el('div',undefined,'event-fields');for(const [id,label] of [['castSeason','Temporada'],['castEpisode','Episodio']]){const l=el('label',t(label)),n=el('input');n.type='number';n.min='1';n.max='10000';n.value=$(id).value||'1';n.oninput=()=>{$(id).value=n.value;};l.append(n);fields.append(l);}info.append(fields);
  }
@@ -183,3 +183,31 @@ $('recents').onclick=()=>setView('recents');
 setInterval(pollNowPlaying,5000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollNowPlaying();});
 window.addEventListener('hashchange',()=>{const match=/^#([ms])([0-9a-z]{1,6})$/i.exec(location.hash);if(match){pendingShared='tmdb:'+(match[1].toLowerCase()==='m'?'movie':'series')+':'+parseInt(match[2],36);openSharedTitle();}});
+
+// Download URLs/tickets live only in the open title dialog, never in share links/storage.
+let downloadRevision=0;
+async function openDownloads(item,refresh=false){
+ const revision=++downloadRevision,profile=selected(),owner=session?.user.id,detail=detailRevision;
+ let panel=$('downloadPanel');if(panel)panel.remove();panel=el('section',undefined,'download-panel');panel.id='downloadPanel';$('detailBody').append(panel);
+ const valid=()=>revision===downloadRevision&&detail===detailRevision&&profile===selected()&&owner===session?.user.id&&$('detail').open;
+ const title=el('h3',language==='en'?'Download · TorBox':'Descargar · TorBox'),status=el('p',t('Cargando…'));const reload=el('button',language==='en'?'Refresh sources':'Actualizar fuentes','quiet');reload.onclick=()=>openDownloads(item,true);panel.append(title,status,reload);
+ panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+ try{
+  const result=await api('/functions/v1/brunio-downloads','POST',{action:'sources',refresh,cloud:item.cloudId,profile,season:Number($('castSeason').value||1),episode:Number($('castEpisode').value||1),language});if(!valid())return;
+  status.textContent=language==='en'?'Choose a source to generate a private download link. Files download directly from TorBox.':'Elige una fuente para generar su enlace privado. El archivo se descarga directamente desde TorBox.';
+  if(!result.sources?.length){status.textContent=language==='en'?'No ready TorBox sources found. Check your add-ons on TV or try another episode.':'No se encontraron fuentes listas de TorBox. Revisa tus add-ons en TV o prueba otro episodio.';return;}
+  for(const source of result.sources){
+   const row=el('article',undefined,'download-source'),meta=el('div');meta.append(el('strong',source.name),el('p',source.filename),el('small',source.provider+(source.size>0?' · '+(source.size/1073741824).toFixed(2)+' GB':'')));
+   const button=el('button',language==='en'?'Generate link':'Generar enlace','quiet');row.append(meta,button);panel.append(row);
+   button.onclick=async()=>{
+    button.disabled=true;const message=el('p',t('Cargando…'));row.append(message);
+    try{
+     const result=await api('/functions/v1/brunio-downloads','POST',{action:'link',ticket:source.ticket,profile,language});if(!valid())return;
+     const url=new URL(result.url);if(url.protocol!=='https:'||!url.hostname.endsWith('.torbox.app')||url.hostname==='api.torbox.app'||url.username||url.password)throw Error(language==='en'?'Invalid download link.':'Enlace de descarga inválido.');
+     const link=el('a','↓ Download','primary download-link');link.href=url.href;link.download=result.filename||'';link.target='_blank';link.rel='noopener noreferrer';link.referrerPolicy='no-referrer';button.replaceWith(link);
+     message.textContent=language==='en'?'Ready. Press Download. Your browser manages the file and save location.':'Listo. Pulsa Download. Tu navegador maneja el archivo y dónde guardarlo.';
+    }catch(e){if(valid()){message.textContent=e.message;button.disabled=false;}}
+   };
+  }
+ }catch(e){if(valid())status.textContent=e.message;}
+}

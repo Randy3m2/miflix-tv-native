@@ -7,3 +7,7 @@ verify_jwt = false
 
 [functions.brunio-catalog]
 verify_jwt = false
+
+[functions.brunio-downloads]
+# Authentication is verified explicitly with Supabase Auth inside the function.
+verify_jwt = false

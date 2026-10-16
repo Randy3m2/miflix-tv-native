@@ -78,7 +78,7 @@ fun QueueAddDialog(state: AppState,item: MediaSummary,close: () -> Unit) {
 }
 
 @Composable
-fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,close: () -> Unit) {
+fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,onRefreshRequests: () -> Unit,close: () -> Unit) {
     val first=remember { FocusRequester() }
     LaunchedEffect(Unit) { withFrameNanos { };first.requestFocus() }
     var person by remember { mutableStateOf<com.miflix.native2.data.FriendActivity?>(null) }
@@ -112,6 +112,9 @@ fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,close: () -> Unit) {
     Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Column(Modifier.width(570.dp).heightIn(max=440.dp).background(Panel,RoundedCornerShape(22.dp)).padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Text(tr("Amigos y Party","Friends & Party"),color=Color.White,fontSize=26.sp)
+            FocusButton(if(state.accessRequestsLoading) tr("Consultando…","Checking…") else tr("Actualizar solicitudes","Refresh requests"),modifier=Modifier.fillMaxWidth()) {
+                if(!state.accessRequestsLoading) onRefreshRequests()
+            }
             Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 FocusButton(tr("Amigos","Friends"),primary=!parties,modifier=Modifier.focusRequester(first)) { parties=false }
                 FocusButton(tr("Salas","Parties"),primary=parties) { parties=true }

@@ -422,14 +422,27 @@ class AppState(context: Context) {
         this.open(item)
         if(item.type=="movie") playMovie() else if(ep!=null) playEpisode(ep) else resumeSeries()
     }
+    var accessRequestsLoading by mutableStateOf(false)
+        private set
+    /** Incoming requests are fetched only from explicit Refresh requests controls. */
+    suspend fun refreshPartyRequests() {
+        val s=session ?: return
+        if(accessRequestsLoading) return
+        val epoch=partyEpoch
+        accessRequestsLoading=true
+        try {
+            val requests=social.requests(s)
+            if(session?.userId==s.userId && partyEpoch==epoch) {
+                accessRequests.clear();accessRequests.addAll(requests)
+            }
+        } finally { accessRequestsLoading=false }
+    }
     suspend fun refreshFriendsDirectory() {
         val s=session ?: return
         refreshFriends()
         val people=social.activity(s)
-        val requests=social.requests(s)
         if(session?.userId!=s.userId) return
         friendActivity.clear(); friendActivity.addAll(people)
-        accessRequests.clear(); accessRequests.addAll(requests)
     }
     suspend fun refreshSocialActivity() {
         val s=session ?: return
@@ -438,11 +451,6 @@ class AppState(context: Context) {
         val req=playerRequest.takeIf { screen==Screen.PLAYER || miniPlayer || watchParty!=null }
         social.presence(s,req?.item?.title.orEmpty(),req?.item?.cloudId.orEmpty(),req?.season ?: 0,req?.episode ?: 0,watchParty?.roomCode)
         social.publishAvatar(s,activeProfile.avatarValue ?: ProfileAvatars[(activeProfile.id.hashCode() and Int.MAX_VALUE)%4].key)
-        if(watchParty!=null && partyRole==PartyRole.HOST) {
-            val requests=social.requests(s)
-            if(!valid()) return
-            accessRequests.clear();accessRequests.addAll(requests)
-        } else accessRequests.clear()
         pendingPartyCode?.let { code ->
             val decision=try { social.requestAccess(s,code) } catch(e: Exception) {
                 if(e is CancellationException) throw e

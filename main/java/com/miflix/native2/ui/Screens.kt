@@ -1152,7 +1152,7 @@ fun WatchPartyScreen(state: AppState,onBack: () -> Unit) {
             item {
                 Row(verticalAlignment=Alignment.CenterVertically) {
                     Text(tr("Solicitudes de acceso","Access requests"),color=Color.White,fontSize=22.sp, lineHeight=26.sp,modifier=Modifier.weight(1f))
-                    FocusButton(tr("Actualizar","Refresh")) { state.launch { state.socialAction { state.refreshFriendsDirectory() } } }
+                    FocusButton(if(state.accessRequestsLoading) tr("Consultando…","Checking…") else tr("Actualizar solicitudes","Refresh requests")) { if(!state.accessRequestsLoading) state.launch { state.socialAction { state.refreshPartyRequests() } } }
                 }
                 AccessRequests(state)
                 if(state.accessRequests.isEmpty()) Text(tr("Sin solicitudes pendientes","No pending requests"),color=Muted)
@@ -1757,7 +1757,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         )
         LaunchedEffect(state.watchParty?.roomCode,mini) { if(state.watchParty==null || mini) quickReactions=false }
 
-        if (showPartyActions) PlayerSocialDialog(state,{ createPlayerParty() }) { showPartyActions=false }
+        if (showPartyActions) PlayerSocialDialog(state,onCreate={ createPlayerParty() },onRefreshRequests={
+            state.launch { state.socialAction { state.refreshPartyRequests() };showPartyActions=false;showAccessRequests=true }
+        }) { showPartyActions=false }
         if(showQueue) QueueDialog(state) { showQueue=false }
         if (state.watchParty != null && state.floatingEvents.isNotEmpty()) {
             Column(Modifier.align(Alignment.CenterEnd).padding(30.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {

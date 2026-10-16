@@ -1,0 +1,16 @@
+'use strict';
+const fs=require('fs'),path=require('path'),assert=require('assert'),root=process.argv[2];
+const read=f=>fs.readFileSync(path.join(root,f),'utf8'),base='app/src/main/java/com/miflix/native2/';
+const state=read(base+'ui/AppState.kt'),repo=read(base+'data/SocialRepository.kt');
+const body=(name,next)=>state.slice(state.indexOf(name),state.indexOf(next,state.indexOf(name)));
+assert.equal((state.match(/social\.requests\(s\)/g)||[]).length,1);
+assert(body('suspend fun refreshPartyRequests()','suspend fun refreshFriendsDirectory()').includes('social.requests(s)'));
+assert(!body('suspend fun refreshFriendsDirectory()','suspend fun refreshSocialActivity()').includes('social.requests('));
+assert(!body('suspend fun refreshSocialActivity()','suspend fun decideAccess(').includes('social.requests('));
+assert(repo.includes('SocialPublishGate(300_000L,changedOnly=false)'));assert(repo.includes('SocialPublishGate(240_000L,changedOnly=true)'));
+assert(repo.indexOf('avatarGate.published(')>repo.indexOf('write(s,"miflix_social_profiles?'));
+assert(read(base+'ui/QueueCalendar.kt').includes('onRefreshRequests()'));assert(read(base+'ui/Screens.kt').includes('state.refreshPartyRequests()'));
+const sql=read('supabase_rc62_presence_window.sql');assert(sql.includes("a.updated_at>now()-interval '7 minutes'"));assert(sql.includes("w.updated_at>now()-interval '90 seconds'"));assert(!/drop|truncate|delete from|alter table/i.test(sql));
+for(const file of ['data/SocialRepository.kt','data/SocialPublishGate.kt','ui/AppState.kt','ui/MiFlixNativeApp.kt','ui/QueueCalendar.kt','ui/Screens.kt','ui/UpdateNotes.kt'])assert.equal(read(base+file),read('main/java/com/miflix/native2/'+file));
+assert(read('app/build.gradle').includes("versionName '2.0.0-rc62'"));
+console.log('PASS: source checks — incoming requests manual-only, 5/4-minute gates, UI wiring, SQL liveness windows, mirrored sources and RC62 version');

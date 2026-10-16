@@ -21,6 +21,8 @@ internal object UpdateNotes {
         "Connect phone / PC abre tu catálogo de Vercel conectado a la TV: QR/enlace sin código manual y botón Play on TV." to "Connect phone / PC opens your Vercel catalog connected to the TV: QR/link with no manual code and a Play on TV button."
     )
     val changes=listOf(
+        "Solicitudes de acceso a Party: consulta manual con Refresh requests en Friends y en el reproductor." to "Party access requests: manual lookup with Refresh requests in Friends and in the player.",
+        "Presencia cada 5 minutos; avatar cambiado como máximo cada 4 minutos, sin escrituras si no cambió." to "Presence every 5 minutes; changed avatar at most every 4 minutes, with no writes if unchanged.",
         "Auriculares: salida PCM con mezcla estéreo real; reinicio de audio al conectar/desconectar conservando posición y pausa." to "Headphones: PCM output with real stereo mixing; audio restarts on connection changes while preserving position and pause.",
         "Recuperación automática limitada para fallos AudioTrack al usar auriculares." to "Bounded automatic recovery for AudioTrack errors with headphones.",
         "Auriculares en la TV: detección de salida, preferencia estéreo y gestión de foco de audio; sincronización mediante Media3." to "TV headphones: output detection, stereo preference and audio focus handling; synchronization through Media3.",

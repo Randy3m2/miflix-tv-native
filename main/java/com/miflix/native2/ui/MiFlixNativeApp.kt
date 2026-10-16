@@ -146,7 +146,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                     catch(e: kotlinx.coroutines.CancellationException) { throw e }
                     catch(_: Exception) { }
                 }
-                delay(5000) // Local check; presence writes are throttled to 60 seconds.
+                delay(5000) // Local tick only: presence <= once/5 min, changed avatar <= once/4 min. Incoming requests are manual.
             }
         }
         LaunchedEffect(state.session?.userId, state.watchParty?.roomCode,state.appForeground) {

@@ -109,3 +109,16 @@ html[data-theme="black"] .friend{background:#111;border-color:#ffffff24}
  #providerCards .provider-tile{flex-basis:56px;width:56px;height:56px}
  .catalog-filter-fields input,.catalog-filter-fields select{font-size:16px}
 }
+
+/* Detail actions on phones: compact More trigger and a readable action list. */
+@media(max-width:640px){
+ .detail-actions>.action-menu[open]>.action-menu-trigger{width:calc(50% - 4px);margin-left:auto}
+ .detail-actions>.action-menu>.action-menu-trigger{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;font-size:13px}
+ .detail-actions>.action-menu>.action-menu-trigger::before{content:'•••';letter-spacing:2px;font-size:14px}
+ .detail-actions>.action-menu>.detail-more-items{display:flex;flex-direction:column;gap:0;padding:4px 12px;margin-top:10px;border:1px solid #ffffff14;border-radius:16px;background:var(--panel)}
+ .detail-actions>.action-menu:not([open])>.detail-more-items{display:none}
+ .detail-more-items>button,.detail-more-items>.detail-secondary-actions>button{display:block;width:100%;min-height:44px;margin:0;padding:12px 4px;font-size:13px;font-weight:500;line-height:1.4;text-align:left;border:0;border-bottom:1px solid #ffffff0d;border-radius:0;background:transparent;white-space:normal}
+ .detail-more-items>.detail-secondary-actions{display:flex;flex-direction:column;gap:0;padding:4px 0 0;margin-top:4px;border:0;border-top:1px solid #ffffff20}
+ .detail-more-items>.detail-secondary-actions>button:last-child{border-bottom:0}
+ .detail-more-items button:hover,.detail-more-items button:focus-visible{background:#a573eb12;border-radius:8px}
+}

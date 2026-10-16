@@ -1,7 +1,5 @@
-BruniO Web — Mobile Header (shell 23)
+BruniO Web — Mobile More polish (shell 24)
+Apply after BruniO_Web_Mobile_Header_Fix.zip. Upload matching files to GitHub and redeploy Vercel. No Supabase or APK changes.
 
-Apply after BruniO_Web_Keep_Login.zip. Upload matching web files to GitHub and redeploy Vercel. No Supabase, SQL or APK changes.
-
-At widths up to 900px, the logo and Menu occupy one compact row. Menu expands in-page into a two-column utility grid with profile and sign-out below. Desktop utility controls remain visible. Mobile navigation/provider scrollbars are hidden while touch scrolling remains available; search and filter inputs use 16px text to avoid iOS focus zoom. Persistent login is included unchanged.
-
-Catalog, experience, shell and markup checks passed. Physical-device visual verification remains pending.
+Mobile More retains a half-width trigger aligned with Play on TV even when expanded. Actions use a single readable list, lighter separators and 44px minimum touch targets instead of oversized button cards. All actions and desktop layout are preserved.
+Shell checks passed; real-device visual verification pending.

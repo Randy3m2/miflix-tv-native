@@ -206,7 +206,7 @@ async function openDownloads(item,refresh=false){
     button.disabled=true;const message=el('p',t('Cargando…'));row.append(message);
     try{
      const result=await api('/functions/v1/brunio-downloads','POST',{action:'link',maxGb,ticket:source.ticket,profile,language});if(!valid())return;
-     const url=new URL(result.url);if(url.protocol!=='https:'||!url.hostname.endsWith('.torbox.app')||url.hostname==='api.torbox.app'||url.username||url.password)throw Error(language==='en'?'Invalid download link.':'Enlace de descarga inválido.');
+     const url=new URL(result.url);if(url.protocol!=='https:'||!isTorBoxMediaHost(url.hostname)||url.hostname==='api.torbox.app'||url.username||url.password)throw Error(language==='en'?'Invalid download link.':'Enlace de descarga inválido.');
      const link=el('a','↓ Download','primary download-link');link.href=url.href;link.download=result.filename||'';link.target='_blank';link.rel='noopener noreferrer';link.referrerPolicy='no-referrer';button.replaceWith(link);appendExternalPlayerActions(row,url.href);
      message.textContent=language==='en'?'Ready. Press Download. Your browser manages the file and save location.':'Listo. Pulsa Download. Tu navegador maneja el archivo y dónde guardarlo.';
     }catch(e){if(valid()){message.textContent=e.message;button.disabled=false;}}
@@ -216,7 +216,7 @@ async function openDownloads(item,refresh=false){
 }
 
 function isAppleMobile(){return /iPad|iPhone|iPod/i.test(navigator.userAgent||'')||(/Mac/i.test(navigator.platform||'')&&Number(navigator.maxTouchPoints)>1);}
-function vlcStreamLink(raw){const url=new URL(raw);if(url.protocol!=='https:'||!url.hostname.endsWith('.torbox.app')||url.hostname==='api.torbox.app'||url.username||url.password)throw Error('Invalid media URL');return 'vlc-x-callback://x-callback-url/stream?url='+encodeURIComponent(url.href);}
+function vlcStreamLink(raw){const url=new URL(raw);if(url.protocol!=='https:'||!isTorBoxMediaHost(url.hostname)||url.hostname==='api.torbox.app'||url.username||url.password)throw Error('Invalid media URL');return 'vlc-x-callback://x-callback-url/stream?url='+encodeURIComponent(url.href);}
 function appendExternalPlayerActions(row,raw){
  const actions=el('div',undefined,'external-player-actions');
  if(isAppleMobile()){
@@ -229,3 +229,5 @@ function appendExternalPlayerActions(row,raw){
  actions.append(el('p',isAppleMobile()?(language==='en'?'Open in VLC streams from TorBox and requires VLC installed. For offline playback: Download → Files/Downloads → Share → VLC. The website cannot open a downloaded local file automatically.':'Abrir en VLC reproduce desde TorBox y requiere VLC instalado. Para verlo offline: Download → Archivos/Descargas → Compartir → VLC. La web no puede abrir automáticamente el archivo local descargado.'):(language==='en'?'Paste the link into your external player’s network stream option. For offline playback, open the downloaded file from your device.':'Pega el enlace en la opción de red de tu reproductor externo. Para verlo offline, abre el archivo descargado desde tu dispositivo.')));
  row.append(actions);
 }
+
+function isTorBoxMediaHost(host){return ['torbox.app','tb-cdn.cx','tb-cdn.io','tb-cdn.pw','tb-cdn.sh','tb-cdn.st','tb-cdn.to','tb-cdn.earth'].some(domain=>host.endsWith('.'+domain));}

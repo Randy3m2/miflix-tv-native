@@ -1,4 +1,4 @@
-// Private add-on configuration never leaves this function. File bytes are not proxied.
+// Private add-on configuration is not returned. TorBox CDN links may contain private access tokens. File bytes are not proxied.
 const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization,apikey,content-type','Access-Control-Allow-Methods':'POST,OPTIONS'};
 const reply=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,'Content-Type':'application/json','Cache-Control':'no-store'}});
 const cache=new Map<string,{at:number;rows:Source[]}>();
@@ -6,7 +6,10 @@ type Source={url:string;provider:string;name:string;filename:string;size:number}
 const defaults=['torrentio.strem.fun','comet.feels.legal','comet.elfhosted.com'];
 function allowedHosts(){return new Set([...defaults,...(Deno.env.get('DOWNLOAD_ADDON_HOSTS')||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean)]);}
 function https(raw:string){const u=new URL(raw);if(u.protocol!=='https:'||u.username||u.password||(u.port&&u.port!=='443'))throw Error('Unsafe URL');return u;}
-function torbox(u:URL){return u.hostname.endsWith('.torbox.app');}
+// Official domains: https://support.torbox.app/en/articles/12667085-torbox-is-being-blocked-by-my-anti-virus-software
+const mediaDomains=['torbox.app','tb-cdn.cx','tb-cdn.io','tb-cdn.pw','tb-cdn.sh','tb-cdn.st','tb-cdn.to','tb-cdn.earth'];
+function torbox(u:URL){return mediaDomains.some(domain=>u.hostname.endsWith('.'+domain));}
+class DownloadError extends Error {code:string;constructor(code:string){super(code);this.code=code;}}
 function addon(raw:string){const u=https(raw);if(!allowedHosts().has(u.hostname)||!u.pathname.endsWith('/manifest.json'))throw Error('Unsupported add-on');return u;}
 const clean=(value:unknown,max=220)=>String(value||'').replace(/https?:\/\/\S+/gi,'').replace(/[\x00-\x1f]/g,' ').slice(0,max);
 function sourceSize(row:any){
@@ -30,28 +33,31 @@ async function unseal(ticket:string){if(ticket.length>18000)throw Error('Invalid
 async function tmdb(path:string){const token=Deno.env.get('TMDB_TOKEN');if(!token)throw Error('Missing TMDB_TOKEN');const u=new URL('https://api.themoviedb.org/3'+path);if(!token.startsWith('eyJ'))u.searchParams.set('api_key',token);return json(await fetch(u,{headers:token.startsWith('eyJ')?{Authorization:'Bearer '+token}:{},signal:AbortSignal.timeout(12000),redirect:'error'}));}
 // Follow only configured provider hosts and TorBox, with no auth-header forwarding.
 async function finalLink(raw:string,providers:Set<string>){
- let current=https(raw);const secrets=new Set<string>();
+ let current=https(raw);
  for(let hop=0;hop<6;hop++){
-  if(!torbox(current)&&!providers.has(current.hostname))throw Error('Unsupported download host');
+  if(!torbox(current)&&!providers.has(current.hostname))throw new DownloadError('LINK_HOST_UNSUPPORTED');
   if(current.hostname==='api.torbox.app'){
-   if(!/^\/v1\/api\/(torrents|usenet|webdl)\/requestdl$/.test(current.pathname))throw Error('Unsupported TorBox route');
-   const key=current.searchParams.get('token');if(key)secrets.add(key);current.searchParams.set('redirect','false');
-   const data=await json(await fetch(current,{redirect:'error',signal:AbortSignal.timeout(20000)}));
-   if(!data.success||typeof data.data!=='string')throw Error('Not ready');current=https(data.data);continue;
+   if(!/^\/v1\/api\/(torrents|usenet|webdl)\/requestdl\/?$/.test(current.pathname))throw new DownloadError('TORBOX_ROUTE_UNSUPPORTED');
+   current.searchParams.set('redirect','false');
+   let response:Response;try{response=await fetch(current,{redirect:'manual',signal:AbortSignal.timeout(20000)});}catch{throw new DownloadError('TORBOX_NETWORK');}
+   if(response.status>=300&&response.status<400){const location=response.headers.get('Location');await response.body?.cancel();if(!location)throw new DownloadError('TORBOX_REDIRECT_EMPTY');current=https(new URL(location,current).href);continue;}
+   if(!response.ok){await response.body?.cancel();throw new DownloadError('TORBOX_HTTP_'+response.status);}
+   const data=await json(response);
+   if(!data.success||typeof data.data!=='string')throw new DownloadError('TORBOX_NOT_READY');current=https(data.data);continue;
   }
   if(torbox(current)){
-   if(/\/(?:v\d+\/)?api\//i.test(current.pathname)||current.searchParams.has('apikey')||current.searchParams.has('api_key')||[...secrets].some(x=>current.href.includes(x)))throw Error('Unsafe download link');
+   if(/\/(?:v\d+\/)?api\//i.test(current.pathname)||current.searchParams.has('apikey')||current.searchParams.has('api_key'))throw new DownloadError('LINK_UNSAFE');
    return current.href;
   }
-  const response=await fetch(current,{method:'GET',headers:{Range:'bytes=0-0'},redirect:'manual',signal:AbortSignal.timeout(20000)});
+  let response:Response;try{response=await fetch(current,{method:'GET',redirect:'manual',signal:AbortSignal.timeout(20000)});}catch{throw new DownloadError('PROVIDER_NETWORK');}
   await response.body?.cancel();const location=response.headers.get('Location');
-  if(response.status<300||response.status>=400||!location)throw Error('Not ready');current=https(new URL(location,current).href);
+  if(response.status<300||response.status>=400||!location)throw new DownloadError('PROVIDER_HTTP_'+response.status);current=https(new URL(location,current).href);
  }
- throw Error('Too many redirects');
+ throw new DownloadError('LINK_REDIRECT_LIMIT');
 }
 Deno.serve(async(request:Request)=>{
  if(request.method==='OPTIONS')return new Response('ok',{headers:cors});if(request.method!=='POST')return reply({error:'POST required'},405);
- let en=false;
+ let en=false,stage='REQUEST';
  try{
   if(Number(request.headers.get('content-length')||0)>24000)return reply({error:'Request too large'},413);
   const authorization=request.headers.get('Authorization')||'';if(!authorization.startsWith('Bearer '))return reply({error:'Sign in required'},401);
@@ -67,10 +73,10 @@ Deno.serve(async(request:Request)=>{
   if(!valid.length)return reply({error:en?'Configure a supported Comet/Torrentio TorBox add-on in BruniO TV first.':'Configura primero un add-on Comet/Torrentio con TorBox en BruniO TV.'},409);
   const fingerprint=await digest(valid.map(x=>x.href).sort().join('|')),providers=new Set(valid.map(x=>x.hostname));
   if(input.action==='link'){
-   const data=await unseal(String(input.ticket||''));
+   stage='TICKET';const data=await unseal(String(input.ticket||''));
    if(data.owner!==user.id||data.profile!==input.profile||data.fingerprint!==fingerprint||data.expires<Date.now())return reply({error:en?'Links expired. Load sources again.':'Enlaces caducados. Carga las fuentes otra vez.'},410);
    if(!withinLimit(data.size,limit))return reply({error:en?'Source exceeds the size limit or has unknown size.':'La fuente supera el límite o su tamaño es desconocido.'},400);
-   const url=await finalLink(data.url,providers);return reply({url,filename:data.filename});
+   stage='RESOLVE';const url=await finalLink(data.url,providers);return reply({url,filename:data.filename});
   }
   if(input.action!=='sources'||!/^tmdb:(movie|series):[1-9][0-9]{0,8}$/.test(input.cloud||''))return reply({error:'Invalid title'},400);
   const [,kind,id]=input.cloud.split(':'),season=Number(input.season||1),episode=Number(input.episode||1);
@@ -96,5 +102,5 @@ Deno.serve(async(request:Request)=>{
   }
   const sources=await Promise.all(rows.filter(row=>withinLimit(row.size,limit)).slice(0,80).map(async row=>({provider:row.provider,name:row.name,filename:row.filename,size:row.size,ticket:await seal({owner:user.id,profile:input.profile,fingerprint,url:row.url,filename:row.filename,size:row.size,expires:Date.now()+15*60000})})));
   return reply({sources});
- }catch{return reply({error:en?'Download unavailable or still processing. Try another source, or load links again.':'Descarga no disponible o todavía procesándose. Prueba otra fuente o carga los enlaces otra vez.'},502);}
+ }catch(error){const code=error instanceof DownloadError?error.code:stage==='TICKET'?'TICKET_INVALID':stage==='RESOLVE'?'LINK_RESOLVE_FAILED':'DOWNLOAD_REQUEST_FAILED';return reply({code,error:(en?'Download could not be prepared. Refresh sources and retry. Code: ':'No se pudo preparar la descarga. Actualiza las fuentes y reintenta. Código: ')+code},502);}
 });

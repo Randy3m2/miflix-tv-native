@@ -112,6 +112,12 @@ internal fun PartyMembersOverlay(state: AppState,modifier: Modifier=Modifier,onO
             ProfileAvatar(Profile(member.id,member.nickname,avatar),Modifier.size(32.dp).clip(CircleShape).border(1.dp,Color.White.copy(alpha=.7f),CircleShape))
         }
         if(members.size>5) Text("+${members.size-5}",color=Color.White,fontSize=12.sp,modifier=Modifier.padding(start=10.dp))
+        state.partyPlaybackNotice?.let {notice ->
+            Text(notice.actor+(if(notice.resumed) tr(" reanudó"," resumed") else tr(" pausó"," paused"))+
+                (if(notice.localOnly) tr(" (local)"," (locally)") else ""),
+                color=Color.White,fontSize=14.sp,maxLines=1,overflow=TextOverflow.Ellipsis,
+                modifier=Modifier.padding(start=14.dp).background(Color(0xD916161F),RoundedCornerShape(18.dp)).padding(horizontal=14.dp,vertical=8.dp))
+        }
     }
 }
 

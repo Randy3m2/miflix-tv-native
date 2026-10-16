@@ -6,7 +6,7 @@ assert.equal((state.match(/social\.requests\(s\)/g)||[]).length,1,'incoming requ
 assert(read(base+'data/SocialRepository.kt').includes('SocialPublishGate(300_000L,changedOnly=false)'));
 assert(read(base+'data/SocialRepository.kt').includes('SocialPublishGate(240_000L,changedOnly=true)'));
 assert(sheet.includes('onRefreshRequests()'));assert(screens.includes('onSwitchCurrent='));assert(screens.includes('onWatchParty='));
-assert(screens.includes('firstFrame && controlsVisible && !mini && state.watchParty!=null'));
+assert(screens.includes('firstFrame && (controlsVisible || state.partyPlaybackNotice!=null) && !mini && state.watchParty!=null'));
 assert(sheet.includes('setDimAmount(0f)'));assert(read(base+'ui/PlaybackTools.kt').includes('setDimAmount(0f)'));
 assert(sheet.includes('Switch party to '));assert(sheet.includes('Watch with the party'));
 assert(sheet.includes('Share with this party'));assert(sheet.includes('may include access to your provider/debrid'));
@@ -19,5 +19,5 @@ const hero=read(base+'ui/BrowseHero.kt');assert(hero.includes('.height(height)')
 const rails=read(base+'ui/CinematicBrowsing.kt');assert(rails.includes('delay(3000)'));assert(rails.includes('if(!pinned) Column'));
 assert(read(base+'ui/SmoothRowFocus.kt').includes('time-previous>=110L'));
 for(const name of ['model/Models.kt','data/SupabaseRepository.kt','data/SocialRepository.kt','data/PartySourcePolicy.kt','data/TmdbRepository.kt','ui/AppState.kt','ui/Screens.kt','ui/QueueCalendar.kt','ui/PartyPresentation.kt','ui/PlaybackTools.kt','ui/BrowseHero.kt','ui/CinematicBrowsing.kt','ui/Components.kt','ui/SmoothRowFocus.kt','ui/SocialScreens.kt','ui/UpdateNotes.kt']) assert.equal(read(base+name),read('main/java/com/miflix/native2/'+name),name);
-assert(read('app/build.gradle').includes("versionName '2.0.0-rc63'"));
+assert(read('app/build.gradle').includes("versionName '2.0.0-rc63.1'"));
 console.log('PASS: RC63 UI/source wiring, manual requests, throttles, metadata privacy, bounded logo preview, 3-second expansion, mirrored sources, version');

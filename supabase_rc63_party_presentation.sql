@@ -95,5 +95,21 @@ drop trigger if exists miflix_rc63_room_options on public.miflix_watch_parties;
 create trigger miflix_rc63_room_options after update of state on public.miflix_watch_parties
 for each row execute function public.miflix_rc63_room_options();
 revoke all on function public.miflix_rc63_playback_guard(),public.miflix_rc63_room_options() from public;
+-- Playback notices reuse the existing member event stream and its polling cadence.
+do $kind$
+declare c record;
+begin
+ for c in select con.conname from pg_constraint con join pg_attribute a
+ on a.attrelid=con.conrelid and a.attname='kind'
+ where con.conrelid='public.miflix_party_events'::regclass and con.contype='c'
+ and con.conkey=array[a.attnum]::smallint[] loop
+  execute format('alter table public.miflix_party_events drop constraint %I',c.conname);
+ end loop;
+end $kind$;
+alter table public.miflix_party_events add constraint miflix_party_events_kind_check
+ check(kind in ('emoji','phrase','chat','playback'));
+alter table public.miflix_party_events drop constraint if exists miflix_party_playback_body;
+alter table public.miflix_party_events add constraint miflix_party_playback_body
+ check(kind<>'playback' or body in ('paused','resumed','paused-local','resumed-local'));
 notify pgrst,'reload schema';
 commit;

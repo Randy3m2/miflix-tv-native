@@ -1208,6 +1208,11 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }
     }
 
+    fun userPlayback(playing: Boolean) {
+        if(player.playWhenReady==playing) return
+        player.playWhenReady=playing
+        if(state.watchParty!=null) state.launch {state.publishPartyPlaybackNotice(playing)}
+    }
     fun openPlayerParty() { showPartyActions=true }
     fun createPlayerParty() {
         if(!creatingParty) {
@@ -1444,11 +1449,11 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 pauseInfoDismissed = true; pauseSynopsis = false; dismissKey = code
                 true
             } else if(code == android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || code == android.view.KeyEvent.KEYCODE_MEDIA_PLAY || code == android.view.KeyEvent.KEYCODE_MEDIA_PAUSE) {
-                player.playWhenReady = when(code) { android.view.KeyEvent.KEYCODE_MEDIA_PLAY -> true; android.view.KeyEvent.KEYCODE_MEDIA_PAUSE -> false; else -> !player.playWhenReady }
+                userPlayback(when(code) { android.view.KeyEvent.KEYCODE_MEDIA_PLAY -> true; android.view.KeyEvent.KEYCODE_MEDIA_PAUSE -> false; else -> !player.playWhenReady })
                 dismissKey = code; true
             } else if(wasHidden) {
                 if(code in listOf(android.view.KeyEvent.KEYCODE_DPAD_CENTER,android.view.KeyEvent.KEYCODE_ENTER,android.view.KeyEvent.KEYCODE_NUMPAD_ENTER)) {
-                    player.playWhenReady=!player.playWhenReady
+                    userPlayback(!player.playWhenReady)
                 }
                 dismissKey = code; true
             } else false
@@ -1493,7 +1498,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         if(!firstFrame && playbackError==null && state.playbackLoading==null) PlaybackArtwork(state,request)
         if(mini) {
             Row(Modifier.align(Alignment.BottomCenter).background(Color(0xEE171717)).padding(6.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                FocusButton(if(paused) "▶" else "Ⅱ",horizontalPadding=12.dp) { player.playWhenReady=!player.playWhenReady }
+                FocusButton(if(paused) "▶" else "Ⅱ",horizontalPadding=12.dp) { userPlayback(!player.playWhenReady) }
                 FocusButton(tr("Ampliar","Expand"),horizontalPadding=14.dp) { state.launch {
                     if(!request.live) { state.open(request.item);if(request.season>1) state.loadSeason(request.season) }
                     if(state.playerRequest?.playbackId==request.playbackId) {
@@ -1575,7 +1580,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         if((firstFrame || hadPlaybackError) && controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !showEpisodes && !showPartyActions && !ended) {
             CompactPlayerControls(request, paused, positionMs, durationMs, speed, maximized, playFocus,
                 onInteraction={ controlInteraction++ },
-                onPlay={ player.playWhenReady=!player.playWhenReady },
+                onPlay={ userPlayback(!player.playWhenReady) },
                 onResize={ resizeMode=if(resizeMode == androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT) androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM else androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT },
                 onMenu={ playerMenu=it }, onLinks={ state.launch { state.playerSources(request,player.currentPosition) } },
                 onSeek={ if(player.isCurrentMediaItemSeekable) { if(state.partyRole==PartyRole.GUEST && state.watchParty?.hostOnlyControls==true) state.partyFollowHost=false;positionMs=it; player.seekTo(it) } }, seekable=player.isCurrentMediaItemSeekable && durationMs>0,
@@ -1598,7 +1603,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 }
             }
         }
-        if(firstFrame && controlsVisible && !mini && state.watchParty!=null && playerMenu==null && !showPartyActions && !showEpisodes) {
+        if(firstFrame && (controlsVisible || state.partyPlaybackNotice!=null) && !mini && state.watchParty!=null && playerMenu==null && !showPartyActions && !showEpisodes) {
             PartyMembersOverlay(state,Modifier.align(Alignment.TopCenter).padding(top=20.dp)) {openPlayerParty()}
         }
         if(controlsVisible && state.accessRequests.isNotEmpty() && !showEpisodes && !showPartyActions) {

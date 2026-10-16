@@ -8,7 +8,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 data class SocialPerson(val id: String, val nickname: String, val avatar: String? = null)
-data class PartyEvent(val id: Long, val userId: String, val kind: String, val body: String)
+data class PartyEvent(val id: Long, val userId: String, val kind: String, val body: String, val createdAt: Long = 0L)
 data class FriendActivity(val id: String, val nickname: String, val title: String, val season: Int, val episode: Int, val room: String?, val online: Boolean, val avatar: String? = null, val cloudId: String = "")
 data class FriendRecommendation(val owner: String, val nickname: String, val cloud: String, val title: String, val poster: String?)
 
@@ -125,7 +125,8 @@ class SocialRepository(private val url: String, private val key: String) {
         val order=if(after<0) "desc" else "asc"
         val filter=if(after<0) "" else "&id=gt.$after"
         val a=rows(s,"miflix_party_events?room_code=eq.${enc(room)}$filter&order=id.$order&limit=60")
-        return (0 until a.length()).map { a.getJSONObject(it).let { x -> PartyEvent(x.getLong("id"),x.getString("user_id"),x.getString("kind"),x.getString("body")) } }.sortedBy { it.id }
+        return (0 until a.length()).map { a.getJSONObject(it).let { x -> PartyEvent(x.getLong("id"),x.getString("user_id"),x.getString("kind"),x.getString("body"),
+            runCatching {java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss",java.util.Locale.US).apply {timeZone=java.util.TimeZone.getTimeZone("UTC")}.parse(x.optString("created_at").take(19))?.time ?: 0L}.getOrDefault(0L)) } }.sortedBy { it.id }
     }
     suspend fun send(s: CloudSession, room: String, kind: String, text: String) {
         write(s,"miflix_party_events",JSONObject().put("room_code",room).put("user_id",s.userId).put("kind",kind).put("body",text.trim().take(400)))

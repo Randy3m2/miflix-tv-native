@@ -1,6 +1,6 @@
-# BruniO TV RC63 — Party & cinematic browsing
+# BruniO TV RC63.1 — Party & cinematic browsing
 
-Apply this delta over RC62. The ZIP has fewer than 100 files and preserves both Android upload layouts.
+Apply this cumulative delta over RC62 or RC63. Rerun the included SQL even if you already installed RC63; it also enables playback action events. The ZIP has fewer than 100 files and preserves both Android upload layouts.
 
 ## Install
 
@@ -14,6 +14,7 @@ No Vercel redeploy, Edge Function deployment, private secrets or server required
 ## Included
 
 - Small participant avatars above the video, shown with player controls.
+- Brief member pause/resume notices beside the avatars, automatically hidden after 3.5 seconds. A remote-control action sends one small event through the existing party event stream; there is no new periodic query. In host-only mode, guest actions say (locally). Buffering, audio recovery and automatic synchronization do not emit these notices. Old event history is not replayed as notices.
 - Right-side Friends & Party sheet with spaced code, members, QR/link and friend invitations.
 - Invited friends see Join in Friends after opening/refreshing it. A deliberate host invitation preapproves that friend; QR/code visitors still require host approval.
 - Optional host-only party controls. Guests can pause/seek locally and use Watch with the party to resume following the host.

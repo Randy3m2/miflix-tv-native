@@ -126,6 +126,24 @@ class AppState(context: Context) {
         partyJoinedNotice="$name · Joined"
         launch { delay(4500); if(joinedNoticeSequence==sequence) partyJoinedNotice=null }
     }
+    var partyPlaybackNotice by mutableStateOf<PartyPlaybackNotice?>(null)
+        private set
+    private var playbackNoticeSequence=0L
+    private fun showPlaybackNotice(name: String,action: String) {
+        val sequence=++playbackNoticeSequence
+        partyPlaybackNotice=PartyPlaybackNoticePolicy.notice(name,action)
+        launch {delay(3500);if(playbackNoticeSequence==sequence) partyPlaybackNotice=null}
+    }
+    suspend fun publishPartyPlaybackNotice(playing: Boolean) {
+        val account=session ?: return;val room=watchParty ?: return;val epoch=partyEpoch
+        if(kidsMode) return
+        val localOnly=partyRole==PartyRole.GUEST && room.hostOnlyControls
+        val action=(if(playing) "resumed" else "paused")+(if(localOnly) "-local" else "")
+        showPlaybackNotice(nickname.ifBlank {activeProfile.name},action)
+        // One small event per deliberate remote-control action; no new poll or heartbeat.
+        try {if(sameParty(epoch,account.userId,room.roomCode)) social.send(account,room.roomCode,"playback",action)}
+        catch(e: CancellationException) {throw e} catch(_: Exception) { /* Cosmetic failure must not interrupt playback. */ }
+    }
     var audioLanguage by mutableStateOf(playbackPrefs.getString("audio", "es") ?: "es")
     var subtitleLanguage by mutableStateOf(playbackPrefs.getString("subtitle", "es") ?: "es")
     var subtitleColor by mutableStateOf(playbackPrefs.getInt("subtitleColor",android.graphics.Color.WHITE))
@@ -1905,6 +1923,7 @@ class AppState(context: Context) {
         watchParty=null; partyRole=null;partyFollowHost=true; pendingPartyCode=null; accessRequests.clear()
         partyMessages.clear(); floatingEvents.clear(); partyMembers.clear(); lastEventId=-1
         knownPartyMembers=null; partyJoinedNotice=null; joinedNoticeSequence++;sharedSourcePlaybackId=null
+        partyPlaybackNotice=null;playbackNoticeSequence++
         partyStatus=""; error=null; partyClosedNotice=false
         if(screen==Screen.PLAYER) screen=if(playerRequest?.live==true) Screen.LIVE_TV else if(selected!=null) Screen.DETAILS else Screen.HOME
         playerRequest=null
@@ -1993,10 +2012,18 @@ class AppState(context: Context) {
         partyMembers.clear(); partyMembers.addAll(members)
         val events=social.events(s,p.roomCode,lastEventId)
         if(!valid()) return
-        if(lastEventId<0) { partyMessages.clear(); partyMessages.addAll(events); lastEventId=events.lastOrNull()?.id ?: 0 }
+        if(lastEventId<0) { partyMessages.clear(); partyMessages.addAll(events.filter {it.kind!="playback"}); lastEventId=events.lastOrNull()?.id ?: 0 }
         else {
             for(event in events) {
-                lastEventId=event.id; partyMessages.add(event); floatingEvents.add(event)
+                lastEventId=event.id
+                if(event.kind=="playback") {
+                    if(event.userId!=s.userId && PartyPlaybackNoticePolicy.accepts(event.kind,event.body,event.createdAt,System.currentTimeMillis())) {
+                        val name=members.firstOrNull {it.id==event.userId}?.nickname ?: tr("Invitado","Guest")
+                        showPlaybackNotice(name,event.body)
+                    }
+                    continue
+                }
+                partyMessages.add(event); floatingEvents.add(event)
                 while(floatingEvents.size>3) floatingEvents.removeAt(0)
                 launch { delay(4500); if(valid()) floatingEvents.removeAll { it.id==event.id } }
             }

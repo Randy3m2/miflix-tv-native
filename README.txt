@@ -1,5 +1,5 @@
-BruniO Web — Mobile More polish (shell 24)
-Apply after BruniO_Web_Mobile_Header_Fix.zip. Upload matching files to GitHub and redeploy Vercel. No Supabase or APK changes.
+BruniO Web — Left mobile drawer (shell 25)
+Apply after BruniO_Web_Mobile_More_Polish.zip. Upload matching files to GitHub and redeploy Vercel. No Supabase or APK changes.
 
-Mobile More retains a half-width trigger aligned with Play on TV even when expanded. Actions use a single readable list, lighter separators and 44px minimum touch targets instead of oversized button cards. All actions and desktop layout are preserved.
-Shell checks passed; real-device visual verification pending.
+Mobile/tablet: hamburger at left, logo at right; slide-in left drawer, dark backdrop, close button, outside-tap/Escape dismissal, scroll lock, inert background and keyboard focus containment. Reduced-motion preference respected. Utility buttons remain visible on desktop. Menu interactions make no network requests.
+Catalog, experience and shell checks passed; isolated drawer open/focus/close/inert cleanup checks passed. Real-device visual verification pending.

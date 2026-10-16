@@ -278,3 +278,16 @@ function appendBrowserPlayAction(row,raw,title,poster,target=null){const actions
 // Native disclosure semantics keep keyboard/touch behavior without a menu library.
 function detailActionMenu(label){const root=el('details',undefined,'action-menu'),summary=el('summary',label,'quiet action-menu-trigger'),panel=el('div',undefined,'action-menu-panel');panel.setAttribute('role','group');panel.setAttribute('aria-label',label);root.append(summary,panel);root.onkeydown=event=>{if(event.key==='Escape'){event.preventDefault();root.open=false;summary.focus();}};panel.onclick=event=>{if(event.target.closest?.('button,a')&&!root.className.includes('source-other-players'))root.open=false;};return {root,panel};}
 document.addEventListener('click',event=>{document.querySelectorAll('.action-menu[open]').forEach(menu=>{if(!menu.contains(event.target))menu.open=false;});});
+
+// A local-only mobile drawer; opening it never triggers network requests.
+const headerMenu=document.querySelector('.header-menu');
+if(headerMenu?.addEventListener&&typeof window.matchMedia==='function'){
+ const mobile=window.matchMedia('(max-width:900px)'),panel=headerMenu.querySelector('.header-menu-panel'),trigger=headerMenu.querySelector('summary'),backdrop=headerMenu.querySelector('.drawer-backdrop'),close=headerMenu.querySelector('.drawer-close');
+ const closeDrawer=(restore=true)=>{headerMenu.open=false;syncDrawer();if(restore)trigger.focus();};
+ function syncDrawer(){const active=mobile.matches&&headerMenu.open;document.body.classList.toggle('drawer-open',active);document.querySelectorAll('main,footer,header>.brand').forEach(n=>n.inert=active);trigger.setAttribute('aria-expanded',String(active));trigger.setAttribute('aria-controls','headerDrawer');if(active){panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label',t('Menú'));}else{panel.removeAttribute('role');panel.removeAttribute('aria-modal');}}
+ headerMenu.addEventListener('toggle',()=>{syncDrawer();if(mobile.matches&&headerMenu.open)close.focus();});
+ close.onclick=()=>closeDrawer();backdrop.onclick=()=>closeDrawer();
+ headerMenu.addEventListener('keydown',e=>{if(!mobile.matches||!headerMenu.open)return;if(e.key==='Escape'){e.preventDefault();closeDrawer();}else if(e.key==='Tab'){const nodes=[...panel.querySelectorAll('button,select,a[href],input')].filter(n=>!n.disabled&&n.getClientRects().length),first=nodes[0],last=nodes[nodes.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
+ panel.addEventListener('click',e=>{if(mobile.matches&&e.target.closest('#webQueue,#castTools,#logout,#installApp'))closeDrawer(false);});
+ mobile.addEventListener('change',()=>{headerMenu.open=false;syncDrawer();});syncDrawer();
+}

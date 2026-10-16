@@ -234,10 +234,10 @@ function isTorBoxMediaHost(host){return ['torbox.app','tb-cdn.cx','tb-cdn.io','t
 
 // User chooses an existing local file; no upload, network fetch or download-completion guessing.
 function appendLocalFileActions(parent){
- const box=el('section',undefined,'local-file-actions'),pick=el('button',language==='en'?'Open downloaded file':'Abrir archivo descargado','quiet'),input=el('input'),open=el('button',language==='en'?'Open with…':'Abrir con…','primary');
+ const box=el('section',undefined,'local-file-actions'),pick=el('button',language==='en'?'Open downloaded file':'Abrir archivo descargado','quiet'),input=el('input'),open=el('button','Open in external player','primary');
  input.type='file';input.accept='video/*,audio/*,.mkv,.avi,.mp4,.m4v,.mov,.webm,.ts';input.hidden=true;input.setAttribute('aria-label',language==='en'?'Select downloaded video':'Seleccionar vídeo descargado');open.hidden=true;
- const fallback=language==='en'?'If your browser cannot share this file, open Files → Downloads → select the video → Share → your player.':'Si el navegador no puede compartir este archivo, abre Archivos → Descargas → selecciona el vídeo → Compartir → tu reproductor.';
- const help=el('p',language==='en'?'Already downloaded? Select the local file, then Open with… and choose your player. No file is uploaded.':'¿Ya lo descargaste? Selecciona el archivo local, pulsa Abrir con… y elige tu reproductor. El archivo no se sube.');
+ const fallback=language==='en'?'If no player appears, open the video from Files/Downloads and choose Open with or Share → your player. On PC, use File Explorer or Finder.':'Si no aparece tu reproductor, abre el vídeo desde Archivos/Descargas y usa Abrir con o Compartir → tu reproductor. En PC, usa el Explorador de archivos o Finder.';
+ const help=el('p',language==='en'?'Already downloaded? Select the local file, then Open in external player to request the device’s app/share menu. No file is uploaded.':'¿Ya lo descargaste? Selecciona el archivo local, pulsa Open in external player para solicitar el menú de apps del dispositivo. El archivo no se sube.');
  let selectedFile=null;
  pick.type='button';open.type='button';pick.onclick=()=>input.click();
  input.onchange=()=>{selectedFile=input.files?.[0]||null;open.hidden=!selectedFile;help.textContent=selectedFile?selectedFile.name+' · '+fallback:fallback;};

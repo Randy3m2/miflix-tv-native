@@ -1871,7 +1871,7 @@ class AppState(context: Context) {
         return fresh?.also { watchParty=it }
     }
 
-    suspend fun switchToPartyState(remote: WatchParty) {
+    suspend fun switchToPartyState(remote: WatchParty, openPlayer: Boolean = false) {
         if(kidsMode) return
         val owner=session?.userId ?: return; val epoch=partyEpoch
         fun valid()=sameParty(epoch,owner,remote.roomCode)
@@ -1879,7 +1879,14 @@ class AppState(context: Context) {
         switchingPartyEpoch=epoch
         try {
             val current=playerRequest
-            if(current!=null && current.item.cloudId==remote.cloudId && current.season==remote.season && current.episode==remote.episode) return
+            if(current!=null && current.item.cloudId==remote.cloudId && current.season==remote.season && current.episode==remote.episode) {
+                if(openPlayer) {
+                    if(screen!=Screen.PLAYER && !miniPlayer) playerRequest=current.copy(resumeMs=partyTargetPosition(remote),playbackId=java.util.UUID.randomUUID().toString())
+                    partyFollowHost=true;miniPlayer=false;screen=Screen.PLAYER
+                }
+                return
+            }
+            if(openPlayer) {partyFollowHost=true;miniPlayer=false}
             if(remote.cloudId.isBlank()) return
             if(remote.shareStream) {
                 val shared=try {cloud.readPartySource(session ?: return,remote)} catch(e: CancellationException) {throw e} catch(_: Exception) {null}
@@ -1990,10 +1997,10 @@ class AppState(context: Context) {
         val person = social.find(s, nick.trim()) ?: error(tr("No se encontró el apodo","Nickname not found"))
         addFriend(person.id)
     }
-    suspend fun pollSocialRoom() {
+    suspend fun pollSocialRoom(refreshMembers: Boolean = true) {
         val s=session ?: return; val p=watchParty ?: return; val epoch=partyEpoch
         fun valid()=sameParty(epoch,s.userId,p.roomCode)
-        val fresh=cloud.readWatchParty(s,p.roomCode)
+        val fresh=if((screen==Screen.PLAYER || miniPlayer) && !refreshMembers) p else cloud.readWatchParty(s,p.roomCode)
         if(!valid()) return
         if(fresh==null) {
             val wasGuest=partyRole==PartyRole.GUEST
@@ -2002,9 +2009,9 @@ class AppState(context: Context) {
             partyClosedNotice=wasGuest
             return
         }
-        if(partyRole==PartyRole.GUEST) { watchParty=fresh; if(fresh.cloudId.isNotBlank()) switchToPartyState(fresh) }
+        if(partyRole==PartyRole.GUEST && screen!=Screen.PLAYER && !miniPlayer) { watchParty=fresh; if(fresh.cloudId.isNotBlank()) switchToPartyState(fresh) }
         if(!valid()) return
-        val members=social.members(s,p.roomCode)
+        val members=if(refreshMembers) social.members(s,p.roomCode) else partyMembers.toList()
         if(!valid()) return
         val before=knownPartyMembers
         if(partyRole==PartyRole.HOST && before!=null) members.filter { it.id!=s.userId && it.id !in before }.forEach { showJoined(it.nickname) }
@@ -2033,7 +2040,7 @@ class AppState(context: Context) {
 
     suspend fun heartbeatRoom() = partyPublishMutex.withLock {
         val s=session ?: return@withLock
-        if(partyRole==PartyRole.HOST) watchParty?.let { cloud.updateWatchParty(s,it) }
+        if(partyRole==PartyRole.HOST && screen!=Screen.PLAYER && !miniPlayer) watchParty?.let { cloud.updateWatchParty(s,it) }
     }
 
     suspend fun traktRefresh() = socialAction {
@@ -2196,3 +2203,6 @@ data class SourceSelection(
     val workGeneration: Long = -1,
     val workSequence: Long = -1
 )
+
+internal fun partyTargetPosition(room: com.miflix.native2.model.WatchParty, now: Long = System.currentTimeMillis()): Long =
+    room.positionMs + if(room.playing) (now-room.updatedAt).coerceIn(0L,5000L) else 0L

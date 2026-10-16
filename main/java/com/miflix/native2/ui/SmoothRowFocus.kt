@@ -26,7 +26,7 @@ internal fun Modifier.smoothHorizontalDpad(): Modifier = composed {
 internal fun Modifier.smoothVerticalDpad(): Modifier = composed {
     var direction by remember {androidx.compose.runtime.mutableIntStateOf(0)}
     var acceptedAt by remember {androidx.compose.runtime.mutableStateOf<Long?>(null)}
-    this.onFocusChanged {if(!it.hasFocus) {direction=0;acceptedAt=null}}.onPreviewKeyEvent {event ->
+    this.onPreviewKeyEvent {event ->
         val code=event.nativeKeyEvent.keyCode
         if(code!=19 && code!=20) false
         else if(event.type==KeyEventType.KeyUp) {direction=0;acceptedAt=null;false}
@@ -34,7 +34,7 @@ internal fun Modifier.smoothVerticalDpad(): Modifier = composed {
         else {
             val time=event.nativeKeyEvent.eventTime
             val previous=acceptedAt
-            if(event.nativeKeyEvent.repeatCount==0 || direction!=code || previous==null || time<previous || time-previous>=110L) {
+            if(event.nativeKeyEvent.repeatCount==0 || direction!=code || previous==null || time<previous || time-previous>=220L) {
                 direction=code;acceptedAt=time;false
             } else true
         }

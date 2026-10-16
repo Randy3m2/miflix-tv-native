@@ -304,7 +304,7 @@ private fun MultiViewTile(req: PlayerRequest, audible: Boolean, hd: Boolean, poo
         delay(250L+order*180L)
         try {
             if(pool.closed) return@LaunchedEffect
-            val http=DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true).setDefaultRequestProperties(req.stream.requestHeaders)
+            val http=DefaultHttpDataSource.Factory().setUserAgent("VLC/3.0.21 LibVLC/3.0.21").setAllowCrossProtocolRedirects(true).setDefaultRequestProperties(req.stream.requestHeaders)
             val p=ExoPlayer.Builder(context,DefaultRenderersFactory(context).setEnableDecoderFallback(true))
                 .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(context,http)))
                 .setLoadControl(DefaultLoadControl.Builder().setBufferDurationsMs(6000,16000,800,1500).setTargetBufferBytes(12*1024*1024).build()).build()
@@ -313,9 +313,18 @@ private fun MultiViewTile(req: PlayerRequest, audible: Boolean, hd: Boolean, poo
                 .setMaxVideoBitrate(if(latestHd) 3000000 else 1800000).setMaxVideoFrameRate(30).setTrackTypeDisabled(C.TRACK_TYPE_TEXT,true)
                 .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,!latestAudible).build()
             p.volume=if(latestAudible) 1f else 0f
+            var triedLiveHls=false
             p.addListener(object: Player.Listener {
                 override fun onPlaybackStateChanged(state: Int) { buffering=state==Player.STATE_BUFFERING }
-                override fun onPlayerError(e: androidx.media3.common.PlaybackException) { error=e.errorCodeName;p.stop() }
+                override fun onPlayerError(e: androidx.media3.common.PlaybackException) {
+                    if(!triedLiveHls && e.errorCode==androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED) {
+                        triedLiveHls=true
+                        p.setMediaItem(MediaItem.Builder().setUri(req.stream.url).setMimeType(androidx.media3.common.MimeTypes.APPLICATION_M3U8).build())
+                        p.prepare();return
+                    }
+                    error=e.errorCodeName + ((e.cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.let {" · HTTP ${it.responseCode}"} ?: "")
+                    p.stop()
+                }
             })
             p.setMediaItem(MediaItem.fromUri(req.stream.url));p.prepare();p.playWhenReady=true;player=p
             kotlinx.coroutines.awaitCancellation()

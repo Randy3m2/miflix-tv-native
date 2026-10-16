@@ -215,7 +215,7 @@ fun MediaCard(
                     scaleY = scale
                     shadowElevation = 0f
                 }
-                .contentFocusBorder(12.dp)
+                .contentFocusBorder(18.dp)
                 
                 .onFocusChanged {
                     focused = it.isFocused
@@ -224,7 +224,7 @@ fun MediaCard(
                 .focusable()
                 .then(if(hold==null) Modifier.tvClick(onClick) else Modifier.tvPlaybackClick(onClick,hold))
                 .clickable(onClick = onClick)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(18.dp))
                 .background(Color(0xFF1A1A1A))
         ) {
             AsyncImage(
@@ -392,7 +392,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
             true
         } else false
     }.onFocusChanged { if(it.hasFocus) onHeaderFocused?.invoke() }.focusGroup()
-        .background(Color.Black.copy(alpha=backgroundAlpha.coerceIn(.92f,1f))).padding(horizontal=24.dp),
+        .background(Brush.verticalGradient(listOf(Color.Black, Bg))).padding(horizontal=24.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)) {
         Image(painterResource(R.drawable.brunio_icon),"BruniO",Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)))
         var profileFocused by remember { mutableStateOf(false) }

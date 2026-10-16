@@ -1170,6 +1170,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         val renderers = com.miflix.native2.player.TimedTextRenderers(context,timing).setEnableDecoderFallback(true)
         val httpFactory = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
+            .apply {if(request.live) setUserAgent("VLC/3.0.21 LibVLC/3.0.21")}
             .setDefaultRequestProperties(request.stream.requestHeaders)
         val dataFactory = DefaultDataSource.Factory(context, httpFactory)
         ExoPlayer.Builder(context, renderers)
@@ -1211,7 +1212,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     fun userPlayback(playing: Boolean) {
         if(player.playWhenReady==playing) return
         player.playWhenReady=playing
-        if(state.watchParty!=null) state.launch {state.publishPartyPlaybackNotice(playing)}
+        if(state.watchParty!=null) state.launch {
+            if(state.partyRole==PartyRole.HOST) state.hostPartyUpdate(request,player.currentPosition,playing)
+            state.publishPartyPlaybackNotice(playing)
+        }
     }
     fun openPlayerParty() { showPartyActions=true }
     fun createPlayerParty() {
@@ -1294,8 +1298,19 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                     (player.playbackState == Player.STATE_READY || player.playbackState == Player.STATE_BUFFERING)
                 )
         }
+        var triedLiveHls=false
         val listener = object : Player.Listener {
-            override fun onPlayerError(error: androidx.media3.common.PlaybackException) { playbackError=error.errorCodeName }
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                // Some IPTV endpoints have no extension and return generic content types.
+                // Retry HLS once only when automatic container detection failed, never on HTTP/auth errors.
+                if(request.live && !triedLiveHls && error.errorCode==androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED) {
+                    triedLiveHls=true
+                    player.setMediaItem(MediaItem.Builder().setUri(request.stream.url).setMimeType(MimeTypes.APPLICATION_M3U8).build())
+                    player.prepare()
+                    return
+                }
+                playbackError=error.errorCodeName + ((error.cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.let {" · HTTP ${it.responseCode}"} ?: "")
+            }
             override fun onTracksChanged(value: androidx.media3.common.Tracks) {
                 tracks = value
                 pendingSubtitleLabel?.let { label ->
@@ -1361,8 +1376,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     }
 
     LaunchedEffect(player, state.partyRole, state.watchParty?.roomCode, request.stream.url,state.appForeground) {
+        var previousRemotePlaying: Boolean?=null
         while (state.watchParty != null && state.appForeground) {
-            delay(1000)
+            delay(500)
             if(state.sessionNeedsSignIn) continue
             when (state.partyRole) {
                 PartyRole.HOST -> {
@@ -1370,7 +1386,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                     kotlinx.coroutines.currentCoroutineContext().ensureActive()
                     if(state.playerRequest?.playbackId!=request.playbackId) break
                     command?.let { player.playWhenReady=it }
-                    runCatching { state.hostPartyUpdate(request, player.currentPosition, player.playWhenReady && player.playbackState != Player.STATE_ENDED) }
+                    runCatching { state.hostPartyUpdate(request, player.currentPosition, player.isPlaying) }
                 }
                 PartyRole.GUEST -> {
                     val remote = try { state.refreshParty() } catch(e: kotlinx.coroutines.CancellationException) { throw e } catch(_: Exception) { null } ?: continue
@@ -1386,9 +1402,18 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                     // Preserve the paused decoder frame. Do not seek to stale host snapshots while
                     // a guest pause/resume request is awaiting acknowledgement, or while paused.
                     // Reconcile position on resume / during playback before applying remote play.
-                    if(guestPlaybackIntent==null && remote.playing && !request.live && player.isCurrentMediaItemSeekable && abs(remote.positionMs-player.currentPosition)>1800) {
-                        player.seekTo(remote.positionMs)
+                    if(guestPlaybackIntent==null && remote.playing && !request.live && player.isCurrentMediaItemSeekable && abs(partyTargetPosition(remote)-player.currentPosition)>900) {
+                        player.seekTo(partyTargetPosition(remote))
                     }
+                    if(guestPlaybackIntent==null && !request.live && player.isCurrentMediaItemSeekable) {
+                        val drift=partyTargetPosition(remote)-player.currentPosition
+                        val speed=if(!remote.playing || abs(drift)<120) 1f else if(drift>0) 1.02f else .98f
+                        if(player.playbackParameters.speed!=speed) player.setPlaybackSpeed(speed)
+                    }
+                    if(guestPlaybackIntent==null && !request.live && !remote.playing && previousRemotePlaying!=false && player.isCurrentMediaItemSeekable && abs(remote.positionMs-player.currentPosition)>120) {
+                        player.seekTo(remote.positionMs) // Align the paused frame once, never on every paused poll.
+                    }
+                    if(guestPlaybackIntent==null) previousRemotePlaying=remote.playing
                     if (guestPlaybackIntent==null && remote.playing != player.playWhenReady) {
                         applyingRemote = true; player.playWhenReady = remote.playing; applyingRemote = false
                     }
@@ -1396,6 +1421,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 null -> Unit
             }
         }
+    }
+
+    LaunchedEffect(state.watchParty?.roomCode,state.partyFollowHost,state.partyRole) {
+        if(state.watchParty==null || !state.partyFollowHost || state.partyRole!=PartyRole.GUEST) player.setPlaybackSpeed(1f)
     }
 
     // Explicit timer also covers controls holding focus on TV remotes.
@@ -1604,7 +1633,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
         }
         if(firstFrame && (controlsVisible || state.partyPlaybackNotice!=null) && !mini && state.watchParty!=null && playerMenu==null && !showPartyActions && !showEpisodes) {
-            PartyMembersOverlay(state,Modifier.align(Alignment.TopCenter).padding(top=20.dp)) {openPlayerParty()}
+            PartyMembersOverlay(state,Modifier.align(Alignment.TopCenter).padding(top=20.dp),playing=player.playWhenReady) {openPlayerParty()}
         }
         if(controlsVisible && state.accessRequests.isNotEmpty() && !showEpisodes && !showPartyActions) {
             Box(Modifier.align(Alignment.CenterEnd).padding(26.dp)) {

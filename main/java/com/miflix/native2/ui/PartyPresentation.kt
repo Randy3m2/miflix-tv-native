@@ -100,7 +100,7 @@ private fun PartyToggle(title: String,subtitle: String,checked: Boolean,enabled:
 }
 
 @Composable
-internal fun PartyMembersOverlay(state: AppState,modifier: Modifier=Modifier,onOpen: () -> Unit) {
+internal fun PartyMembersOverlay(state: AppState,modifier: Modifier=Modifier,playing: Boolean?=null,onOpen: () -> Unit) {
     val members=state.partyMembers.sortedWith(compareBy<com.miflix.native2.data.SocialPerson> {it.id!=state.watchParty?.hostUserId}.thenBy {it.nickname}).ifEmpty {
         listOf(com.miflix.native2.data.SocialPerson(state.session?.userId.orEmpty(),state.nickname.ifBlank {state.activeProfile.name},state.activeProfile.avatarValue))
     }
@@ -112,7 +112,7 @@ internal fun PartyMembersOverlay(state: AppState,modifier: Modifier=Modifier,onO
             ProfileAvatar(Profile(member.id,member.nickname,avatar),Modifier.size(32.dp).clip(CircleShape).border(1.dp,Color.White.copy(alpha=.7f),CircleShape))
         }
         if(members.size>5) Text("+${members.size-5}",color=Color.White,fontSize=12.sp,modifier=Modifier.padding(start=10.dp))
-        state.partyPlaybackNotice?.let {notice ->
+        state.partyPlaybackNotice?.takeIf {playing==null || it.resumed==playing}?.let {notice ->
             Text(notice.actor+(if(notice.resumed) tr(" reanudó"," resumed") else tr(" pausó"," paused"))+
                 (if(notice.localOnly) tr(" (local)"," (locally)") else ""),
                 color=Color.White,fontSize=14.sp,maxLines=1,overflow=TextOverflow.Ellipsis,
@@ -255,5 +255,5 @@ internal fun PartyLobby(state: AppState,onBack: () -> Unit) {
     if(sheet && state.watchParty!=null) PartyRoomSheet(state,onCreate={},onRefreshRequests={
         state.launch {state.socialAction {state.refreshPartyRequests()}}
     },onSwitchCurrent={state.playerRequest?.let {req -> state.launch {state.socialAction {state.hostPartyUpdate(req,req.resumeMs,true)}}}},
-        onWatchParty={state.launch {state.socialAction {state.refreshParty()?.let {state.switchToPartyState(it)};sheet=false}}},close={sheet=false})
+        onWatchParty={state.launch {state.socialAction {state.refreshParty()?.let {state.switchToPartyState(it,openPlayer=true)};sheet=false}}},close={sheet=false})
 }

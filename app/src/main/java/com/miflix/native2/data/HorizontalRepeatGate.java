@@ -9,7 +9,7 @@ public final class HorizontalRepeatGate {
         if(up) {direction=0;return false;}
         if(!down) return false;
         if(repeat==0 || direction!=code) {direction=code;lastAccepted=time;return false;}
-        if(time>=lastAccepted && time-lastAccepted<90L) return true;
+        if(time>=lastAccepted && time-lastAccepted<140L) return true;
         lastAccepted=time;
         return false;
     }

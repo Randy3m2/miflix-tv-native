@@ -20,13 +20,13 @@ public final class KidsAndNavigationCheck {
         expect(!gate.consume(22,true,false,0,0),"Fresh right press is immediate");
         int moved=1,blocked=0;
         for(int i=1;i<=100;i++) {if(gate.consume(22,true,false,i,i*10)) blocked++;else moved++;}
-        expect(moved==12 && blocked==89,"Held repeat burst must be coalesced");
+        expect(moved==8 && blocked==93,"Held repeat burst must be coalesced");
         expect(!gate.consume(22,false,true,101,1001),"Release is never swallowed");
         expect(!gate.consume(22,true,false,0,1002),"Fresh press after release remains immediate");
         expect(!gate.consume(21,true,false,1,1003),"Reversing direction remains immediate");
         expect(!gate.consume(20,true,false,20,1004),"Vertical input unaffected");
         expect(!gate.consume(23,true,false,10,1005),"OK unaffected");
         gate.reset();expect(!gate.consume(21,true,false,20,1006),"Focus reentry starts fresh");
-        System.out.println("PASS: Kids rating exclusions, missing/conflicting metadata; held burst 101 -> 12 moves; release, reversal, fresh press, vertical and OK");
+        System.out.println("PASS: Kids rating exclusions, missing/conflicting metadata; held burst 101 -> 8 moves; release, reversal, fresh press, vertical and OK");
     }
 }

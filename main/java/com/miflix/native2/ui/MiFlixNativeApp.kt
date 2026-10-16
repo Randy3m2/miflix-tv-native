@@ -154,10 +154,11 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 var ticks = 0
                 while (state.watchParty != null && state.appForeground) {
                     if(!state.sessionNeedsSignIn) {
-                        state.socialAction { state.pollSocialRoom() }
-                        if (++ticks % 30 == 0) state.socialAction { state.heartbeatRoom() }
+                        val watching=state.screen==Screen.PLAYER || state.miniPlayer
+                        state.socialAction { state.pollSocialRoom(refreshMembers=!watching || ticks % 8 == 0) }
+                        if (++ticks % 120 == 0) state.socialAction { state.heartbeatRoom() }
                     }
-                    delay(2000)
+                    delay(if(state.screen==Screen.PLAYER || state.miniPlayer) 500L else 2000L)
                 }
             }
         }

@@ -136,8 +136,8 @@ private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolea
     Box(modifier.width(width.dp).fillMaxHeight().padding(horizontal=6.dp).bringIntoViewRequester(cardBring)
         .onFocusChanged { focused=it.isFocused; if(it.isFocused) onFocused() }.focusable()
         .then(if(onLongClick==null) Modifier.tvClick(onClick) else Modifier.tvPlaybackClick(onClick,onLongClick)).clickable(onClick=onClick)
-        .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(9.dp))
-        .padding(3.dp).clip(RoundedCornerShape(7.dp)).background(Panel)) {
+        .border(if(focused) 2.dp else 0.dp,if(focused) Accent else Color.Transparent,RoundedCornerShape(18.dp))
+        .padding(3.dp).clip(RoundedCornerShape(16.dp)).background(Panel)) {
         AsyncImage(if(showBackdrop) item.backdrop ?: item.poster else item.poster ?: item.backdrop,
             item.title,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xD9050505)))))

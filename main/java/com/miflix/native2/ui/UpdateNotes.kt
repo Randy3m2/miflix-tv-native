@@ -21,6 +21,8 @@ internal object UpdateNotes {
         "Connect phone / PC abre tu catálogo de Vercel conectado a la TV: QR/enlace sin código manual y botón Play on TV." to "Connect phone / PC opens your Vercel catalog connected to the TV: QR/link with no manual code and a Play on TV button."
     )
     val changes=listOf(
+        "Regreso al party, sincronización más precisa, tarjetas redondeadas, transición superior suave y control de repeticiones del mando." to "Return to party, tighter playback synchronization, rounded cards, blended header and steadier held remote navigation.",
+        "Compatibilidad HTTP de canales en el reproductor y multiview; errores HTTP más claros." to "Live HTTP compatibility in the player and multiview; clearer HTTP errors.",
         "Avisos breves de pausa/reanudación junto a los avatares: nombre del miembro, sin avisar por buffering ni sincronización automática." to "Brief pause/resume notices beside the avatars: member name, with no notices for buffering or automatic synchronization.",
         "Participantes del party en avatares compactos, visibles solo con los controles del player." to "Compact party member avatars, visible only with player controls.",
         "Panel lateral de Friends & Party con código, QR, miembros e invitaciones a amigos." to "Friends & Party side panel with code, QR, members and friend invitations.",

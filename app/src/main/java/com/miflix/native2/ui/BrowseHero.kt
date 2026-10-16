@@ -65,6 +65,7 @@ private fun FocusedBrowseHero(state: AppState,pending: State<MediaSummary?>,fall
             Crossfade(item.backdrop ?: item.poster,modifier=Modifier.align(Alignment.CenterEnd).fillMaxHeight().fillMaxWidth(.75f),animationSpec=tween(140),label="browseBackdrop") {image ->
                 AsyncImage(image,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
             }
+            Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(42.dp).background(Brush.verticalGradient(listOf(Bg,Color.Transparent))))
             Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Bg,Bg.copy(alpha=.92f),Color.Transparent))))
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Bg))))
             Column(Modifier.align(Alignment.TopStart).fillMaxHeight().padding(start=40.dp,end=22.dp,top=8.dp,bottom=12.dp).fillMaxWidth(.65f),verticalArrangement=Arrangement.spacedBy(7.dp)) {

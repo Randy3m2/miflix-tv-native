@@ -17,6 +17,7 @@ function load(html,src,agent='Mozilla Android Samsung'){
  assert.equal(player.get('browser').href,src);assert.equal(player.get('android').hidden,false);assert(player.get('android').href.startsWith('intent://'));assert.equal(player.get('vlc').hidden,true);
  v.error={code:4};v.handlers.error();assert(player.get('status').textContent.includes('MEDIA_4'));
  v.play=()=>{const e=Error('tap required');e.name='NotAllowedError';return Promise.reject(e);};await player.get('play').onclick();assert(player.get('status').textContent.includes('Tap the video'));
+ let full=0;v.requestFullscreen=()=>{full++;return Promise.resolve();};player.get('fullscreen').onclick();assert.equal(full,1);delete v.requestFullscreen;v.webkitEnterFullscreen=()=>{full++;};player.get('fullscreen').onclick();assert.equal(full,2);
  player.events.pagehide();assert.equal(v.src,undefined);assert.equal(v.paused,true);assert.equal(v.loads,1);
  const invalid=load(html,'https://torbox.app.evil.example/media');assert.equal(invalid.get('video').src,undefined);assert.equal(invalid.get('play').disabled,true);
  const ios=load(html,src,'Mozilla iPad');assert.equal(ios.get('vlc').hidden,false);assert.equal(new URL(ios.get('vlc').href).searchParams.get('url'),src);

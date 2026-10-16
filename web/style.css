@@ -139,3 +139,7 @@ html[data-theme="black"] .friend{background:#111;border-color:#ffffff24}
  @keyframes drawer-enter{from{transform:translateX(-100%)}to{transform:translateX(0)}}
 }
 @media(prefers-reduced-motion:reduce){.header-menu[open]>.header-menu-panel{animation:none}}
+
+/* Keep dialog artwork in its own visible, reserved paint box. */
+#detail .detail-hero>img{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:1;visibility:visible}
+#detail .cast-person img,#detail .filmography-card img,#experienceDialog .filmography-card img{display:block;opacity:1;visibility:visible;background:#ffffff08}

@@ -1,6 +1,7 @@
-BruniO Web — Persistent Login (shell 22)
-Apply after BruniO_Web_Compact_Catalog_Icons.zip. Upload matching web files to GitHub and redeploy Vercel. No SQL, Supabase function deployment or APK build.
+BruniO Web — Mobile Header (shell 23)
 
-Session persists in the same browser and website origin, including new tabs and browser restarts. Existing tab sessions migrate automatically. Password is never stored. Refresh remains on demand; Web Locks coordinate refresh across supported browser tabs. Logout clears persistent and legacy session storage and signs out other open tabs.
-Private browsing, cleared website data, another browser/domain or revoked/expired refresh tokens still require sign-in.
-Validation: catalog, experience, shell checks and isolated persistence/migration/logout checks passed. Real-device browser QA pending.
+Apply after BruniO_Web_Keep_Login.zip. Upload matching web files to GitHub and redeploy Vercel. No Supabase, SQL or APK changes.
+
+At widths up to 900px, the logo and Menu occupy one compact row. Menu expands in-page into a two-column utility grid with profile and sign-out below. Desktop utility controls remain visible. Mobile navigation/provider scrollbars are hidden while touch scrolling remains available; search and filter inputs use 16px text to avoid iOS focus zoom. Persistent login is included unchanged.
+
+Catalog, experience, shell and markup checks passed. Physical-device visual verification remains pending.

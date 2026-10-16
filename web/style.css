@@ -79,3 +79,33 @@ html[data-theme="black"] .friend{background:#111;border-color:#ffffff24}
 @media(max-width:900px){.catalog-filter-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.catalog-filter-fields .person-filter,.catalog-filter-fields .filter-actions{grid-column:1/-1}}
 @media(max-width:640px){#app>.heading{gap:12px;margin:4px 0 16px}#app .tabs{width:100%}#app .tabs button{flex:0 0 auto;padding:9px 11px}#providerCards{gap:11px}#providerCards .provider-tile{flex-basis:60px;width:60px;height:60px;border-radius:13px}#providerCards .provider-all{font-size:10px}#providerCaption{font-size:9px}.catalog-filter-fields{gap:10px;padding:4px 10px 12px}#toolbar .filters{gap:2px}#toolbar button{padding:8px 10px}}
 @media(prefers-reduced-motion:reduce){#providerCards .provider-tile{transition:none}#providerCards .provider-tile:hover{transform:none}}
+
+/* Mobile header keeps utilities together, without changing desktop controls. */
+.header-menu>summary{display:none}
+.header-menu-panel{display:flex;align-items:center;gap:16px}
+.header-menu:not([open])>.header-menu-panel{display:flex}
+@media(max-width:900px){
+ header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:16px 20px}
+ header .brand{font-size:27px;gap:9px;min-width:0}header .brand img{width:42px;height:42px}header .brand small{font-size:8px;letter-spacing:3px}
+ .header-tools{display:contents}
+ .header-menu{display:contents}
+ .header-menu>summary{display:flex;align-items:center;justify-content:center;gap:8px;justify-self:end;cursor:pointer;list-style:none;min-height:44px;padding:10px 14px;border:1px solid #ffffff20;border-radius:12px;background:var(--panel);font-size:13px}
+ .header-menu>summary::-webkit-details-marker{display:none}
+ .header-menu>summary:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+ .header-menu:not([open])>.header-menu-panel{display:none}
+ .header-menu[open]>.header-menu-panel{display:grid;grid-column:1/-1;width:100%;min-width:0;gap:12px;padding:14px;background:var(--panel);border:1px solid #ffffff14;border-radius:16px}
+ .header-menu-panel .preferences{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
+ .header-menu-panel .preferences>*{width:100%;min-width:0;min-height:44px;margin:0;padding:10px 12px;font-size:13px;white-space:nowrap}
+ .header-menu-panel #account{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;border-top:1px solid #ffffff14;padding-top:12px}
+ .header-menu-panel #account[hidden]{display:none!important}
+ .header-menu-panel #account select{width:100%;max-width:none;min-width:0;font-size:16px}
+ .header-menu-panel #logout{white-space:nowrap;font-size:13px;min-height:44px}
+ #app .tabs,#providerCards{scrollbar-width:none}#app .tabs::-webkit-scrollbar,#providerCards::-webkit-scrollbar{display:none}
+}
+@media(max-width:640px){
+ main{padding:18px 16px}#app>.heading h1{font-size:27px;line-height:1.15}#caption{font-size:12px}
+ #app .tabs{gap:2px;border-radius:12px}#app .tabs button{min-height:44px;padding:10px 12px}
+ #searchForm input{font-size:16px;padding:11px 12px}#searchForm button{font-size:12px;padding:10px 14px}
+ #providerCards .provider-tile{flex-basis:56px;width:56px;height:56px}
+ .catalog-filter-fields input,.catalog-filter-fields select{font-size:16px}
+}

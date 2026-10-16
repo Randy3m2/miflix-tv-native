@@ -5,9 +5,9 @@ class Node {
  addEventListener(name,fn){this.handlers[name]=fn;} replaceChildren(...nodes){this.children=[...nodes];} remove(){} append(...nodes){this.children.push(...nodes);} setAttribute(){} removeAttribute(name){delete this[name];} querySelector(){return this.children[0]||null;} focus(){} select(){}
  play(){this.paused=false;return Promise.resolve();} pause(){this.paused=true;} load(){this.loads++;}
 }
-function load(html,src,agent='Mozilla Android Samsung'){
+function load(html,src,agent='Mozilla Android Samsung',extra={},hlsType=null){
  const nodes=new Map(),get=id=>{if(!nodes.has(id)){const node=new Node();node.hidden=['vlc','android'].includes(id);nodes.set(id,node);}return nodes.get(id);},events={},history=[];
- const context=vm.createContext({URL,URLSearchParams,Blob,Error,Number,String,document:{getElementById:get,documentElement:{},createElement:()=>new Node()},location:{hash:'#'+new URLSearchParams({src,title:'My movie',lang:'en',autoplay:'1',poster:'https://evil.example/poster.jpg'}),pathname:'/player.html',search:''},history:{replaceState:(...args)=>history.push(args)},navigator:{userAgent:agent,platform:'Linux',maxTouchPoints:1},window:{addEventListener:(name,fn)=>events[name]=fn},setTimeout:()=>1,clearTimeout(){},setInterval:()=>1,clearInterval(){},fetch(){throw Error('No API/file proxy expected');}});
+ const context=vm.createContext({URL,URLSearchParams,Blob,Error,Number,String,document:{getElementById:get,documentElement:{},head:new Node(),createElement:()=>new Node()},location:{hash:'#'+new URLSearchParams({src,title:'My movie',lang:'en',autoplay:'1',poster:'https://evil.example/poster.jpg',...extra}),pathname:'/player.html',search:''},history:{replaceState:(...args)=>history.push(args)},navigator:{userAgent:agent,platform:'Linux',maxTouchPoints:1},window:{Hls:hlsType,addEventListener:(name,fn)=>events[name]=fn},setTimeout:()=>1,clearTimeout(){},setInterval:()=>1,clearInterval(){},fetch(){throw Error('No API/file proxy expected');}});
  vm.runInContext(html.match(/<script>([\s\S]*?)<\/script>/)[1],context);return{context,get,events,history};
 }
 (async()=>{
@@ -30,5 +30,12 @@ function load(html,src,agent='Mozilla Android Samsung'){
  vm.runInContext("installOnlineSubtitles([{lang:'es-419',label:'Latino',vtt:'WEBVTT\\n\\n00:00:01.000 --> 00:00:02.000\\nHello'}])",controls.context);assert.equal(vm.runInContext('onlineSubtitleResources.length',controls.context),1);assert(controls.get('subtitleStatus').textContent.includes('preloaded'));
  controls.events.pagehide();assert.equal(vm.runInContext('onlineSubtitleResources.length',controls.context),0);
  assert(html.includes('<svg width="22"'));assert(html.includes('id="castLabel"'));
- console.log('PASS: standalone player source validation, private fragment cleanup, native controls, Android/VLC fallbacks, codec/autoplay errors, subtitle conversion/controls, Cast/AirPlay dispatch/icon, automatic subtitle Blob installation and playback cleanup');
+ const direct=load(html,'https://channels.example.com/live.mp4','Samsung',{mode:'live'});assert.equal(direct.get('video').src,'https://channels.example.com/live.mp4');assert.equal(direct.get('play').disabled,undefined);
+ const privateLive=load(html,'https://127.0.0.1/private.mp4','Samsung',{mode:'live'});assert.equal(privateLive.get('play').disabled,true);
+ const engines=[];class FakeHls{static isSupported(){return true;}static Events={ERROR:'hls-error'};constructor(config){this.config=config;engines.push(this);}on(name,fn){this.error=fn;}loadSource(source){this.source=source;}attachMedia(video){this.video=video;}destroy(){this.destroyed=true;}}
+ const hls=load(html,'https://channels.example.com/live.m3u8','Samsung',{mode:'live'},FakeHls);await Promise.resolve();await Promise.resolve();assert.equal(engines.length,1);assert.equal(engines[0].source,'https://channels.example.com/live.m3u8');assert.equal(engines[0].config.fragLoadingMaxRetry,1);
+ let castRequest;hls.context.window.chrome={cast:{media:{MediaInfo:class{constructor(url,mime){this.contentId=url;this.contentType=mime;}},GenericMediaMetadata:class{},LoadRequest:class{constructor(info){this.media=info;}},StreamType:{LIVE:'LIVE'}}}};
+ hls.context.window.cast={framework:{CastContext:{getInstance:()=>({requestSession:async()=>{},getCurrentSession:()=>({loadMedia:async request=>{castRequest=request;}})})}}};vm.runInContext('googleCastReady=true',hls.context);await hls.get('cast').onclick();assert.equal(castRequest.media.contentId,'https://channels.example.com/live.m3u8');assert.equal(castRequest.media.streamType,'LIVE');assert(hls.get('video').paused);
+ hls.events.pagehide();assert(engines[0].destroyed);
+ console.log('PASS: standalone player source validation, private fragment cleanup, native controls, Android/VLC fallbacks, codec/autoplay errors, subtitle conversion/controls, Cast/AirPlay dispatch/icon, automatic subtitle Blob installation, direct live HTTPS validation, HLS lifecycle and Google Cast LIVE dispatch');
 })().catch(e=>{console.error(e);process.exitCode=1;});

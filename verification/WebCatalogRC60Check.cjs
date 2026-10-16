@@ -44,5 +44,10 @@ class Element {
  run("const testRow=el('div');appendExternalPlayerActions(testRow,'https://cdn.torbox.app/file');globalThis.playerTestRow=testRow;");assert.equal(context.playerTestRow.children[0].children[0].href.startsWith('vlc-x-callback:'),true);
  assert.equal(run("isTorBoxMediaHost('store.tb-cdn.earth')"),true);assert.equal(run("isTorBoxMediaHost('store.tb-cdn.io.evil.example')"),false);
  assert.equal(run('downloadMaxGb'),5);
+ run('showDetail(currentDetail);castRender();');const info=get('detailBody').children[1],actions=info.children.at(-1);assert.equal(actions.children.filter(x=>x.textContent==='Enviar a TV').length,0);assert.equal(actions.children.filter(x=>x.textContent==='Reproducir en TV').length,1);assert.equal(get('castTools').textContent,'Conectar TV');
+ run("const filePanel=el('section');appendLocalFileActions(filePanel);globalThis.localFileTestPanel=filePanel;");const localBox=context.localFileTestPanel.children[0],fileInput=localBox.children[1],openWith=localBox.children[2];assert.equal(openWith.hidden,true);
+ const chosen={name:'Downloaded.mkv',size:1000};fileInput.files=[chosen];fileInput.onchange();assert.equal(openWith.hidden,false);
+ let shared=null;context.navigator.canShare=data=>data.files[0]===chosen;context.navigator.share=async data=>{shared=data.files[0];};const beforeShare=requests.length;await openWith.onclick();assert.equal(shared,chosen);assert.equal(requests.length,beforeShare,'no cloud request/file upload');
+ context.navigator.canShare=()=>false;await openWith.onclick();assert(localBox.children[3].textContent.includes('Archivos'),'unsupported file sharing explains local Files fallback');
  assert.equal(intervals.length,1);console.log('PASS: short links/deep-link login continuation, 25-title batches, recents sorting/pagination, recommendation upsert, local-only Now Playing and hidden/disconnected polling');
 })().catch(e=>{console.error(e);process.exitCode=1;});

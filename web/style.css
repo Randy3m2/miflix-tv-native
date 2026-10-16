@@ -32,3 +32,5 @@ html[data-theme="black"] .friend{background:#111;border-color:#ffffff24}
 .external-player-actions{width:100%;display:flex;flex-wrap:wrap;align-items:center;gap:10px}.external-player-link{display:inline-block;border:1px solid #b792ff66;border-radius:30px;padding:12px 20px;text-decoration:none;color:inherit;font-weight:600}.external-player-actions p{width:100%;color:var(--muted);font-size:12px;line-height:1.6}.external-player-actions input{width:100%;font-size:12px}@media(max-width:640px){.external-player-actions>button,.external-player-link{width:100%;text-align:center}}
 
 .download-cap{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin:18px 0}.download-cap label{display:grid;gap:8px;font-size:13px}.download-cap input{width:150px;padding:12px}.download-cap button{font-size:12px}
+
+.local-file-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:16px 0;margin:12px 0;border-top:1px solid #ffffff18;border-bottom:1px solid #ffffff18}.local-file-actions p{width:100%;font-size:12px;line-height:1.6;color:var(--muted);overflow-wrap:anywhere}.local-file-actions button{border-radius:30px}

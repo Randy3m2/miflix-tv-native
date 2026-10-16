@@ -19,6 +19,63 @@ function media(x:any,type?:string,language='es') {
  backdrop:x.backdrop_path?`https://image.tmdb.org/t/p/w1280${x.backdrop_path}`:null,runtime:x.runtime||x.episode_run_time?.[0]||null,
  poster:x.poster_path?`https://image.tmdb.org/t/p/w500${x.poster_path}`:null,year:(x.release_date||x.first_air_date||'').slice(0,4),date:x.release_date||x.first_air_date||'',rating:x.vote_average||0,genres:x.genre_ids||(x.genres||[]).map((g:any)=>g.id)};
 }
+// Subtitle lookup/files use fixed public providers, authenticated access and bounded memory caches.
+const subtitleCache=new Map<string,{at:number;data:any}>();
+const subtitlePending=new Map<string,Promise<any>>();
+function subtitleURL(raw:string) {
+ const u=new URL(raw);if(u.protocol==='http:')u.protocol='https:';
+ const allowed=['opensubtitles.org','opensubtitles.com'].some(h=>u.hostname===h||u.hostname.endsWith('.'+h))||['opensubtitles-v3.strem.io','opensubtitles.strem.io'].includes(u.hostname);
+ if(u.protocol!=='https:'||u.username||u.password||(u.port&&u.port!=='443')||!allowed)throw Error('Unsupported subtitle host');return u;
+}
+async function subtitleBytes(url:URL,limit:number):Promise<Uint8Array> {
+ let current=url;
+ for(let hop=0;hop<4;hop++){
+  const r=await fetch(current,{redirect:'manual',signal:AbortSignal.timeout(7000)});
+  if([301,302,303,307,308].includes(r.status)){const location=r.headers.get('location');await r.body?.cancel();if(!location)throw Error('Missing redirect');current=subtitleURL(new URL(location,current).href);continue;}
+  if(!r.ok){await r.body?.cancel();throw Error('Subtitle provider unavailable');}
+  if(Number(r.headers.get('content-length'))>limit){await r.body?.cancel();throw Error('Subtitle too large');}
+  const reader=r.body?.getReader();if(!reader)throw Error('Empty subtitle');let size=0;const chunks:Uint8Array[]=[];
+  while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>limit){await reader.cancel();throw Error('Subtitle too large');}chunks.push(value);}
+  const bytes=new Uint8Array(size);let offset=0;for(const part of chunks){bytes.set(part,offset);offset+=part.length;}return bytes;
+ }
+ throw Error('Too many subtitle redirects');
+}
+function webSubtitleVtt(text:string) {
+ text=text.replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n').trim();
+ if(!/^WEBVTT(?:[ \t]|\n|$)/.test(text))text='WEBVTT\n\n'+text.replace(/^(\d+:\d{2}:\d{2}),(\d{3})([ \t]+-->[ \t]+)(\d+:\d{2}:\d{2}),(\d{3})/gm,'$1.$2$3$4.$5');
+ if(!/\d{2}:\d{2}\.\d{3}[ \t]+-->[ \t]+/.test(text))throw Error('Unsupported subtitle format');return text;
+}
+function subtitleLanguage(raw:string,label='') {
+ const value=raw.toLowerCase().replace(/_/g,'-');
+ if(/^(es-419|es-la|es-mx|spl|spn)$/.test(value)||/latino|latam|latin american/i.test(label))return 'es-419';
+ if(/^(spa|es|es-es|spanish|español)$/.test(value))return 'es';
+ if(/^(eng|en|en-us|en-gb|english)$/.test(value))return 'en';return '';
+}
+async function preloadSubtitles(input:any,language:string) {
+ if(!/^tmdb:(movie|series):[1-9][0-9]{0,8}$/.test(input.cloud||''))throw Error('Invalid title');
+ const [,kind,id]=input.cloud.split(':'),season=kind==='series'?Number(input.season):0,episode=kind==='series'?Number(input.episode):0;
+ if(kind==='series'&&(!Number.isSafeInteger(season)||season<0||season>10000||!Number.isSafeInteger(episode)||episode<1||episode>10000))throw Error('Invalid episode');
+ const key=[input.cloud,season,episode,language].join(':'),cached=subtitleCache.get(key);if(cached&&Date.now()-cached.at<(cached.data.tracks?.length?1800000:60000))return cached.data;
+ if(subtitlePending.has(key))return subtitlePending.get(key);
+ const work=(async()=>{
+  const external=await catalog(`/${kind==='series'?'tv':'movie'}/${id}/external_ids`),imdb=external.imdb_id;
+  if(!/^tt[0-9]{5,12}$/.test(imdb||''))return {tracks:[]};
+  const video=kind==='series'?`${imdb}:${season}:${episode}`:imdb;
+  async function lookup(base:string){try{const bytes=await subtitleBytes(subtitleURL(`${base}/subtitles/${kind}/${video}/*.json`),500000);const data=JSON.parse(new TextDecoder().decode(bytes));return (Array.isArray(data.subtitles)?data.subtitles:[]).slice(0,200).flatMap((row:any)=>{try{const label=String(row.label||row.lang||'').slice(0,120),lang=subtitleLanguage(String(row.lang||''),label);return lang?[{url:subtitleURL(String(row.url)).href,lang,label}]:[];}catch{return [];}});}catch{return [];}}
+  let rows=await lookup('https://opensubtitles-v3.strem.io');
+  if(!rows.some((r:any)=>r.lang.startsWith('es'))||!rows.some((r:any)=>r.lang==='en'))rows.push(...await lookup('https://opensubtitles.strem.io/stremio/v1'));
+  rows=[...new Map(rows.map((r:any)=>[r.url,r])).values()];
+  rows.sort((a:any,b:any)=>{const rank=(r:any)=>language==='en'?(r.lang==='en'?0:r.lang==='es-419'?1:2):(r.lang==='es-419'?0:r.lang==='es'?1:2);return rank(a)-rank(b);});
+  const chosen=[...rows.filter((r:any)=>language==='en'?r.lang==='en':r.lang.startsWith('es')).slice(0,2),...rows.filter((r:any)=>language==='en'?r.lang.startsWith('es'):r.lang==='en').slice(0,1)];
+  const tracks=(await Promise.all(chosen.map(async(row:any,index:number)=>{try{
+   const bytes=await subtitleBytes(subtitleURL(row.url),500000);let text:string;
+   if(bytes[0]===0x1f&&bytes[1]===0x8b){const stream=new Blob([bytes.buffer as ArrayBuffer]).stream().pipeThrough(new DecompressionStream('gzip'));const reader=stream.getReader();let size=0;const chunks:Uint8Array[]=[];while(true){const part=await reader.read();if(part.done)break;size+=part.value.length;if(size>500000){await reader.cancel();throw Error('Subtitle too large');}chunks.push(part.value);}const all=new Uint8Array(size);let at=0;for(const chunk of chunks){all.set(chunk,at);at+=chunk.length;}text=new TextDecoder().decode(all);}else text=new TextDecoder().decode(bytes);
+   return {id:'online-'+index,lang:row.lang,label:(row.lang==='es-419'?'Español latino':row.lang==='es'?'Español':'English')+' · '+(index+1),vtt:webSubtitleVtt(text)};
+  }catch{return null;}}))).filter(Boolean);
+  const data={tracks};if(subtitleCache.size>=16)subtitleCache.delete(subtitleCache.keys().next().value!);subtitleCache.set(key,{at:Date.now(),data});return data;
+ })();subtitlePending.set(key,work);try{return await work;}finally{subtitlePending.delete(key);}
+}
+
 Deno.serve(async(request:Request)=>{
  if(request.method==='OPTIONS')return new Response('ok',{headers:cors});if(request.method!=='POST')return reply({error:'POST required'},405);
  let language='es';
@@ -27,6 +84,7 @@ Deno.serve(async(request:Request)=>{
   const auth=await fetch(`${Deno.env.get('SUPABASE_URL')}/auth/v1/user`,{headers:{apikey:Deno.env.get('SUPABASE_ANON_KEY')!,Authorization:authorization},signal:AbortSignal.timeout(12000)});if(!auth.ok)return reply({error:'Session expired'},401);
   const input=await request.json();language=input.language==='en'?'en':'es';const lang={language:language==='en'?'en-US':'es-ES'};
   const region=typeof input.region==='string'&&/^[A-Z]{2}$/.test(input.region)?input.region:'US';
+  if(input.action==='subtitles'){if(!/^tmdb:(movie|series):[1-9][0-9]{0,8}$/.test(input.cloud||''))return reply({error:'Invalid title'},400);if(input.cloud.startsWith('tmdb:series:')&&(!Number.isSafeInteger(Number(input.season))||Number(input.season)<0||Number(input.season)>10000||!Number.isSafeInteger(Number(input.episode))||Number(input.episode)<1||Number(input.episode)>10000))return reply({error:'Invalid episode'},400);return reply(await preloadSubtitles(input,language));}
   if(input.action==='config') {
    const [m,t,p,pt]=await Promise.all([catalog('/genre/movie/list',lang),catalog('/genre/tv/list',lang),catalog('/watch/providers/movie',lang),catalog('/watch/providers/tv',lang)]);
    const providers=Object.entries(platforms).map(([key,v])=>{const provider=[...(p.results||[]),...(pt.results||[])].find((x:any)=>v.ids.includes(x.provider_id));return {key,name:v.name,logo:provider?.logo_path?`https://image.tmdb.org/t/p/w185${provider.logo_path}`:null};});

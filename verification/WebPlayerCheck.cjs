@@ -27,5 +27,8 @@ function load(html,src,agent='Mozilla Android Samsung'){
  const controls=load(html,src);controls.get('subtitlePanel').hidden=true;controls.get('subtitles').onclick();assert.equal(controls.get('subtitlePanel').hidden,false);controls.get('subtitles').onclick();assert.equal(controls.get('subtitlePanel').hidden,true);
  let prompts=0;controls.get('video').remote={prompt:async()=>{prompts++;}};await controls.get('cast').onclick();assert.equal(prompts,1);
  let airplay=0;controls.get('video').webkitShowPlaybackTargetPicker=()=>{airplay++;};await controls.get('cast').onclick();assert.equal(airplay,1);
- console.log('PASS: standalone player source validation, private fragment cleanup, native controls, Android/VLC fallbacks, codec/autoplay errors, subtitle conversion/controls, Cast/AirPlay dispatch and playback cleanup');
+ vm.runInContext("installOnlineSubtitles([{lang:'es-419',label:'Latino',vtt:'WEBVTT\\n\\n00:00:01.000 --> 00:00:02.000\\nHello'}])",controls.context);assert.equal(vm.runInContext('onlineSubtitleResources.length',controls.context),1);assert(controls.get('subtitleStatus').textContent.includes('preloaded'));
+ controls.events.pagehide();assert.equal(vm.runInContext('onlineSubtitleResources.length',controls.context),0);
+ assert(html.includes('<svg width="22"'));assert(html.includes('id="castLabel"'));
+ console.log('PASS: standalone player source validation, private fragment cleanup, native controls, Android/VLC fallbacks, codec/autoplay errors, subtitle conversion/controls, Cast/AirPlay dispatch/icon, automatic subtitle Blob installation and playback cleanup');
 })().catch(e=>{console.error(e);process.exitCode=1;});

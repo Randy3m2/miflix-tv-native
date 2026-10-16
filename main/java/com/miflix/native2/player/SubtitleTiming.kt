@@ -15,6 +15,10 @@ class SubtitleTiming {
 
 @UnstableApi
 class TimedTextRenderers(context: Context, private val timing: SubtitleTiming) : DefaultRenderersFactory(context) {
+    override fun buildAudioSink(context: Context, enableFloatOutput: Boolean,
+        enableAudioOutputPlaybackParams: Boolean): androidx.media3.exoplayer.audio.AudioSink =
+        headphoneAwareAudioSink(context)
+
     override fun buildTextRenderers(context: Context, output: TextOutput, outputLooper: Looper,
         extensionRendererMode: Int, out: ArrayList<Renderer>) {
         val text=ArrayList<Renderer>()

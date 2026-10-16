@@ -1293,7 +1293,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
         }
     }
-    HeadphoneAudioRouting(player)
+    HeadphoneAudioRouting(player) { playbackError=null }
     LaunchedEffect(player) {
         try {
             while(true) {

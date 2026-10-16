@@ -7,33 +7,83 @@ import android.os.Handler
 import android.os.Looper
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import com.miflix.native2.player.hasHeadphoneOutput
 
-/** Let Media3/AudioTrack keep the audio clock. Never guess a Bluetooth offset. */
+/** Recreate the AudioTrack after a route change; retain the media, position and play intent. */
 @Composable
-internal fun HeadphoneAudioRouting(player: ExoPlayer) {
-    val context=LocalContext.current
+internal fun HeadphoneAudioRouting(player: ExoPlayer, onRecover: () -> Unit = {}) {
+    val context = LocalContext.current
+    val recovery = rememberUpdatedState(onRecover)
     DisposableEffect(player) {
-        val manager=context.getSystemService(AudioManager::class.java)
-        val original=player.trackSelectionParameters.maxAudioChannelCount
-        fun refresh() {
-            val headphones=manager.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any {
-                it.type==AudioDeviceInfo.TYPE_WIRED_HEADPHONES || it.type==AudioDeviceInfo.TYPE_WIRED_HEADSET ||
-                    it.type==AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || it.type==AudioDeviceInfo.TYPE_USB_HEADSET ||
-                    (android.os.Build.VERSION.SDK_INT>=31 && it.type==AudioDeviceInfo.TYPE_BLE_HEADSET)
+        val manager = context.getSystemService(AudioManager::class.java)
+        val handler = Handler(Looper.getMainLooper())
+        val original = player.trackSelectionParameters.maxAudioChannelCount
+        var headphones = hasHeadphoneOutput(context)
+        var retries = 0
+        var pending: Runnable? = null
+        var disposed = false
+        fun applyLimit() {
+            val limit = if (headphones) 2 else original
+            if (player.trackSelectionParameters.maxAudioChannelCount != limit)
+                player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                    .setMaxAudioChannelCount(limit).build()
+        }
+        fun scheduleRestart() {
+            if (pending != null || player.mediaItemCount == 0) return
+            val position = player.currentPosition.coerceAtLeast(0)
+            val playing = player.playWhenReady
+            val mediaIndex = player.currentMediaItemIndex
+            val task = Runnable {
+                pending = null
+                if (!disposed) {
+                    // stop resets the old renderer/sink. prepare negotiates PCM against the new route.
+                    player.stop()
+                    applyLimit()
+                    player.seekTo(mediaIndex, position)
+                    recovery.value()
+                    player.prepare()
+                    player.playWhenReady = playing
+                }
             }
-            val limit=if(headphones) 2 else original
-            if(player.trackSelectionParameters.maxAudioChannelCount!=limit) {
-                player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().setMaxAudioChannelCount(limit).build()
+            pending = task
+            handler.postDelayed(task, 500)
+        }
+        val callback = object : AudioDeviceCallback() {
+            fun update() {
+                val next = hasHeadphoneOutput(context)
+                if (next != headphones) {
+                    headphones = next
+                    retries = 0
+                    scheduleRestart()
+                }
+            }
+            override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) = update()
+            override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) = update()
+        }
+        val listener = object : Player.Listener {
+            override fun onPlayerError(error: PlaybackException) {
+                if (hasHeadphoneOutput(context) && retries < 1 &&
+                    (error.errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED ||
+                        error.errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED)) {
+                    retries++ // Never retry unrelated errors or loop forever on unsupported hardware.
+                    headphones = true
+                    scheduleRestart()
+                }
             }
         }
-        val callback=object: AudioDeviceCallback() {
-            override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) {refresh()}
-            override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) {refresh()}
+        applyLimit()
+        player.addListener(listener)
+        manager.registerAudioDeviceCallback(callback, handler)
+        onDispose {
+            disposed = true
+            pending?.let { handler.removeCallbacks(it) }
+            player.removeListener(listener)
+            manager.unregisterAudioDeviceCallback(callback)
         }
-        manager.registerAudioDeviceCallback(callback,Handler(Looper.getMainLooper()))
-        refresh()
-        onDispose {manager.unregisterAudioDeviceCallback(callback)}
     }
 }

@@ -21,6 +21,8 @@ internal object UpdateNotes {
         "Connect phone / PC abre tu catálogo de Vercel conectado a la TV: QR/enlace sin código manual y botón Play on TV." to "Connect phone / PC opens your Vercel catalog connected to the TV: QR/link with no manual code and a Play on TV button."
     )
     val changes=listOf(
+        "Auriculares: salida PCM con mezcla estéreo real; reinicio de audio al conectar/desconectar conservando posición y pausa." to "Headphones: PCM output with real stereo mixing; audio restarts on connection changes while preserving position and pause.",
+        "Recuperación automática limitada para fallos AudioTrack al usar auriculares." to "Bounded automatic recovery for AudioTrack errors with headphones.",
         "Auriculares en la TV: detección de salida, preferencia estéreo y gestión de foco de audio; sincronización mediante Media3." to "TV headphones: output detection, stereo preference and audio focus handling; synchronization through Media3.",
         "Conexión local por Wi-Fi o Ethernet en la misma subred, sin códigos manuales." to "Local connection over Wi-Fi or Ethernet on the same subnet, without manual codes.",
         "Now Playing en la web con estado y tiempo de la TV, consultado por la red local." to "Web Now Playing with TV status and playback time, fetched over the local network.",

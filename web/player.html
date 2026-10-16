@@ -27,12 +27,17 @@ try{
  video.addEventListener('canplay',()=>{clearWait();status('Ready. Press Play if playback has not started.','Listo. Pulsa Play si no ha comenzado.');});
  video.addEventListener('error',()=>{clearWait();const code=video.error?.code;status(code===4?'Unsupported source/format in this browser. Choose another source or use VLC/an external player. [MEDIA_4]':code===3?'The browser could not decode this video or audio. Try another source. [MEDIA_3]':'Video unavailable, expired link or network error. Regenerate the link or try another source. [MEDIA_'+(code||0)+']',code===4?'Fuente/formato no compatible con este navegador. Prueba otra fuente o VLC/un player externo. [MEDIA_4]':code===3?'El navegador no pudo decodificar este vídeo o audio. Prueba otra fuente. [MEDIA_3]':'Vídeo no disponible, enlace caducado o error de red. Genera otro enlace o prueba otra fuente. [MEDIA_'+(code||0)+']');});
  video.autoplay=params.get('autoplay')==='1';video.src=media;
+ const resume=Number(params.get('resume')||0);video.addEventListener('loadedmetadata',()=>{if(Number.isFinite(resume)&&resume>0&&Number.isFinite(video.duration)&&resume<video.duration-2)video.currentTime=resume;});
  status('Press Play to start streaming.','Pulsa Play para comenzar.');
 }catch{status('Invalid or missing source. Return to the catalog and generate a fresh link.','Fuente inválida o ausente. Vuelve al catálogo y genera un enlace nuevo.');$('play').disabled=true;$('retry').disabled=true;$('browser').hidden=true;$('copy').hidden=true;}
 $('play').onclick=play;
 $('retry').onclick=()=>{if(media&&!disposed){video.load();play();}};
 $('fullscreen').onclick=()=>{const fallback=()=>status('Use the fullscreen button in the video controls.','Usa el botón de pantalla completa del vídeo.');try{let result;if(video.requestFullscreen)result=video.requestFullscreen();else if(video.webkitRequestFullscreen)result=video.webkitRequestFullscreen();else if(video.webkitEnterFullscreen)result=video.webkitEnterFullscreen();else{fallback();return;}result?.catch(fallback);}catch{fallback();}};
 $('copy').onclick=async()=>{if(!media)return;try{if(!navigator.clipboard)throw Error('No clipboard');await navigator.clipboard.writeText(media);status('Private media link copied.','Enlace privado copiado.');}catch{let input=$('manual').querySelector('input');if(!input){input=document.createElement('input');input.readOnly=true;input.setAttribute('aria-label',t('Private media link','Enlace privado'));$('manual').append(input);}input.value=media;input.focus();input.select();}};
-window.addEventListener('pagehide',cleanup);
-window.addEventListener('pageshow',event=>{if(event.persisted&&disposed&&media){disposed=false;video.autoplay=false;video.src=media;status('Press Play to resume.','Pulsa Play para reanudar.');}});
+function reportProgress(reason){if(!params.get('channel')||!window.parent||window.parent===window||!Number.isFinite(video.duration)||video.duration<=0)return;window.parent.postMessage({brunio:'web-progress',channel:params.get('channel'),position:video.currentTime,duration:video.duration,reason},location.origin);}
+video.addEventListener('pause',()=>reportProgress('pause'));
+video.addEventListener('ended',()=>reportProgress('ended'));
+let progressTimer=setInterval(()=>{if(!disposed&&!video.paused)reportProgress('position');},10000);
+window.addEventListener('pagehide',()=>{reportProgress('close');clearInterval(progressTimer);cleanup();});
+window.addEventListener('pageshow',event=>{if(event.persisted&&disposed&&media){disposed=false;progressTimer=setInterval(()=>{if(!disposed&&!video.paused)reportProgress('position');},10000);video.autoplay=false;video.src=media;status('Press Play to resume.','Pulsa Play para reanudar.');}});
 </script></body></html>

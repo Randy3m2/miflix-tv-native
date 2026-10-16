@@ -1,0 +1,24 @@
+'use strict';
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+class Node {
+ constructor(tag='div'){this.tagName=tag;this.children=[];this.value='';this.dataset={};this.style={};this.classList={toggle(){}};this.open=false;this.selectedOptions=[{textContent:'USA'}];}
+ append(...nodes){this.children.push(...nodes);}prepend(...nodes){this.children.unshift(...nodes);}replaceChildren(...nodes){this.children=nodes;}setAttribute(){}focus(){}select(){}remove(){}scrollIntoView(){}showModal(){this.open=true;}close(){this.open=false;}querySelector(){return null;}
+}
+(async()=>{
+ const nodes=new Map(),storage=new Map(),events={},get=id=>{if(!nodes.has(id))nodes.set(id,new Node());return nodes.get(id);};
+ const context=vm.createContext({URL,URLSearchParams,AbortController,Date,Intl,Math,Map,Set,Promise,console,location:{hash:'',pathname:'/',search:'',origin:'https://brunio.example'},history:{replaceState(){}},navigator:{},localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v)},sessionStorage:{getItem(){return null},setItem(){},removeItem(){}},document:{hidden:false,documentElement:{dataset:{}},getElementById:get,createElement:tag=>new Node(tag),querySelector:()=>new Node(),querySelectorAll:()=>[],addEventListener(){}},window:{parent:null,addEventListener:(name,fn)=>events[name]=fn},setTimeout:()=>1,clearTimeout(){},setInterval:()=>1,fetch(){throw Error('No ambient requests allowed');}});context.window.parent=context.window;
+ const run=code=>vm.runInContext(code,context);run(fs.readFileSync(process.argv[2],'utf8'));run(fs.readFileSync(process.argv[3],'utf8'));
+ run("session={user:{id:'owner'},expires_at:Date.now()+3600000};$('profile').value='p1';globalThis.requests=[];api=async(path,method,body)=>{requests.push({path,method,body});return path.includes('miflix_ratings?user_id')?[{score:7}]:{items:[]};};");
+ run("globalThis.titleFixture={cloudId:'tmdb:series:99',id:99,type:'series',title:'Show',seasons:[{number:1,name:'Season 1',count:2}],cast:[{id:1,name:'Actor',photo:'https://image.tmdb.org/t/p/w185/p.jpg',character:'Role'}],related:[{cloudId:'tmdb:movie:1',id:1,type:'movie',title:'Related'}]};currentDetail=titleFixture;$('detail').open=true;catalog=async input=>input.action==='episodes'?{episodes:[{season:1,episode:1,title:'Spoiler',overview:'Story',date:'2020-01-01',still:'https://image.tmdb.org/t/p/w500/e.jpg'}],hasMore:false}:{};");
+ run('enrichDetail(titleFixture)');await Promise.resolve();const flattened=node=>[node,...(node.children||[]).flatMap(flattened)],all=flattened(get('detailBody'));assert(all.some(x=>x.className==='web-cast'));assert(all.some(x=>x.className==='web-episode'));assert(all.some(x=>x.className==='spoiler-blur'));
+ run('enqueue(titleFixture,1,1);enqueue(titleFixture,1,1);');assert.equal(run('queueItems().length'),1);run("$('profile').value='p2';");assert.equal(run('queueItems().length'),0);run("$('profile').value='p1';");
+ await run('markWebWatched(titleFixture,1,1)');assert.equal(run('requests.at(-1).body.p_progress["tmdb:series:99:s1e1"].percent'),100);assert.equal(run('requests.at(-1).body.p_adds.length'),0);
+ const rating=new Node();context.ratingFixture=rating;await run('ratingPanel(titleFixture,ratingFixture)');assert.equal(rating.children[0].value,'7');rating.children[0].value='9';await rating.children[1].onclick();assert.equal(run('requests.at(-1).body.score'),9);
+ run("requests=[];openBrowserPlayer('https://store.tb-cdn.io/dld/movie?token=private','Episode',null,{...titleFixture,season:1,episode:1});");const current=run('activeWebPlayer');current.frame.contentWindow={};const message=reason=>({origin:'https://brunio.example',source:current.frame.contentWindow,data:{brunio:'web-progress',channel:current.channel,position:40,duration:100,reason}});
+ events.message(message('position'));assert.equal(run('requests.length'),0,'watching uses local messages only');assert.equal(run('recentProgress["tmdb:series:99:s1e1"].position'),40);
+ const wrong=message('pause');wrong.origin='https://evil.example';events.message(wrong);assert.equal(run('requests.length'),0);
+ events.message(message('pause'));await Promise.resolve();await Promise.resolve();assert.equal(run('requests.length'),1);events.message(message('pause'));await Promise.resolve();assert.equal(run('requests.length'),1,'same position deduplicated');
+ events.message(message('ended'));await Promise.resolve();await Promise.resolve();assert.equal(run('requests.length'),2);assert.equal(run('requests.at(-1).body.p_progress["tmdb:series:99:s1e1"].percent'),100);
+ assert(!run('requests.some(x=>/party/i.test(x.path))'));
+ console.log('PASS: rich content UI/episode spoilers, per-profile deduplicated queue, native-compatible watched/rating writes, local progress and bounded pause/end RPCs, strict message origin and no Watch Party requests');
+})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -7,7 +7,7 @@ class Node {
 }
 function load(html,src,agent='Mozilla Android Samsung'){
  const nodes=new Map(),get=id=>{if(!nodes.has(id)){const node=new Node();node.hidden=['vlc','android'].includes(id);nodes.set(id,node);}return nodes.get(id);},events={},history=[];
- const context=vm.createContext({URL,URLSearchParams,Error,Number,String,document:{getElementById:get,documentElement:{},createElement:()=>new Node()},location:{hash:'#'+new URLSearchParams({src,title:'My movie',lang:'en',autoplay:'1',poster:'https://evil.example/poster.jpg'}),pathname:'/player.html',search:''},history:{replaceState:(...args)=>history.push(args)},navigator:{userAgent:agent,platform:'Linux',maxTouchPoints:1},window:{addEventListener:(name,fn)=>events[name]=fn},setTimeout:()=>1,clearTimeout(){},fetch(){throw Error('No API/file proxy expected');}});
+ const context=vm.createContext({URL,URLSearchParams,Error,Number,String,document:{getElementById:get,documentElement:{},createElement:()=>new Node()},location:{hash:'#'+new URLSearchParams({src,title:'My movie',lang:'en',autoplay:'1',poster:'https://evil.example/poster.jpg'}),pathname:'/player.html',search:''},history:{replaceState:(...args)=>history.push(args)},navigator:{userAgent:agent,platform:'Linux',maxTouchPoints:1},window:{addEventListener:(name,fn)=>events[name]=fn},setTimeout:()=>1,clearTimeout(){},setInterval:()=>1,clearInterval(){},fetch(){throw Error('No API/file proxy expected');}});
  vm.runInContext(html.match(/<script>([\s\S]*?)<\/script>/)[1],context);return{context,get,events,history};
 }
 (async()=>{

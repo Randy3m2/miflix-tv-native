@@ -32,6 +32,33 @@ Deno.serve(async(request:Request)=>{
    const providers=Object.entries(platforms).map(([key,v])=>{const provider=[...(p.results||[]),...(pt.results||[])].find((x:any)=>v.ids.includes(x.provider_id));return {key,name:v.name,logo:provider?.logo_path?`https://image.tmdb.org/t/p/w185${provider.logo_path}`:null};});
    return reply({genres:{movie:m.genres,series:t.genres},providers});
   }
+  if(['details','episodes','filmography','randomEpisode'].includes(input.action)) {
+   if(input.action==='filmography') {
+    const person=Number(input.person),page=Number(input.page||1);if(!Number.isSafeInteger(person)||person<1||!Number.isSafeInteger(page)||page<1||page>1000)return reply({error:'Invalid person/page'},400);
+    const data=await catalog(`/person/${person}/combined_credits`,lang);
+    const rows=[...new Map((data.cast||[]).filter((x:any)=>!x.adult&&['movie','tv'].includes(x.media_type)).map((x:any)=>[x.media_type+':'+x.id,x])).values()] as any[];
+    rows.sort((a,b)=>(b.popularity||0)-(a.popularity||0));return reply({items:rows.slice((page-1)*25,page*25).map(x=>media(x,undefined,language)).filter(Boolean),hasMore:rows.length>page*25});
+   }
+   if(!/^tmdb:(movie|series):[1-9][0-9]{0,8}$/.test(input.cloud||''))return reply({error:'Invalid title'},400);
+   const [,kind,id]=input.cloud.split(':'),path=`/${kind==='series'?'tv':'movie'}/${id}`;
+   if(input.action==='randomEpisode') {
+    if(kind!=='series')return reply({error:'Series required'},400);
+    const show=await catalog(path,lang),today=new Date().toISOString().slice(0,10),seasons=(show.seasons||[]).filter((x:any)=>x.season_number>0&&x.episode_count>0&&x.air_date&&x.air_date<=today);
+    while(seasons.length){const total=seasons.reduce((n:number,x:any)=>n+x.episode_count,0);let draw=Math.random()*total,index=0;for(;index<seasons.length-1;index++){draw-=seasons[index].episode_count;if(draw<0)break;}const season=seasons.splice(index,1)[0];const data=await catalog(`${path}/season/${season.season_number}`,lang),episodes=(data.episodes||[]).filter((x:any)=>x.air_date&&x.air_date<=today);if(episodes.length){const others=episodes.filter((x:any)=>x.season_number!==Number(input.excludeSeason)||x.episode_number!==Number(input.excludeEpisode)),pool=others.length?others:episodes;const ep=pool[Math.floor(Math.random()*pool.length)];return reply({episode:{season:ep.season_number,episode:ep.episode_number}});}}
+    return reply({episode:null});
+   }
+   if(input.action==='episodes') {
+    const season=Number(input.season),page=Number(input.page||1);if(kind!=='series'||!Number.isInteger(season)||season<0||season>10000||!Number.isInteger(page)||page<1||page>1000)return reply({error:'Invalid season/page'},400);
+    const data=await catalog(`${path}/season/${season}`,lang),episodes=(data.episodes||[]).map((x:any)=>({id:x.id,season:x.season_number,episode:x.episode_number,title:x.name,overview:x.overview||'',date:x.air_date||'',runtime:x.runtime||0,still:x.still_path?`https://image.tmdb.org/t/p/w500${x.still_path}`:null}));
+    return reply({episodes:episodes.slice((page-1)*25,page*25),hasMore:episodes.length>page*25});
+   }
+   const data=await catalog(path,{...lang,append_to_response:'credits,recommendations,images',include_image_language:language+',en,null'}),item=media(data,kind,language);
+   if(!item)return reply({error:'Title unavailable'},404);
+   return reply({item:{...item,full:true,tagline:data.tagline||'',status:data.status||'',logo:data.images?.logos?.[0]?.file_path?`https://image.tmdb.org/t/p/w500${data.images.logos[0].file_path}`:null,
+    cast:(data.credits?.cast||[]).slice(0,60).map((x:any)=>({id:x.id,name:x.name,character:x.character||'',photo:x.profile_path?`https://image.tmdb.org/t/p/w185${x.profile_path}`:null})),
+    seasons:(data.seasons||[]).filter((x:any)=>x.season_number>0).map((x:any)=>({number:x.season_number,name:x.name,count:x.episode_count,date:x.air_date||''})),
+    related:(data.recommendations?.results||[]).slice(0,25).map((x:any)=>media(x,kind,language)).filter(Boolean)}});
+  }
   if(input.action==='people') {const q=String(input.query||'').trim().slice(0,150);if(q.length<2)return reply({people:[]});const data=await catalog('/search/person',{...lang,query:q,include_adult:'false'});return reply({people:(data.results||[]).filter((x:any)=>!x.adult).slice(0,8).map((x:any)=>({id:x.id,name:x.name,department:x.known_for_department}))});}
   if(input.action==='titles') {
    if(!Array.isArray(input.ids)||input.ids.length>25||input.ids.some((id:unknown)=>typeof id!=='string'||!/^tmdb:(movie|series):\d+$/.test(id)))return reply({error:'Invalid title batch'},400);

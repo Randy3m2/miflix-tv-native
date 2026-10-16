@@ -1,6 +1,6 @@
 'use strict';
 // Public app shell only. Never cache Supabase, TorBox media, authenticated data or private links.
-const CACHE='brunio-shell-19',FILES=['./','index.html','app.js?v=19','experience.js?v=19','style.css?v=19','manifest.webmanifest','brunio-logo.png','icon-192.png','icon-512.png'];
+const CACHE='brunio-shell-20',FILES=['./','index.html','app.js?v=20','experience.js?v=20','style.css?v=20','manifest.webmanifest','brunio-logo.png','icon-192.png','icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('brunio-shell-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{

@@ -28,19 +28,19 @@ internal val LocalBrowsePreview=staticCompositionLocalOf<((MediaSummary) -> Unit
 /** Header and rails have separate viewports. No hero height/layout changes on focus. */
 @Composable
 internal fun BrowsingViewport(state: AppState,fallback: MediaSummary?,modifier: Modifier=Modifier,
-    heroHeight: Dp=228.dp,heroFocus: FocusRequester?=null,ranked: List<MediaSummary> = emptyList(),onRandom: (() -> Unit)?=null,content: @Composable () -> Unit) {
+    heroHeight: Dp=228.dp,headerInset: Dp=0.dp,heroFocus: FocusRequester?=null,ranked: List<MediaSummary> = emptyList(),onRandom: (() -> Unit)?=null,content: @Composable () -> Unit) {
     val pending=remember {mutableStateOf<MediaSummary?>(null)}
     val publish=remember { {item: MediaSummary -> pending.value=item} }
     CompositionLocalProvider(LocalBrowsePreview provides publish) {
         Column(modifier.fillMaxSize()) {
-            FocusedBrowseHero(state,pending,fallback,heroHeight,heroFocus,ranked,onRandom)
+            FocusedBrowseHero(state,pending,fallback,heroHeight,headerInset,heroFocus,ranked,onRandom)
             Box(Modifier.weight(1f).fillMaxWidth()) {content()}
         }
     }
 }
 
 @Composable
-private fun FocusedBrowseHero(state: AppState,pending: State<MediaSummary?>,fallback: MediaSummary?,height: Dp,
+private fun FocusedBrowseHero(state: AppState,pending: State<MediaSummary?>,fallback: MediaSummary?,height: Dp,headerInset: Dp,
     heroFocus: FocusRequester?,ranked: List<MediaSummary>,onRandom: (() -> Unit)?) {
     var shown by remember {mutableStateOf(fallback)}
     var logo by remember {mutableStateOf<String?>(null)}
@@ -52,7 +52,7 @@ private fun FocusedBrowseHero(state: AppState,pending: State<MediaSummary?>,fall
     val candidate=pending.value ?: ranked.getOrNull(rankIndex) ?: fallback
     LaunchedEffect(candidate?.cloudId,state.interfaceLanguage) {
         // Coalesce fast focus movements before decoding artwork or requesting logos.
-        delay(140)
+        delay(350)
         shown=candidate;logo=null
         if(candidate!=null) {
             delay(650)
@@ -65,10 +65,10 @@ private fun FocusedBrowseHero(state: AppState,pending: State<MediaSummary?>,fall
             Crossfade(item.backdrop ?: item.poster,modifier=Modifier.align(Alignment.CenterEnd).fillMaxHeight().fillMaxWidth(.75f),animationSpec=tween(140),label="browseBackdrop") {image ->
                 AsyncImage(image,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
             }
-            Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(42.dp).background(Brush.verticalGradient(listOf(Bg,Color.Transparent))))
+            Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(if(headerInset>0.dp) 150.dp else 60.dp).background(Brush.verticalGradient(listOf(Bg,Color.Transparent))))
             Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Bg,Bg.copy(alpha=.92f),Color.Transparent))))
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Bg))))
-            Column(Modifier.align(Alignment.TopStart).fillMaxHeight().padding(start=40.dp,end=22.dp,top=8.dp,bottom=12.dp).fillMaxWidth(.65f),verticalArrangement=Arrangement.spacedBy(7.dp)) {
+            Column(Modifier.align(Alignment.TopStart).fillMaxHeight().padding(start=40.dp,end=22.dp,top=headerInset+8.dp,bottom=12.dp).fillMaxWidth(.65f),verticalArrangement=Arrangement.spacedBy(7.dp)) {
                 Box(Modifier.fillMaxWidth().height(if(height>=200.dp) 64.dp else 44.dp),contentAlignment=Alignment.CenterStart) {
                     if(logo!=null) AsyncImage(logo,item.title,Modifier.widthIn(max=280.dp).fillMaxHeight(),contentScale=ContentScale.Fit)
                     else Text(item.title,color=Color.White,fontSize=if(height>=200.dp) 28.sp else 23.sp,lineHeight=if(height>=200.dp) 30.sp else 23.sp,fontWeight=FontWeight.Black,maxLines=2,overflow=TextOverflow.Ellipsis)
@@ -81,7 +81,7 @@ private fun FocusedBrowseHero(state: AppState,pending: State<MediaSummary?>,fall
                 }
             }
             if(pending.value==null && heroFocus!=null) Text("#${rankIndex+1}  "+tr("TOP 10 · ESTA SEMANA","TOP 10 · THIS WEEK"),color=Accent,fontSize=11.sp,
-                modifier=Modifier.align(Alignment.TopEnd).padding(end=34.dp,top=12.dp))
+                modifier=Modifier.align(Alignment.TopEnd).padding(end=34.dp,top=headerInset+12.dp))
         }
     }
 }

@@ -143,7 +143,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     val openCollection: (CollectionTile) -> Unit={ tile -> state.launch { state.openCollection(tile.id,tile.title) } }
     val returnToTop: () -> Unit={ scope.launch { scroll.animateScrollToItem(0) }; Unit }
     Box(Modifier.fillMaxSize().background(Bg)) {
-        BrowsingViewport(state,(state.trending+state.movies).firstOrNull {it.type=="movie"},modifier=Modifier.padding(top=84.dp),heroFocus=heroFocus,ranked=(state.trending+state.movies).filter {it.type=="movie"}.distinctBy {it.cloudId}.take(10),
+        BrowsingViewport(state,(state.trending+state.movies).firstOrNull {it.type=="movie"},heroHeight=312.dp,headerInset=84.dp,heroFocus=heroFocus,ranked=(state.trending+state.movies).filter {it.type=="movie"}.distinctBy {it.cloudId}.take(10),
             onRandom={if(!state.randomChoosing) state.launch {state.playRandomMovie()}}) {
         CompositionLocalProvider(LocalBringIntoViewSpec provides object : BringIntoViewSpec {
             override fun calculateScrollDistance(offset: Float,size: Float,containerSize: Float): Float = when {
@@ -153,7 +153,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 else -> 0f
             }
         }) {
-            LazyColumn(Modifier.fillMaxSize().padding(bottom=12.dp).smoothVerticalDpad().focusRequester(contentFocus).focusGroup(),state=scroll,contentPadding=PaddingValues(bottom=32.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            LazyColumn(Modifier.fillMaxSize().padding(bottom=12.dp).smoothVerticalDpad { !scroll.isScrollInProgress }.focusRequester(contentFocus).focusGroup(),state=scroll,contentPadding=PaddingValues(bottom=32.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 if(state.continueWatching.isNotEmpty()) item(key="continue") {
                     SpotlightRail(title=tr("Seguir viendo","Continue Watching"),rows=state.continueWatching,landscape=true,
                         progressFor={ state.progress[it.cloudId]?.percent },onLongClick={state.titleActions(it,true)},onClick=openItem)
@@ -1167,14 +1167,14 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var cancelAutoplay by remember(request.playbackId) { mutableStateOf(false) }
 
     val player = remember(request.playbackId) {
-        val renderers = com.miflix.native2.player.TimedTextRenderers(context,timing).setEnableDecoderFallback(true)
+        val renderers = if(request.live) androidx.media3.exoplayer.DefaultRenderersFactory(context).setEnableDecoderFallback(true)
+            else com.miflix.native2.player.TimedTextRenderers(context,timing).setEnableDecoderFallback(true)
         val httpFactory = DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
-            .apply {if(request.live) setUserAgent("VLC/3.0.21 LibVLC/3.0.21")}
             .setDefaultRequestProperties(request.stream.requestHeaders)
         val dataFactory = DefaultDataSource.Factory(context, httpFactory)
         ExoPlayer.Builder(context, renderers)
-            .setAudioAttributes(androidx.media3.common.AudioAttributes.Builder().setUsage(androidx.media3.common.C.USAGE_MEDIA).setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MOVIE).build(),true)
+            .apply {if(!request.live) setAudioAttributes(androidx.media3.common.AudioAttributes.Builder().setUsage(androidx.media3.common.C.USAGE_MEDIA).setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MOVIE).build(),true)}
             .setHandleAudioBecomingNoisy(true)
             .setMediaSourceFactory(DefaultMediaSourceFactory(dataFactory))
             .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder()
@@ -1309,7 +1309,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                     player.prepare()
                     return
                 }
-                playbackError=error.errorCodeName + ((error.cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)?.let {" · HTTP ${it.responseCode}"} ?: "")
+                playbackError=playerFailureDetails(error)
             }
             override fun onTracksChanged(value: androidx.media3.common.Tracks) {
                 tracks = value

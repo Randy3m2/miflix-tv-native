@@ -14,16 +14,18 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.focus.onFocusChanged
 import com.miflix.native2.data.HorizontalRepeatGate
 
-internal fun Modifier.smoothHorizontalDpad(): Modifier = composed {
+internal fun Modifier.smoothHorizontalDpad(canRepeat: () -> Boolean = {true}): Modifier = composed {
     val gate=remember {HorizontalRepeatGate()}
     this.onFocusChanged {if(!it.hasFocus) gate.reset()}.onPreviewKeyEvent {event ->
-        gate.consume(event.nativeKeyEvent.keyCode,event.type==KeyEventType.KeyDown,event.type==KeyEventType.KeyUp,
+        if(event.type==KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount>0 &&
+            event.nativeKeyEvent.keyCode in 21..22 && !canRepeat()) true
+        else gate.consume(event.nativeKeyEvent.keyCode,event.type==KeyEventType.KeyDown,event.type==KeyEventType.KeyUp,
             event.nativeKeyEvent.repeatCount,event.nativeKeyEvent.eventTime)
     }.focusGroup()
 }
 
 /** Fresh presses remain immediate; held vertical repeats cannot queue overlapping scrolls. */
-internal fun Modifier.smoothVerticalDpad(): Modifier = composed {
+internal fun Modifier.smoothVerticalDpad(canRepeat: () -> Boolean = {true}): Modifier = composed {
     var direction by remember {androidx.compose.runtime.mutableIntStateOf(0)}
     var acceptedAt by remember {androidx.compose.runtime.mutableStateOf<Long?>(null)}
     this.onPreviewKeyEvent {event ->
@@ -31,6 +33,7 @@ internal fun Modifier.smoothVerticalDpad(): Modifier = composed {
         if(code!=19 && code!=20) false
         else if(event.type==KeyEventType.KeyUp) {direction=0;acceptedAt=null;false}
         else if(event.type!=KeyEventType.KeyDown) false
+        else if(event.nativeKeyEvent.repeatCount>0 && !canRepeat()) true
         else {
             val time=event.nativeKeyEvent.eventTime
             val previous=acceptedAt

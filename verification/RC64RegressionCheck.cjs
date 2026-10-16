@@ -9,12 +9,12 @@ assert(screen.includes('delay(500)'));assert(screen.includes('abs(partyTargetPos
 assert(state.includes('room.positionMs + if(room.playing)'));assert(state.includes('.coerceIn(0L,5000L)'));
 assert(read('ui/PartyPresentation.kt').includes('it.resumed==playing'));
 assert(read('ui/MiFlixNativeApp.kt').includes('refreshMembers=!watching || ticks % 8 == 0'));
-for(const f of ['ui/Screens.kt','ui/LivePlayerTools.kt']) {const s=read(f);assert(s.includes('VLC/3.0.21 LibVLC/3.0.21'));assert(s.includes('triedLiveHls=true'));assert(s.includes('ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED'));assert(s.includes('HTTP ${'));}
+for(const f of ['ui/Screens.kt','ui/LivePlayerTools.kt']) {const s=read(f);assert(s.includes('triedLiveHls=true'));assert(s.includes('ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED'));assert(s.includes('playerFailureDetails('));}
 const repo=read('data/SupabaseRepository.kt');const progress=repo.slice(repo.indexOf('progress.forEach'),repo.indexOf('val body',repo.indexOf('progress.forEach')));
 assert.deepEqual([...new Set([...progress.matchAll(/\bp\.(\w+)/g)].map(m=>m[1]))].sort(),['percent','position','duration','updatedAt','season','episode'].sort());
 const party=repo.slice(repo.indexOf('private fun partyStateJson'));
 for(const f of ['title','overview','poster','logo','sourceName','sourceKey','shareStream','hostOnlyControls'])assert(party.includes('p.'+f));
 assert(read('ui/SmoothRowFocus.kt').includes('time-previous>=220L'));assert(read('data/HorizontalRepeatGate.java').includes('<140L'));
-assert(read('ui/Components.kt').includes('Brush.verticalGradient(listOf(Color.Black, Bg))'));
-assert(fs.readFileSync('app/build.gradle','utf8').includes("versionName '2.0.0-rc64'"));
+assert(read('ui/Components.kt').includes('Brush.verticalGradient(listOf(Color.Black.copy(alpha=.8f)'));
+assert(fs.readFileSync('app/build.gradle','utf8').includes("versionName '2.0.0-rc65'"));
 console.log('PASS: manual party return, snapshot extrapolation, bounded drift correction, pause alignment, notice/state matching, bounded live fallback, progress/party serializer separation, navigation and version');

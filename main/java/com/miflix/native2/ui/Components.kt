@@ -386,13 +386,17 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
         Screen.LIVE_TV to tr("TV en vivo","Live TV"),
         Screen.MY_LIST to tr("Mi lista","My List")
     ))
+    var headerHadFocus by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().height(76.dp).onPreviewKeyEvent { event ->
         if(event.key==Key.DirectionDown && onMoveDown!=null) {
-            if(event.type==KeyEventType.KeyDown) onMoveDown()
+            if(event.type==KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount==0) onMoveDown()
             true
         } else false
-    }.onFocusChanged { if(it.hasFocus) onHeaderFocused?.invoke() }.focusGroup()
-        .background(Brush.verticalGradient(listOf(Color.Black, Bg))).padding(horizontal=24.dp),
+    }.onFocusChanged {
+        if(it.hasFocus && !headerHadFocus) onHeaderFocused?.invoke()
+        headerHadFocus=it.hasFocus
+    }.focusGroup()
+        .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha=.8f),Color.Black.copy(alpha=.35f),Color.Transparent))).padding(horizontal=24.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)) {
         Image(painterResource(R.drawable.brunio_icon),"BruniO",Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)))
         var profileFocused by remember { mutableStateOf(false) }

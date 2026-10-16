@@ -29,6 +29,7 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -90,6 +91,10 @@ internal fun SpotlightRail(
             else -> 0f
         }
     } }
+    val expansionPx=with(androidx.compose.ui.platform.LocalDensity.current) {322.dp.toPx()}
+    val expandLeft=active && settledId==selectedId && railScroll.layoutInfo.visibleItemsInfo.firstOrNull {it.key==selectedId}?.let {
+        it.offset+expansionPx>railScroll.layoutInfo.viewportEndOffset
+    }==true
     val selected=rows.firstOrNull { it.cloudId==selectedId } ?: rows.first()
     Column(Modifier.fillMaxWidth().height(if(pinned) {if(eyebrow==null) 224.dp else 245.dp} else if(eyebrow==null) 302.dp else 323.dp)
         .bringIntoViewRequester(bring).onFocusChanged { active=it.hasFocus }.focusGroup()) {
@@ -98,9 +103,9 @@ internal fun SpotlightRail(
         Text(title,color=Color.White,fontSize=22.sp,lineHeight=27.sp,fontWeight=FontWeight.Bold,
             modifier=Modifier.padding(start=40.dp,end=40.dp,bottom=8.dp))
         CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalSpec) {
-        LazyRow(Modifier.fillMaxWidth().height(188.dp).smoothHorizontalDpad().firstCardOnDown(railScroll,firstCard),state=railScroll,contentPadding=PaddingValues(horizontal=34.dp,vertical=6.dp)) {
+        LazyRow(Modifier.fillMaxWidth().height(188.dp).smoothHorizontalDpad { !railScroll.isScrollInProgress }.firstCardOnDown(railScroll,firstCard),state=railScroll,contentPadding=PaddingValues(horizontal=34.dp,vertical=6.dp)) {
             items(rows,key={it.cloudId},contentType={"spotlight"}) { item ->
-                SpotlightCard(item,expanded=active && selectedId==item.cloudId && settledId==item.cloudId,landscape=landscape,
+                SpotlightCard(item,expanded=active && selectedId==item.cloudId && settledId==item.cloudId,landscape=landscape,expandLeft=expandLeft,
                     progress=progressFor(item),modifier=if(item.cloudId==rows.first().cloudId) Modifier.focusRequester(firstCard) else Modifier,
                     onFocused={selectedId=item.cloudId;publishPreview?.invoke(item)},onLongClick=hold?.let {action -> {action(item)}},onClick={onClick(item)})
             }
@@ -122,32 +127,36 @@ internal fun SpotlightRail(
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolean,progress: Double?,modifier: Modifier=Modifier,onFocused: () -> Unit,onLongClick: (() -> Unit)? = null,onClick: () -> Unit) {
+private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolean,expandLeft: Boolean,progress: Double?,modifier: Modifier=Modifier,onFocused: () -> Unit,onLongClick: (() -> Unit)? = null,onClick: () -> Unit) {
     var focused by remember(item.cloudId) { mutableStateOf(false) }
     val cardBring=remember { BringIntoViewRequester() }
-    LaunchedEffect(expanded) { if(expanded) { delay(170);cardBring.bringIntoView() } }
-    // Width animates only inside this bounded LazyRow, never the whole screen.
-    val width by animateFloatAsState(if(expanded) 322f else if(landscape) 240f else 132f,
-        tween(if(expanded) 150 else 80,easing=LinearOutSlowInEasing),label="spotlightWidth")
+    
+    // Keep focus and scroll geometry stable while artwork expands above neighboring slots.
+    val slotWidth=if(landscape) 312f else 130f
+    val displayWidth by animateFloatAsState(if(expanded) 322f else slotWidth-12f,
+        tween(if(expanded) 160 else 0),label="spotlightArtworkWidth")
     var showBackdrop by remember(item.cloudId) { mutableStateOf(landscape) }
     LaunchedEffect(expanded,landscape) {
         if(expanded) { delay(60); showBackdrop=true } else showBackdrop=landscape
     }
-    Box(modifier.width(width.dp).fillMaxHeight().padding(horizontal=6.dp).bringIntoViewRequester(cardBring)
+    Box(modifier.width(slotWidth.dp).fillMaxHeight().padding(horizontal=6.dp).zIndex(if(expanded) 2f else 0f)
+        .bringIntoViewRequester(cardBring)
         .onFocusChanged { focused=it.isFocused; if(it.isFocused) onFocused() }.focusable()
-        .then(if(onLongClick==null) Modifier.tvClick(onClick) else Modifier.tvPlaybackClick(onClick,onLongClick)).clickable(onClick=onClick)
+        .then(if(onLongClick==null) Modifier.tvClick(onClick) else Modifier.tvPlaybackClick(onClick,onLongClick)).clickable(onClick=onClick)) {
+        Box(Modifier.fillMaxHeight().wrapContentWidth(if(expandLeft) Alignment.End else Alignment.Start,unbounded=true).requiredWidth(displayWidth.dp)
         .border(if(focused) 2.dp else 0.dp,if(focused) Accent else Color.Transparent,RoundedCornerShape(18.dp))
         .padding(3.dp).clip(RoundedCornerShape(16.dp)).background(Panel)) {
         AsyncImage(if(showBackdrop) item.backdrop ?: item.poster else item.poster ?: item.backdrop,
             item.title,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xD9050505)))))
-        Text(item.title,color=Color.White,fontSize=if(expanded) 18.sp else 12.sp,lineHeight=if(expanded) 22.sp else 15.sp,
+        if(expanded) Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xD9050505)))))
+        if(expanded) Text(item.title,color=Color.White,fontSize=if(expanded) 18.sp else 12.sp,lineHeight=if(expanded) 22.sp else 15.sp,
             fontWeight=FontWeight.Bold,maxLines=2,overflow=TextOverflow.Ellipsis,
             modifier=Modifier.align(Alignment.BottomStart).padding(10.dp))
         progress?.takeIf { it>0.0 && it<100.0 }?.let { value ->
             Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color(0x88555555))) {
                 Box(Modifier.fillMaxHeight().fillMaxWidth((value/100.0).toFloat().coerceIn(0f,1f)).background(Color.White))
             }
+        }
         }
     }
 }

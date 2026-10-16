@@ -9,6 +9,13 @@ function https(raw:string){const u=new URL(raw);if(u.protocol!=='https:'||u.user
 function torbox(u:URL){return u.hostname.endsWith('.torbox.app');}
 function addon(raw:string){const u=https(raw);if(!allowedHosts().has(u.hostname)||!u.pathname.endsWith('/manifest.json'))throw Error('Unsupported add-on');return u;}
 const clean=(value:unknown,max=220)=>String(value||'').replace(/https?:\/\/\S+/gi,'').replace(/[\x00-\x1f]/g,' ').slice(0,max);
+function sourceSize(row:any){
+ const explicit=Number(row.behaviorHints?.videoSize);if(Number.isFinite(explicit)&&explicit>0)return explicit;
+ const text=String(row.title||'')+' '+String(row.description||'');const match=/\b(\d+(?:[.,]\d+)?)\s*(TiB|GiB|MiB|KiB|TB|GB|MB|KB)\b/i.exec(text);if(!match)return 0;
+ const unit=match[2].toLowerCase(),power=unit.startsWith('t')?4:unit.startsWith('g')?3:unit.startsWith('m')?2:1;return Number(match[1].replace(',','.'))*Math.pow(unit.includes('i')?1024:1000,power);
+}
+function sizeLimit(value:unknown){const cap=value===undefined?5:Number(value);if(!Number.isFinite(cap)||cap<0||cap>1000)throw Error('Invalid size limit');return cap*1e9;}
+function withinLimit(size:number,limit:number){return limit===0||(Number.isFinite(size)&&size>0&&size<=limit);}
 async function json(response:Response){
  if(!response.ok)throw Error('Upstream unavailable');const reader=response.body?.getReader();if(!reader)throw Error('Empty response');let size=0;const chunks:Uint8Array[]=[];
  try{while(true){const part=await reader.read();if(part.done)break;size+=part.value.length;if(size>2*1024*1024)throw Error('Response too large');chunks.push(part.value);}}finally{await reader.cancel().catch(()=>{});}
@@ -50,7 +57,7 @@ Deno.serve(async(request:Request)=>{
   const authorization=request.headers.get('Authorization')||'';if(!authorization.startsWith('Bearer '))return reply({error:'Sign in required'},401);
   const base=Deno.env.get('SUPABASE_URL')!,key=Deno.env.get('SUPABASE_ANON_KEY')!,headers={apikey:key,Authorization:authorization};
   const auth=await fetch(base+'/auth/v1/user',{headers,signal:AbortSignal.timeout(10000)});if(!auth.ok)return reply({error:'Session expired'},401);const user=await auth.json();
-  const input=await request.json();en=input.language==='en';
+  const input=await request.json();en=input.language==='en';const limit=sizeLimit(input.maxGb);
   if(typeof input.profile!=='string'||input.profile.length>100)return reply({error:en?'Select a profile.':'Selecciona un perfil.'},400);
   const stateRows=await json(await fetch(base+'/rest/v1/miflix_user_state?user_id=eq.'+encodeURIComponent(user.id)+'&profile_id=eq.__account__&select=state',{headers,signal:AbortSignal.timeout(10000)}));
   const account=stateRows[0]?.state||{},profile=(account.profiles||[]).find((p:any)=>p.id===input.profile);
@@ -62,6 +69,7 @@ Deno.serve(async(request:Request)=>{
   if(input.action==='link'){
    const data=await unseal(String(input.ticket||''));
    if(data.owner!==user.id||data.profile!==input.profile||data.fingerprint!==fingerprint||data.expires<Date.now())return reply({error:en?'Links expired. Load sources again.':'Enlaces caducados. Carga las fuentes otra vez.'},410);
+   if(!withinLimit(data.size,limit))return reply({error:en?'Source exceeds the size limit or has unknown size.':'La fuente supera el límite o su tamaño es desconocido.'},400);
    const url=await finalLink(data.url,providers);return reply({url,filename:data.filename});
   }
   if(input.action!=='sources'||!/^tmdb:(movie|series):[1-9][0-9]{0,8}$/.test(input.cloud||''))return reply({error:'Invalid title'},400);
@@ -78,15 +86,15 @@ Deno.serve(async(request:Request)=>{
     return (body.streams||[]).slice(0,120).flatMap((row:any)=>{
      const label=String(row.name||'')+' '+String(row.title||'');if(!/\bTB\b|torbox/i.test(label)||/TB\s*Download|\buncached\b/i.test(label))return [];
      try{const url=https(row.url);if(!torbox(url)&&!providers.has(url.hostname))return [];
-      return [{url:url.href,provider:manifest.hostname,name:clean(row.name||'TorBox',100),filename:clean(row.behaviorHints?.filename||row.title||'Download'),size:Number(row.behaviorHints?.videoSize)||0}];
+      return [{url:url.href,provider:manifest.hostname,name:clean(row.name||'TorBox',100),filename:clean(row.behaviorHints?.filename||row.title||'Download'),size:sourceSize(row)}];
      }catch{return [];}
     }) as Source[];
    }));
    if(batches.every(x=>x.status==='rejected'))return reply({error:en?'Providers are unavailable. Try again later.':'Proveedores no disponibles. Reintenta luego.'},502);
-   rows=[...new Map(batches.flatMap(x=>x.status==='fulfilled'?x.value:[]).map(x=>[x.url,x])).values()].slice(0,80);
+   rows=[...new Map(batches.flatMap(x=>x.status==='fulfilled'?x.value:[]).map(x=>[x.url,x])).values()].slice(0,480);
    if(cache.size>=100)cache.delete(cache.keys().next().value!);cache.set(cacheKey,{at:Date.now(),rows});
   }
-  const sources=await Promise.all(rows.map(async row=>({provider:row.provider,name:row.name,filename:row.filename,size:row.size,ticket:await seal({owner:user.id,profile:input.profile,fingerprint,url:row.url,filename:row.filename,expires:Date.now()+15*60000})})));
+  const sources=await Promise.all(rows.filter(row=>withinLimit(row.size,limit)).slice(0,80).map(async row=>({provider:row.provider,name:row.name,filename:row.filename,size:row.size,ticket:await seal({owner:user.id,profile:input.profile,fingerprint,url:row.url,filename:row.filename,size:row.size,expires:Date.now()+15*60000})})));
   return reply({sources});
  }catch{return reply({error:en?'Download unavailable or still processing. Try another source, or load links again.':'Descarga no disponible o todavía procesándose. Prueba otra fuente o carga los enlaces otra vez.'},502);}
 });

@@ -185,29 +185,47 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)pollNowPla
 window.addEventListener('hashchange',()=>{const match=/^#([ms])([0-9a-z]{1,6})$/i.exec(location.hash);if(match){pendingShared='tmdb:'+(match[1].toLowerCase()==='m'?'movie':'series')+':'+parseInt(match[2],36);openSharedTitle();}});
 
 // Download URLs/tickets live only in the open title dialog, never in share links/storage.
-let downloadRevision=0;
+let downloadRevision=0,downloadMaxGb=5;
+try{const cap=localStorage.getItem('brunio-download-max-gb');if(cap!==null&&Number.isFinite(Number(cap))&&Number(cap)>=0&&Number(cap)<=1000)downloadMaxGb=Number(cap);}catch{}
 async function openDownloads(item,refresh=false){
- const revision=++downloadRevision,profile=selected(),owner=session?.user.id,detail=detailRevision;
+ const maxGb=downloadMaxGb;const revision=++downloadRevision,profile=selected(),owner=session?.user.id,detail=detailRevision;
  let panel=$('downloadPanel');if(panel)panel.remove();panel=el('section',undefined,'download-panel');panel.id='downloadPanel';$('detailBody').append(panel);
  const valid=()=>revision===downloadRevision&&detail===detailRevision&&profile===selected()&&owner===session?.user.id&&$('detail').open;
- const title=el('h3',language==='en'?'Download · TorBox':'Descargar · TorBox'),status=el('p',t('Cargando…'));const reload=el('button',language==='en'?'Refresh sources':'Actualizar fuentes','quiet');reload.onclick=()=>openDownloads(item,true);panel.append(title,status,reload);
+ const title=el('h3',language==='en'?'Download · TorBox':'Descargar · TorBox'),status=el('p',t('Cargando…'));const reload=el('button',language==='en'?'Refresh sources':'Actualizar fuentes','quiet');reload.onclick=()=>openDownloads(item,true);const capLabel=el('label',language==='en'?'Maximum file size (GB) · 0 = unlimited':'Tamaño máximo (GB) · 0 = sin límite'),capInput=el('input');capInput.type='number';capInput.min='0';capInput.max='1000';capInput.step='any';capInput.required=true;capInput.value=String(maxGb);capLabel.append(capInput);
+ const applyCap=el('button',language==='en'?'Apply limit':'Aplicar límite','quiet');applyCap.onclick=()=>{if(!capInput.reportValidity())return;const value=Number(capInput.value);if(!Number.isFinite(value)||value<0||value>1000)return;downloadMaxGb=value;try{localStorage.setItem('brunio-download-max-gb',String(value));}catch{}openDownloads(item);};
+ const capControls=el('div',undefined,'download-cap');capControls.append(capLabel,applyCap,reload);panel.append(title,capControls,status);
  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
  try{
-  const result=await api('/functions/v1/brunio-downloads','POST',{action:'sources',refresh,cloud:item.cloudId,profile,season:Number($('castSeason').value||1),episode:Number($('castEpisode').value||1),language});if(!valid())return;
-  status.textContent=language==='en'?'Choose a source to generate a private download link. Files download directly from TorBox.':'Elige una fuente para generar su enlace privado. El archivo se descarga directamente desde TorBox.';
-  if(!result.sources?.length){status.textContent=language==='en'?'No ready TorBox sources found. Check your add-ons on TV or try another episode.':'No se encontraron fuentes listas de TorBox. Revisa tus add-ons en TV o prueba otro episodio.';return;}
+  const result=await api('/functions/v1/brunio-downloads','POST',{action:'sources',maxGb,refresh,cloud:item.cloudId,profile,season:Number($('castSeason').value||1),episode:Number($('castEpisode').value||1),language});if(!valid())return;
+  status.textContent=language==='en'?'Choose a source. With a limit enabled, unknown sizes are hidden. Files download directly from TorBox.':'Elige una fuente. Con un límite activo, se ocultan tamaños desconocidos. El archivo baja directamente desde TorBox.';
+  if(!result.sources?.length){status.textContent=language==='en'?'No TorBox sources match this size limit. Change the limit or check your TV add-ons.':'No hay fuentes de TorBox con este límite. Cambia el límite o revisa tus add-ons en TV.';return;}
   for(const source of result.sources){
-   const row=el('article',undefined,'download-source'),meta=el('div');meta.append(el('strong',source.name),el('p',source.filename),el('small',source.provider+(source.size>0?' · '+(source.size/1073741824).toFixed(2)+' GB':'')));
+   const row=el('article',undefined,'download-source'),meta=el('div');meta.append(el('strong',source.name),el('p',source.filename),el('small',source.provider+(source.size>0?' · '+(source.size/1000000000).toFixed(2)+' GB':'')));
    const button=el('button',language==='en'?'Generate link':'Generar enlace','quiet');row.append(meta,button);panel.append(row);
    button.onclick=async()=>{
     button.disabled=true;const message=el('p',t('Cargando…'));row.append(message);
     try{
-     const result=await api('/functions/v1/brunio-downloads','POST',{action:'link',ticket:source.ticket,profile,language});if(!valid())return;
+     const result=await api('/functions/v1/brunio-downloads','POST',{action:'link',maxGb,ticket:source.ticket,profile,language});if(!valid())return;
      const url=new URL(result.url);if(url.protocol!=='https:'||!url.hostname.endsWith('.torbox.app')||url.hostname==='api.torbox.app'||url.username||url.password)throw Error(language==='en'?'Invalid download link.':'Enlace de descarga inválido.');
-     const link=el('a','↓ Download','primary download-link');link.href=url.href;link.download=result.filename||'';link.target='_blank';link.rel='noopener noreferrer';link.referrerPolicy='no-referrer';button.replaceWith(link);
+     const link=el('a','↓ Download','primary download-link');link.href=url.href;link.download=result.filename||'';link.target='_blank';link.rel='noopener noreferrer';link.referrerPolicy='no-referrer';button.replaceWith(link);appendExternalPlayerActions(row,url.href);
      message.textContent=language==='en'?'Ready. Press Download. Your browser manages the file and save location.':'Listo. Pulsa Download. Tu navegador maneja el archivo y dónde guardarlo.';
     }catch(e){if(valid()){message.textContent=e.message;button.disabled=false;}}
    };
   }
  }catch(e){if(valid())status.textContent=e.message;}
+}
+
+function isAppleMobile(){return /iPad|iPhone|iPod/i.test(navigator.userAgent||'')||(/Mac/i.test(navigator.platform||'')&&Number(navigator.maxTouchPoints)>1);}
+function vlcStreamLink(raw){const url=new URL(raw);if(url.protocol!=='https:'||!url.hostname.endsWith('.torbox.app')||url.hostname==='api.torbox.app'||url.username||url.password)throw Error('Invalid media URL');return 'vlc-x-callback://x-callback-url/stream?url='+encodeURIComponent(url.href);}
+function appendExternalPlayerActions(row,raw){
+ const actions=el('div',undefined,'external-player-actions');
+ if(isAppleMobile()){
+  const vlc=el('a',language==='en'?'▶ Open in VLC':'▶ Abrir en VLC','quiet external-player-link');vlc.href=vlcStreamLink(raw);vlc.target='_top';vlc.rel='noreferrer';actions.append(vlc);
+ }
+ const copy=el('button',language==='en'?'Copy link for another player':'Copiar enlace para otro player','quiet');copy.type='button';copy.onclick=async()=>{
+  try{if(!navigator.clipboard)throw Error('Clipboard unavailable');await navigator.clipboard.writeText(raw);toast(t('Enlace copiado'));}
+  catch{let field=actions.querySelector?.('input');if(!field){field=el('input');field.type='text';field.readOnly=true;field.value=raw;field.setAttribute('aria-label',language==='en'?'Media link for external player':'Enlace para reproductor externo');actions.append(field);}field.focus();field.select();}
+ };actions.append(copy);
+ actions.append(el('p',isAppleMobile()?(language==='en'?'Open in VLC streams from TorBox and requires VLC installed. For offline playback: Download → Files/Downloads → Share → VLC. The website cannot open a downloaded local file automatically.':'Abrir en VLC reproduce desde TorBox y requiere VLC instalado. Para verlo offline: Download → Archivos/Descargas → Compartir → VLC. La web no puede abrir automáticamente el archivo local descargado.'):(language==='en'?'Paste the link into your external player’s network stream option. For offline playback, open the downloaded file from your device.':'Pega el enlace en la opción de red de tu reproductor externo. Para verlo offline, abre el archivo descargado desde tu dispositivo.')));
+ row.append(actions);
 }

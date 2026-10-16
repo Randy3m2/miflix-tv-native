@@ -8,7 +8,7 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert'),{webcrypto}=req
   if(url.pathname==='/auth/v1/user')return Response.json({id:options.headers.Authorization==='Bearer other'?'other':'owner'});
   if(url.pathname==='/rest/v1/miflix_user_state')return Response.json([{state:{profiles:[{id:'adult'},{id:'brunio-kids',isKids:true}],privateSetup:{addonManifests:[manifest]}}}]);
   if(url.hostname==='api.themoviedb.org')return Response.json({imdb_id:'tt0137523'});
-  if(url.pathname.endsWith('/stream/movie/tt0137523.json'))return Response.json({streams:[{name:'[TB⚡] Comet 1080p',title:'Movie',url:'https://comet.feels.legal/resolve/private',behaviorHints:{filename:'Movie.mkv',videoSize:5000000000}},{name:'[TB] Bad',url:'http://127.0.0.1/private'},{name:'[TB Download] waiting',url:'https://comet.feels.legal/waiting'},{name:'[RD] Other service',url:'https://comet.feels.legal/rd'}]});
+  if(url.pathname.endsWith('/stream/movie/tt0137523.json'))return Response.json({streams:[{name:'[TB⚡] Comet 1080p',title:'Movie',url:'https://comet.feels.legal/resolve/private',behaviorHints:{filename:'Movie.mkv',videoSize:5000000000}},{name:'[TB] Bad',url:'http://127.0.0.1/private'},{name:'[TB Download] waiting',url:'https://comet.feels.legal/waiting'},{name:'[TB] Large',url:'https://comet.feels.legal/large',behaviorHints:{videoSize:7000000000}},{name:'[TB] Unknown',url:'https://comet.feels.legal/unknown'},{name:'[RD] Other service',url:'https://comet.feels.legal/rd'}]});
   if(url.hostname==='comet.feels.legal'&&url.pathname==='/resolve/private')return new Response(null,{status:302,headers:{Location:'https://api.torbox.app/v1/api/torrents/requestdl?token='+secret+'&torrent_id=1&file_id=2&redirect=true'}});
   if(url.hostname==='api.torbox.app'){assert.equal(url.searchParams.get('redirect'),'false');return Response.json({success:true,data:'https://cdn.torbox.app/download/short-lived-signature/Movie.mkv'});}
   throw Error('Unexpected fetch: '+url.hostname);
@@ -20,6 +20,8 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert'),{webcrypto}=req
  const input={profile:'adult',action:'sources',cloud:'tmdb:movie:550',language:'en'};
  const sources=await call(input);assert.equal(sources.status,200);assert.equal(sources.body.sources.length,1);
  const serialized=JSON.stringify(sources.body);assert(!serialized.includes(secret));assert(!serialized.includes('private-config'));assert(!serialized.includes('resolve/private'));assert(!('url' in sources.body.sources[0]));
+ assert.equal((await call({...input,maxGb:2})).body.sources.length,0);assert.equal((await call({...input,maxGb:10})).body.sources.length,2);assert.equal((await call({...input,maxGb:0})).body.sources.length,3);
+ assert.equal(vm.runInContext("sourceSize({title:'Size: 1.5 GiB'})",context),1.5*1024**3);assert.equal(vm.runInContext("withinLimit(0,sizeLimit(undefined))",context),false);
  const count=calls.filter(x=>x.url.includes('/stream/')).length;await call(input);assert.equal(calls.filter(x=>x.url.includes('/stream/')).length,count,'source list cached');
  const ticket=sources.body.sources[0].ticket;
  assert.equal((await call({profile:'adult',action:'link',ticket},'other')).status,410,'ticket owner bound');

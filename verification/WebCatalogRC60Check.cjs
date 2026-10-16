@@ -39,5 +39,9 @@ class Element {
  run("document.hidden=false;castToken='';");await run('pollNowPlaying()');assert.equal(get('nowPlaying').hidden,true,'disconnect hides stale activity');
  run("api=async(path,method,body)=>body.action==='sources'?{sources:[{name:'Comet 1080p',filename:'Movie.mkv',provider:'Comet',size:1000,ticket:'opaque-ticket'}]}:{url:'https://cdn.torbox.app/download/Movie.mkv',filename:'Movie.mkv'};");
  await run('openDownloads(currentDetail)');const panel=get('detailBody').children.at(-1),row=panel.children.at(-1),generate=row.children[1];await generate.onclick();assert.equal(generate.replacement.tagName,'a');assert.equal(generate.replacement.href,'https://cdn.torbox.app/download/Movie.mkv');assert.equal(generate.replacement.download,'Movie.mkv');
+ run("navigator.platform='MacIntel';navigator.maxTouchPoints=5;navigator.userAgent='Mozilla Macintosh';");assert.equal(run('isAppleMobile()'),true);
+ const raw='https://cdn.torbox.app/download/Movie.mkv?token=temporary&x=1';const encoded=run('vlcStreamLink('+JSON.stringify(raw)+')');assert.equal(new URL(encoded).searchParams.get('url'),raw);assert.throws(()=>run("vlcStreamLink('javascript:alert(1)')"));
+ run("const testRow=el('div');appendExternalPlayerActions(testRow,'https://cdn.torbox.app/file');globalThis.playerTestRow=testRow;");assert.equal(context.playerTestRow.children[0].children[0].href.startsWith('vlc-x-callback:'),true);
+ assert.equal(run('downloadMaxGb'),5);
  assert.equal(intervals.length,1);console.log('PASS: short links/deep-link login continuation, 25-title batches, recents sorting/pagination, recommendation upsert, local-only Now Playing and hidden/disconnected polling');
 })().catch(e=>{console.error(e);process.exitCode=1;});

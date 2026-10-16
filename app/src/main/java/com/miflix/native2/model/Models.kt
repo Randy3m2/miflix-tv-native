@@ -159,7 +159,17 @@ data class WatchParty(
     val liveChannelId: String = "",
     val liveProvider: String = "",
     val liveTitle: String = "",
-    val liveType: String = "tv"
+    val liveType: String = "tv",
+    val title: String = "",
+    val overview: String = "",
+    val poster: String? = null,
+    val logo: String? = null,
+    val sourceName: String = "",
+    val sourceFilename: String = "",
+    val sourceSize: Long = 0L,
+    val sourceKey: String = "",
+    val shareStream: Boolean = false,
+    val hostOnlyControls: Boolean = false
 )
 
 enum class PartyRole { HOST, GUEST }

@@ -71,6 +71,8 @@ internal fun SpotlightRail(
     onClick: (MediaSummary) -> Unit
 ) {
     val hold=onLongClick ?: LocalTitleActions.current
+    val publishPreview=LocalBrowsePreview.current
+    val pinned=publishPreview!=null
     if(rows.isEmpty()) return
     var selectedId by rememberSaveable(title) { mutableStateOf(rows.first().cloudId) }
     var active by remember { mutableStateOf(false) }
@@ -79,7 +81,7 @@ internal fun SpotlightRail(
     val railScroll=androidx.compose.foundation.lazy.rememberLazyListState()
     val firstCard=remember {FocusRequester()}
     LaunchedEffect(selectedId,active) { settledId=null;if(active) { delay(3000);settledId=selectedId } }
-    LaunchedEffect(active) { if(active) { delay(50); bring.bringIntoView() } }
+    LaunchedEffect(active) { if(active && !pinned) { delay(50); bring.bringIntoView() } }
     val infoVisibility by animateFloatAsState(if(active && settledId==selectedId) 1f else 0f,tween(150),label="railInfo")
     val horizontalSpec=remember {object: BringIntoViewSpec {
         override fun calculateScrollDistance(offset: Float,size: Float,containerSize: Float): Float=when {
@@ -89,7 +91,7 @@ internal fun SpotlightRail(
         }
     } }
     val selected=rows.firstOrNull { it.cloudId==selectedId } ?: rows.first()
-    Column(Modifier.fillMaxWidth().height(if(eyebrow==null) 302.dp else 323.dp)
+    Column(Modifier.fillMaxWidth().height(if(pinned) {if(eyebrow==null) 224.dp else 245.dp} else if(eyebrow==null) 302.dp else 323.dp)
         .bringIntoViewRequester(bring).onFocusChanged { active=it.hasFocus }.focusGroup()) {
         eyebrow?.let { Text(it,color=Accent,fontSize=11.sp,fontWeight=FontWeight.Bold,
             modifier=Modifier.padding(start=40.dp,bottom=5.dp)) }
@@ -100,12 +102,12 @@ internal fun SpotlightRail(
             items(rows,key={it.cloudId},contentType={"spotlight"}) { item ->
                 SpotlightCard(item,expanded=active && selectedId==item.cloudId && settledId==item.cloudId,landscape=landscape,
                     progress=progressFor(item),modifier=if(item.cloudId==rows.first().cloudId) Modifier.focusRequester(firstCard) else Modifier,
-                    onFocused={selectedId=item.cloudId},onLongClick=hold?.let {action -> {action(item)}},onClick={onClick(item)})
+                    onFocused={selectedId=item.cloudId;publishPreview?.invoke(item)},onLongClick=hold?.let {action -> {action(item)}},onClick={onClick(item)})
             }
         }
         }
         // Reserved space prevents neighboring rails from jumping when focus changes.
-        Column(Modifier.padding(start=40.dp,end=40.dp,top=4.dp).fillMaxWidth().height(72.dp)
+        if(!pinned) Column(Modifier.padding(start=40.dp,end=40.dp,top=4.dp).fillMaxWidth().height(72.dp)
             .graphicsLayer { alpha=infoVisibility;translationY=(1f-infoVisibility)*6.dp.toPx() }) {
             if(active && settledId==selectedId) {
                 Text("${selected.title}  ·  ${selected.year}  ·  ★ ${"%.1f".format(selected.rating)}",
@@ -126,7 +128,7 @@ private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolea
     LaunchedEffect(expanded) { if(expanded) { delay(170);cardBring.bringIntoView() } }
     // Width animates only inside this bounded LazyRow, never the whole screen.
     val width by animateFloatAsState(if(expanded) 322f else if(landscape) 240f else 132f,
-        tween(150,easing=LinearOutSlowInEasing),label="spotlightWidth")
+        tween(if(expanded) 150 else 80,easing=LinearOutSlowInEasing),label="spotlightWidth")
     var showBackdrop by remember(item.cloudId) { mutableStateOf(landscape) }
     LaunchedEffect(expanded,landscape) {
         if(expanded) { delay(60); showBackdrop=true } else showBackdrop=landscape

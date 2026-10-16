@@ -22,6 +22,25 @@ internal fun Modifier.smoothHorizontalDpad(): Modifier = composed {
     }.focusGroup()
 }
 
+/** Fresh presses remain immediate; held vertical repeats cannot queue overlapping scrolls. */
+internal fun Modifier.smoothVerticalDpad(): Modifier = composed {
+    var direction by remember {androidx.compose.runtime.mutableIntStateOf(0)}
+    var acceptedAt by remember {androidx.compose.runtime.mutableStateOf<Long?>(null)}
+    this.onFocusChanged {if(!it.hasFocus) {direction=0;acceptedAt=null}}.onPreviewKeyEvent {event ->
+        val code=event.nativeKeyEvent.keyCode
+        if(code!=19 && code!=20) false
+        else if(event.type==KeyEventType.KeyUp) {direction=0;acceptedAt=null;false}
+        else if(event.type!=KeyEventType.KeyDown) false
+        else {
+            val time=event.nativeKeyEvent.eventTime
+            val previous=acceptedAt
+            if(event.nativeKeyEvent.repeatCount==0 || direction!=code || previous==null || time<previous || time-previous>=110L) {
+                direction=code;acceptedAt=time;false
+            } else true
+        }
+    }
+}
+
 /** Down always enters at item zero, regardless of the expanded card's center above. */
 internal fun Modifier.firstCardOnDown(
     row: androidx.compose.foundation.lazy.LazyListState,

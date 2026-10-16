@@ -7,10 +7,12 @@ import java.net.URLEncoder
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-data class SocialPerson(val id: String, val nickname: String)
+data class SocialPerson(val id: String, val nickname: String, val avatar: String? = null)
 data class PartyEvent(val id: Long, val userId: String, val kind: String, val body: String)
 data class FriendActivity(val id: String, val nickname: String, val title: String, val season: Int, val episode: Int, val room: String?, val online: Boolean, val avatar: String? = null, val cloudId: String = "")
 data class FriendRecommendation(val owner: String, val nickname: String, val cloud: String, val title: String, val poster: String?)
+
+data class PartyInvitation(val room: String,val host: String,val title: String)
 
 data class AccessRequest(val room: String, val id: String, val nickname: String)
 data class Friendship(val sender: String, val receiver: String, val status: String)
@@ -69,6 +71,14 @@ class SocialRepository(private val url: String, private val key: String) {
     suspend fun removeRecommendation(s: CloudSession, cloud: String) {
         Http.text("$url/rest/v1/miflix_recommendations?owner_id=eq.${s.userId}&cloud_id=eq.${enc(cloud)}","DELETE",headers(s))
     }
+    suspend fun inviteParty(s: CloudSession,room: String,friend: String) {
+        write(s,"rpc/miflix_invite_party",JSONObject().put("code",room).put("friend",friend))
+    }
+    suspend fun partyInvitations(s: CloudSession): List<PartyInvitation> {
+        val a=rows(s,"miflix_party_invites?recipient_id=eq.${s.userId}&select=room_code,host_name,title&order=created_at.desc&limit=20")
+        return (0 until a.length()).map { a.getJSONObject(it).let { x -> PartyInvitation(x.getString("room_code"),x.optString("host_name"),x.optString("title")) } }
+    }
+    suspend fun previewParty(s: CloudSession,room: String): JSONObject = JSONObject(Http.text("$url/rest/v1/rpc/miflix_party_preview","POST",headers(s),JSONObject().put("code",room).toString()))
     suspend fun requestAccess(s: CloudSession, room: String): String = Http.text("$url/rest/v1/rpc/miflix_request_access","POST",headers(s),JSONObject().put("code",room).toString()).trim().trim('"')
     suspend fun requests(s: CloudSession): List<AccessRequest> {
         val a=JSONArray(Http.text("$url/rest/v1/rpc/miflix_access_requests","POST",headers(s),"{}"))
@@ -95,13 +105,13 @@ class SocialRepository(private val url: String, private val key: String) {
         Http.text("$url/rest/v1/miflix_social_profiles?on_conflict=user_id","POST",headers(s)+( "Prefer" to "resolution=merge-duplicates,return=minimal"),JSONObject().put("user_id",s.userId).put("nickname",nick).toString())
     }
     suspend fun find(s: CloudSession, nick: String): SocialPerson? {
-        val p=rows(s,"miflix_social_profiles?nickname=eq.${enc(nick.lowercase())}&select=user_id,nickname").optJSONObject(0) ?: return null
-        return SocialPerson(p.getString("user_id"),p.getString("nickname"))
+        val p=rows(s,"miflix_social_profiles?nickname=eq.${enc(nick.lowercase())}&select=user_id,nickname,avatar_value").optJSONObject(0) ?: return null
+        return SocialPerson(p.getString("user_id"),p.getString("nickname"),p.optString("avatar_value").takeUnless { it.isBlank() || it=="null" })
     }
     suspend fun people(s: CloudSession, ids: List<String>): List<SocialPerson> {
         if(ids.isEmpty())return emptyList()
-        val a=rows(s,"miflix_social_profiles?user_id=in.(${ids.joinToString(",")})&select=user_id,nickname")
-        return (0 until a.length()).map { a.getJSONObject(it).let { p -> SocialPerson(p.getString("user_id"),p.getString("nickname")) } }
+        val a=rows(s,"miflix_social_profiles?user_id=in.(${ids.joinToString(",")})&select=user_id,nickname,avatar_value")
+        return (0 until a.length()).map { a.getJSONObject(it).let { p -> SocialPerson(p.getString("user_id"),p.getString("nickname"),p.optString("avatar_value").takeUnless { it.isBlank() || it=="null" }) } }
     }
     suspend fun join(s: CloudSession, room: String) { write(s,"rpc/miflix_join_room",JSONObject().put("code",room)) }
     suspend fun leave(s: CloudSession, room: String) { Http.text("$url/rest/v1/miflix_party_members?room_code=eq.${enc(room)}&user_id=eq.${s.userId}","DELETE",headers(s)) }

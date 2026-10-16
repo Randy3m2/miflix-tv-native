@@ -1,0 +1,28 @@
+'use strict';
+const {PGlite}=require('@electric-sql/pglite');
+const fs=require('fs'),assert=require('assert');
+const A='11111111-1111-4111-8111-111111111111',B='22222222-2222-4222-8222-222222222222',C='33333333-3333-4333-8333-333333333333';
+(async()=>{
+ const db=new PGlite();
+ await db.exec(`create role authenticated;create role anon;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key);insert into auth.users values('${A}'),('${B}'),('${C}');create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema public,auth to authenticated,anon;grant execute on function auth.uid() to authenticated;`);
+ for(const name of ['SUPABASE_WATCH_PARTY.sql','supabase_watch_party_repair.sql','supabase_social_setup.sql','supabase_final_upgrade.sql','supabase_friends_party_upgrade.sql','supabase_rc5_upgrade.sql','supabase_rc63_party_presentation.sql','supabase_rc63_party_presentation.sql']) await db.exec(fs.readFileSync(name,'utf8'));
+ async function as(uid){await db.exec(`reset role;set role authenticated;select set_config('request.jwt.claim.sub','${uid}',false);`);}
+ async function denied(sql){let rejected=false;try{await db.exec(sql)}catch{rejected=true}assert(rejected,'Expected rejection');}
+ const state={cloudId:'tmdb:series:99',season:1,episode:2,title:'A title',overview:'Public synopsis',poster:'https://image.tmdb.org/t/p/w500/poster.jpg',sourceName:'Comet 2160p',sourceKey:'safe-key',shareStream:true};
+ await as(A);await db.exec(`insert into miflix_social_profiles(user_id,nickname) values('${A}','randy');insert into miflix_watch_parties(room_code,host_user_id,state) values('123456','${A}','${JSON.stringify(state)}');select miflix_join_room('123456');insert into miflix_friendships(sender_id,receiver_id) values('${A}','${B}');`);
+ await as(B);await db.exec(`insert into miflix_social_profiles(user_id,nickname) values('${B}','guest');update miflix_friendships set status='accepted' where receiver_id='${B}';`);
+ await as(A);await db.exec(`select miflix_invite_party('123456','${B}');`);await denied(`select miflix_invite_party('123456','${C}')`);
+ await as(C);assert.equal((await db.query('select * from miflix_party_invites')).rows.length,0);assert.equal((await db.query('select * from miflix_party_sources')).rows.length,0);await denied(`select miflix_invite_party('123456','${B}')`);
+ await as(B);assert.equal((await db.query('select * from miflix_party_invites')).rows.length,1);assert.equal((await db.query("select miflix_request_access('123456') as result")).rows[0].result,'approved');await db.exec("select miflix_join_room('123456')");
+ await as(A);await db.exec(`insert into miflix_party_sources(room_code,cloud_id,season,episode,source_key,url,request_headers,expires_at) values('123456','tmdb:series:99',1,2,'safe-key','https://provider.example/private-link','{"Authorization":"private-test-only"}',now()+interval '2 hours');`);
+ await as(B);assert.equal((await db.query('select * from miflix_party_sources')).rows.length,1);assert.equal((await db.query("update miflix_party_sources set url='https://evil.example/' returning room_code")).rows.length,0);assert.equal((await db.query("select url from miflix_party_sources")).rows[0].url,'https://provider.example/private-link');await denied("insert into miflix_party_invites(room_code,recipient_id,host_name,title) values('123456','"+C+"','spoof','spoof')");
+ await db.exec("select miflix_request_playback('123456','tmdb:series:99',1,2,false)");
+ await as(A);await db.exec("update miflix_watch_parties set state=jsonb_set(state,'{hostOnlyControls}','true') where room_code='123456'");assert.equal((await db.query("select miflix_take_playback('123456') as result")).rows[0].result,null);
+ await as(B);await denied("select miflix_request_playback('123456','tmdb:series:99',1,2,false)");
+ await as(A);await db.exec("update miflix_watch_parties set state=jsonb_set(state,'{sourceKey}','\"another-source\"') where room_code='123456'");await as(B);assert.equal((await db.query('select * from miflix_party_sources')).rows.length,0);
+ await as(A);await db.exec("update miflix_watch_parties set state=jsonb_set(state,'{sourceKey}','\"safe-key\"') where room_code='123456';update miflix_party_sources set expires_at=now()-interval '1 second'");await as(B);assert.equal((await db.query('select * from miflix_party_sources')).rows.length,0);
+ await as(A);await db.exec("update miflix_party_sources set expires_at=now()+interval '1 hour';update miflix_watch_parties set state=jsonb_set(state,'{shareStream}','false') where room_code='123456'");assert.equal((await db.query('select * from miflix_party_sources')).rows.length,0);
+ await db.exec("reset role;set role anon");const preview=(await db.query("select miflix_party_preview('123456') as data")).rows[0].data;assert.equal(preview.title,'A title');assert.equal(preview.host,'randy');assert(!JSON.stringify(preview).includes('private'));assert(!('sourceKey' in preview));await denied('select * from miflix_party_sources');assert.deepEqual((await db.query("select miflix_party_preview('000000') as data")).rows[0].data,{});
+ await db.exec("reset role;update miflix_watch_parties set expires_at=now()-interval '1 second';set role anon");assert.deepEqual((await db.query("select miflix_party_preview('123456') as data")).rows[0].data,{});
+ await db.close();console.log('PASS: RC63 SQL rerun, friend consent/invitations, approved membership, source RLS, wrong-source/expiry isolation, source revocation, host-only controls, safe anonymous QR preview');
+})().catch(e=>{console.error(e);process.exitCode=1;});

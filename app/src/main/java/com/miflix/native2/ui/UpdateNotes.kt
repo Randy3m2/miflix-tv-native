@@ -21,6 +21,18 @@ internal object UpdateNotes {
         "Connect phone / PC abre tu catálogo de Vercel conectado a la TV: QR/enlace sin código manual y botón Play on TV." to "Connect phone / PC opens your Vercel catalog connected to the TV: QR/link with no manual code and a Play on TV button."
     )
     val changes=listOf(
+        "Participantes del party en avatares compactos, visibles solo con los controles del player." to "Compact party member avatars, visible only with player controls.",
+        "Panel lateral de Friends & Party con código, QR, miembros e invitaciones a amigos." to "Friends & Party side panel with code, QR, members and friend invitations.",
+        "Share my stream opcional, apagado por defecto y limitado a miembros admitidos." to "Optional Share my stream, off by default and restricted to admitted members.",
+        "Fuente del host visible para invitados e identificada en Playback links." to "Host source visible to guests and identified in Playback links.",
+        "Switch party to the current title y Watch with the party desde el reproductor." to "Switch party to the current title and Watch with the party from the player.",
+        "Control exclusivo del host opcional; los invitados pueden pausar o buscar localmente y volver al party." to "Optional host-only controls; guests can pause or seek locally and rejoin the party.",
+        "Información de reproducción transparente sobre el video, con archivo, tamaño, video, audio y subtítulos." to "Transparent playback information over the video, with file, size, video, audio and subtitle details.",
+        "Sinopsis, fondo y logo en una zona fija superior al enfocar títulos; expansión lateral después de 3 segundos." to "Synopsis, backdrop and logo in a fixed upper area as titles gain focus; sideways expansion after 3 seconds.",
+        "Navegación rápida con repeticiones verticales reguladas y menos cambios de layout por fila." to "Fast navigation with coalesced vertical repeats and fewer per-row layout changes.",
+        "Se conservan solicitudes manuales, presencia cada 5 minutos y avatar cada 4 minutos." to "Manual requests, 5-minute presence and 4-minute avatar limits are preserved."
+    )
+    val rc62Changes=listOf(
         "Solicitudes de acceso a Party: consulta manual con Refresh requests en Friends y en el reproductor." to "Party access requests: manual lookup with Refresh requests in Friends and in the player.",
         "Presencia cada 5 minutos; avatar cambiado como máximo cada 4 minutos, sin escrituras si no cambió." to "Presence every 5 minutes; changed avatar at most every 4 minutes, with no writes if unchanged.",
         "Auriculares: salida PCM con mezcla estéreo real; reinicio de audio al conectar/desconectar conservando posición y pausa." to "Headphones: PCM output with real stereo mixing; audio restarts on connection changes while preserving position and pause.",
@@ -31,7 +43,7 @@ internal object UpdateNotes {
         "Fichas web con imagen superior, sinopsis, Play on TV, My List, recomendar, compartir y eventos." to "Web title profiles with hero artwork, synopsis, Play on TV, My List, recommend, share and events.",
         "Enlaces cortos para compartir títulos y Recientes del historial sincronizado del perfil, de 25 en 25." to "Short title sharing links and Recents from the profile’s synced history, paged in groups of 25."
     )
-    val previousChanges=rc59Changes+listOf(
+    val previousChanges=rc62Changes+rc59Changes+listOf(
         "Menú de amigos: Watch, View Details, Recommendations y Close; detalles abre la ficha sin iniciar reproducción." to "Friend menu: Watch, View Details, Recommendations and Close; details opens the title without starting playback.",
         "Enlaces de Comet y Torrentio con texto ordenado e insignias de Dolby/HDR según sus metadatos." to "Clean Comet and Torrentio link metadata with small Dolby/HDR badges when reported by the source.",
         "Envío local a TV por Wi-Fi, con enlace y código de conexión; sin reproducción web." to "Send titles to TV over local Wi-Fi with a connection link and code; no web playback.",
@@ -64,7 +76,7 @@ internal fun ChangelogDialog(state: AppState,close: ()->Unit) {
             androidx.tv.material3.Text("Changelog / Details · ${BuildConfig.VERSION_NAME}",color=androidx.compose.ui.graphics.Color.White,fontSize=24.sp)
             androidx.compose.foundation.lazy.LazyColumn(androidx.compose.ui.Modifier.weight(1f,false),verticalArrangement=androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
                 items(UpdateNotes.changes.size) {index -> val change=UpdateNotes.changes[index];androidx.tv.material3.Text("• "+tr(change.first,change.second),color=Muted,fontSize=15.sp,modifier=androidx.compose.ui.Modifier.fillMaxWidth().contentFocusBorder().focusable().padding(10.dp)) }
-                item {androidx.tv.material3.Text("RC57–RC59",color=Accent,fontSize=20.sp)}
+                item {androidx.tv.material3.Text("RC57–RC62",color=Accent,fontSize=20.sp)}
                 items(UpdateNotes.previousChanges.size) {index -> val change=UpdateNotes.previousChanges[index];androidx.tv.material3.Text("• "+tr(change.first,change.second),color=Muted,fontSize=15.sp,modifier=androidx.compose.ui.Modifier.fillMaxWidth().contentFocusBorder().focusable().padding(10.dp)) }
             }
             FocusButton(tr("Cerrar","Close"),modifier=androidx.compose.ui.Modifier.focusRequester(focus)) {state.markNoticesRead(UpdateNotes.id);close()}

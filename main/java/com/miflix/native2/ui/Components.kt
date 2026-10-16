@@ -189,6 +189,7 @@ fun MediaCard(
     allowContextMenu: Boolean = true,
     onClick: () -> Unit
 ) {
+    val publishPreview=LocalBrowsePreview.current
     val titleActions=LocalTitleActions.current
     val hold=onLongClick ?: titleActions?.takeIf {allowContextMenu}?.let {action -> {action(item)}}
     var focused by remember(item.cloudId) { mutableStateOf(false) }
@@ -218,7 +219,7 @@ fun MediaCard(
                 
                 .onFocusChanged {
                     focused = it.isFocused
-                    if (it.isFocused) onFocused(item)
+                    if (it.isFocused) { onFocused(item);publishPreview?.invoke(item) }
                 }
                 .focusable()
                 .then(if(hold==null) Modifier.tvClick(onClick) else Modifier.tvPlaybackClick(onClick,hold))

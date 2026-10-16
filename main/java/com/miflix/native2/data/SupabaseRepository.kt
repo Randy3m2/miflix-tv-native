@@ -140,7 +140,10 @@ class SupabaseRepository(private val url: String, private val key: String) {
         val po = JSONObject()
         progress.forEach { (k, p) ->
             po.put(k, JSONObject().put("percent", p.percent).put("position", p.position / 1000.0).put("duration", p.duration / 1000.0)
-                .put("updatedAt", p.updatedAt).put("season", p.season).put("episode", p.episode))
+                .put("updatedAt", p.updatedAt)
+        .put("title",p.title).put("overview",p.overview).put("poster",p.poster ?: JSONObject.NULL).put("logo",p.logo ?: JSONObject.NULL)
+        .put("sourceName",p.sourceName).put("sourceFilename",p.sourceFilename).put("sourceSize",p.sourceSize).put("sourceKey",p.sourceKey)
+        .put("shareStream",p.shareStream).put("hostOnlyControls",p.hostOnlyControls).put("season", p.season).put("episode", p.episode))
         }
         val body = JSONObject().put("p_profile", profileId)
             .put("p_adds", JSONArray((favorites - baseline).toList()))
@@ -202,7 +205,13 @@ class SupabaseRepository(private val url: String, private val key: String) {
             liveChannelId = state.optString("liveChannelId"),
             liveProvider = state.optString("liveProvider"),
             liveTitle = state.optString("liveTitle"),
-            liveType = state.optString("liveType","tv")
+            liveType = state.optString("liveType","tv"),
+            title=state.optString("title"),overview=state.optString("overview"),
+            poster=state.optString("poster").takeIf {it.startsWith("https://image.tmdb.org/")},
+            logo=state.optString("logo").takeIf {it.startsWith("https://image.tmdb.org/")},
+            sourceName=state.optString("sourceName"),sourceFilename=state.optString("sourceFilename"),
+            sourceSize=state.optLong("sourceSize"),sourceKey=state.optString("sourceKey"),
+            shareStream=state.optBoolean("shareStream"),hostOnlyControls=state.optBoolean("hostOnlyControls")
         )
     }
 
@@ -222,6 +231,31 @@ class SupabaseRepository(private val url: String, private val key: String) {
         .put("positionMs", p.positionMs)
         .put("playing", p.playing)
         .put("updatedAt", p.updatedAt)
+        .put("title",p.title).put("overview",p.overview).put("poster",p.poster ?: JSONObject.NULL).put("logo",p.logo ?: JSONObject.NULL)
+        .put("sourceName",p.sourceName).put("sourceFilename",p.sourceFilename).put("sourceSize",p.sourceSize).put("sourceKey",p.sourceKey)
+        .put("shareStream",p.shareStream).put("hostOnlyControls",p.hostOnlyControls)
+
+    suspend fun sharePartySource(session: CloudSession,p: WatchParty,stream: com.miflix.native2.model.StreamChoice?) {
+        val code=URLEncoder.encode(p.roomCode,"UTF-8")
+        if(stream==null) { Http.text("$url/rest/v1/miflix_party_sources?room_code=eq.$code","DELETE",headers(session));return }
+        require(stream.url.startsWith("https://") || stream.url.startsWith("http://")) {"This source cannot be shared"}
+        val requestHeaders=JSONObject();stream.requestHeaders.forEach {(k,v) -> requestHeaders.put(k,v)}
+        val body=JSONObject().put("room_code",p.roomCode).put("cloud_id",p.cloudId).put("season",p.season).put("episode",p.episode)
+            .put("source_key",p.sourceKey).put("url",stream.url).put("request_headers",requestHeaders)
+            .put("expires_at",isoFromMillis(System.currentTimeMillis()+3*60*60*1000L))
+        Http.text("$url/rest/v1/miflix_party_sources?on_conflict=room_code","POST",headers(session)+("Prefer" to "resolution=merge-duplicates,return=minimal"),body.toString())
+    }
+    suspend fun readPartySource(session: CloudSession,p: WatchParty): com.miflix.native2.model.StreamChoice? {
+        if(!p.shareStream) return null
+        val code=URLEncoder.encode(p.roomCode,"UTF-8")
+        val a=JSONArray(Http.text("$url/rest/v1/miflix_party_sources?room_code=eq.$code&select=*",headers=headers(session)))
+        val x=a.optJSONObject(0) ?: return null
+        if(x.optString("cloud_id")!=p.cloudId || x.optInt("season")!=p.season || x.optInt("episode")!=p.episode || x.optString("source_key")!=p.sourceKey) return null
+        val h=x.optJSONObject("request_headers") ?: JSONObject();val parsed=mutableMapOf<String,String>()
+        h.keys().forEach {key -> parsed[key]=h.getString(key)}
+        val url=x.optString("url").takeIf {it.startsWith("http://") || it.startsWith("https://")} ?: return null
+        return com.miflix.native2.model.StreamChoice(p.sourceName.ifBlank {"Party source"},url,p.sourceName,filename=p.sourceFilename,videoSize=p.sourceSize,requestHeaders=parsed,addonName="Party")
+    }
 
     private suspend fun readRow(session: CloudSession, profileId: String): JSONObject? {
         val pid = URLEncoder.encode(profileId, "UTF-8")

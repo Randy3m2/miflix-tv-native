@@ -1,5 +1,6 @@
 package com.miflix.native2.ui
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -50,36 +51,66 @@ fun PlaybackInfoDialog(player: ExoPlayer, request: PlayerRequest, close: () -> U
     var video by remember { mutableStateOf<Format?>(player.videoFormat) }
     var audio by remember { mutableStateOf<Format?>(player.audioFormat) }
     var buffer by remember { mutableStateOf(0L) }
-    LaunchedEffect(player) { while(true) { video=player.videoFormat;audio=player.audioFormat;buffer=player.totalBufferedDuration;delay(1000) } }
+    var subtitle by remember {mutableStateOf<Format?>(null)}
+    LaunchedEffect(player) { while(true) {
+        video=player.videoFormat;audio=player.audioFormat;buffer=player.totalBufferedDuration
+        subtitle=player.currentTracks.groups.filter {it.type==C.TRACK_TYPE_TEXT}.firstNotNullOfOrNull {group ->
+            (0 until group.length).firstOrNull {group.isTrackSelected(it)}?.let {group.getTrackFormat(it)}
+        }
+        delay(1000)
+    } }
     val first=remember { FocusRequester() }
-    LaunchedEffect(Unit) { withFrameNanos { };first.requestFocus() }
+    val presentation=remember(request.stream) {com.miflix.native2.data.StreamPresentation.parse(request.stream.addonName,request.stream.name,request.stream.title,request.stream.filename,request.stream.videoSize)}
     fun rate(f: Format?): String {
         val bitrate=f?.averageBitrate?.takeIf { it>0 } ?: f?.peakBitrate?.takeIf { it>0 }
-        return bitrate?.let { String.format(Locale.US,"%.2f Mbps",it/1_000_000.0) } ?: tr("No informado","Not reported")
+        return bitrate?.let { String.format(Locale.US,"%.2f Mbps",it/1_000_000.0) } ?: "—"
     }
     Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
-        Column(Modifier.width(690.dp).heightIn(max=510.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-            Text(tr("Información de reproducción","Playback information"),color=Color.White,fontSize=25.sp)
-            LazyColumn(Modifier.weight(1f,false),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                item { Text(request.item.title,color=Color.White,fontSize=21.sp) }
-                item { InfoLine(tr("Resolución","Resolution"),video?.takeIf { it.width>0 && it.height>0 }?.let { "${it.width} × ${it.height}" } ?: "—") }
-                item { InfoLine("Video",listOfNotNull(video?.sampleMimeType,video?.codecs,video?.frameRate?.takeIf { it>0 }?.let { "$it fps" }).joinToString(" · ").ifBlank { "—" }) }
-                item { InfoLine(tr("Bitrate de vídeo (declarado)","Video bitrate (declared)"),rate(video)) }
-                item { InfoLine(tr("Formato de audio","Audio format"),listOfNotNull(audio?.sampleMimeType,audio?.codecs,audio?.channelCount?.takeIf { it>0 }?.let { "$it ch" },audio?.sampleRate?.takeIf { it>0 }?.let { "$it Hz" },audio?.language).joinToString(" · ").ifBlank { "—" }) }
-                item { InfoLine(tr("Bitrate de audio (declarado)","Audio bitrate (declared)"),rate(audio)) }
-                item { InfoLine(tr("Nombre del archivo","File name"),request.stream.filename.ifBlank { tr("No informado por el proveedor","Not supplied by provider") }) }
-                item { InfoLine(tr("Tamaño del archivo","File Size"),request.stream.videoSize.takeIf { it>0 }?.let {
-                    String.format(Locale.US,"%.2f GiB (%d bytes)",it/1073741824.0,it)
-                } ?: tr("No informado por el proveedor","Not supplied by provider")) }
-                item { InfoLine(tr("Fuente","Source"),request.stream.name) }
-                item { InfoLine("Buffer",String.format(Locale.US,"%.1f s",buffer/1000.0)) }
+        val view=androidx.compose.ui.platform.LocalView.current
+        DisposableEffect(view) {
+            (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window?.setDimAmount(0f)
+            onDispose { }
+        }
+        LaunchedEffect(Unit) {withFrameNanos { };runCatching {first.requestFocus()} }
+        Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(
+            listOf(Color(0xEC08080E),Color(0xC408080E),Color(0x6008080E)))).padding(horizontal=40.dp,vertical=26.dp)) {
+            Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+                Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+                    Text(tr("Información de reproducción","Playback information"),color=Color.White,fontSize=25.sp,modifier=Modifier.weight(1f))
+                    FocusButton(tr("Cerrar","Close"),modifier=Modifier.focusRequester(first),onClick=close)
+                }
+                LazyColumn(Modifier.weight(1f).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(18.dp),contentPadding=PaddingValues(bottom=24.dp)) {
+                    item {InfoLine(tr("ORIGEN","SOURCE"),presentation.heading)}
+                    item {Text(request.item.title+if(request.season>0) " · S${request.season} E${request.episode}" else "",color=Color.White,fontSize=20.sp)}
+                    item {InfoLine(tr("Motor de reproducción","Playback engine"),"Media3 · ExoPlayer")}
+                    item {Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(24.dp)) {
+                        Box(Modifier.weight(1f)) {InfoLine(tr("Nombre del archivo","File name"),com.miflix.native2.data.PartySourcePolicy.label(request.stream.filename).ifBlank {"—"})}
+                        Box(Modifier.width(160.dp)) {InfoLine(tr("Tamaño del archivo","File Size"),request.stream.videoSize.takeIf {it>0}?.let {String.format(Locale.US,"%.2f GiB",it/1073741824.0)} ?: tr("No informado","Not reported"))}
+                    }}
+                    item {Text("VIDEO",color=Muted,fontSize=12.sp)}
+                    item {Row(horizontalArrangement=Arrangement.spacedBy(26.dp)) {
+                        Box(Modifier.weight(1f)) {InfoLine(tr("Códec","Codec"),listOfNotNull(video?.sampleMimeType,video?.codecs).joinToString(" · ").ifBlank {"—"})}
+                        Box(Modifier.weight(1f)) {InfoLine(tr("Resolución","Resolution"),video?.takeIf {it.width>0 && it.height>0}?.let {"${it.width} × ${it.height}"} ?: "—")}
+                        Box(Modifier.weight(1f)) {InfoLine("Bitrate",rate(video))}
+                    }}
+                    item {Text("AUDIO",color=Muted,fontSize=12.sp)}
+                    item {Row(horizontalArrangement=Arrangement.spacedBy(26.dp)) {
+                        Box(Modifier.weight(1f)) {InfoLine(tr("Códec","Codec"),audio?.sampleMimeType ?: "—")}
+                        Box(Modifier.weight(1f)) {InfoLine(tr("Canales","Channels"),audio?.channelCount?.takeIf {it>0}?.toString() ?: "—")}
+                        Box(Modifier.weight(1f)) {InfoLine(tr("Frecuencia","Sample rate"),audio?.sampleRate?.takeIf {it>0}?.let {"${it/1000.0} kHz"} ?: "—")}
+                        Box(Modifier.weight(1f)) {InfoLine(tr("Idioma","Language"),audio?.language ?: "—")}
+                    }}
+                    item {Row(horizontalArrangement=Arrangement.spacedBy(26.dp)) {
+                        Box(Modifier.weight(1f)) {InfoLine(tr("Subtítulos","Subtitles"),listOfNotNull(subtitle?.label,subtitle?.language).joinToString(" · ").ifBlank {tr("Desactivados","Off")})}
+                        Box(Modifier.weight(1f)) {InfoLine("Buffer",String.format(Locale.US,"%.1f s",buffer/1000.0))}
+                    }}
+                }
             }
-            FocusButton(tr("Cerrar","Close"),modifier=Modifier.focusRequester(first)) { close() }
         }
     }
 }
 @Composable
-private fun InfoLine(label: String,value: String) { Column { Text(label,color=Muted,fontSize=14.sp);Text(value,color=Color.White,fontSize=18.sp) } }
+private fun InfoLine(label: String,value: String) { Column(Modifier.fillMaxWidth().contentFocusBorder(8.dp).focusable().padding(6.dp)) { Text(label,color=Muted,fontSize=14.sp);Text(value,color=Color.White,fontSize=18.sp) } }
 
 internal fun android.content.Context.playbackActivity(): androidx.activity.ComponentActivity? {
     var current: android.content.Context=this

@@ -20,6 +20,17 @@ class TmdbRepository(var token: String) {
     var language: String = "en-US"
     private val base = "https://api.themoviedb.org/3"
 
+    private val browseLogos=linkedMapOf<String,String?>()
+    suspend fun browseLogo(item: MediaSummary): String? {
+        val key="$language:${item.cloudId}"
+        if(browseLogos.containsKey(key)) return browseLogos[key]
+        val a=get("/${if(item.type=="series") "tv" else "movie"}/${item.id}/images",mapOf("include_image_language" to "${language.substringBefore('-')},en,null")).optJSONArray("logos")
+        val rows=(0 until (a?.length() ?: 0)).mapNotNull {a?.optJSONObject(it)}
+        val logo=rows.sortedBy {if(it.optString("iso_639_1")==language.substringBefore('-')) 0 else 1}.firstOrNull()?.optString("file_path")?.takeIf {it.isNotBlank()}?.let {image(it,"w500")}
+        if(browseLogos.size>=60) browseLogos.remove(browseLogos.keys.first())
+        browseLogos[key]=logo
+        return logo
+    }
     private val filterCreditsCache=linkedMapOf<String,List<JSONObject>>()
     suspend fun filterPeople(query: String): List<CatalogPerson> {
         val a=get("/search/person",mapOf("query" to query.trim(),"include_adult" to "false")).optJSONArray("results") ?: return emptyList()

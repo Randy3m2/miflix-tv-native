@@ -90,6 +90,16 @@ fun FriendsScreen(state: AppState) {
                     else LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(bottom=32.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 if(state.session==null) item { FocusButton(tr("Iniciar sesión","Sign in")) { state.screen=Screen.SETTINGS } }
                 else {
+                    if(tab==0 || tab==2) items(state.partyInvitations,key={"party-invite:${it.room}"}) {invitation ->
+                        Row(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(18.dp)).padding(16.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
+                            Column(Modifier.weight(1f)) {
+                                Text(tr("Invitación de ","Party invitation from ")+invitation.host,color=Accent,fontSize=14.sp)
+                                Text(invitation.title,color=Color.White,fontSize=18.sp,maxLines=1)
+                                Text("Party · ${invitation.room}",color=Muted,fontSize=12.sp)
+                            }
+                            FocusButton(tr("Unirme","Join")) {state.launch {state.socialAction {state.joinWatchParty(invitation.room)}}}
+                        }
+                    }
                     if(tab==2) {
                         item { AccessRequests(state) }
                         items(state.friendRows.filter { it.status=="pending" }) { row ->

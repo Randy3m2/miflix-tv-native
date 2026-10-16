@@ -299,6 +299,7 @@ class AppState(context: Context) {
     }
     private val partyPlaybackMutex=Mutex()
     suspend fun requestPartyPlayback(req: PlayerRequest, playing: Boolean) {
+        if(watchParty?.hostOnlyControls==true && partyRole==PartyRole.GUEST) return
         val s=session ?: return; val room=watchParty?.roomCode ?: return
         partyPlaybackMutex.withLock {
             if(session?.userId==s.userId && watchParty?.roomCode==room && playerRequest?.playbackId==req.playbackId) {
@@ -307,6 +308,7 @@ class AppState(context: Context) {
         }
     }
     suspend fun takePartyPlayback(): Boolean? {
+        if(watchParty?.hostOnlyControls==true) return null
         val s=session ?: return null; val room=watchParty?.roomCode ?: return null
         return social.takePlayback(s,room)
     }
@@ -395,6 +397,57 @@ class AppState(context: Context) {
     val trakt = TraktRepository(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY)
     var nickname by mutableStateOf("")
     val partyMembers = mutableStateListOf<SocialPerson>()
+    val partyInvitations = mutableStateListOf<PartyInvitation>()
+    var partyOptionsBusy by mutableStateOf(false)
+        private set
+    private var sharedSourcePlaybackId: String? = null
+    suspend fun inviteToParty(friendId: String) {
+        val account=session ?: return;val room=watchParty ?: return
+        check(partyRole==PartyRole.HOST)
+        social.inviteParty(account,room.roomCode,friendId)
+        partyStatus=tr("Invitación enviada","Invitation sent")
+    }
+    suspend fun previewParty(code: String): org.json.JSONObject? {
+        if(!code.matches(Regex("[0-9]{6}"))) return null
+        return social.previewParty(session ?: return null,code).takeIf {it.length()>0}
+    }
+    private fun partyPresentation(p: WatchParty,req: PlayerRequest): WatchParty = p.copy(
+        title=req.item.title,overview=req.item.overview.take(800),poster=req.item.poster,
+        logo=details?.takeIf {it.summary.cloudId==req.item.cloudId}?.logo,
+        sourceName=PartySourcePolicy.label(req.stream.addonName+" · "+req.stream.name),
+        sourceFilename=PartySourcePolicy.label(req.stream.filename),sourceSize=req.stream.videoSize,
+        sourceKey=PartySourcePolicy.key(req.stream))
+    suspend fun configureParty(share: Boolean?=null,hostOnly: Boolean?=null) = partyPublishMutex.withLock {
+        val account=session ?: return@withLock;val old=watchParty ?: return@withLock
+        check(partyRole==PartyRole.HOST)
+        if(partyOptionsBusy) return@withLock
+        partyOptionsBusy=true
+        try {
+            val req=playerRequest
+            if(share==true) require(req!=null && req.item.cloudId==old.cloudId && req.season==old.season && req.episode==old.episode) {tr("Cambia primero el party a este contenido","Switch the party to this title first")}
+            val matching=req?.takeIf {it.item.cloudId==old.cloudId && it.season==old.season && it.episode==old.episode}
+            val next=(matching?.let {partyPresentation(old,it)} ?: old).copy(
+                shareStream=share ?: old.shareStream,hostOnlyControls=hostOnly ?: old.hostOnlyControls)
+            if(next.shareStream && share==true) {
+                require(req!=null) {tr("Inicia primero un contenido","Start a title first")}
+                cloud.sharePartySource(account,next,req.stream)
+                sharedSourcePlaybackId=req.playbackId
+            }
+            cloud.updateWatchParty(account,next)
+            if(session?.userId==account.userId && watchParty?.roomCode==old.roomCode) watchParty=next
+            if(share==false) sharedSourcePlaybackId=null
+        } finally { partyOptionsBusy=false }
+    }
+    suspend fun usePartySource() {
+        val account=session ?: return;val remote=refreshParty() ?: return;val epoch=partyEpoch
+        val stream=cloud.readPartySource(account,remote) ?: error(tr("El host ya no comparte ese enlace o expiró","The host stopped sharing this source or it expired"))
+        if(!sameParty(epoch,account.userId,remote.roomCode)) return
+        val current=playerRequest ?: return
+        if(current.item.cloudId!=remote.cloudId || current.season!=remote.season || current.episode!=remote.episode) return
+        playerRequest=current.copy(stream=stream,resumeMs=remote.positionMs,playbackId=UUID.randomUUID().toString())
+        sourceSelection=null;screen=Screen.PLAYER
+    }
+
     val friendActivity = mutableStateListOf<FriendActivity>()
     val accessRequests = mutableStateListOf<AccessRequest>()
     var pendingPartyCode by mutableStateOf<String?>(null)
@@ -441,8 +494,10 @@ class AppState(context: Context) {
         val s=session ?: return
         refreshFriends()
         val people=social.activity(s)
+        val invitations=try {social.partyInvitations(s)} catch(e: CancellationException) {throw e} catch(_: Exception) {emptyList()}
         if(session?.userId!=s.userId) return
         friendActivity.clear(); friendActivity.addAll(people)
+        partyInvitations.clear();partyInvitations.addAll(invitations)
     }
     suspend fun refreshSocialActivity() {
         val s=session ?: return
@@ -856,6 +911,7 @@ class AppState(context: Context) {
     var pairingRequest by mutableStateOf<PairingRequest?>(null)
     var pairingStatus by mutableStateOf("")
 
+    var partyFollowHost by mutableStateOf(true)
     var watchParty by mutableStateOf<WatchParty?>(null)
     var partyRole by mutableStateOf<PartyRole?>(null)
     var partyStatus by mutableStateOf("")
@@ -1704,7 +1760,7 @@ class AppState(context: Context) {
     suspend fun createWatchParty(withCurrentTitle: Boolean = false): WatchParty? {
         val s = session ?: run { error = tr("Inicia sesión antes de crear una sala","Sign in before creating a Watch Party"); return null }
         watchParty?.let { return it }
-        val item = if (withCurrentTitle) selected ?: playerRequest?.item else null
+        val item = if (withCurrentTitle) playerRequest?.item ?: selected else null
         val req = if (withCurrentTitle && playerRequest?.item?.cloudId == item?.cloudId) playerRequest else null
         val saved = item?.let { progress[it.cloudId] }
         val room = (100000..999999).random().toString()
@@ -1720,7 +1776,9 @@ class AppState(context: Context) {
             liveChannelId = req?.liveChannelId.orEmpty(),
             liveProvider = req?.liveProvider.orEmpty(),
             liveType = req?.liveType ?: "tv",
-            liveTitle = if (req?.live == true) req.item.title else ""
+            liveTitle = if (req?.live == true) req.item.title else "",
+            title=item?.title.orEmpty(),overview=item?.overview.orEmpty().take(800),poster=item?.poster,
+            logo=details?.takeIf {it.summary.cloudId==item?.cloudId}?.logo
         )
         val epoch=partyEpoch
         return runCatching {
@@ -1752,6 +1810,7 @@ class AppState(context: Context) {
         val party = cloud.readWatchParty(s, code.trim()) ?: run { error = tr("No se encontró la sala","Watch Party room not found"); return }
         if(partyEpoch!=epoch || session?.userId!=s.userId) return
         partyEpoch++; invalidatePlaybackWork(); knownPartyMembers=null
+        partyFollowHost=true
         watchParty = party
         partyRole = if (party.hostUserId == s.userId) PartyRole.HOST else PartyRole.GUEST
         rememberRoom(party.roomCode)
@@ -1766,7 +1825,7 @@ class AppState(context: Context) {
         val s = session ?: return@withLock
         if (partyRole != PartyRole.HOST || playerRequest?.playbackId!=req.playbackId) return@withLock
         val current = watchParty ?: return@withLock
-        val next = current.copy(
+        var next = partyPresentation(current,req).copy(
             cloudId = req.item.cloudId,
             liveChannelId = req.liveChannelId,
             liveProvider = req.liveProvider,
@@ -1778,6 +1837,11 @@ class AppState(context: Context) {
             playing = playing,
             updatedAt = System.currentTimeMillis()
         )
+        if(next.shareStream && sharedSourcePlaybackId!=req.playbackId) {
+            try {cloud.sharePartySource(s,next,req.stream);sharedSourcePlaybackId=req.playbackId}
+            catch(e: CancellationException) {throw e}
+            catch(_: Exception) {next=next.copy(shareStream=false);error=tr("No se pudo compartir la nueva fuente","Could not share the new source")}
+        }
         watchParty = next
         try { cloud.updateWatchParty(s,next) } catch(e: CancellationException) { throw e } catch(e: Exception) { error=e.message }
     }
@@ -1799,6 +1863,19 @@ class AppState(context: Context) {
             val current=playerRequest
             if(current!=null && current.item.cloudId==remote.cloudId && current.season==remote.season && current.episode==remote.episode) return
             if(remote.cloudId.isBlank()) return
+            if(remote.shareStream) {
+                val shared=try {cloud.readPartySource(session ?: return,remote)} catch(e: CancellationException) {throw e} catch(_: Exception) {null}
+                if(!valid()) return
+                if(shared!=null) {
+                    val item=if(remote.liveChannelId.isNotBlank()) MediaSummary(remote.liveChannelId.hashCode(),"live",remote.title,remote.overview,null,remote.poster,0.0,"LIVE") else tmdb.byCloudId(remote.cloudId)
+                    if(!valid()) return
+                    if(item!=null) {
+                        selected=item;playerRequest=PlayerRequest(item,shared,remote.season,remote.episode,remote.positionMs,
+                            remote.liveChannelId.isNotBlank(),remote.liveChannelId,remote.liveProvider,liveType=remote.liveType)
+                        screen=Screen.PLAYER;return
+                    }
+                }
+            }
             if(remote.liveChannelId.isNotBlank()) {
                 val manifest=calendarLiveManifest(remote.liveProvider)
                 val channel=LiveChannel(remote.liveChannelId,remote.liveType,remote.liveTitle,null,"")
@@ -1825,9 +1902,9 @@ class AppState(context: Context) {
         miniPlayer=false
         partyEpoch++; switchingPartyEpoch=null; invalidatePlaybackWork()
         session?.let { socialPrefs.edit().remove("room_${it.userId}").apply() }
-        watchParty=null; partyRole=null; pendingPartyCode=null; accessRequests.clear()
+        watchParty=null; partyRole=null;partyFollowHost=true; pendingPartyCode=null; accessRequests.clear()
         partyMessages.clear(); floatingEvents.clear(); partyMembers.clear(); lastEventId=-1
-        knownPartyMembers=null; partyJoinedNotice=null; joinedNoticeSequence++
+        knownPartyMembers=null; partyJoinedNotice=null; joinedNoticeSequence++;sharedSourcePlaybackId=null
         partyStatus=""; error=null; partyClosedNotice=false
         if(screen==Screen.PLAYER) screen=if(playerRequest?.live==true) Screen.LIVE_TV else if(selected!=null) Screen.DETAILS else Screen.HOME
         playerRequest=null
@@ -2048,7 +2125,7 @@ class AppState(context: Context) {
         setAccountManifests(emptyList()); sourceSelection=null; playerRequest=null
         watchParty=null; partyRole=null; nickname=""
         partyMessages.clear(); floatingEvents.clear(); partyMembers.clear()
-        calendarEvents.clear();friendRows.clear(); friendPeople.clear(); friendActivity.clear(); accessRequests.clear(); pendingPartyCode=null; lastEventId=-1
+        partyInvitations.clear();calendarEvents.clear();friendRows.clear(); friendPeople.clear(); friendActivity.clear(); accessRequests.clear(); pendingPartyCode=null; lastEventId=-1
         traktConnected=false; traktDevice=null; traktSent.clear()
         session = null
         local.saveSession(null)

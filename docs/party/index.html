@@ -1,10 +1,12 @@
 <!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MiFlix · Party Chat</title>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BruniO · Watch party</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#080b13;color:#eef2ff;font:16px system-ui,sans-serif}main{max-width:720px;margin:auto;padding:20px}h1{margin:10px 0;font-size:30px}h2{font-size:18px}p{color:#b5bfd5;line-height:1.5}input,button{font:inherit;border:1px solid #39445e;border-radius:12px;padding:12px;background:#141c2e;color:white}input{width:100%;margin:6px 0}button{cursor:pointer;min-height:44px}button:focus-visible{outline:3px solid #7edaff}button:disabled{opacity:.5}.row{display:flex;gap:8px;flex-wrap:wrap}.box{background:#101728;border:1px solid #26324a;border-radius:18px;padding:16px;margin:16px 0}[hidden]{display:none!important}#messages{height:36vh;min-height:230px;overflow:auto;display:flex;flex-direction:column;gap:10px}.bubble{background:#1b2940;padding:12px;border-radius:14px;overflow-wrap:anywhere}.bubble small{display:block;color:#90ccff;margin-bottom:5px}.emoji{font-size:25px;flex:1}#status{color:#ffce84}#code{letter-spacing:4px}.member{display:flex;justify-content:space-between;align-items:center;margin:8px 0}.send{display:flex;gap:8px}.send input{margin:0;flex:1}.send button{background:#15648f}label{display:block;margin-top:12px}
-</style></head><body><main><h1>MiFlix · Watch Party</h1><p>Sala <strong id="code"></strong> · El mismo QR aunque cambie la película.</p><p id="status" role="status"></p>
-<section id="login" class="box"><h2>Entra con tu cuenta de MiFlix</h2><form id="loginForm"><label>Email<input id="email" type="email" autocomplete="username" required></label><label>Contraseña<input id="password" type="password" autocomplete="current-password" required></label><button>Entrar al chat</button></form></section>
-<section id="chat" hidden><div class="box"><div class="row"><button id="signout">Cerrar sesión</button><button id="pauseRoom" type="button">⏸ Pausar sala</button><button id="resumeRoom" type="button">▶ Reanudar sala</button><a id="joinApp"><button type="button">Abrir MiFlix</button></a></div><label>Tu nickname<input id="nick" placeholder="3–24 letras, números o _" maxlength="24"></label><button id="saveNick">Guardar nickname</button></div>
+
+#landing{text-align:center;padding:26px 10px 18px}#partyLogo{max-width:85%;max-height:110px;object-fit:contain;margin:20px auto}#partyPoster{width:100%;max-height:220px;object-fit:cover;border-radius:18px}#landing h2{font-size:30px;margin:18px 0 10px}#landingCode{display:flex;justify-content:space-between;gap:12px;margin:28px 0}#landingCode span{flex:1;border-bottom:2px solid #777;padding:12px 0;font-size:28px;font-weight:700}#joinParty{width:100%;background:#7046bd;border:0;border-radius:28px;font-weight:700}body{background:#08080d}.box{background:#14141c;border-color:#2c2939}#partyHost{color:#d3c7eb}
+</style></head><body><main><h1>BruniO · Watch party</h1><section id="landing"><img id="partyPoster" hidden alt=""><img id="partyLogo" hidden alt=""><h2 id="partyTitle">Watch party</h2><p id="partyEpisode"></p><p id="partyOverview"></p><p id="partyHost"></p><div id="landingCode" aria-label="Party code"></div><button id="joinParty" type="button">Join party</button><p>El host aprueba las solicitudes nuevas. Las invitaciones de amigos ya están autorizadas.</p></section><p>Sala <strong id="code"></strong> · El mismo QR aunque cambie la película.</p><p id="status" role="status"></p>
+<section id="login" class="box" hidden><h2>Entra con tu cuenta de BruniO</h2><form id="loginForm"><label>Email<input id="email" type="email" autocomplete="username" required></label><label>Contraseña<input id="password" type="password" autocomplete="current-password" required></label><button>Entrar al chat</button></form></section>
+<section id="chat" hidden><div class="box"><div class="row"><button id="signout">Cerrar sesión</button><button id="pauseRoom" type="button">⏸ Pausar sala</button><button id="resumeRoom" type="button">▶ Reanudar sala</button><a id="joinApp"><button type="button">Abrir BruniO</button></a></div><label>Tu nickname<input id="nick" placeholder="3–24 letras, números o _" maxlength="24"></label><button id="saveNick">Guardar nickname</button></div>
 <div class="box"><h2>Chat en vivo</h2><div id="messages" aria-live="polite"></div><form id="sendForm" class="send"><input id="text" maxlength="400" placeholder="Escribe un mensaje…" required><button>Enviar</button></form><div id="reactions" class="row" style="margin-top:12px"></div></div>
 <div class="box"><h2>Frases rápidas</h2><div id="phrases" class="row"></div><label>Personaliza tus frases (separadas con |)<input id="phraseEdit" maxlength="1000"></label><button id="savePhrases">Guardar frases</button></div>
 <div class="box"><h2>Participantes y amigos</h2><div id="members"></div><label>Agregar por nickname<input id="friendNick" placeholder="Nickname"></label><button id="addFriend">Enviar solicitud</button><div id="friends"></div></div></section></main>
@@ -17,6 +19,11 @@ const $=id=>document.getElementById(id);
 const room=new URLSearchParams(location.search).get('room')||'';
 $('code').textContent=/^\d{6}$/.test(room)?room:'Código inválido';
 $('joinApp').href=`miflix://watch-party?code=${encodeURIComponent(room)}`;
+let joinRequested=false;
+$('landingCode').replaceChildren(...(/^\d{6}$/.test(room)?room:'------').split('').map(c=>{const span=document.createElement('span');span.textContent=c;return span;}));
+async function loadPreview(){try{const {data,error}=await client.rpc('miflix_party_preview',{code:room});if(error||!data?.title)return;$('partyTitle').textContent=data.title;$('partyEpisode').textContent=data.season?'S'+data.season+' E'+data.episode:'';$('partyOverview').textContent=data.overview||'';$('partyHost').textContent='Hosted by '+data.host+' · '+data.members+' members';for(const [key,id] of [['poster','partyPoster'],['logo','partyLogo']]){if(typeof data[key]==='string'&&data[key].startsWith('https://image.tmdb.org/')){$(id).src=data[key];$(id).hidden=false;}}}catch{}}
+if(/^\d{6}$/.test(room))loadPreview();
+$('joinParty').onclick=()=>action(async()=>{if(joinRequested)return;joinRequested=true;const {data}=await client.auth.getSession();if(data.session)await enter(data.session);else{$('login').hidden=false;$('email').focus();}});
 let user=null, cursor=-1, names=new Map(), polling=false, sending=false, lastSend=0, timer=null;
 let phrases=JSON.parse(localStorage.getItem('miflix-party-phrases')||'null')||['¡Qué buena escena!','Un momento, por favor','¡No spoilers!'];
 const status=text=>{$('status').textContent=text;};
@@ -71,11 +78,11 @@ async function enter(session){
  const decision=await checked(client.rpc('miflix_request_access',{code:room}));
  if(decision!=='approved'){
   clearInterval(timer);$('chat').hidden=true;status(decision==='pending'?'Solicitud enviada · esperando aprobación del host':'El host rechazó la solicitud');
-  if(decision==='pending')timer=setInterval(()=>action(()=>waitAccess(session)),2000);
+  if(decision==='pending')timer=setInterval(()=>action(()=>waitAccess(session)),5000);
   return;
  }
  await checked(client.rpc('miflix_join_room',{code:room}));
- $('login').hidden=true;$('chat').hidden=false;
+ $('landing').hidden=true;$('login').hidden=true;$('chat').hidden=false;
  const me=await checked(client.from('miflix_social_profiles').select('nickname').eq('user_id',user.id).maybeSingle());$('nick').value=me?.nickname||'';
  cursor=-1;$('messages').replaceChildren();clearInterval(timer);await poll();await friends();timer=setInterval(()=>action(poll),2000);status('Conectado. Los mensajes y reacciones aparecen en la TV.');
 }
@@ -92,7 +99,7 @@ $('resumeRoom').onclick=()=>action(()=>setRoomPlayback(true));
 $('sendForm').onsubmit=e=>{e.preventDefault();action(async()=>{await send('chat',$('text').value);$('text').value='';});};
 $('saveNick').onclick=()=>action(async()=>{const nick=$('nick').value.trim().toLowerCase();if(!/^[a-z0-9_]{3,24}$/.test(nick))throw new Error('Usa 3–24 letras, números o _');await checked(client.from('miflix_social_profiles').upsert({user_id:user.id,nickname:nick}));status('Nickname guardado');await poll();});
 $('addFriend').onclick=()=>action(async()=>{const nick=$('friendNick').value.trim().toLowerCase();const person=await checked(client.from('miflix_social_profiles').select('user_id').eq('nickname',nick).maybeSingle());if(!person)throw new Error('Nickname no encontrado');await add(person.user_id);});
-$('signout').onclick=()=>action(async()=>{clearInterval(timer);await client.auth.signOut();user=null;$('chat').hidden=true;$('login').hidden=false;status('Sesión cerrada');});
-const {data}=await client.auth.getSession();if(data.session)action(()=>enter(data.session));
+$('signout').onclick=()=>action(async()=>{clearInterval(timer);await client.auth.signOut();user=null;joinRequested=false;$('landing').hidden=false;$('chat').hidden=true;$('login').hidden=false;status('Sesión cerrada');});
+const {data}=await client.auth.getSession();if(data.session)status('Sesión guardada. Pulsa Join party para entrar.');
 window.addEventListener('pagehide',()=>clearInterval(timer));
 </script></body></html>

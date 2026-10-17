@@ -11,6 +11,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 
 internal val LocalHomeShelfPaging=staticCompositionLocalOf {false}
@@ -21,8 +23,9 @@ internal val LocalHomeCardRowHeight=staticCompositionLocalOf {188.dp}
 @Composable
 internal fun HomeShelfFrame(index:Int,scroll:LazyListState,modifier:Modifier=Modifier,content:@Composable ()->Unit) {
     var active by remember {mutableStateOf(false)}
-    LaunchedEffect(active,index) {
-        if(active) {
+    val returning=LocalHomeReturnFocus.current
+    LaunchedEffect(active,index,returning?.pending) {
+        if(active && returning?.pending==null) {
             withFrameNanos { }
             val row=scroll.layoutInfo.visibleItemsInfo.firstOrNull {it.index==index}
             if(row!=null) scroll.animateScrollBy(row.offset.toFloat(),tween(140))
@@ -51,4 +54,34 @@ internal fun HomeHorizontalRail(content:@Composable ()->Unit) {
         }
     }}
     CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalSpec) {content()}
+}
+
+/** Save IDs, not FocusRequester instances, across the details destination. */
+internal class HomeReturnFocus(initialKey:String?,val record:(String)->Unit) {
+    var pending by mutableStateOf(initialKey)
+}
+internal val LocalHomeReturnFocus=staticCompositionLocalOf<HomeReturnFocus?> {null}
+
+@Composable
+internal fun homeReturnFocus(key:String):Modifier {
+    val returning=LocalHomeReturnFocus.current ?: return Modifier
+    val requester=remember {FocusRequester()}
+    LaunchedEffect(returning.pending,key) {
+        if(returning.pending==key) {
+            withFrameNanos { }
+            withFrameNanos { }
+            if(runCatching {requester.requestFocus()}.getOrDefault(false)) returning.pending=null
+        }
+    }
+    return Modifier.focusRequester(requester).onFocusChanged {
+        if(it.isFocused && (returning.pending==null || returning.pending==key)) returning.record(key)
+    }
+}
+
+@Composable
+internal fun BrowseReturnScope(owner:String,content:@Composable ()->Unit) {
+    var savedKey by androidx.compose.runtime.saveable.rememberSaveable(owner) {mutableStateOf<String?>(null)}
+    val returning=remember(owner) {HomeReturnFocus(savedKey) {savedKey=it}}
+    LaunchedEffect(returning) {kotlinx.coroutines.delay(1500);returning.pending=null}
+    CompositionLocalProvider(LocalHomeReturnFocus provides returning) {content()}
 }

@@ -110,7 +110,7 @@ internal fun SpotlightRail(
             items(rows,key={it.cloudId},contentType={"spotlight"}) { item ->
                 SpotlightCard(item,expanded=active && selectedId==item.cloudId && settledId==item.cloudId,landscape=landscape,showTitle=showTitle,
                     progress=progressFor(item),rank=if(ranked) rows.indexOf(item)+1 else null,
-                    awardLabel=if(awardLabels) com.miflix.native2.data.AwardSelections.label(item.id,item.type,tr("es","en")=="es",awardYear) else null,modifier=if(item.cloudId==rows.first().cloudId) Modifier.focusRequester(firstCard) else Modifier,
+                    awardLabel=if(awardLabels) com.miflix.native2.data.AwardSelections.label(item.id,item.type,tr("es","en")=="es",awardYear) else null,modifier=(if(item.cloudId==rows.first().cloudId) Modifier.focusRequester(firstCard) else Modifier).then(homeReturnFocus("media:$title:${item.cloudId}")),
                     onFocused={selectedId=item.cloudId;publishPreview?.invoke(item)},onLongClick=hold?.let {action -> {action(item)}},onClick={onClick(item)})
             }
         }

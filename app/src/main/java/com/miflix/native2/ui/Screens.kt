@@ -126,6 +126,10 @@ internal fun AppShell(state: AppState, screen: Screen, onNavigate: (Screen) -> U
 @Composable
 fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     val simple=state.simpleHome
+    var homeFocusKey by androidx.compose.runtime.saveable.rememberSaveable {mutableStateOf<String?>(null)}
+    val homeReturn=remember {HomeReturnFocus(homeFocusKey) {homeFocusKey=it}}
+    // If a refreshed catalog removed the old target, release the restoration guard.
+    LaunchedEffect(Unit) {delay(1500);homeReturn.pending=null}
     LaunchedEffect(state.activeProfile.id,state.session?.userId,state.interfaceLanguage) {state.loadFamiliarHome()}
     LaunchedEffect(state.activeProfile.id,state.session?.userId,state.interfaceLanguage) {state.loadHolidayHome()}
     LaunchedEffect(state.activeProfile.id,state.session?.userId,state.interfaceLanguage,state.discoveryHistoryKey) {
@@ -147,8 +151,8 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     }
     val openItem: (MediaSummary) -> Unit={ item -> state.launch { state.open(item) } }
     val openCollection: (CollectionTile) -> Unit={ tile -> state.launch { state.openCollection(tile.id,tile.title) } }
-    val returnToTop: () -> Unit={ scope.launch { scroll.animateScrollToItem(0) }; Unit }
-    CompositionLocalProvider(LocalSimpleHome provides simple) {
+    val returnToTop: () -> Unit={ if(homeReturn.pending==null) scope.launch { scroll.animateScrollToItem(0) }; Unit }
+    CompositionLocalProvider(LocalSimpleHome provides simple,LocalHomeReturnFocus provides homeReturn) {
     BoxWithConstraints(Modifier.fillMaxSize().background(Bg)) {
         val homeHeroHeight=(maxHeight*.5f).coerceIn(228.dp,284.dp)
         BrowsingViewport(state,(state.trending+state.movies).firstOrNull {it.type=="movie"},heroHeight=homeHeroHeight,headerInset=84.dp,heroFocus=heroFocus,ranked=(state.trending+state.movies).filter {it.type=="movie"}.distinctBy {it.cloudId}.take(10),
@@ -186,7 +190,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                     }
                     HomeHorizontalRail {
                     LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=32.dp).clipToBounds().smoothHorizontalDpad().firstCardOnDown(genreScroll,firstGenre),state=genreScroll,contentPadding=PaddingValues(horizontal=8.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
-                        items(state.genres,key={it.id}) { genre -> GenreCard(genre.copy(coverUrl=state.genreCovers[genre.id] ?: genre.coverUrl),modifier=if(genre.id==state.genres.firstOrNull()?.id) Modifier.focusRequester(firstGenre) else Modifier) { state.launch { state.openGenre(genre) } } }
+                        items(state.genres,key={it.id}) { genre -> GenreCard(genre.copy(coverUrl=state.genreCovers[genre.id] ?: genre.coverUrl),modifier=(if(genre.id==state.genres.firstOrNull()?.id) Modifier.focusRequester(firstGenre) else Modifier).then(homeReturnFocus("genre:${genre.id}"))) { state.launch { state.openGenre(genre) } } }
                     }
                     }
                     Spacer(Modifier.height(8.dp))
@@ -280,7 +284,7 @@ private fun DirectorRail(state: AppState) {
         modifier=Modifier.padding(start=34.dp,top=12.dp,bottom=16.dp))
     LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=26.dp),contentPadding=PaddingValues(horizontal=8.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
         items(state.directors,key={it.key}) { group ->
-            FocusButton(if(group.key=="russo") tr("Hermanos Russo","Russo Brothers") else group.title) {
+            FocusButton(if(group.key=="russo") tr("Hermanos Russo","Russo Brothers") else group.title,modifier=homeReturnFocus("director:${group.key}")) {
                 state.launch { state.socialAction { state.openDirector(group) } }
             }
         }
@@ -373,7 +377,7 @@ private fun CollectionRail(title: String, rows: List<CollectionTile>, onClick: (
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             items(rows, key = { it.id }) { tile ->
-                Box(if(tile.id==rows.firstOrNull()?.id) Modifier.focusRequester(firstCard) else Modifier) {
+                Box((if(tile.id==rows.firstOrNull()?.id) Modifier.focusRequester(firstCard) else Modifier).then(homeReturnFocus("collection:$title:${tile.id}"))) {
                     CollectionCard(tile) { onClick(tile) }
                 }
             }
@@ -399,6 +403,7 @@ fun CatalogScreen(state: AppState, title: String, catalog: List<MediaSummary>, o
             runCatching {newBatchFocus.requestFocus()}
         }
     }
+    BrowseReturnScope("catalog:$title") {
     AppShell(state, state.screen, { state.screen = it }) {
         BrowsingViewport(state,catalog.firstOrNull(),heroHeight=152.dp) {
         Column(Modifier.fillMaxSize().padding(start = 34.dp, top = 8.dp, end = 34.dp)) {
@@ -410,12 +415,13 @@ fun CatalogScreen(state: AppState, title: String, catalog: List<MediaSummary>, o
             Spacer(Modifier.height(8.dp))
             LazyVerticalGrid(columns=GridCells.Adaptive(220.dp),state=catalogScroll,modifier=Modifier.weight(1f).fillMaxWidth().smoothVerticalDpad(),
                 horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(bottom=48.dp,top=8.dp)) {
-                gridItems(catalog,key={it.cloudId}) { item -> MediaCard(item,landscape=true,compact=true,modifier=Modifier.fillMaxWidth()
+                gridItems(catalog,key={it.cloudId}) { item -> MediaCard(item,landscape=true,compact=true,modifier=Modifier.fillMaxWidth().then(homeReturnFocus("catalog:$title:${item.cloudId}"))
                     .then(if(item.cloudId==catalog.getOrNull(newBatchStart)?.cloudId) Modifier.focusRequester(newBatchFocus) else Modifier),progressPercent=state.progress[item.cloudId]?.percent,onLongClick={state.titleActions(item)}) { state.launch { state.open(item) } } }
                 if(footer!=null) item(span={ androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { footer() }
             }
         }
         } // fixed browse viewport
+    }
     }
 }
 
@@ -429,6 +435,7 @@ fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     LaunchedEffect(Unit) { state.loadDiscoveryArt(); state.loadHomeExtras(); runCatching { state.loadComingSoon() }.onFailure { state.error=it.message } }
     val years = (java.util.Calendar.getInstance().get(java.util.Calendar.YEAR) downTo 1990).map { year -> CollectionTile("year:$year", year.toString(), "") }
+    BrowseReturnScope("collections") {
     AppShell(state, Screen.COLLECTIONS, { state.screen = it }) {
         BrowsingViewport(state,state.comingMovies.firstOrNull() ?: state.movies.firstOrNull(),heroHeight=190.dp) {
         LazyColumn(Modifier.fillMaxSize().smoothVerticalDpad(), contentPadding = PaddingValues(top = 34.dp, bottom = 60.dp)) {
@@ -438,9 +445,9 @@ fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
                     Spacer(Modifier.height(5.dp))
                     Text(tr("Plataformas, géneros y películas por año.","Streaming services, genres and movies by year."), color = Muted, fontSize = 14.sp, lineHeight=17.sp)
                     Spacer(Modifier.height(16.dp))
-                    FocusButton(tr("Filtro personalizado","Custom filter")) { state.screen=Screen.CUSTOM_FILTER }
+                    FocusButton(tr("Filtro personalizado","Custom filter"),modifier=homeReturnFocus("collections:filter")) { state.screen=Screen.CUSTOM_FILTER }
                     Spacer(Modifier.height(12.dp))
-                    FocusButton("🏆 Oscars · "+tr("Por año","By year")) {state.screen=Screen.OSCARS}
+                    FocusButton("🏆 Oscars · "+tr("Por año","By year"),modifier=homeReturnFocus("collections:oscars")) {state.screen=Screen.OSCARS}
                     Spacer(Modifier.height(24.dp))
                 }
             }
@@ -448,7 +455,7 @@ fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
                 Text(tr("Franquicias","Franchises"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(start=34.dp,bottom=12.dp))
                 LazyRow(Modifier.fillMaxWidth(),contentPadding=PaddingValues(horizontal=28.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(16.dp)) {
                     items(listOf("marvel" to "Marvel","dc" to "DC")) { (brand,label) ->
-                        CollectionCard(CollectionTile("franchise:$brand",label,"")) { state.launch { state.openFranchise(brand) } }
+                        Box(homeReturnFocus("franchise:$brand")) {CollectionCard(CollectionTile("franchise:$brand",label,"")) { state.launch { state.openFranchise(brand) } }}
                     }
                 }
                 Spacer(Modifier.height(24.dp))
@@ -457,7 +464,7 @@ fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
                 Text(tr("Géneros","Genres"),color=Color.White,fontSize=24.sp,lineHeight=29.sp,fontWeight=FontWeight.Bold,
                     modifier=Modifier.padding(start=34.dp,bottom=16.dp))
                 LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=26.dp).firstCardOnDown(genreScroll,firstGenre),state=genreScroll,contentPadding=PaddingValues(horizontal=8.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
-                    items(state.genres,key={it.id}) { genre -> GenreCard(genre.copy(coverUrl=state.genreCovers[genre.id] ?: genre.coverUrl),modifier=if(genre.id==state.genres.firstOrNull()?.id) Modifier.focusRequester(firstGenre) else Modifier) { state.launch { state.openGenre(genre) } } }
+                    items(state.genres,key={it.id}) { genre -> GenreCard(genre.copy(coverUrl=state.genreCovers[genre.id] ?: genre.coverUrl),modifier=(if(genre.id==state.genres.firstOrNull()?.id) Modifier.focusRequester(firstGenre) else Modifier).then(homeReturnFocus("genre:${genre.id}"))) { state.launch { state.openGenre(genre) } } }
                 }
                 Spacer(Modifier.height(24.dp))
             } }
@@ -469,7 +476,7 @@ fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
                 item {
                     Text(label,color=Color.White,fontSize=22.sp,modifier=Modifier.padding(start=34.dp,top=8.dp,bottom=10.dp))
                     LazyRow(Modifier.fillMaxWidth().padding(horizontal=26.dp),contentPadding=PaddingValues(horizontal=8.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                        items(years,key={it.id}) { tile -> FocusButton(tile.title,modifier=Modifier.width(106.dp)) { state.launch { state.openYear(tile.title.toInt(),category) } } }
+                        items(years,key={it.id}) { tile -> FocusButton(tile.title,modifier=Modifier.width(106.dp).then(homeReturnFocus("year:$category:${tile.id}"))) { state.launch { state.openYear(tile.title.toInt(),category) } } }
                     }
                     Spacer(Modifier.height(28.dp))
                 }
@@ -478,13 +485,14 @@ fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
                 Text(tr("Películas por año","Movies by Year"), color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 34.dp, top = 8.dp, bottom = 10.dp))
                 LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=26.dp),contentPadding = PaddingValues(horizontal=8.dp,vertical=8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(years, key = { it.id }) { tile ->
-                        FocusButton(tile.title, modifier = Modifier.width(106.dp)) { state.launch { state.openCollection(tile.id, tile.title) } }
+                        FocusButton(tile.title, modifier = Modifier.width(106.dp).then(homeReturnFocus("year:movies:${tile.id}"))) { state.launch { state.openCollection(tile.id, tile.title) } }
                     }
                 }
                 Spacer(Modifier.height(28.dp))
             }
         }
         } // fixed browse viewport
+    }
     }
 }
 
@@ -533,6 +541,7 @@ private fun GenreCard(g: GenreDefinition,modifier: Modifier=Modifier,onClick: ()
 @Composable
 fun PlatformScreen(state: AppState, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
+    BrowseReturnScope("platform:${state.platformTitle}") {
     AppShell(state, Screen.PLATFORM_DETAIL, { state.screen = it }) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = 32.dp, bottom = 64.dp)) {
             item {
@@ -549,6 +558,7 @@ fun PlatformScreen(state: AppState, onBack: () -> Unit) {
                 else MediaRail(section.title, section.items, landscape = section.landscape, onClick = { state.launch { state.open(it) } })
             }
         }
+    }
     }
 }
 

@@ -78,7 +78,7 @@ private fun FocusedBrowseHero(state: AppState,pending: State<MediaSummary?>,fall
                 Text(listOf(if(item.type=="series") tr("Serie","Series") else tr("Película","Movie"),item.year,"★ ${"%.1f".format(item.rating)}").filter {it.isNotBlank()}.joinToString(" · "),color=Muted,fontSize=12.sp)
                 Text(item.overview,color=Color(0xFFD4D1DA),fontSize=if(compact) 12.sp else 13.sp,lineHeight=if(compact) 15.sp else 17.sp,maxLines=if(veryCompact) 1 else if(compact) 2 else if(height>=200.dp) 3 else 2,overflow=TextOverflow.Ellipsis)
                 if(heroFocus!=null) Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                    FocusButton(tr("Ver detalles","View details"),primary=true,onFocused={heroFocused=it},modifier=Modifier.focusRequester(heroFocus)) {state.launch {state.open(item)}}
+                    FocusButton(tr("Ver detalles","View details"),primary=true,onFocused={heroFocused=it},modifier=Modifier.focusRequester(heroFocus).then(homeReturnFocus("home:hero"))) {state.launch {state.open(item)}}
                     onRandom?.let {action -> FocusButton(tr("Aleatorio","Random"),onClick=action)}
                 }
             }

@@ -345,6 +345,8 @@ class AppState(context: Context) {
     val romancePicks=mutableStateListOf<MediaSummary>()
     val koreanPicks=mutableStateListOf<MediaSummary>()
     val classicPicks=mutableStateListOf<MediaSummary>()
+    val oscarPicks=mutableStateListOf<MediaSummary>()
+    val emmyPicks=mutableStateListOf<MediaSummary>()
     private var simpleHomeRevision by mutableIntStateOf(0)
     val simpleHome: Boolean get() {simpleHomeRevision;return playbackPrefs.getBoolean("simple_home:${ratingsKey()}",false)}
     fun saveSimpleHome(enabled: Boolean) {
@@ -359,7 +361,7 @@ class AppState(context: Context) {
     suspend fun loadFamiliarHome() = familiarHomeMutex.withLock {
         if(kidsMode || tmdb.token.isBlank()) return@withLock
         val owner=ratingsKey();val locale=tmdb.language
-        if(!familiarHomeMatches) {romancePicks.clear();koreanPicks.clear();classicPicks.clear()}
+        if(!familiarHomeMatches) {romancePicks.clear();koreanPicks.clear();classicPicks.clear();oscarPicks.clear();emmyPicks.clear()}
         familiarHomeOwner="$owner:$locale"
         suspend fun load(kind: String,target: MutableList<MediaSummary>) {
             val rows=try {tmdb.familiarCatalog(kind)} catch(e: CancellationException) {throw e} catch(_: Exception) {emptyList()}
@@ -367,6 +369,15 @@ class AppState(context: Context) {
         }
         // Three bounded requests, cached locally; no Supabase calls or background polling.
         load("romance",romancePicks);load("kdrama",koreanPicks);load("classics",classicPicks)
+        coroutineScope {
+            suspend fun loadAwards(kind:String,target:MutableList<MediaSummary>) {
+                val rows=try {tmdb.awardCatalog(kind)} catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
+                if(owner==ratingsKey() && locale==tmdb.language && !kidsMode) target.replaceWith(rows)
+            }
+            val oscars=async {loadAwards("oscar",oscarPicks)}
+            val emmys=async {loadAwards("emmy",emmyPicks)}
+            oscars.await();emmys.await()
+        }
         if(owner==ratingsKey() && locale==tmdb.language) refreshForYou()
     }
     val comingMovies=mutableStateListOf<MediaSummary>()

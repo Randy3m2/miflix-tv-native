@@ -1,0 +1,13 @@
+BruniO RC78 / 2.0.0-rc78 / versionCode 22077
+
+Sube los 15 archivos sobre RC77 y ejecuta el workflow Android TV. Espera a que publique APK y update.json para Check for Updates. Sin SQL ni Vercel.
+
+Top 10: numeros blancos dentro de la portada, sombreado local para legibilidad, bordes redondos, misma geometria de enfoque y expansion a los 3 segundos. En Home y Top 10 de plataformas. El orden reutiliza tendencias/catalogo existentes, no un ranking oficial regional de Apple.
+Home: dos filas editoriales con diez peliculas Oscar ganadoras/nominadas y diez series ganadoras de Emmy. Ceremonia 2024 indicada explicitamente. No son los resultados 2026 ni un ranking oficial. Ganadora significa al menos un premio asociado a la produccion, no necesariamente Mejor pelicula/serie. Datos de premios incluidos en codigo; titulos, sinopsis y portadas traducidos desde TMDB.
+Consultas nuevas solo a TMDB: maximo veinte fichas, maximo tres simultaneas, cache por idioma por tres horas. Sin Supabase, polling ni imagenes nuevas para numeros. No se muestran selecciones adultas en Kids. Un fallo individual no cancela toda la fila.
+
+Fuentes verificadas:
+https://www.oscars.org/oscars/ceremonies/2024
+https://www.televisionacademy.com/features/news/awards-news/76th-emmy-winners
+
+Verificacion: analisis sintactico sin nuevos errores respecto a RC77; checks de Friends/Party, navegacion, LIDOM y Home familiar correctos; espejos identicos. Compilacion Android y pruebas visuales/control remoto pendientes en GitHub y TV. No se genero APK aqui.

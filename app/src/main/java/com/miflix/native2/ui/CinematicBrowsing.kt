@@ -68,6 +68,8 @@ internal fun SpotlightRail(
     landscape: Boolean = false,
     progressFor: (MediaSummary) -> Double? = { null },
     eyebrow: String? = null,
+    ranked: Boolean = false,
+    awardLabels: Boolean = false,
     onLongClick: ((MediaSummary) -> Unit)? = null,
     onClick: (MediaSummary) -> Unit
 ) {
@@ -107,7 +109,8 @@ internal fun SpotlightRail(
         LazyRow(Modifier.fillMaxWidth().height(188.dp).smoothHorizontalDpad { !railScroll.isScrollInProgress }.firstCardOnDown(railScroll,firstCard),state=railScroll,contentPadding=PaddingValues(horizontal=34.dp,vertical=6.dp)) {
             items(rows,key={it.cloudId},contentType={"spotlight"}) { item ->
                 SpotlightCard(item,expanded=active && selectedId==item.cloudId && settledId==item.cloudId,landscape=landscape,expandLeft=expandLeft,
-                    progress=progressFor(item),modifier=if(item.cloudId==rows.first().cloudId) Modifier.focusRequester(firstCard) else Modifier,
+                    progress=progressFor(item),rank=if(ranked) rows.indexOf(item)+1 else null,
+                    awardLabel=if(awardLabels) com.miflix.native2.data.AwardSelections.label(item.id,item.type,tr("es","en")=="es") else null,modifier=if(item.cloudId==rows.first().cloudId) Modifier.focusRequester(firstCard) else Modifier,
                     onFocused={selectedId=item.cloudId;publishPreview?.invoke(item)},onLongClick=hold?.let {action -> {action(item)}},onClick={onClick(item)})
             }
         }
@@ -128,7 +131,7 @@ internal fun SpotlightRail(
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolean,expandLeft: Boolean,progress: Double?,modifier: Modifier=Modifier,onFocused: () -> Unit,onLongClick: (() -> Unit)? = null,onClick: () -> Unit) {
+private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolean,expandLeft: Boolean,progress: Double?,rank:Int?=null,awardLabel:String?=null,modifier: Modifier=Modifier,onFocused: () -> Unit,onLongClick: (() -> Unit)? = null,onClick: () -> Unit) {
     val simple=LocalSimpleHome.current
     var focused by remember(item.cloudId) { mutableStateOf(false) }
     val cardBring=remember { BringIntoViewRequester() }
@@ -150,10 +153,24 @@ private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolea
         .padding(3.dp).clip(RoundedCornerShape(16.dp)).background(Panel)) {
         AsyncImage(if(showBackdrop) item.backdrop ?: item.poster else item.poster ?: item.backdrop,
             item.title,Modifier.fillMaxSize(),contentScale=if(simple && !landscape && !expanded) ContentScale.Fit else ContentScale.Crop)
-        if(expanded || simple) Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xD9050505)))))
+        if(expanded || simple || rank!=null || awardLabel!=null) Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xD9050505)))))
         if(expanded || simple) Text(item.title,color=Color.White,fontSize=if(simple) 18.sp else if(expanded) 18.sp else 12.sp,lineHeight=if(simple || expanded) 22.sp else 15.sp,
             fontWeight=FontWeight.Bold,maxLines=2,overflow=TextOverflow.Ellipsis,
-            modifier=Modifier.align(Alignment.BottomStart).padding(10.dp))
+            modifier=Modifier.align(Alignment.BottomStart).padding(start=10.dp,end=10.dp,top=10.dp,bottom=if(awardLabel!=null) 38.dp else 10.dp))
+        rank?.let {position ->
+            // Draw inside the existing clipped artwork: no separate rank tile or changing focus geometry.
+            Box(Modifier.align(Alignment.TopStart).size(width=86.dp,height=80.dp)
+                .background(Brush.radialGradient(listOf(Color(0xA6000000),Color.Transparent))))
+            Text(position.toString(),color=Color.White,fontSize=if(position==10) 46.sp else 56.sp,
+                lineHeight=60.sp,fontWeight=FontWeight.Black,
+                modifier=Modifier.align(Alignment.TopStart).padding(start=10.dp,top=4.dp))
+        }
+        awardLabel?.let {label ->
+            Text(label,color=Color(0xFFFFDEA0),fontSize=10.sp,lineHeight=13.sp,fontWeight=FontWeight.Bold,
+                maxLines=2,overflow=TextOverflow.Ellipsis,
+                modifier=Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                    .background(Color(0xD90B0B10)).padding(horizontal=8.dp,vertical=7.dp))
+        }
         progress?.takeIf { it>0.0 && it<100.0 }?.let { value ->
             Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color(0x88555555))) {
                 Box(Modifier.fillMaxHeight().fillMaxWidth((value/100.0).toFloat().coerceIn(0f,1f)).background(Color.White))

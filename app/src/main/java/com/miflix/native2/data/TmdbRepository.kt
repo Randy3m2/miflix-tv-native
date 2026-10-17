@@ -473,6 +473,23 @@ class TmdbRepository(var token: String) {
         if(title.isNotBlank()) spanishTitles.put(item.cloudId,title)
         return title
     }
+    private val awardSlots=Semaphore(3)
+    internal suspend fun awardCatalog(kind:String):List<MediaSummary> {
+        val locale=language
+        val key="awards:2024:$locale:$kind"
+        discoveryCache.get(key)?.let {return it}
+        val type=if(kind=="emmy") "series" else "movie"
+        val ids=if(kind=="emmy") AwardSelections.emmys else AwardSelections.oscars
+        val rows=coroutineScope {
+            ids.map {id ->async {awardSlots.withPermit {
+                try {mapItem(get("/${if(type=="series") "tv" else "movie"}/$id",mapOf("language" to locale)),type)}
+                catch(e:CancellationException) {throw e} catch(_:Exception) {null}
+            }}}.awaitAll().filterNotNull()
+        }
+        if(rows.isNotEmpty()) discoveryCache.put(key,rows)
+        return rows
+    }
+
     suspend fun familiarCatalog(kind: String): List<MediaSummary> {
         val locale=language
         val key="familiar:$locale:$kind"

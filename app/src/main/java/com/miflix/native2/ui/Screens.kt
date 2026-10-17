@@ -185,6 +185,19 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                     Spacer(Modifier.height(24.dp))
                 } }
                 if(state.forYou.isNotEmpty()) item(key="for_you") { SpotlightRail(title=tr("Para ti · según lo que ves","For you · Based on what you watch"),rows=state.forYou,onClick=openItem) }
+                if(!simple && state.trending.isNotEmpty()) item(key="ranked_movies") {
+                    SpotlightRail(tr("Top 10 · Películas","Top 10 · Movies"),
+                        (state.trending+state.movies).filter {it.type=="movie"}.distinctBy {it.cloudId}.take(10),
+                        ranked=true,eyebrow=tr("TENDENCIAS EN BRUNIO","TRENDING ON BRUNIO"),onClick=openItem)
+                }
+                if(state.familiarHomeMatches && state.oscarPicks.isNotEmpty()) item(key="oscar_picks") {
+                    SpotlightRail(tr("Oscar · Ganadoras y nominadas","Oscar · Winners & nominees"),state.oscarPicks,
+                        awardLabels=true,eyebrow=tr("SELECCIÓN · PREMIOS 2024","CURATED · 2024 AWARDS"),onClick=openItem)
+                }
+                if(state.familiarHomeMatches && state.emmyPicks.isNotEmpty()) item(key="emmy_picks") {
+                    SpotlightRail(tr("Emmy · Series premiadas","Emmy · Award-winning series"),state.emmyPicks,
+                        awardLabels=true,eyebrow=tr("SELECCIÓN · PREMIOS 2024","CURATED · 2024 AWARDS"),onClick=openItem)
+                }
                 if(state.familiarHomeMatches && state.romancePicks.isNotEmpty()) item(key="romance_picks") {
                     SpotlightRail(tr("Historias de amor","Romance & love stories"),state.romancePicks,onClick=openItem)
                 }
@@ -493,7 +506,9 @@ fun PlatformScreen(state: AppState, onBack: () -> Unit) {
                 }
             }
             items(state.platformSections, key = { it.id }) { section ->
-                MediaRail(section.title, section.items, landscape = section.landscape, onClick = { state.launch { state.open(it) } })
+                if(section.id=="top10") SpotlightRail(section.title,section.items.take(10),ranked=true,
+                    onClick={state.launch {state.open(it)}})
+                else MediaRail(section.title, section.items, landscape = section.landscape, onClick = { state.launch { state.open(it) } })
             }
         }
     }

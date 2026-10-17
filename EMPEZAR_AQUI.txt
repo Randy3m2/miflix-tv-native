@@ -1,35 +1,24 @@
-BRUNIO WEB - LIVE TV CAST DIRECTO (v32)
+BruniO Web v34 - Safari / AirPlay
 
-1. Sube los 3 archivos de web/ a la carpeta web/ en GitHub.
-2. Redespliega Vercel y recarga la pagina.
-3. En Chrome, abre Live TV, selecciona el proveedor/canal y pulsa Cast.
-4. Elige tu receptor Google Cast en la misma red Wi-Fi/Ethernet.
+Sube los 5 archivos de web/ sobre la version web actual en GitHub y espera el redeploy de Vercel. Los archivos verification/ son pruebas opcionales. Sin SQL, Edge Functions ni build de Android TV. Actualiza la pagina/PWA despues del despliegue.
 
-No instalar/abrir el servidor Windows, no SQL, funciones ni APK.
-No hace falta aplicar los parches LAN/publico anteriores. Este cambio se puede
-aplicar directamente sobre la version web que ya tenia canales (v29 o posterior).
-La web sigue siendo https://miflix-tv-native-web.vercel.app/
+Cambios:
+- Apple: controles de video nativos, reproduccion inline y comienzo manual con Play para evitar bloqueo de autoplay. Pantalla completa nativa en iPhone/iPad cuando esta disponible.
+- HLS de peliculas/series y canales: motor nativo Safari primero; hls.js solo cuando hace falta. No se descarga el archivo entero ni se convierte a Blob para reproducirlo.
+- Fuentes en Apple: preferencia por candidatos MP4/M4V/MOV/HLS y H.264/AAC segun nombre de archivo, respetando prioridad de idioma identificable cuando el ajuste es espanol. Son pistas, no una verificacion del contenido del archivo. Todos los enlaces y descarga/player externo se conservan.
+- AirPlay: icono propio, selector de destino iniciado por click, eventos de disponibilidad y conexion; sin sobreescribirlo con Cast al desconectar. Si un navegador Apple no expone la API AirPlay, se conserva su alternativa Cast/Remote Playback cuando exista.
+- Live TV: AirPlay abre los controles BruniO del canal HTTPS; pulsa AirPlay dentro del player para elegir el receptor. Dos pulsaciones por las reglas de gesto de Safari. No se carga Google Cast SDK en esta ruta. Google Cast habitual se conserva para otros navegadores.
+- Se mantiene validacion de URL/privacidad, progreso y subtitulos existentes. Sin peticiones nuevas a Supabase ni proxy de video por Vercel.
 
-CAMBIOS
-- Selector de canales con icono Google Cast y envio directo al receptor.
-- Conserva el enlace HTTP/HTTPS original: elimina la conversion HTTP -> HTTPS.
-- No crea video web, no descarga manifiestos ni fragmentos para reproducir local.
-- No usa servidor LAN/publico, Vercel ni Supabase como proxy de video.
-- Listado/fuentes se consultan al proveedor directamente, como antes.
-- SDK Google Cast cargado al abrir fuentes. Si el selector no aparece al primer
-  intento mientras carga el SDK, pulsa Cast de nuevo.
-- Peliculas y series mantienen su player/descarga actual: cambio solo Live TV.
+Limites reales:
+No se transcodifica video/audio. MKV y codecs de audio/video no soportados por Safari pueden seguir fallando; hace falta otra fuente compatible, player externo o una futura conversion en servidor. La preferencia MP4 no garantiza que su codec sea compatible. Las fuentes con headers especiales o solo HTTP no pasan a ser aptas para AirPlay. La recepcion requiere dispositivo AirPlay compatible, misma red y permisos adecuados; las pistas de subtitulos Blob del navegador pueden no transferirse al receptor.
 
-COMPATIBILIDAD
-Requiere receptor Google Cast y navegador con soporte del SDK; empezar con Chrome
-Android o PC. No es duplicacion de pantalla ni soporte universal DLNA/Miracast.
-Safari/iPad no tienen implementado AirPlay directo en este flujo sin video web.
-Si un canal requiere cabeceras especiales, se indica que no admite Cast directo.
-El receptor debe poder descargar el medio: pueden fallar CORS, codecs, restricciones
-HTTP o bloqueos del proveedor. Cambiar a Cast no garantiza todos los canales.
-Sports con error 403 al consultar fuentes tampoco queda resuelto por este cambio.
-No hemos probado fisicamente tu receptor: probar Space HD primero.
+Prueba recomendada:
+En Safari, genera una fuente MP4 H.264/AAC y pulsa Play in BruniO, luego Play dentro del player; prueba pantalla completa. Con el receptor en la misma red, pulsa AirPlay y elige destino. Prueba despues un enlace HLS compatible y un canal HTTPS. Si un enlace falla, anota MEDIA_3/MEDIA_4 y formato de archivo, sin compartir su URL privada. En Safari puede ayudar abrir el mismo player en otra pestana si el modo embebido restringe un permiso.
 
-VERIFICACION
-Sintaxis JavaScript y pruebas simuladas: enlace HTTP intacto, payload LIVE,
-reutilizacion del receptor, rechazo de cabeceras especiales y ausencia de video web.
+Validacion realizada:
+Pruebas simuladas del reproductor existente, flujo Apple, AirPlay disponible/conectado, selector, fullscreen nativo, HLS VOD nativo y liberacion de recursos; Live AirPlay/HTTPS y fallback Google Cast en Mac Chrome; puente de subtitulos y sintaxis JS. No hay prueba fisica en iPhone/iPad/Apple TV ni confirmacion de reproduccion de tus enlaces privados.
+
+Documentacion:
+https://developer.apple.com/documentation/webkitjs/adding_an_airplay_button_to_your_safari_media_controls
+https://developer.apple.com/documentation/webkit/delivering-video-content-for-safari

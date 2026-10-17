@@ -2093,7 +2093,19 @@ private fun formatPosition(ms: Long): String {
 @Composable
 fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
     val firstLink = remember(selection) { FocusRequester() }
-    LaunchedEffect(selection) { delay(100); firstLink.requestFocus() }
+    val activeRequest=state.playerRequest?.takeIf {it.item.cloudId==selection.item.cloudId &&
+        it.season==selection.season && it.episode==selection.episode}
+    val playingUrl=activeRequest?.stream?.let {it.sourceUrl.ifBlank {it.url}}
+    val currentIndex=selection.streams.indexOfFirst {it.sourceUrl.ifBlank {it.url}==playingUrl}
+    val focusIndex=currentIndex.coerceAtLeast(0)
+    val linkScroll=rememberLazyListState(initialFirstVisibleItemIndex=focusIndex)
+    LaunchedEffect(selection,focusIndex) {
+        if(selection.streams.isNotEmpty()) {
+            linkScroll.scrollToItem(focusIndex)
+            withFrameNanos { }
+            runCatching {firstLink.requestFocus()}
+        }
+    }
     PlayerMenuDialog(
         forceSide = true,
         onDismissRequest = { state.sourceSelection = null },
@@ -2118,12 +2130,13 @@ fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
                 }
                 if(state.partyRole==PartyRole.GUEST) Text(tr("Este enlace se cambia solo para ti · sigues sincronizado con el host","This link changes only for you · You stay synced with the host"),color=Muted)
                 Spacer(Modifier.height(18.dp))
-                LazyColumn(Modifier.weight(1f),verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 30.dp)) {
-                    items(selection.streams) { stream ->
+                LazyColumn(Modifier.weight(1f),state=linkScroll,verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 30.dp)) {
+                    items(selection.streams.size) { index ->
+                        val stream=selection.streams[index]
                         Column {
                         if(state.partyRole==PartyRole.GUEST && com.miflix.native2.data.PartySourcePolicy.key(stream)==state.watchParty?.sourceKey) Text(tr("FUENTE DEL PARTY","PARTY SOURCE"),color=Accent,fontSize=12.sp)
                         SourceLinkCard(stream,Modifier.fillMaxWidth().then(
-                            if(stream===selection.streams.first()) Modifier.focusRequester(firstLink) else Modifier)) {
+                            if(index==focusIndex) Modifier.focusRequester(firstLink) else Modifier),playing=index==currentIndex) {
                             state.launch { state.playSelectedSource(selection,stream) }
                         }
                         }
@@ -2135,7 +2148,7 @@ fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
 }
 
 @Composable
-private fun SourceLinkCard(stream: com.miflix.native2.model.StreamChoice,modifier: Modifier,onClick: () -> Unit) {
+private fun SourceLinkCard(stream: com.miflix.native2.model.StreamChoice,modifier: Modifier,playing: Boolean=false,onClick: () -> Unit) {
     var focused by remember(stream) {mutableStateOf(false)}
     var rawDetails by remember(stream) {mutableStateOf(false)}
     val info=remember(stream) {com.miflix.native2.data.StreamPresentation.parse(stream.addonName,stream.name,stream.title,stream.filename,stream.videoSize)}
@@ -2150,9 +2163,10 @@ private fun SourceLinkCard(stream: com.miflix.native2.model.StreamChoice,modifie
         }
     }
     Column(modifier.onFocusChanged {focused=it.isFocused}.focusable().tvPlaybackClick(onClick,{rawDetails=true}).clickable(onClick=onClick)
-        .background(if(focused) FocusedPanel else Color(0xFF252528),RoundedCornerShape(18.dp))
-        .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(18.dp)).padding(20.dp),
+        .background(if(focused) FocusedPanel else if(playing) Accent.copy(alpha=.18f) else Color(0xFF252528),RoundedCornerShape(18.dp))
+        .border(if(focused || playing) 2.dp else 1.dp,if(focused || playing) Accent else PanelBorder,RoundedCornerShape(18.dp)).padding(20.dp),
         verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        if(playing) Text("▶ "+tr("REPRODUCIENDO","NOW PLAYING"),color=Accent,fontSize=11.sp,fontWeight=FontWeight.Bold)
         Text(info.heading,color=ink,fontSize=15.sp,lineHeight=20.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         if(info.technologies.isNotEmpty()) FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
             info.technologies.forEach {TechnologyBadge(it,ink)}

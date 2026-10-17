@@ -77,7 +77,9 @@ data class StreamChoice(
     val requestHeaders: Map<String, String> = emptyMap(),
     val addonName: String = "",
     val nativeSource: com.miflix.native2.data.NativeSource? = null,
-    val audioLanguages: List<String> = emptyList()
+    val audioLanguages: List<String> = emptyList(),
+    // Local identity of the list entry when materialization replaces its playback URL.
+    val sourceUrl: String = ""
 )
 
 data class SubtitleChoice(

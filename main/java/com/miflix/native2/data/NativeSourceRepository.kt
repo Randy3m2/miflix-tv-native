@@ -125,6 +125,6 @@ class NativeSourceRepository(private val transport: suspend (String,String,Map<S
         val link=api("torrents/requestdl?token=${enc(token)}&torrent_id=$id&file_id=$fileId&redirect=false",token).optString("data")
         check(link.startsWith("https://")) { "TorBox · invalid playback link" }
         check(stillValid()) { "Playback changed" }
-        stream.copy(url=link,nativeSource=null)
+        stream.copy(url=link,nativeSource=null,sourceUrl=stream.sourceUrl.ifBlank {stream.url})
     }
 }

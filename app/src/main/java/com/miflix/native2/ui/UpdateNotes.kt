@@ -21,6 +21,7 @@ internal object UpdateNotes {
         "Connect phone / PC abre tu catálogo de Vercel conectado a la TV: QR/enlace sin código manual y botón Play on TV." to "Connect phone / PC opens your Vercel catalog connected to the TV: QR/link with no manual code and a Play on TV button."
     )
     val changes=listOf(
+        "RC86: Playback links identifica el enlace actual con REPRODUCIENDO, mantiene su resaltado y abre la lista en esa fuente." to "RC86: Playback links labels the current source NOW PLAYING, keeps it highlighted and opens the list at that source.",
         "RC85: si falla una fuente, prueba automáticamente el siguiente enlace también en inglés; aviso durante la carga y posición conservada. Hasta cinco intentos con la lista cargada." to "RC85: failed sources automatically advance to the next link in English too; loading notice and playback position preserved. Up to five attempts from the loaded list.",
         "RC84: corrige el fallo AudioProcessor/flush que impedía iniciar películas y episodios; conserva la mezcla de audio para auriculares." to "RC84: fixes the AudioProcessor/flush failure preventing movies and episodes from starting; preserves headphone audio mixing.",
         "RC83: al volver de los detalles, Home y Collections recuperan la fila, su desplazamiento horizontal y la tarjeta enfocada, sin regresar al inicio." to "RC83: returning from details restores the Home/Collections row, horizontal scroll and focused card instead of jumping to the top.",

@@ -1,0 +1,5 @@
+BruniO 2.0.0-rc76 / versionCode 22075
+
+Sube los archivos encima de RC75. Incluye calendario LIDOM, hotfix ensureActive, changelog y aumento de version.
+Ejecuta el workflow de Android TV en GitHub y espera a que termine y publique APK + update.json en native-latest. Luego Check for Updates desde la TV. La firma debe seguir siendo la misma.
+No requiere SQL ni Vercel. No se compilo el APK en este entorno.

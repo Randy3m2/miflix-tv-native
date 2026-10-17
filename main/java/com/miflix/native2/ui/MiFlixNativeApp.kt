@@ -37,9 +37,10 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         state.appForeground=lifecycle?.currentState?.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)==true
         val observer=androidx.lifecycle.LifecycleEventObserver { _, _ ->
             state.appForeground=lifecycle?.currentState?.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)==true
+            state.publishSocialPresenceEvent()
         }
         lifecycle?.addObserver(observer)
-        onDispose { lifecycle?.removeObserver(observer);state.appForeground=false }
+        onDispose { lifecycle?.removeObserver(observer);state.appForeground=false;state.publishSocialPresenceEvent() }
     }
     LaunchedEffect(state.session?.refreshToken) { state.sessionNeedsSignIn=false }
 
@@ -155,16 +156,23 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 if(!state.sessionNeedsSignIn) state.refreshAccountSession()
             }
         }
+        // Event presence has no polling loop. App background/exit records a durable stop.
+        LaunchedEffect(bootstrapped,state.session?.userId,state.appForeground,state.screen,state.miniPlayer,
+            state.playerRequest?.playbackId,state.socialReadyPlaybackId,state.socialEndedPlaybackId,
+            state.watchParty?.roomCode) {
+            if(bootstrapped && !state.sessionNeedsSignIn) state.publishSocialPresenceEvent()
+        }
+        PresenceNetworkRecovery(state)
         LaunchedEffect(bootstrapped,state.session?.userId,state.appForeground,
-            state.activeProfile.avatarValue,state.playerRequest?.item?.cloudId,state.playerRequest?.season,
-            state.playerRequest?.episode,state.screen,state.watchParty?.roomCode,state.pendingPartyCode) {
+            state.activeProfile.avatarValue,state.pendingPartyCode) {
             if(bootstrapped && state.session!=null && state.appForeground) while(true) {
                 if(!state.sessionNeedsSignIn) {
                     try { state.refreshSocialActivity() }
                     catch(e: kotlinx.coroutines.CancellationException) { throw e }
                     catch(_: Exception) { }
                 }
-                delay(5000) // Local tick only: presence <= once/5 min, changed avatar <= once/4 min. Incoming requests are manual.
+                // Avatar gate / pending admission only. Never publishes social presence.
+                delay(5000)
             }
         }
         LaunchedEffect(state.session?.userId, state.watchParty?.roomCode,state.appForeground) {

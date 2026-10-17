@@ -23,7 +23,6 @@ data class CalendarEvent(val id: String, val owner: String, val title: String, v
 class SocialRepository(private val url: String, private val key: String) {
     private val presenceMutex=Mutex()
     private val avatarMutex=Mutex()
-    private val presenceGate=SocialPublishGate(300_000L,changedOnly=false)
     private val avatarGate=SocialPublishGate(240_000L,changedOnly=true)
     private fun headers(s: CloudSession) = mapOf("apikey" to key, "Authorization" to "Bearer ${s.accessToken}", "Content-Type" to "application/json")
     private fun enc(s: String) = URLEncoder.encode(s,"UTF-8")
@@ -45,13 +44,9 @@ class SocialRepository(private val url: String, private val key: String) {
         write(s,"miflix_social_profiles?user_id=eq.${s.userId}",JSONObject().put("avatar_value",avatar),"PATCH")
         avatarGate.published(s.userId,signature,android.os.SystemClock.elapsedRealtime())
     }
-    suspend fun presence(s: CloudSession, title: String, media: String, season: Int, episode: Int, room: String?) = presenceMutex.withLock {
-        val body=JSONObject().put("title",title).put("media",media).put("s",season).put("e",episode).put("room",room ?: JSONObject.NULL)
-        val signature=s.userId+":"+body.toString()
-        val now=android.os.SystemClock.elapsedRealtime()
-        if(!presenceGate.due(s.userId,signature,now)) return@withLock
-        write(s,"rpc/miflix_set_presence",body)
-        presenceGate.published(s.userId,signature,android.os.SystemClock.elapsedRealtime())
+    /** Event RPC is deliberately independent of all watch-party control/heartbeat RPCs. */
+    internal suspend fun presenceEvent(s: CloudSession, body: JSONObject) = presenceMutex.withLock {
+        write(s,"rpc/brunio_presence_event",body)
     }
     suspend fun activity(s: CloudSession): List<FriendActivity> {
         val a=JSONArray(Http.text("$url/rest/v1/rpc/miflix_friend_activity_v30","POST",headers(s),"{}"))

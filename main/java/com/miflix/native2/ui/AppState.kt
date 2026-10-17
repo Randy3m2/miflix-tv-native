@@ -510,6 +510,7 @@ class AppState(context: Context) {
         } finally { accessRequestsLoading=false }
     }
     suspend fun refreshFriendsDirectory() {
+        retrySocialPresenceEvent()
         val s=session ?: return
         refreshFriends()
         val people=social.activity(s)
@@ -522,8 +523,6 @@ class AppState(context: Context) {
         val s=session ?: return
         val epoch=partyEpoch
         fun valid()=partyEpoch==epoch && session?.userId==s.userId
-        val req=playerRequest.takeIf { screen==Screen.PLAYER || miniPlayer || watchParty!=null }
-        social.presence(s,req?.item?.title.orEmpty(),req?.item?.cloudId.orEmpty(),req?.season ?: 0,req?.episode ?: 0,watchParty?.roomCode)
         social.publishAvatar(s,activeProfile.avatarValue ?: ProfileAvatars[(activeProfile.id.hashCode() and Int.MAX_VALUE)%4].key)
         pendingPartyCode?.let { code ->
             val decision=try { social.requestAccess(s,code) } catch(e: Exception) {
@@ -560,6 +559,40 @@ class AppState(context: Context) {
     private val updates = UpdateRepository()
     private val subtitleRepo = SubtitleRepository()
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    private val presenceEvents = com.miflix.native2.data.EventPresencePublisher(appContext,social,appScope)
+    var socialReadyPlaybackId by mutableStateOf("")
+        private set
+    var socialEndedPlaybackId by mutableStateOf("")
+        private set
+    private var socialExpiresAt=0L
+    /** Capture the lease once at first frame, never from the progress/seek ticker. */
+    fun socialPlaybackStarted(req: PlayerRequest, position: Long, duration: Long) {
+        if(playerRequest?.playbackId!=req.playbackId || socialReadyPlaybackId==req.playbackId) return
+        val remaining=if(req.live) 4*60*60*1000L
+            else if(duration>0) (duration-position.coerceAtLeast(0)).coerceAtLeast(0)+30*60*1000L
+            else if(req.item.type=="series") 90*60*1000L else 3*60*60*1000L
+        socialExpiresAt=System.currentTimeMillis()+remaining.coerceIn(60_000L,12*60*60*1000L)
+        socialReadyPlaybackId=req.playbackId
+    }
+    fun socialPlaybackReady(req: PlayerRequest, position: Long, duration: Long) {
+        if(socialEndedPlaybackId==req.playbackId) {
+            socialEndedPlaybackId="";socialReadyPlaybackId=""
+            socialPlaybackStarted(req,position,duration)
+        }
+    }
+    fun socialPlaybackEnded(req: PlayerRequest) {
+        if(playerRequest?.playbackId==req.playbackId) socialEndedPlaybackId=req.playbackId
+    }
+    fun publishSocialPresenceEvent() {
+        val s=session ?: return
+        val req=playerRequest?.takeIf { appForeground && (screen==Screen.PLAYER || miniPlayer) &&
+            it.playbackId==socialReadyPlaybackId && it.playbackId!=socialEndedPlaybackId }
+        presenceEvents.queue(s,req?.item?.title.orEmpty(),req?.item?.cloudId.orEmpty(),
+            req?.season ?: 0,req?.episode ?: 0,if(req!=null) watchParty?.roomCode else null,
+            if(req!=null) socialExpiresAt else System.currentTimeMillis())
+    }
+    fun retrySocialPresenceEvent() { session?.takeUnless {sessionNeedsSignIn}?.let {presenceEvents.retry(it)} }
 
     val tmdb = TmdbRepository(BuildConfig.MIFLIX_TMDB_TOKEN).also { it.language=if(interfaceLanguage=="es") "es-ES" else "en-US" }
     val streamRepo = StreamRepository("")
@@ -2246,6 +2279,7 @@ class AppState(context: Context) {
     }
 
     fun signOut() {
+        session?.let { presenceEvents.queue(it,"","",0,0,null,System.currentTimeMillis()) }
         playbackLinkCache.clear()
         closeAvatarUpload()
         detachParty()

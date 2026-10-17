@@ -21,6 +21,7 @@ internal object UpdateNotes {
         "Connect phone / PC abre tu catálogo de Vercel conectado a la TV: QR/enlace sin código manual y botón Play on TV." to "Connect phone / PC opens your Vercel catalog connected to the TV: QR/link with no manual code and a Play on TV button."
     )
     val changes=listOf(
+        "Presencia social por eventos: inicio, cambio, salida y fin del contenido, sin heartbeat. Cola local y vencimiento para cierres inesperados; Watch Party conserva su sincronización." to "Event-driven social presence: start, change, exit and playback end, with no heartbeat. Durable outbox and crash expiry; Watch Party synchronization stays unchanged.",
         "Sports → LIDOM: seis equipos, logos, favoritos, calendario directo, fuentes por equipo, YouTube oficial y URLs HLS/DASH configurables." to "Sports → LIDOM: six teams, logos, favorites, direct schedule, team sources, official YouTube player and configurable HLS/DASH URLs.",
         "Amigos visibles debajo de Create party y Refresh requests en el panel del reproductor, con estado, actividad y acciones." to "Friends visible below Create party and Refresh requests in the player panel, with status, activity and actions.",
         "En Home, pulsa Atrás dos veces para cerrar la app; aviso breve en la primera pulsación." to "On Home, press Back twice to close the app; a brief prompt appears on the first press.",
@@ -39,7 +40,7 @@ internal object UpdateNotes {
         "Información de reproducción transparente sobre el video, con archivo, tamaño, video, audio y subtítulos." to "Transparent playback information over the video, with file, size, video, audio and subtitle details.",
         "Sinopsis, fondo y logo en una zona fija superior al enfocar títulos; expansión lateral después de 3 segundos." to "Synopsis, backdrop and logo in a fixed upper area as titles gain focus; sideways expansion after 3 seconds.",
         "Navegación rápida con repeticiones verticales reguladas y menos cambios de layout por fila." to "Fast navigation with coalesced vertical repeats and fewer per-row layout changes.",
-        "Se conservan solicitudes manuales, presencia cada 5 minutos y avatar cada 4 minutos." to "Manual requests, 5-minute presence and 4-minute avatar limits are preserved."
+        "Se conservan solicitudes manuales y avatar cambiado como máximo cada 4 minutos." to "Manual requests and the 4-minute changed-avatar limit are preserved."
     )
     val rc62Changes=listOf(
         "Solicitudes de acceso a Party: consulta manual con Refresh requests en Friends y en el reproductor." to "Party access requests: manual lookup with Refresh requests in Friends and in the player.",

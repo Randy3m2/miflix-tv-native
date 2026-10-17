@@ -2,6 +2,8 @@ package com.miflix.native2.ui
 
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.padding
@@ -31,4 +33,22 @@ internal fun HomeShelfFrame(index:Int,scroll:LazyListState,modifier:Modifier=Mod
         val cardHeight=(maxHeight-64.dp).coerceIn(124.dp,188.dp)
         CompositionLocalProvider(LocalHomeShelfPaging provides true,LocalHomeCardRowHeight provides cardHeight) {content()}
     }
+}
+
+/** Restore horizontal focus scrolling only for Home rails inheriting its vertical no-scroll policy. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+internal fun HomeHorizontalRail(content:@Composable ()->Unit) {
+    if(!LocalHomeShelfPaging.current) {
+        content()
+        return
+    }
+    val horizontalSpec=remember {object: BringIntoViewSpec {
+        override fun calculateScrollDistance(offset:Float,size:Float,containerSize:Float):Float=when {
+            offset<0f -> offset
+            offset+size>containerSize -> offset+size-containerSize
+            else -> 0f
+        }
+    }}
+    CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalSpec) {content()}
 }

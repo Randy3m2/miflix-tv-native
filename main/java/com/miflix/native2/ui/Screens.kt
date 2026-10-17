@@ -184,8 +184,10 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                         FocusButton(tr("Colecciones","Collections")) {onNavigate(Screen.COLLECTIONS)}
                         FocusButton("Oscars") {onNavigate(Screen.OSCARS)}
                     }
+                    HomeHorizontalRail {
                     LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=32.dp).clipToBounds().smoothHorizontalDpad().firstCardOnDown(genreScroll,firstGenre),state=genreScroll,contentPadding=PaddingValues(horizontal=8.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
                         items(state.genres,key={it.id}) { genre -> GenreCard(genre.copy(coverUrl=state.genreCovers[genre.id] ?: genre.coverUrl),modifier=if(genre.id==state.genres.firstOrNull()?.id) Modifier.focusRequester(firstGenre) else Modifier) { state.launch { state.openGenre(genre) } } }
+                    }
                     }
                     Spacer(Modifier.height(8.dp))
                 } }
@@ -363,6 +365,7 @@ private fun CollectionRail(title: String, rows: List<CollectionTile>, onClick: (
     val firstCard=remember {FocusRequester()}
     Column(Modifier.fillMaxWidth().height(208.dp)) {
         Text(title, color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 40.dp,end=40.dp, bottom = 8.dp))
+        HomeHorizontalRail {
         LazyRow(
             modifier=Modifier.fillMaxWidth().padding(horizontal=32.dp).clipToBounds().smoothHorizontalDpad().firstCardOnDown(railScroll,firstCard),
             state=railScroll,
@@ -374,6 +377,7 @@ private fun CollectionRail(title: String, rows: List<CollectionTile>, onClick: (
                     CollectionCard(tile) { onClick(tile) }
                 }
             }
+        }
         }
     }
 }

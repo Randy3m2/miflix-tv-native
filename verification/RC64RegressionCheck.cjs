@@ -16,5 +16,5 @@ const party=repo.slice(repo.indexOf('private fun partyStateJson'));
 for(const f of ['title','overview','poster','logo','sourceName','sourceKey','shareStream','hostOnlyControls'])assert(party.includes('p.'+f));
 assert(read('ui/SmoothRowFocus.kt').includes('time-previous>=220L'));assert(read('data/HorizontalRepeatGate.java').includes('<140L'));
 assert(read('ui/Components.kt').includes('Brush.verticalGradient(listOf(Color.Black.copy(alpha=.8f)'));
-assert(fs.readFileSync('app/build.gradle','utf8').includes("versionName '2.0.0-rc81'"));
+assert(fs.readFileSync('app/build.gradle','utf8').includes("versionName '2.0.0-rc82'"));
 console.log('PASS: manual party return, snapshot extrapolation, bounded drift correction, pause alignment, notice/state matching, bounded live fallback, progress/party serializer separation, navigation and version');

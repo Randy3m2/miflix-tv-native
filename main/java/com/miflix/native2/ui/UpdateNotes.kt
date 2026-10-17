@@ -21,6 +21,7 @@ internal object UpdateNotes {
         "Connect phone / PC abre tu catálogo de Vercel conectado a la TV: QR/enlace sin código manual y botón Play on TV." to "Connect phone / PC opens your Vercel catalog connected to the TV: QR/link with no manual code and a Play on TV button."
     )
     val changes=listOf(
+        "LIDOM: fuentes combinadas de IPTV-org y Nauta por canal, conservando YouTube; Toros con Coral 39 y Teleantillas, Gigantes con Telemedios y Estrellas con Teleantillas." to "LIDOM: combined IPTV-org and Nauta sources per channel, keeping YouTube; Toros with Coral 39 and Teleantillas, Gigantes with Telemedios and Estrellas with Teleantillas.",
         "LIDOM: calendario con logos de ambos equipos, hora dominicana y transmisiones anunciadas; canal por confirmar cuando no se publica." to "LIDOM: schedule with both team logos, Dominican start times and listed broadcasts; unannounced channels show To be confirmed.",
         "Menús del reproductor en paneles a la derecha: enlaces, audio, subtítulos, información, episodios, cola, chat y momentos; fondo visible y entrada breve." to "Right-side player panels: links, audio, subtitles, info, episodes, queue, chat and moments; visible video and a short entrance animation.",
         "Compartir momentos muestra tarjetas de amigos con avatar y nombre, reutilizando la información del perfil social." to "Moment sharing shows friend cards with avatars and names, reusing social profile data.",

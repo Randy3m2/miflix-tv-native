@@ -1,5 +1,8 @@
 package com.miflix.native2.data
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.CancellationException
 import android.content.Context
 import android.net.Uri
 import org.json.JSONObject
@@ -78,16 +81,32 @@ internal class LidomRepository(private val context:Context, owner:String) {
     suspend fun resolve(source:LidomSource, manifest:String?=null):List<StreamChoice> {
         if(source.kind in setOf("HLS","DASH")) {require(httpUrl(source.url));return listOf(StreamChoice(source.name,source.url,source.name,addonName="LIDOM"))}
         require(source.kind=="TV")
-        val rows=try {IptvRepository.channels(LiveCategory("tv","iptv:all","All",paginated=true),0,"",IptvRepository.PLAYLIST)}
-            catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {emptyList()}
-        val matches=rows.filter {row -> source.aliases.any {matchesStation(row.name,it)}}
-        val primary=matches.flatMap {IptvRepository.streams(it,IptvRepository.PLAYLIST)}.distinctBy {it.url}.take(30)
-        if(primary.isNotEmpty() || manifest==null || !httpUrl(manifest)) return primary
-        val live=LiveRepository()
-        val category=live.categories(manifest).firstOrNull {it.searchable} ?: return emptyList()
-        val channels=live.channels(manifest,category,search=source.name).filter {row ->source.aliases.any {matchesStation(row.name,it)}}
-        return channels.take(6).flatMap {live.streams(manifest,it)}.distinctBy {it.url}.take(30)
+        return supervisorScope {
+            // Fetch both providers once per selection. A provider failure must not discard the other.
+            suspend fun safely(block:suspend ()->List<StreamChoice>):List<StreamChoice> =
+                try {block()} catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
+            val iptv=async {safely {
+                val rows=IptvRepository.channels(LiveCategory("tv","iptv:all","All",paginated=true),0,"",IptvRepository.PLAYLIST)
+                rows.filter {row ->source.aliases.any {matchesStation(row.name,it)}}.take(6)
+                    .flatMap {channel ->safely {IptvRepository.streams(channel,IptvRepository.PLAYLIST)}}
+                    .map {it.copy(name=source.name+" · IPTV-org · "+it.name,addonName="LIDOM · IPTV-org")}.take(30)
+            }}
+            val nauta=async {safely {
+                if(manifest==null || !httpUrl(manifest)) return@safely emptyList()
+                val live=LiveRepository()
+                val category=live.categories(manifest).firstOrNull {it.searchable} ?: return@safely emptyList()
+                val queries=(listOf(source.name)+source.aliases).distinct().take(3)
+                val channels=queries.flatMap {query ->
+                    try {live.channels(manifest,category,search=query)}
+                    catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
+                }.filter {row ->source.aliases.any {matchesStation(row.name,it)}}.distinctBy {it.id}.take(6)
+                channels.flatMap {channel ->safely {live.streams(manifest,channel)}}
+                    .map {it.copy(name=source.name+" · Nauta · "+it.name,addonName="LIDOM · Nauta")}.take(30)
+            }}
+            (iptv.await()+nauta.await()).distinctBy {it.url to it.requestHeaders}.take(60)
+        }
     }
+
     suspend fun videos(source:LidomSource):List<LidomVideo> {
         val channel=LidomUrlPolicy.channelId(source.url) ?: return emptyList()
         val text=Http.text("https://www.youtube.com/feeds/videos.xml?channel_id=$channel",timeoutMs=15000)

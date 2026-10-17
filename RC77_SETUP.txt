@@ -1,0 +1,5 @@
+Sube estos archivos sobre RC76 y ejecuta el workflow Android TV. RC77 / versionCode 22076. Sin SQL ni Vercel.
+Fuentes por equipo conservan YouTube y ahora combinan IPTV-org y Nauta aunque IPTV tenga resultados. Cada proveedor y canal falla de forma independiente; se conservan headers y se eliminan URLs+headers duplicados. Busqueda solo al seleccionar canal, hasta 3 nombres por Nauta y 6 canales por proveedor, sin polling de Supabase.
+Canales solicitados: Toros Coral 39 + Teleantillas; Gigantes Telemedios; Licey y Escogido Digital 15. Aguilas Tele Universo 29 + CDN Deportes; Estrellas Teleantillas + fuentes ya existentes.
+Fuentes son opciones del equipo: no certifican que un juego este al aire. No todos los canales estaran disponibles en todos los proveedores.
+APK y reproduccion en TV pendientes de validacion en GitHub/dispositivo.

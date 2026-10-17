@@ -100,7 +100,8 @@
           "reference": "https://aguilas.com.do/wp-content/uploads/2025/10/Boletin-de-Prensa-No.1-Aguilas-Cibaenas-Serie-Regular-2025-26.pdf",
           "note": "2025–26 reference · check your configured TV sources",
           "aliases": [
-            "cdn deportes"
+            "cdn deportes",
+            "cdn deporte"
           ]
         }
       ]
@@ -170,7 +171,7 @@
         {
           "id": "gigantes-tv-0",
           "team": "gigantes",
-          "name": "Telemedios 8",
+          "name": "Telemedios",
           "kind": "TV",
           "url": "",
           "reference": "https://lidom.com/gigantes-del-cibao/gigantes-renuevan-acuerdo-con-telemedios-canal-8-96975.html",
@@ -178,7 +179,8 @@
           "aliases": [
             "telemedios 8",
             "telemedios dominicanos",
-            "telemedios canal 8"
+            "telemedios canal 8",
+            "telemedios"
           ]
         }
       ]
@@ -227,6 +229,19 @@
             "toros tv",
             "torostv"
           ]
+        },
+        {
+          "id": "toros-coral-39",
+          "team": "toros",
+          "name": "Coral 39",
+          "kind": "TV",
+          "url": "",
+          "reference": "User supplied channel mapping",
+          "note": "Team broadcast option · current-game availability may vary",
+          "aliases": [
+            "coral 39",
+            "coral"
+          ]
         }
       ]
     },
@@ -274,6 +289,19 @@
             "estrellas tv",
             "estrellastv",
             "estrellas hd"
+          ]
+        },
+        {
+          "id": "estrellas-teleantillas",
+          "team": "estrellas",
+          "name": "Teleantillas",
+          "kind": "TV",
+          "url": "",
+          "reference": "https://www.vicbaez.com/estos-son-los-medios-de-transmision-de-radio-y-tv-de-los-equipos-de-lidom/",
+          "note": "Team broadcast option · current-game availability may vary",
+          "aliases": [
+            "teleantillas",
+            "tele antillas"
           ]
         }
       ]

@@ -21,6 +21,7 @@ internal object UpdateNotes {
         "Connect phone / PC abre tu catálogo de Vercel conectado a la TV: QR/enlace sin código manual y botón Play on TV." to "Connect phone / PC opens your Vercel catalog connected to the TV: QR/link with no manual code and a Play on TV button."
     )
     val changes=listOf(
+        "RC84: corrige el fallo AudioProcessor/flush que impedía iniciar películas y episodios; conserva la mezcla de audio para auriculares." to "RC84: fixes the AudioProcessor/flush failure preventing movies and episodes from starting; preserves headphone audio mixing.",
         "RC83: al volver de los detalles, Home y Collections recuperan la fila, su desplazamiento horizontal y la tarjeta enfocada, sin regresar al inicio." to "RC83: returning from details restores the Home/Collections row, horizontal scroll and focused card instead of jumping to the top.",
         "RC82: desplazamiento horizontal restaurado en Streaming y Browse by genre de Home, conservando encabezados y tarjetas completos." to "RC82: restored horizontal scrolling in Home Streaming and Browse by genre, preserving full headings and cards.",
         "Home: cabecera compacta y filas completas al navegar arriba/abajo; las tarjetas expandidas empujan a las siguientes; Continue Watching uniforme con título dentro; logos sin nombre repetido." to "Home: compact hero and complete shelves when navigating up/down; expanded cards push neighbors; uniform Continue Watching covers with titles inside; streaming logos without duplicate captions.",

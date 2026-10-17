@@ -20,5 +20,5 @@ const hero=read(base+'ui/BrowseHero.kt');assert(hero.includes('.height(height)')
 const rails=read(base+'ui/CinematicBrowsing.kt');assert(rails.includes('delay(3000)'));assert(rails.includes('if(!pinned) Column'));
 assert(read(base+'ui/SmoothRowFocus.kt').includes('time-previous>=220L'));
 for(const name of ['model/Models.kt','data/SupabaseRepository.kt','data/SocialRepository.kt','data/PartySourcePolicy.kt','data/TmdbRepository.kt','ui/AppState.kt','ui/Screens.kt','ui/QueueCalendar.kt','ui/PartyPresentation.kt','ui/PlaybackTools.kt','ui/BrowseHero.kt','ui/CinematicBrowsing.kt','ui/Components.kt','ui/SmoothRowFocus.kt','ui/SocialScreens.kt','ui/UpdateNotes.kt']) assert.equal(read(base+name),read('main/java/com/miflix/native2/'+name),name);
-assert(read('app/build.gradle').includes("versionName '2.0.0-rc83'"));
+assert(read('app/build.gradle').includes("versionName '2.0.0-rc84'"));
 console.log('PASS: RC63 UI/source wiring, manual requests, throttles, metadata privacy, bounded logo preview, 3-second expansion, mirrored sources, version');

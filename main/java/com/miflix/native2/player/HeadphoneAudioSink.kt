@@ -56,19 +56,29 @@ internal fun headphoneMixCoefficients(channels: Int, stereo: Boolean): FloatArra
 
 @UnstableApi
 @Suppress("DEPRECATION")
-internal fun headphoneAwareAudioSink(context: Context): AudioSink {
+internal fun headphoneAudioProcessor(stereoOutput: () -> Boolean): AudioProcessor {
     val mixer = ChannelMixingAudioProcessor()
-    val processor = object : AudioProcessor by mixer {
+    return object : AudioProcessor by mixer {
         override fun configure(inputAudioFormat: AudioProcessor.AudioFormat): AudioProcessor.AudioFormat {
             val channels = inputAudioFormat.channelCount
             if (channels > 0) {
-                val stereo = hasHeadphoneOutput(context)
+                val stereo = stereoOutput()
                 mixer.putChannelMixingMatrix(ChannelMixingMatrix(channels,
                     if (stereo && channels > 2) 2 else channels, headphoneMixCoefficients(channels, stereo)))
             }
             return mixer.configure(inputAudioFormat)
         }
+        // Kotlin interface delegation can inherit Java default methods instead of
+        // forwarding them. Media3 must flush the mixer, including its pending format.
+        override fun flush() { mixer.flush() }
+        override fun flush(streamMetadata: AudioProcessor.StreamMetadata) { mixer.flush(streamMetadata) }
     }
+}
+
+@UnstableApi
+@Suppress("DEPRECATION")
+internal fun headphoneAwareAudioSink(context: Context): AudioSink {
+    val processor = headphoneAudioProcessor { hasHeadphoneOutput(context) }
     val sink = DefaultAudioSink.Builder(context).setEnableFloatOutput(false)
         .setEnableAudioTrackPlaybackParams(false).setAudioProcessors(arrayOf(processor)).build()
     return object : ForwardingAudioSink(sink) {

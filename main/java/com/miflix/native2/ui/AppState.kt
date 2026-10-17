@@ -292,6 +292,7 @@ class AppState(context: Context) {
         introRepo.segments(imdb,req.season,req.episode,req.item.type == "movie")
     }.getOrDefault(PlaybackSegments())
     suspend fun playerSources(req: PlayerRequest, position: Long) {
+        if(req.liveProvider=="lidom") {showLidomSources(req);return}
         if(req.live) { error=tr("Los canales en vivo usan su enlace configurado","Live channels use their configured stream"); return }
         val generation=playbackWork.generation
         val imdb=tmdb.details(req.item).imdbId ?: return
@@ -913,16 +914,27 @@ class AppState(context: Context) {
         }}
     }
 
+    var lidomTeamId by mutableStateOf("")
+    var lidomShowSources by mutableStateOf(false)
+    var lidomConfigure by mutableStateOf(false)
+    fun showLidomSources(req: PlayerRequest) {
+        lidomTeamId=req.lidomTeam;lidomShowSources=true;miniPlayer=false;screen=Screen.LIDOM
+    }
+    fun markLidomSourceWorking(req: PlayerRequest) {
+        if(req.liveProvider=="lidom" && playerRequest?.playbackId==req.playbackId && req.lidomTeam.isNotBlank())
+            com.miflix.native2.data.LidomRepository(appContext,"${session?.userId ?: "local"}:${activeProfile.id}").working(req.lidomTeam,req.lidomSource)
+    }
+
     fun openLivePlayer(req: PlayerRequest) {
         require(!kidsMode) {tr("TV en vivo no está disponible en Kids.","Live TV is not available in Kids.") }
         invalidatePlaybackWork()
-        if(req.liveProvider.isNotBlank() && liveProviderTab!=req.liveProvider) { liveProviderTab=req.liveProvider;liveCategoryId=null }
+        if(req.liveProvider.isNotBlank() && req.liveProvider!="lidom" && liveProviderTab!=req.liveProvider) { liveProviderTab=req.liveProvider;liveCategoryId=null }
         miniPlayer=false;selected=req.item;playerRequest=req;screen=Screen.PLAYER
     }
     fun beginMultiView(req: PlayerRequest) {
         require(!kidsMode) {"Multiview is not available in Kids."}
         require(req.live)
-        if(req.liveProvider.isNotBlank()) liveProviderTab=req.liveProvider
+        if(req.liveProvider.isNotBlank() && req.liveProvider!="lidom") liveProviderTab=req.liveProvider
         miniPlayer=false;multiViewRequests.clear();multiViewRequests.add(req)
         playerRequest=null;screen=Screen.MULTIVIEW
     }
@@ -2258,7 +2270,7 @@ class AppState(context: Context) {
 enum class Screen {
     SPLASH, HOME, SEARCH, MOVIES, SERIES, COLLECTIONS, COLLECTION_DETAIL, PLATFORM_DETAIL,
     GENRES, GENRE_DETAIL, YEAR_DETAIL, MY_LIST, SETTINGS, PROFILES, WATCH_PARTY, PAIR_DEVICE,
-    DETAILS, CUSTOM_FILTER, FRANCHISE, PLAYER, MULTIVIEW, LIVE_TV, FRIENDS, TRAKT, NOTIFICATIONS, DIRECTOR_DETAIL
+    DETAILS, CUSTOM_FILTER, FRANCHISE, PLAYER, MULTIVIEW, LIVE_TV, LIDOM, FRIENDS, TRAKT, NOTIFICATIONS, DIRECTOR_DETAIL
 }
 
 data class PlayerRequest(
@@ -2271,7 +2283,11 @@ data class PlayerRequest(
     val liveChannelId: String = "",
     val liveProvider: String = "",
     val playbackId: String = java.util.UUID.randomUUID().toString(),
-    val liveType: String = "tv"
+    val liveType: String = "tv",
+    val liveMime: String = "",
+    val lidomTeam: String = "",
+    val lidomSource: String = "",
+    val returnScreen: Screen? = null
 )
 
 data class SourceSelection(

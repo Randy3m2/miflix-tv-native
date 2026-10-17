@@ -140,6 +140,7 @@ fun LiveScreen(state: AppState) {
                 } } }
                 if(sports) item { FocusButton(tr("Manifiesto de deportes","Sports manifest")) { editManifest=true } }
             }
+            if(sports) {Spacer(Modifier.height(10.dp));FocusButton("⚾ LIDOM 2026–27",primary=true) {state.screen=Screen.LIDOM}}
             if(iptv) { Spacer(Modifier.height(8.dp));RegionTabs(provider) { provider=it;state.liveProviderTab=it;state.liveCategoryId=null } }
             Spacer(Modifier.height(8.dp))
             NativeTextField(search, { search = it; state.liveSearch=it }, tr("Buscar nombre o número de canal","Search channel name or number"), modifier = Modifier.fillMaxWidth())

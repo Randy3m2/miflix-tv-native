@@ -60,7 +60,7 @@ internal fun CompactPlayerControls(
         Row(Modifier.align(Alignment.TopEnd).padding(top=20.dp,end=24.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
             PlayerIconButton("info",tr("Información técnica","Playback info"),onInteraction=onInteraction,onClick=onInfo,onLabel={ focusedLabel=it })
             PlayerIconButton("pip",tr("Ventana flotante","Picture in Picture"),onInteraction=onInteraction,onClick=onPip,onLabel={ focusedLabel=it })
-            if(request.live) PlayerIconButton("grid",tr("Hasta 4 canales","Up to 4 channels"),onInteraction=onInteraction,onClick=onMultiView,onLabel={ focusedLabel=it })
+            if(request.live && request.liveProvider!="lidom") PlayerIconButton("grid",tr("Hasta 4 canales","Up to 4 channels"),onInteraction=onInteraction,onClick=onMultiView,onLabel={ focusedLabel=it })
         }
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
             .background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xE6000000))))
@@ -81,7 +81,7 @@ internal fun CompactPlayerControls(
                     PlayerIconButton("next",tr("Siguiente episodio","Next episode"),onInteraction=onInteraction,onClick=onNext,onLabel={ focusedLabel=it },enabled=nextAvailable)
                     PlayerIconButton("episodes",tr("Episodios","Episodes"),onInteraction=onInteraction,onClick=onEpisodes,onLabel={ focusedLabel=it })
                 }
-                if(request.live) PlayerIconButton("episodes",tr("Canales","Channels"),onInteraction=onInteraction,onClick=onEpisodes,onLabel={ focusedLabel=it })
+                if(request.live) PlayerIconButton("episodes",if(request.liveProvider=="lidom") tr("Fuentes del equipo","Team sources") else tr("Canales","Channels"),onInteraction=onInteraction,onClick=onEpisodes,onLabel={ focusedLabel=it })
                 PlayerIconButton("cc",tr("Subtítulos","Subtitles"),onInteraction=onInteraction,onClick={onMenu("subtitles")},onLabel={ focusedLabel=it })
                 PlayerIconButton("audio",tr("Pista de audio","Audio track"),onInteraction=onInteraction,onClick={onMenu("audio")},onLabel={ focusedLabel=it })
                 PlayerIconButton("links",tr("Enlaces de reproducción","Playback links"),onInteraction=onInteraction,onClick=onLinks,onLabel={ focusedLabel=it })
@@ -90,7 +90,7 @@ internal fun CompactPlayerControls(
                 PlayerIconButton("reactions",tr("Emojis · Mantén pulsado para frases","Emojis · Hold for phrases"),onInteraction=onInteraction,onClick=onQuickReactions,onLongClick=onReactions,onLabel={ focusedLabel=it })
                 PlayerIconButton("queue",tr("Cola","Queue"),onInteraction=onInteraction,onClick=onQueue,onLabel={ focusedLabel=it })
                 Spacer(Modifier.weight(1f))
-                Text(if(duration>0) "${tr("Termina","Ends")} " + java.text.SimpleDateFormat("HH:mm",java.util.Locale.getDefault()).format(java.util.Date(System.currentTimeMillis()+((duration-position).coerceAtLeast(0)/speed.coerceAtLeast(0.1f)).toLong())) else if(request.live) tr("EN VIVO","LIVE") else playbackTime(position),
+                Text(if(duration>0) "${tr("Termina","Ends")} " + java.text.SimpleDateFormat("HH:mm",java.util.Locale.getDefault()).format(java.util.Date(System.currentTimeMillis()+((duration-position).coerceAtLeast(0)/speed.coerceAtLeast(0.1f)).toLong())) else if(request.liveProvider=="lidom") tr("TRANSMISIÓN","STREAM") else if(request.live) tr("EN VIVO","LIVE") else playbackTime(position),
                     color=Color.White,fontSize=14.sp,lineHeight=18.sp)
             }
         }

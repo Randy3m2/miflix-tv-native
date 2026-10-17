@@ -100,6 +100,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             Screen.TRAKT -> TraktScreen(state)
             Screen.NOTIFICATIONS -> NotificationsScreen(state)
             Screen.LIVE_TV -> LiveScreen(state)
+            Screen.LIDOM -> LidomScreen(state)
             Screen.SEARCH -> SearchScreen(state) { state.screen = Screen.HOME }
             Screen.MOVIES -> CatalogScreen(state, tr("Películas","Movies"), state.movies, onBack = { state.screen = Screen.HOME })
             Screen.SERIES -> CatalogScreen(state, tr("Series","Series"), state.series, onBack = { state.screen = Screen.HOME })
@@ -134,7 +135,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         state.playerRequest?.takeIf { state.screen==Screen.PLAYER || state.miniPlayer }?.let { req ->
             key(req.playbackId) {
                 Box(if(state.miniPlayer && state.screen!=Screen.PLAYER) Modifier.align(Alignment.BottomEnd).padding(20.dp).width(320.dp).height(220.dp) else Modifier.fillMaxSize()) {
-                    PlayerScreen(state,req) { state.miniPlayer=false;state.screen=if(req.live) Screen.LIVE_TV else Screen.DETAILS }
+                    PlayerScreen(state,req) { state.miniPlayer=false;state.screen=req.returnScreen ?: if(req.live) Screen.LIVE_TV else Screen.DETAILS }
                 }
             }
         }

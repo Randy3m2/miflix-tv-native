@@ -934,6 +934,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     if(category=="sources") item(key="setting-9") {
                         SettingsSectionCard(onFocused={ helpTitle="Native Sources";helpDescription="Configure the native sources available for your account.";helpIndex=9 }) {
                 NativeSourcesSettings(state)
+                FocusButton("LIDOM · "+tr("Configurar fuentes","Source settings")) {state.lidomConfigure=true;state.screen=Screen.LIDOM}
 
                         }
                     }
@@ -1184,6 +1185,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             setSeekBackIncrementMs(10_000)
             setSeekForwardIncrementMs(10_000)
             val builder = MediaItem.Builder().setUri(request.stream.url)
+            if(request.liveMime.isNotBlank()) builder.setMimeType(request.liveMime)
             if (subtitles.isNotEmpty()) {
                 builder.setSubtitleConfigurations(
                     subtitles.sortedBy { if(normalizeMediaLanguage(it.lang) == preferredText) 0 else 1 }.take(60).map { s ->
@@ -1314,7 +1316,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                 // Some IPTV endpoints have no extension and return generic content types.
                 // Retry HLS once only when automatic container detection failed, never on HTTP/auth errors.
-                if(request.live && !triedLiveHls && error.errorCode==androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED) {
+                if(request.live && request.liveMime!="application/dash+xml" && !triedLiveHls && error.errorCode==androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED) {
                     triedLiveHls=true
                     player.setMediaItem(MediaItem.Builder().setUri(request.stream.url).setMimeType(MimeTypes.APPLICATION_M3U8).build())
                     player.prepare()
@@ -1350,7 +1352,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 updateScreenAwake()
             }
 
-            override fun onRenderedFirstFrame() {firstFrame=true;state.finishPlaybackLoading(request.playbackId)}
+            override fun onRenderedFirstFrame() {if(!firstFrame) state.markLidomSourceWorking(request);firstFrame=true;state.finishPlaybackLoading(request.playbackId)}
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_ENDED) {
                     ended = true; paused = false
@@ -1557,6 +1559,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         if(playbackError!=null) {
             val errorMessage=playbackError
             LaunchedEffect(errorMessage) {
+                if(request.liveProvider=="lidom") return@LaunchedEffect
                 delay(5000)
                 if(playbackError==errorMessage) { playbackError=null;controlsVisible=true;controlInteraction++ }
             }
@@ -1568,7 +1571,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 Text(playbackError.orEmpty(),color=Muted)
                 Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     FocusButton(tr("Reintentar","Retry"),modifier=Modifier.focusRequester(retryFocus)) { playbackError=null; surfaceGeneration++; player.prepare() }
-                    FocusButton(tr("Otro enlace","Another link")) { playbackError=null; state.launch { state.playerSources(request,player.currentPosition) } }
+                    FocusButton(if(request.liveProvider=="lidom") tr("Probar otra fuente","Try another source") else tr("Otro enlace","Another link")) { playbackError=null; state.launch { state.playerSources(request,player.currentPosition) } }
                     FocusButton(tr("Salir","Exit")) { parkCurrentPlayback();onClose() }
                 }
             }
@@ -1636,7 +1639,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 onQuickReactions={ if(state.watchParty==null) openPlayerParty() else { quickReactions=true;controlsVisible=false;controlInteraction++ } },onClose={ requestExit() }, onMaximize={ maximized=!maximized },
                 nextAvailable=(randomMode || upcoming!=null) && state.partyRole!=PartyRole.GUEST,
                 onNext={cancelAutoplay=true;state.launch {state.socialAction {if(randomMode) state.playRandomEpisode(request.item) else upcoming?.let {state.playNext(request,it)} } }},
-                onEpisodes={ if(request.live) playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else "channels" else { episodesResumeAfterClose=false;showEpisodes=true } },onQueue={ showQueue=true },
+                onEpisodes={ if(request.liveProvider=="lidom") state.showLidomSources(request) else if(request.live) playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else "channels" else { episodesResumeAfterClose=false;showEpisodes=true } },onQueue={ showQueue=true },
                 onInfo={ playerMenu="info" },onPip={ parkCurrentPlayback();playerMenu=null;controlsVisible=false;state.miniPlayer=true;state.screen=Screen.HOME },
                 onMultiView={ if(state.watchParty!=null || state.pendingPartyCode!=null) confirmMulti=true else state.beginMultiView(request) })
         }

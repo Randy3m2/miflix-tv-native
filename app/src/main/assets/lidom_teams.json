@@ -1,0 +1,282 @@
+{
+  "season": "2026–27",
+  "teams": [
+    {
+      "id": "licey",
+      "mlb": 672,
+      "name": "Tigres del Licey",
+      "short": "Licey",
+      "color": "#1763C9",
+      "website": "https://www.licey.com/",
+      "logo": "lidom_licey",
+      "sources": [
+        {
+          "id": "licey-youtube",
+          "team": "licey",
+          "name": "YouTube · Licey",
+          "kind": "YOUTUBE",
+          "url": "https://www.youtube.com/channel/UCodG7MOVMjh3lpV47EUTnMA",
+          "reference": "https://lidom.com/tigres-del-licey/licey-renueva-su-equipo-de-comunicacion-y-transmision-96860.html",
+          "note": "Select a video; availability and embedding checked by YouTube",
+          "aliases": []
+        },
+        {
+          "id": "licey-tv-0",
+          "team": "licey",
+          "name": "Digital 15",
+          "kind": "TV",
+          "url": "",
+          "reference": "https://lidom.com/tigres-del-licey/licey-renueva-su-equipo-de-comunicacion-y-transmision-96860.html",
+          "note": "2026–27 · check your configured TV sources",
+          "aliases": [
+            "digital 15"
+          ]
+        },
+        {
+          "id": "licey-tv-1",
+          "team": "licey",
+          "name": "Telemicro Internacional",
+          "kind": "TV",
+          "url": "",
+          "reference": "https://lidom.com/tigres-del-licey/licey-renueva-su-equipo-de-comunicacion-y-transmision-96860.html",
+          "note": "2026–27 · check your configured TV sources",
+          "aliases": [
+            "telemicro internacional"
+          ]
+        },
+        {
+          "id": "licey-tv-2",
+          "team": "licey",
+          "name": "LiceyTV",
+          "kind": "TV",
+          "url": "",
+          "reference": "https://lidom.com/tigres-del-licey/licey-renueva-su-equipo-de-comunicacion-y-transmision-96860.html",
+          "note": "2026–27 · check your configured TV sources",
+          "aliases": [
+            "licey tv",
+            "liceytv"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "aguilas",
+      "mlb": 667,
+      "name": "Águilas Cibaeñas",
+      "short": "Águilas",
+      "color": "#E6B52B",
+      "website": "https://aguilas.com.do/",
+      "logo": "lidom_aguilas",
+      "sources": [
+        {
+          "id": "aguilas-youtube",
+          "team": "aguilas",
+          "name": "YouTube · Águilas",
+          "kind": "YOUTUBE",
+          "url": "https://www.youtube.com/channel/UC_l6h1_eJl7yJ1aagWximmA",
+          "reference": "https://aguilas.com.do/wp-content/uploads/2025/10/Boletin-de-Prensa-No.1-Aguilas-Cibaenas-Serie-Regular-2025-26.pdf",
+          "note": "Select a video; availability and embedding checked by YouTube",
+          "aliases": []
+        },
+        {
+          "id": "aguilas-tv-0",
+          "team": "aguilas",
+          "name": "Tele Universo 29",
+          "kind": "TV",
+          "url": "",
+          "reference": "https://aguilas.com.do/wp-content/uploads/2025/10/Boletin-de-Prensa-No.1-Aguilas-Cibaenas-Serie-Regular-2025-26.pdf",
+          "note": "2025–26 reference · check your configured TV sources",
+          "aliases": [
+            "teleuniverso",
+            "tele universo"
+          ]
+        },
+        {
+          "id": "aguilas-tv-1",
+          "team": "aguilas",
+          "name": "CDN Deportes",
+          "kind": "TV",
+          "url": "",
+          "reference": "https://aguilas.com.do/wp-content/uploads/2025/10/Boletin-de-Prensa-No.1-Aguilas-Cibaenas-Serie-Regular-2025-26.pdf",
+          "note": "2025–26 reference · check your configured TV sources",
+          "aliases": [
+            "cdn deportes"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "escogido",
+      "mlb": 671,
+      "name": "Leones del Escogido",
+      "short": "Escogido",
+      "color": "#CA2439",
+      "website": "https://www.escogido.com/",
+      "logo": "lidom_escogido",
+      "sources": [
+        {
+          "id": "escogido-youtube",
+          "team": "escogido",
+          "name": "YouTube · Abriendo Sports / La Cueva Roja",
+          "kind": "YOUTUBE",
+          "url": "",
+          "reference": "https://lidom.com/leones-del-escogido/escogido-apuesta-por-jovenes-y-formato-digital-para-ampliar-audiencia-en-youtube-96582.html",
+          "note": "Select a video; availability and embedding checked by YouTube",
+          "aliases": []
+        },
+        {
+          "id": "escogido-team-youtube",
+          "team": "escogido",
+          "name": "YouTube · Escogido BBC",
+          "kind": "YOUTUBE",
+          "url": "https://www.youtube.com/channel/UCtwRRpKOd3a62LCW8z1MwPQ",
+          "reference": "https://www.escogido.com/",
+          "note": "Team channel · select a video; current-game availability unverified",
+          "aliases": []
+        },
+        {
+          "id": "escogido-tv-0",
+          "team": "escogido",
+          "name": "Digital 15",
+          "kind": "TV",
+          "url": "",
+          "reference": "https://lidom.com/leones-del-escogido/escogido-apuesta-por-jovenes-y-formato-digital-para-ampliar-audiencia-en-youtube-96582.html",
+          "note": "2025–26 reference · check your configured TV sources",
+          "aliases": [
+            "digital 15"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gigantes",
+      "mlb": 670,
+      "name": "Gigantes del Cibao",
+      "short": "Gigantes",
+      "color": "#882D4F",
+      "website": "https://gigantes.do/",
+      "logo": "lidom_gigantes",
+      "sources": [
+        {
+          "id": "gigantes-youtube",
+          "team": "gigantes",
+          "name": "YouTube / ION Creators · verify",
+          "kind": "YOUTUBE",
+          "url": "",
+          "reference": "https://lidom.com/gigantes-del-cibao/gigantes-renuevan-acuerdo-con-telemedios-canal-8-96975.html",
+          "note": "Select a video; availability and embedding checked by YouTube",
+          "aliases": []
+        },
+        {
+          "id": "gigantes-tv-0",
+          "team": "gigantes",
+          "name": "Telemedios 8",
+          "kind": "TV",
+          "url": "",
+          "reference": "https://lidom.com/gigantes-del-cibao/gigantes-renuevan-acuerdo-con-telemedios-canal-8-96975.html",
+          "note": "2026–27 · check your configured TV sources",
+          "aliases": [
+            "telemedios 8",
+            "telemedios dominicanos",
+            "telemedios canal 8"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "toros",
+      "mlb": 668,
+      "name": "Toros del Este",
+      "short": "Toros",
+      "color": "#E98024",
+      "website": "https://torosdeleste.com/",
+      "logo": "lidom_toros",
+      "sources": [
+        {
+          "id": "toros-youtube",
+          "team": "toros",
+          "name": "YouTube · Toros",
+          "kind": "YOUTUBE",
+          "url": "",
+          "reference": "https://torosdeleste.com/",
+          "note": "Select a video; availability and embedding checked by YouTube",
+          "aliases": []
+        },
+        {
+          "id": "toros-tv-0",
+          "team": "toros",
+          "name": "Teleantillas",
+          "kind": "TV",
+          "url": "",
+          "reference": "https://torosdeleste.com/",
+          "note": "Reference · check your configured TV sources",
+          "aliases": [
+            "teleantillas",
+            "tele antillas"
+          ]
+        },
+        {
+          "id": "toros-tv-1",
+          "team": "toros",
+          "name": "Toros TV",
+          "kind": "TV",
+          "url": "",
+          "reference": "https://torosdeleste.com/",
+          "note": "Reference · check your configured TV sources",
+          "aliases": [
+            "toros tv",
+            "torostv"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "estrellas",
+      "mlb": 669,
+      "name": "Estrellas Orientales",
+      "short": "Estrellas",
+      "color": "#25834C",
+      "website": "https://estrellasorientales.com.do/",
+      "logo": "lidom_estrellas",
+      "sources": [
+        {
+          "id": "estrellas-youtube",
+          "team": "estrellas",
+          "name": "YouTube · Estrellas",
+          "kind": "YOUTUBE",
+          "url": "",
+          "reference": "https://estrellasorientales.com.do/",
+          "note": "Select a video; availability and embedding checked by YouTube",
+          "aliases": []
+        },
+        {
+          "id": "estrellas-tv-0",
+          "team": "estrellas",
+          "name": "Coral 39",
+          "kind": "TV",
+          "url": "",
+          "reference": "https://estrellasorientales.com.do/",
+          "note": "Reference · check your configured TV sources",
+          "aliases": [
+            "coral 39",
+            "coral"
+          ]
+        },
+        {
+          "id": "estrellas-tv-1",
+          "team": "estrellas",
+          "name": "Estrellas TV",
+          "kind": "TV",
+          "url": "",
+          "reference": "https://estrellasorientales.com.do/",
+          "note": "Reference · check your configured TV sources",
+          "aliases": [
+            "estrellas tv",
+            "estrellastv",
+            "estrellas hd"
+          ]
+        }
+      ]
+    }
+  ]
+}

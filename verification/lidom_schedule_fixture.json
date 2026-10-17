@@ -1,0 +1,141 @@
+{
+  "dates": [
+    {
+      "date": "2026-10-16",
+      "games": [
+        {
+          "gamePk": 851509,
+          "gameDate": "2026-10-16T23:00:00Z",
+          "status": {
+            "abstractGameState": "Live",
+            "codedGameState": "I",
+            "detailedState": "In Progress",
+            "statusCode": "I",
+            "startTimeTBD": false,
+            "abstractGameCode": "L"
+          },
+          "teams": {
+            "away": {
+              "team": {
+                "id": 667,
+                "name": "Aguilas Cibaenas",
+                "link": "/api/v1/teams/667"
+              },
+              "leagueRecord": {
+                "wins": 0,
+                "losses": 0,
+                "ties": 0,
+                "pct": ".000"
+              },
+              "splitSquad": false,
+              "seriesNumber": 1
+            },
+            "home": {
+              "team": {
+                "id": 670,
+                "name": "Gigantes del Cibao",
+                "link": "/api/v1/teams/670"
+              },
+              "leagueRecord": {
+                "wins": 0,
+                "losses": 0,
+                "ties": 0,
+                "pct": ".000"
+              },
+              "splitSquad": false,
+              "seriesNumber": 1
+            }
+          }
+        },
+        {
+          "gamePk": 851491,
+          "gameDate": "2026-10-16T23:15:00Z",
+          "status": {
+            "abstractGameState": "Live",
+            "codedGameState": "I",
+            "detailedState": "In Progress",
+            "statusCode": "I",
+            "startTimeTBD": false,
+            "abstractGameCode": "L"
+          },
+          "teams": {
+            "away": {
+              "team": {
+                "id": 672,
+                "name": "Tigres del Licey",
+                "link": "/api/v1/teams/672"
+              },
+              "leagueRecord": {
+                "wins": 0,
+                "losses": 0,
+                "ties": 0,
+                "pct": ".000"
+              },
+              "splitSquad": false,
+              "seriesNumber": 1
+            },
+            "home": {
+              "team": {
+                "id": 671,
+                "name": "Leones del Escogido",
+                "link": "/api/v1/teams/671"
+              },
+              "leagueRecord": {
+                "wins": 0,
+                "losses": 0,
+                "ties": 0,
+                "pct": ".000"
+              },
+              "splitSquad": false,
+              "seriesNumber": 1
+            }
+          }
+        },
+        {
+          "gamePk": 851435,
+          "gameDate": "2026-10-16T23:30:00Z",
+          "status": {
+            "abstractGameState": "Live",
+            "codedGameState": "I",
+            "detailedState": "In Progress",
+            "statusCode": "I",
+            "startTimeTBD": false,
+            "abstractGameCode": "L"
+          },
+          "teams": {
+            "away": {
+              "team": {
+                "id": 669,
+                "name": "Estrellas Orientales",
+                "link": "/api/v1/teams/669"
+              },
+              "leagueRecord": {
+                "wins": 0,
+                "losses": 0,
+                "ties": 0,
+                "pct": ".000"
+              },
+              "splitSquad": false,
+              "seriesNumber": 1
+            },
+            "home": {
+              "team": {
+                "id": 668,
+                "name": "Toros del Este",
+                "link": "/api/v1/teams/668"
+              },
+              "leagueRecord": {
+                "wins": 0,
+                "losses": 0,
+                "ties": 0,
+                "pct": ".000"
+              },
+              "splitSquad": false,
+              "seriesNumber": 1
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

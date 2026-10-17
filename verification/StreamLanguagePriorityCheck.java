@@ -9,6 +9,9 @@ public class StreamLanguagePriorityCheck {
     }
     public static void main(String[] args) {
         rank(0, "", "1080p Español Latino");
+        rank(0, "", "Peerflix 🇪🇸 1080p | Subtitles: English");
+        rank(1, "", "Peerflix 🇺🇸 1080p | Subtitles: Español");
+        rank(2, "", "Subtitles: Español");
         rank(0, "", "Peerflix · LAT · 1080p");
         rank(0, "", "Peerflix · España · 720p");
         rank(0, "", "Comet · SPAIN · 1080p");

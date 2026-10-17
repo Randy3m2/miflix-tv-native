@@ -112,7 +112,7 @@ class AppState(context: Context) {
         invalidatePlaybackWork()
     }
     private fun invalidatePlaybackWork() {
-        playbackWork.invalidate(); sourceSelection=null; busyMessage=null;playbackLoading=null
+        playbackWork.invalidate(); sourceFallback=null; sourceSelection=null; busyMessage=null;playbackLoading=null
         playbackSubtitleJobs.values.forEach { it.cancel() }; playbackSubtitleJobs.clear()
     }
     private fun sameParty(epoch: Long, owner: String, room: String): Boolean =
@@ -1848,6 +1848,70 @@ class AppState(context: Context) {
         ranked
     }
 
+    private data class SourceFallbackPlan(val owner: String?,val profile: String,val generation: Long,
+        val rows: List<StreamChoice>,val budget: com.miflix.native2.player.SourceFallbackBudget,
+        var playbackId: String,var busy: Boolean=false)
+    private var sourceFallback: SourceFallbackPlan?=null
+    private suspend fun materializeAutomaticSource(rows: List<StreamChoice>,budget: com.miflix.native2.player.SourceFallbackBudget,
+        owner: String?,valid: () -> Boolean): StreamChoice {
+        var index=0
+        while(true) {
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
+            check(valid()) {"Playback changed"}
+            val candidate=rows[index]
+            try {
+                return if(candidate.nativeSource==null) candidate else {
+                    check(nativeStore.enabled(owner)) {tr("El motor nativo está apagado","Native engine is disabled")}
+                    nativeSources.materialize(candidate,nativeStore.token(owner),valid)
+                }
+            } catch(e: CancellationException) {throw e} catch(e: Exception) {
+                val next=budget.nextIndex()
+                if(next<0) throw e
+                index=next
+            }
+        }
+    }
+    /** Reuses the already loaded list; no add-on search or Supabase read is made here. */
+    suspend fun tryNextPlaybackSource(req: PlayerRequest,position: Long,playing: Boolean): Boolean {
+        val plan=sourceFallback ?: return false
+        fun valid()=sourceFallback===plan && plan.playbackId==req.playbackId && playerRequest?.playbackId==req.playbackId &&
+            session?.userId==plan.owner && activeProfile.id==plan.profile && playbackWork.generation==plan.generation &&
+            screen==Screen.PLAYER && appForeground && watchParty==null && !req.live
+        if(!valid() || plan.busy) return false
+        val manager=appContext.getSystemService(android.net.ConnectivityManager::class.java)
+        val online=manager.getNetworkCapabilities(manager.activeNetwork)?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)==true
+        if(!online) return false
+        plan.busy=true
+        try {
+            while(valid()) {
+                val index=plan.budget.nextIndex()
+                if(index<0) {sourceFallback=null;return false}
+                val candidate=plan.rows[index]
+                beginPlaybackLoading(req.item,req.season,req.episode)
+                val resolved=try {
+                    if(candidate.nativeSource==null) candidate else nativeSources.materialize(candidate,nativeStore.token(plan.owner),::valid)
+                } catch(e: CancellationException) {throw e} catch(_: Exception) {continue}
+                if(!valid()) return false
+                val subs=withTimeoutOrNull(50) {playbackSubtitleJobs[subtitleKey(req.item,req.season,req.episode)]?.await()}.orEmpty()
+                val next=req.copy(stream=resolved.copy(subtitles=(resolved.subtitles+subs).distinctBy {it.url}),
+                    resumeMs=position.coerceAtLeast(0),playbackId=UUID.randomUUID().toString(),sourceFallbackPlaying=playing)
+                plan.playbackId=next.playbackId
+                // Same title/episode: changing source must not publish an off/on presence pair.
+                if(socialReadyPlaybackId==req.playbackId) socialReadyPlaybackId=next.playbackId
+                playerRequest=next
+                playbackLoading=playbackLoading?.copy(playbackId=next.playbackId)
+                return true
+            }
+            return false
+        } finally {
+            plan.busy=false
+            if(playerRequest?.playbackId==req.playbackId) playbackLoading=null
+        }
+    }
+    fun isSourceFallbackReplacement(req: PlayerRequest): Boolean = playerRequest?.let {
+        it.playbackId!=req.playbackId && it.sourceFallbackPlaying!=null && it.item.cloudId==req.item.cloudId &&
+            it.season==req.season && it.episode==req.episode
+    }==true
     private val playbackSubtitleJobs = mutableMapOf<String, Deferred<List<SubtitleChoice>>>()
     private fun subtitleKey(item: MediaSummary, season: Int, episode: Int) = "${item.cloudId}:$season:$episode"
     suspend fun playbackSubtitles(req: PlayerRequest): List<SubtitleChoice> {
@@ -1861,6 +1925,7 @@ class AppState(context: Context) {
         if(kidsMode) require(tmdb.kidsAllowed(item)) { tr("Este título no está disponible en Kids.","This title is not available in Kids.") }
         if(randomEpisodeCloud!=item.cloudId) randomEpisodeCloud=null
         val ticket=playbackWork.begin()
+        sourceFallback=null
         val playbackOwner=session?.userId; val playbackProfile=activeProfile.id
         fun valid()=playbackWork.current(ticket) && session?.userId==playbackOwner && activeProfile.id==playbackProfile
         if(playbackLoading?.let {it.item.cloudId==item.cloudId && it.season==season && it.episode==episode}!=true) beginPlaybackLoading(item,season,episode)
@@ -1879,10 +1944,11 @@ class AppState(context: Context) {
             val streams = streamsJob.await()
             if(!valid()) return@coroutineScope
             val chosen = StreamOrdering.best(streams,audioLanguage) ?: throw IllegalStateException(tr("No se encontraron enlaces reproducibles","No playable sources found"))
-            val best = if(chosen.nativeSource==null) chosen else {
-                check(nativeStore.enabled(playbackOwner)) { tr("El motor nativo está apagado","Native engine is disabled") }
-                nativeSources.materialize(chosen,nativeStore.token(playbackOwner),::valid)
-            }
+            val automaticFallback=selectedStream==null && watchParty==null && com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(audioLanguage)
+            val retryRows=if(automaticFallback) StreamOrdering.fallbackCandidates(streams,audioLanguage)
+                .takeIf {it.firstOrNull()?.url==chosen.url} ?: listOf(chosen) else listOf(chosen)
+            val budget=com.miflix.native2.player.SourceFallbackBudget(retryRows.size)
+            val best=materializeAutomaticSource(retryRows,budget,playbackOwner,::valid)
             val externalSubs = withTimeoutOrNull(800) { subsJob.await() }.orEmpty()
             val mergedSubs = (best.subtitles + externalSubs)
                 .distinctBy { it.url }
@@ -1897,6 +1963,9 @@ class AppState(context: Context) {
             playbackLoading=playbackLoading?.copy(playbackId=playerRequest?.playbackId)
             screen = Screen.PLAYER
             playerRequest?.let { onStarted?.invoke(it) }
+            val req=playerRequest
+            if(automaticFallback && req!=null && retryRows.size>1) sourceFallback=SourceFallbackPlan(playbackOwner,playbackProfile,ticket.generation,
+                retryRows,budget,req.playbackId)
         }.onFailure { if(it is CancellationException) throw it; if(valid()) {playbackLoading=null;error=it.message} }
         if(valid()) busyMessage=null
     }
@@ -2421,7 +2490,8 @@ data class PlayerRequest(
     val returnScreen: Screen? = null,
     val momentStartMs: Long = 0L,
     val momentEndMs: Long = 0L,
-    val momentSender: String = ""
+    val momentSender: String = "",
+    val sourceFallbackPlaying: Boolean? = null
 )
 
 data class SourceSelection(

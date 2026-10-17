@@ -21,6 +21,8 @@ internal object UpdateNotes {
         "Connect phone / PC abre tu catálogo de Vercel conectado a la TV: QR/enlace sin código manual y botón Play on TV." to "Connect phone / PC opens your Vercel catalog connected to the TV: QR/link with no manual code and a Play on TV button."
     )
     val changes=listOf(
+        "Reproducción automática: hasta tres fuentes españolas antes de recurrir a inglés; cinco intentos totales, conservando el minuto y usando la lista ya cargada." to "Automatic playback: up to three Spanish sources before English fallback; five total attempts, preserving position and reusing loaded links.",
+        "Recuperación limitada ante errores de fuente o carga inicial sin video durante 20 segundos; sin cambiar Live TV ni la sincronización del Party." to "Bounded recovery from source errors or 20 seconds without an initial video frame; Live TV and Party synchronization stay unchanged.",
         "Momentos compartidos: marca inicio y final en el reproductor y envíalos a un amigo, sin subir video." to "Shared moments: mark start/end in the player and share with a friend without uploading video.",
         "Friends → Momentos: recepción exclusivamente con Refresh manual; reproduce desde el inicio marcado y pausa al final, con Repetir o Continuar." to "Friends → Moments: manual Refresh only; plays from the marked start and pauses at the end, with Replay or Continue.",
         "Selección global entre todos los add-ons: español latino/castellano/España primero; inglés como respaldo, antes de priorizar resolución o tamaño." to "Global selection across all add-ons: Latin American/Castilian/Spain Spanish first, English fallback, before resolution or file size.",

@@ -1,0 +1,23 @@
+'use strict';
+const fs=require('fs'),assert=require('assert');
+const root='app/src/main/java/com/miflix/native2/';
+const read=p=>fs.readFileSync(root+p,'utf8');
+const state=read('ui/AppState.kt'),screen=read('ui/Screens.kt'),order=read('data/StreamOrdering.kt');
+assert(order.includes('rows.filter {languageRank(it)==0}.take(3)+rows.filter {languageRank(it)==1}.take(2)'));
+const fallback=state.slice(state.indexOf('suspend fun tryNextPlaybackSource'),state.indexOf('private val playbackSubtitleJobs'));
+assert(!fallback.includes('resolvePlaybackSources(') && !fallback.includes('streamRepo.resolve('));
+assert(!fallback.includes('social.') && !fallback.includes('cloud.'));
+assert(fallback.includes('plan.budget.nextIndex()'));
+assert(fallback.includes('screen==Screen.PLAYER && appForeground && watchParty==null && !req.live'));
+assert(fallback.includes('session?.userId==plan.owner && activeProfile.id==plan.profile'));
+assert(fallback.includes('resumeMs=position.coerceAtLeast(0)'));
+assert(fallback.includes('val next=req.copy('));
+assert(fallback.includes('socialReadyPlaybackId=next.playbackId'));
+assert(screen.includes('if(!state.isSourceFallbackReplacement(request))'));
+assert(screen.includes('SourceFallbackBudget.sourceFailure(error.errorCode)'));
+assert(screen.includes('delay(20_000)'));
+assert(screen.includes('request.sourceFallbackPlaying ?:'));
+assert(state.includes('materializeAutomaticSource(retryRows,budget,playbackOwner,::valid)'));
+for(const rel of ['data/StreamOrdering.kt','data/StreamLanguagePriority.java','ui/AppState.kt','ui/Screens.kt','ui/UpdateNotes.kt','player/SourceFallbackBudget.java'])
+ assert.equal(read(rel),fs.readFileSync('main/java/com/miflix/native2/'+rel,'utf8'),rel);
+console.log('PASS: Spanish-first bounded chain, cached candidates only, shared budget across materialization/player failures, account/profile/generation guards, live/party isolation, position/play-intent/range retention, no extra presence/exit sync per source replacement, timeout and matching mirrors.');

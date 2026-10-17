@@ -13,6 +13,7 @@ public final class StreamLanguagePriority {
     private static final Pattern ENGLISH = Pattern.compile(EDGE + "(?:en(?:[-_](?:us|gb))?|eng|english|ingles)" + END);
     private static final Pattern OTHER = Pattern.compile(EDGE + "(?:fr|fra|fre|french|francais|de|deu|ger|german|aleman|it|ita|italian|italiano|pt|por|portuguese|portugues|ru|rus|russian|ruso|ja|jpn|japanese|japones|ko|kor|korean|coreano|hi|hin|hindi)" + END);
     private static final Pattern SUB = Pattern.compile("\\b(?:subtitles?|subs?|subtitulos?|subbed|hardsubs?|vostfr|vose|vosi)\\b");
+    private static final Pattern SUB_SECTION = Pattern.compile("(?:[|;]|📝|💬|📜)\\s*(?:subtitles?|subs?|subtitulos?)\\b");
     private static final Pattern AUDIO = Pattern.compile("\\b(?:audio|dubbed|doblado|doblaje)\\b");
     private static final Pattern LANGUAGE_BEFORE_SUB = Pattern.compile("(?:spanish|espanol|castellano|latino|latam|english|ingles|spa|eng|es|en)\\s+(?:subtitles?|subs?|subtitulos?)\\b.*");
     private static String normalize(String text) {
@@ -38,6 +39,8 @@ public final class StreamLanguagePriority {
         if (declared != 2) return declared;
         StringBuilder evidence = new StringBuilder();
         for (String line : normalize(labels).split("\\r?\\n")) {
+            java.util.regex.Matcher section = SUB_SECTION.matcher(line);
+            if (section.find()) line = line.substring(0, section.start());
             if (SUB.matcher(line).find()) {
                 if (!AUDIO.matcher(line).find()) continue;
                 line = LANGUAGE_BEFORE_SUB.matcher(line).replaceFirst("");

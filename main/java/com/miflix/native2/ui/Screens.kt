@@ -1164,6 +1164,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var maximized by remember { mutableStateOf(true) }
     var speed by remember(request.playbackId) { mutableStateOf(1f) }
     var playbackError by remember(request.playbackId) { mutableStateOf<String?>(null) }
+    var advancingSource by remember(request.playbackId) {mutableStateOf(false)}
     LaunchedEffect(playbackError) {if(playbackError!=null) {hadPlaybackError=true;state.finishPlaybackLoading(request.playbackId)}}
     var externalSubtitles by remember(request.playbackId) { mutableStateOf<List<SubtitleChoice>>(emptyList()) }
     var subtitleLoading by remember(request.playbackId) { mutableStateOf(false) }
@@ -1245,7 +1246,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             trackSelectionParameters = trackBuilder.build()
             videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
             prepare()
-            playWhenReady = if(state.isPlaybackParked(request)) false else if (state.partyRole == PartyRole.GUEST) state.watchParty?.playing ?: true else true
+            playWhenReady = if(state.isPlaybackParked(request)) false else request.sourceFallbackPlaying ?: if (state.partyRole == PartyRole.GUEST) state.watchParty?.playing ?: true else true
         }
     }
 
@@ -1344,6 +1345,25 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }
     }
 
+    fun advanceSourceOrShow(message: String) {
+        if(advancingSource || state.playerRequest?.playbackId!=request.playbackId) return
+        advancingSource=true
+        val position=if(firstFrame) player.currentPosition.coerceAtLeast(0) else player.currentPosition.coerceAtLeast(request.resumeMs)
+        val playing=player.playWhenReady
+        state.launch {
+            try {
+                val advanced=state.tryNextPlaybackSource(request,position,playing)
+                if(!advanced && state.playerRequest?.playbackId==request.playbackId) playbackError=message
+            } finally {advancingSource=false}
+        }
+    }
+    LaunchedEffect(player,request.playbackId,firstFrame) {
+        if(!request.live && state.watchParty==null && !firstFrame) {
+            delay(20_000)
+            if(!firstFrame && playbackError==null && player.playWhenReady && state.appForeground && !state.isPlaybackParked(request))
+                advanceSourceOrShow(tr("La fuente no comenzó a reproducir. Prueba otro enlace.","The source did not start playing. Try another link."))
+        }
+    }
     DisposableEffect(player, playbackView) {
         val previousKeepScreenOn = playbackView.keepScreenOn
         fun updateScreenAwake() {
@@ -1363,7 +1383,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                     player.prepare()
                     return
                 }
-                playbackError=playerFailureDetails(error)
+                if(!request.live && com.miflix.native2.player.SourceFallbackBudget.sourceFailure(error.errorCode)) {
+                    advanceSourceOrShow(playerFailureDetails(error))
+                } else playbackError=playerFailureDetails(error)
             }
             override fun onTracksChanged(value: androidx.media3.common.Tracks) {
                 tracks = value
@@ -1417,8 +1439,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             val lastPosition=player.currentPosition
             val lastDuration=player.duration.coerceAtLeast(0)
             state.updateProgress(request, lastPosition, lastDuration)
-            state.launch { state.traktMarkWatched(request,lastPosition,lastDuration) }
-            state.launch { runCatching { state.pushCloud() } }
+            if(!state.isSourceFallbackReplacement(request)) {
+                state.launch { state.traktMarkWatched(request,lastPosition,lastDuration) }
+                state.launch { runCatching { state.pushCloud() } }
+            }
             player.release()
         }
     }

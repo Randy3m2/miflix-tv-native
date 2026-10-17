@@ -25,6 +25,10 @@ internal object StreamOrdering {
     /** Provider-neutral automatic selection: language precedes resolution, size and add-on order. */
     fun best(streams: List<StreamChoice>,preferredAudio: String = ""): StreamChoice? =
         sorted(streams,preferredAudio).firstOrNull()
+    fun fallbackCandidates(streams: List<StreamChoice>,preferredAudio: String): List<StreamChoice> {
+        val rows=sorted(streams,preferredAudio)
+        return rows.filter {languageRank(it)==0}.take(3)+rows.filter {languageRank(it)==1}.take(2)
+    }
     fun sorted(streams: List<StreamChoice>, preferredAudio: String = ""): List<StreamChoice> {
         val spanish = StreamLanguagePriority.prefersSpanish(preferredAudio)
         return streams.filter { playable(it) }

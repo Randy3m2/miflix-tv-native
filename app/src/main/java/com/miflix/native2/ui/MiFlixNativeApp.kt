@@ -71,8 +71,25 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         LaunchedEffect(state.activeProfile.id,state.session?.userId) {
             if(state.miniPlayer) { state.miniPlayer=false;state.playerRequest=null }
         }
+        var homeExitArmedAt by remember {mutableStateOf(0L)}
+        LaunchedEffect(state.screen,state.appForeground) {
+            if(state.screen!=Screen.HOME || !state.appForeground) homeExitArmedAt=0L
+        }
+        LaunchedEffect(homeExitArmedAt) {if(homeExitArmedAt!=0L) {delay(2200);homeExitArmedAt=0L}}
+        // Registered before content: dialogs, popups and screensavers get Back first.
+        androidx.activity.compose.BackHandler(enabled=state.screen==Screen.HOME) {
+            val now=android.os.SystemClock.elapsedRealtime()
+            if(homeExitArmedAt!=0L && now-homeExitArmedAt<=2200L) {
+                homeExitArmedAt=0L
+                baseContext.playbackActivity()?.finish()
+            } else homeExitArmedAt=now
+        }
         val navigationState=androidx.compose.runtime.saveable.rememberSaveableStateHolder()
-        Box(Modifier.fillMaxSize().onPreviewKeyEvent {MenuActivity.touch();false}.pointerInput(Unit) {awaitPointerEventScope {while(true) {awaitPointerEvent(PointerEventPass.Initial);MenuActivity.touch()} }}) {
+        Box(Modifier.fillMaxSize().onPreviewKeyEvent {
+            MenuActivity.touch()
+            if(it.nativeKeyEvent.action==android.view.KeyEvent.ACTION_DOWN && it.nativeKeyEvent.keyCode!=android.view.KeyEvent.KEYCODE_BACK) homeExitArmedAt=0L
+            false
+        }.pointerInput(Unit) {awaitPointerEventScope {while(true) {awaitPointerEvent(PointerEventPass.Initial);MenuActivity.touch()} }}) {
         navigationState.SaveableStateProvider("${state.session?.userId}:${state.activeProfile.id}:${state.screen.name}") {
         val destination=if(state.kidsMode && state.screen !in setOf(Screen.HOME,Screen.SEARCH,Screen.MY_LIST,Screen.DETAILS,Screen.PROFILES,Screen.NOTIFICATIONS,Screen.PLAYER)) Screen.HOME else state.screen
         LaunchedEffect(destination,state.screen) {if(destination!=state.screen) state.screen=destination}
@@ -161,6 +178,10 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                     delay(if(state.screen==Screen.PLAYER || state.miniPlayer) 500L else 2000L)
                 }
             }
+        }
+        if(homeExitArmedAt!=0L && state.screen==Screen.HOME) Box(Modifier.fillMaxSize(),contentAlignment=Alignment.BottomCenter) {
+            Text(tr("Pulsa Atrás otra vez para salir","Press Back again to exit"),color=Color.White,fontSize=16.sp,
+                modifier=Modifier.padding(bottom=32.dp).background(Color(0xE6222222),RoundedCornerShape(16.dp)).padding(horizontal=24.dp,vertical=14.dp))
         }
         if(state.changelogOpen) ChangelogDialog(state) {state.changelogOpen=false}
         MenuScreensaver(state)

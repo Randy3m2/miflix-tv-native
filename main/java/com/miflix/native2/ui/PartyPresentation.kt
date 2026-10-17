@@ -123,6 +123,7 @@ internal fun PartyMembersOverlay(state: AppState,modifier: Modifier=Modifier,pla
 
 @Composable
 internal fun PartyRoomSheet(state: AppState,onCreate: () -> Unit,onRefreshRequests: () -> Unit,onSwitchCurrent: () -> Unit,onWatchParty: () -> Unit,close: () -> Unit) {
+    var selectedFriend by remember {mutableStateOf<com.miflix.native2.data.FriendActivity?>(null)}
     var invite by remember {mutableStateOf(false)}
     var qr by remember {mutableStateOf(false)}
     var confirmShare by remember {mutableStateOf(false)}
@@ -140,7 +141,12 @@ internal fun PartyRoomSheet(state: AppState,onCreate: () -> Unit,onRefreshReques
             item {PartyCode(room.roomCode)}
             item {Text(listOf(room.title,if(room.season>0) "S${room.season} E${room.episode}" else "").filter {it.isNotBlank()}.joinToString(" · "),color=Color.White,fontSize=15.sp,maxLines=2)}
             val current=state.playerRequest
-            if(current!=null && host) item {
+            if(current!=null && state.screen!=Screen.PLAYER) item {
+                FocusButton(tr("Volver al reproductor","Return to player"),primary=true,modifier=Modifier.fillMaxWidth()) {
+                    state.returnToPlayer();close()
+                }
+            }
+            if(current!=null && host && state.screen==Screen.PLAYER && (current.item.cloudId!=room.cloudId || current.season!=room.season || current.episode!=room.episode)) item {
                 val label=current.item.title+if(current.season>0) " · S${current.season} E${current.episode}" else ""
                 FocusButton(tr("Cambiar el party a ","Switch party to ")+label,primary=true,modifier=Modifier.fillMaxWidth(),onClick=onSwitchCurrent)
             }
@@ -177,9 +183,25 @@ internal fun PartyRoomSheet(state: AppState,onCreate: () -> Unit,onRefreshReques
             item {FocusButton(if(host) tr("Terminar para todos","End for everyone") else tr("Salir del party","Leave party"),destructive=true,modifier=Modifier.fillMaxWidth()) {state.launch {state.leaveWatchParty();close()}}}
         }
         item {FocusButton(if(state.accessRequestsLoading) tr("Consultando…","Checking…") else tr("Actualizar solicitudes","Refresh requests"),modifier=Modifier.fillMaxWidth()) {if(!state.accessRequestsLoading) onRefreshRequests()}}
+        item {Text(tr("Amigos","Friends"),color=Color.White,fontSize=19.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=6.dp))}
+        val friends=state.friendActivity.distinctBy {it.id}.sortedWith(compareByDescending<com.miflix.native2.data.FriendActivity> {it.online}.thenBy {it.nickname.lowercase()})
+        if(state.session==null) item {Text(tr("Inicia sesión para ver tus amigos.","Sign in to see your friends."),color=Muted,fontSize=13.sp)}
+        else if(friends.isEmpty()) item {Text(if(state.friendsTabLoading) tr("Cargando amigos…","Loading friends…") else tr("Aún no tienes amigos agregados.","No friends added yet."),color=Muted,fontSize=13.sp)}
+        items(friends,key={"player-friend:${it.id}"}) {friend ->
+            Row(Modifier.fillMaxWidth().contentFocusBorder(16.dp).focusable().tvClick {selectedFriend=friend}.clickable {selectedFriend=friend}
+                .background(Color(0xFF0A0A10),RoundedCornerShape(16.dp)).padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(38.dp))
+                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
+                    Text(friend.nickname,color=Color.White,fontSize=15.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
+                    Text(if(friend.online) tr("En línea","Online") else tr("Desconectado","Offline"),color=if(friend.online) Color(0xFF80D99A) else Muted,fontSize=11.sp)
+                    if(friend.title.isNotBlank()) Text(friend.title+(if(friend.season>0) " · S${friend.season} E${friend.episode}" else ""),color=Muted,fontSize=12.sp,maxLines=2,overflow=TextOverflow.Ellipsis)
+                }
+            }
+        }
         if(state.partyStatus.isNotBlank()) item {Text(state.partyStatus,color=Muted,fontSize=12.sp)}
         state.error?.let {message -> item {Text(message,color=Color(0xFFFFC6C6),fontSize=12.sp)}}
     }
+    selectedFriend?.let {friend -> FriendActionsDialog(state,friend,close={selectedFriend=null},onContentOpened={selectedFriend=null;close()})}
     if(qr && room!=null) PlayerSideSheet(tr("Invitar al party","Invite to party"),{qr=false}) {
         item {PartyCode(room.roomCode)}
         item {Box(Modifier.fillMaxWidth(),contentAlignment=Alignment.Center) {QrCode(partyJoinUrl(room.roomCode),190.dp)}}
@@ -254,6 +276,6 @@ internal fun PartyLobby(state: AppState,onBack: () -> Unit) {
     }
     if(sheet && state.watchParty!=null) PartyRoomSheet(state,onCreate={},onRefreshRequests={
         state.launch {state.socialAction {state.refreshPartyRequests()}}
-    },onSwitchCurrent={state.playerRequest?.let {req -> state.launch {state.socialAction {state.hostPartyUpdate(req,req.resumeMs,true)}}}},
+    },onSwitchCurrent={state.returnToPlayer();sheet=false},
         onWatchParty={state.launch {state.socialAction {state.refreshParty()?.let {state.switchToPartyState(it,openPlayer=true)};sheet=false}}},close={sheet=false})
 }

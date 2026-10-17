@@ -610,7 +610,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(tr("Episodios","Episodes"), color = Color.White, fontSize = 25.sp, lineHeight=30.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.width(16.dp))
-                        if ((details?.seasonCount ?: 0) > 1) {
+                        if ((details?.seasonCount ?: 0) > 0) {
                             SeasonSelector(state, details?.seasonCount ?: 0)
 
                         }
@@ -1205,11 +1205,22 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             trackSelectionParameters = trackBuilder.build()
             videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
             prepare()
-            playWhenReady = if (state.partyRole == PartyRole.GUEST) state.watchParty?.playing ?: true else true
+            playWhenReady = if(state.isPlaybackParked(request)) false else if (state.partyRole == PartyRole.GUEST) state.watchParty?.playing ?: true else true
         }
     }
 
+    fun parkCurrentPlayback() {
+        val position=player.currentPosition.coerceAtLeast(0L)
+        applyingRemote=true;player.pause();applyingRemote=false
+        if(state.parkPlayback(request,position) && state.partyRole==PartyRole.HOST) {
+            val room=state.watchParty?.roomCode
+            state.launch {runCatching {
+                if(room!=null && state.watchParty?.roomCode==room) state.publishParkedParty(request,position,room)
+            }}
+        }
+    }
     fun userPlayback(playing: Boolean) {
+        if(playing) state.unparkPlayback(request)
         if(player.playWhenReady==playing) return
         player.playWhenReady=playing
         if(state.watchParty!=null) state.launch {
@@ -1357,6 +1368,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         onDispose {
             playbackView.keepScreenOn = previousKeepScreenOn
             player.removeListener(listener)
+            parkCurrentPlayback()
             val lastPosition=player.currentPosition
             val lastDuration=player.duration.coerceAtLeast(0)
             state.updateProgress(request, lastPosition, lastDuration)
@@ -1364,6 +1376,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             state.launch { runCatching { state.pushCloud() } }
             player.release()
         }
+    }
+
+    LaunchedEffect(player,state.appForeground,mini) {
+        if(!state.appForeground || mini) parkCurrentPlayback()
     }
 
     LaunchedEffect(player, request.stream.url) {
@@ -1379,7 +1395,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         var previousRemotePlaying: Boolean?=null
         while (state.watchParty != null && state.appForeground) {
             delay(500)
-            if(state.sessionNeedsSignIn) continue
+            if(state.sessionNeedsSignIn || state.screen!=Screen.PLAYER) continue
+            if(state.partyRole==PartyRole.GUEST && state.isPlaybackParked(request)) continue
             when (state.partyRole) {
                 PartyRole.HOST -> {
                     val command=try { state.takePartyPlayback() } catch(e: kotlinx.coroutines.CancellationException) { throw e } catch(e: Exception) { state.error=e.message;null }
@@ -1447,7 +1464,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var exitArmedAt by remember(request.playbackId) { mutableStateOf(0L) }
     fun requestExit() {
         val now=android.os.SystemClock.elapsedRealtime()
-        if(exitArmedAt!=0L && now-exitArmedAt<=2200L) { exitArmedAt=0L;onClose() }
+        if(exitArmedAt!=0L && now-exitArmedAt<=2200L) { exitArmedAt=0L;parkCurrentPlayback();onClose() }
         else exitArmedAt=now
     }
     LaunchedEffect(exitArmedAt) { if(exitArmedAt!=0L) { delay(2200);exitArmedAt=0L } }
@@ -1534,7 +1551,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                         state.selected=request.item;state.miniPlayer=false;state.screen=Screen.PLAYER;controlsVisible=true;controlInteraction++
                     }
                 } }
-                FocusButton(tr("Cerrar","Close"),horizontalPadding=14.dp) { state.miniPlayer=false;state.playerRequest=null }
+                FocusButton(tr("Cerrar","Close"),horizontalPadding=14.dp) { parkCurrentPlayback();state.miniPlayer=false;state.playerRequest=null }
             }
         } else if(firstFrame || hadPlaybackError || playbackError!=null) {
         if(playbackError!=null) {
@@ -1552,7 +1569,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     FocusButton(tr("Reintentar","Retry"),modifier=Modifier.focusRequester(retryFocus)) { playbackError=null; surfaceGeneration++; player.prepare() }
                     FocusButton(tr("Otro enlace","Another link")) { playbackError=null; state.launch { state.playerSources(request,player.currentPosition) } }
-                    FocusButton(tr("Salir","Exit")) { onClose() }
+                    FocusButton(tr("Salir","Exit")) { parkCurrentPlayback();onClose() }
                 }
             }
             }
@@ -1620,7 +1637,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 nextAvailable=(randomMode || upcoming!=null) && state.partyRole!=PartyRole.GUEST,
                 onNext={cancelAutoplay=true;state.launch {state.socialAction {if(randomMode) state.playRandomEpisode(request.item) else upcoming?.let {state.playNext(request,it)} } }},
                 onEpisodes={ if(request.live) playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else "channels" else { episodesResumeAfterClose=false;showEpisodes=true } },onQueue={ showQueue=true },
-                onInfo={ playerMenu="info" },onPip={ playerMenu=null;controlsVisible=false;state.miniPlayer=true;state.screen=Screen.HOME },
+                onInfo={ playerMenu="info" },onPip={ parkCurrentPlayback();playerMenu=null;controlsVisible=false;state.miniPlayer=true;state.screen=Screen.HOME },
                 onMultiView={ if(state.watchParty!=null || state.pendingPartyCode!=null) confirmMulti=true else state.beginMultiView(request) })
         }
         if(showAccessRequests) {
@@ -1737,6 +1754,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             state.launch { state.socialAction {
                 val remote=state.refreshParty()
                 if(remote!=null) {
+                    state.unparkPlayback(request)
                     state.partyFollowHost=true
                     if(remote.cloudId==request.item.cloudId && remote.season==request.season && remote.episode==request.episode) {
                         applyingRemote=true
@@ -1999,14 +2017,53 @@ private fun SeasonSelector(state: AppState, count: Int) {
     val rail=rememberLazyListState(initialFirstVisibleItemIndex=(state.currentSeason-1).coerceAtLeast(0))
     val scope=rememberCoroutineScope()
     var pending by remember {mutableStateOf<kotlinx.coroutines.Job?>(null)}
+    var menuSeason by remember {mutableStateOf<Int?>(null)}
+    var marking by remember {mutableStateOf(false)}
+    val menuFocus=remember {FocusRequester()}
+    val menuPosition=remember {object: androidx.compose.ui.window.PopupPositionProvider {
+        override fun calculatePosition(anchorBounds: androidx.compose.ui.unit.IntRect,windowSize: androidx.compose.ui.unit.IntSize,
+            layoutDirection: androidx.compose.ui.unit.LayoutDirection,popupContentSize: androidx.compose.ui.unit.IntSize): androidx.compose.ui.unit.IntOffset {
+            val x=anchorBounds.left.coerceIn(8,(windowSize.width-popupContentSize.width-8).coerceAtLeast(8))
+            val below=anchorBounds.bottom+8
+            val y=if(below+popupContentSize.height<=windowSize.height-8) below else (anchorBounds.top-popupContentSize.height-8).coerceAtLeast(8)
+            return androidx.compose.ui.unit.IntOffset(x,y)
+        }
+    }}
     DisposableEffect(Unit) {onDispose {pending?.cancel()} }
     LazyRow(Modifier.widthIn(max=680.dp).smoothHorizontalDpad(),state=rail,horizontalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(4.dp)) {
         items((1..count).toList(),key={it}) { season ->
-            FocusButton("${tr("Temporada","Season")} $season",primary=state.currentSeason==season,
-                onFocused={ focused ->
-                    if(focused) {pending?.cancel();pending=scope.launch {delay(240);if(state.currentSeason!=season) state.loadSeason(season)}}
-                    else pending?.cancel()
-                }) {pending?.cancel();state.launch {state.loadSeason(season)} }
+            val anchor=remember {FocusRequester()}
+            Box {
+                FocusButton("${tr("Temporada","Season")} $season",primary=state.currentSeason==season,
+                    modifier=Modifier.focusRequester(anchor),
+                    onLongClick={pending?.cancel();menuSeason=season},
+                    onFocused={ focused ->
+                        if(focused && menuSeason==null) {pending?.cancel();pending=scope.launch {delay(240);if(state.currentSeason!=season) state.loadSeason(season)}}
+                        else pending?.cancel()
+                    }) {pending?.cancel();state.launch {state.loadSeason(season)} }
+                if(menuSeason==season) {
+                    fun closeMenu() {menuSeason=null;scope.launch {withFrameNanos { };runCatching {anchor.requestFocus()}}}
+                    androidx.compose.ui.window.Popup(
+                        popupPositionProvider=menuPosition,
+                        onDismissRequest={closeMenu()},
+                        properties=androidx.compose.ui.window.PopupProperties(focusable=true)
+                    ) {
+                        LaunchedEffect(season) {withFrameNanos { };runCatching {menuFocus.requestFocus()}}
+                        Column(Modifier.consumeOpeningPress().width(270.dp).background(Panel,RoundedCornerShape(18.dp)).border(1.dp,PanelBorder,RoundedCornerShape(18.dp)).padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                            Text("${tr("Temporada","Season")} $season",color=Color.White,fontSize=18.sp,fontWeight=FontWeight.Bold)
+                            Text(tr("Solo episodios estrenados","Released episodes only"),color=Muted,fontSize=12.sp)
+                            FocusButton(if(marking) tr("Guardando…","Saving…") else tr("Marcar como visto","Mark as watched"),modifier=Modifier.fillMaxWidth().focusRequester(menuFocus)) {
+                                val item=if(state.screen==Screen.PLAYER) state.playerRequest?.item else state.selected
+                                if(!marking && item!=null) {
+                                    marking=true
+                                    state.launch {try {state.socialAction {state.markSeasonWatched(item,season)}} finally {marking=false;if(menuSeason==season) closeMenu()}}
+                                }
+                            }
+                            FocusButton(tr("Cerrar","Close"),modifier=Modifier.fillMaxWidth()) {closeMenu()}
+                        }
+                    }
+                }
+            }
         }
     }
 }

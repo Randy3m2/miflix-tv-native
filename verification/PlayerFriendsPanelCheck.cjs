@@ -1,0 +1,16 @@
+const fs=require('fs'),assert=require('assert');
+const file='app/src/main/java/com/miflix/native2/ui/PartyPresentation.kt',source=fs.readFileSync(file,'utf8');
+const panel=source.slice(source.indexOf('internal fun PartyRoomSheet'),source.indexOf('internal fun PartyLobby'));
+assert(panel.indexOf('tr("Crear party","Create party")')<panel.indexOf('"Refresh requests"'));
+assert(panel.indexOf('"Refresh requests"')<panel.indexOf('tr("Amigos","Friends")'));
+assert(panel.includes('state.friendActivity.distinctBy {it.id}'));
+assert(panel.includes('key={"player-friend:${it.id}"}'));
+assert(panel.includes('ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar)'));
+assert(panel.includes('if(friend.online) tr("En línea","Online")'));
+assert(panel.includes('if(friend.title.isNotBlank())'));
+assert(panel.includes('FriendActionsDialog(state,friend'));
+assert(panel.includes('onContentOpened={selectedFriend=null;close()}'));
+assert.equal((panel.match(/state.refreshFriendsTab\(\)/g)||[]).length,1);
+assert(!panel.includes('while(true)'));assert(!panel.includes('social.activity('));
+assert.equal(source,fs.readFileSync('main/java/com/miflix/native2/ui/PartyPresentation.kt','utf8'));
+console.log('PASS: friends below Create/Refresh; avatar, online/offline and title; safe distinct lazy keys; shared friend actions; close parent when opening content; existing one-shot refresh only; mirrors.');

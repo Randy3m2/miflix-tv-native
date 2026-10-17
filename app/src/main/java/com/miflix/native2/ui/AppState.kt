@@ -876,6 +876,43 @@ class AppState(context: Context) {
     var sourceSelection by mutableStateOf<SourceSelection?>(null)
     var miniPlayer by mutableStateOf(false)
     val multiViewRequests = mutableStateListOf<PlayerRequest>()
+    var parkedPlaybackId by mutableStateOf<String?>(null)
+        private set
+    fun isPlaybackParked(req: PlayerRequest)=parkedPlaybackId==req.playbackId
+    fun unparkPlayback(req: PlayerRequest) {if(parkedPlaybackId==req.playbackId) parkedPlaybackId=null}
+    /** Retain the actual exit position, not the position from the original play request. */
+    fun parkPlayback(req: PlayerRequest, position: Long): Boolean {
+        val current=playerRequest ?: return false
+        if(current.playbackId!=req.playbackId) return false
+        val newlyParked=parkedPlaybackId!=req.playbackId
+        parkedPlaybackId=req.playbackId
+        playerRequest=current.copy(resumeMs=if(req.live) 0L else position.coerceAtLeast(0L))
+        if(partyRole==PartyRole.HOST) watchParty?.takeIf {it.cloudId==req.item.cloudId && it.season==req.season && it.episode==req.episode}?.let {
+            watchParty=it.copy(positionMs=position.coerceAtLeast(0L),playing=false,updatedAt=System.currentTimeMillis())
+        }
+        return newlyParked
+    }
+    fun returnToPlayer() {
+        val old=playerRequest ?: return
+        val parked=isPlaybackParked(old)
+        val next=if(miniPlayer) old else old.copy(playbackId=java.util.UUID.randomUUID().toString())
+        playerRequest=next
+        parkedPlaybackId=if(parked) next.playbackId else null
+        selected=next.item;miniPlayer=false;screen=Screen.PLAYER
+        // Restore the episode picker after browsing another title, without delaying the return.
+        launch {runCatching {
+            val info=tmdb.details(next.item)
+            if(playerRequest?.playbackId!=next.playbackId || selected?.cloudId!=next.item.cloudId) return@runCatching
+            details=info
+            if(next.item.type=="series") {
+                val rows=tmdb.season(next.item.id,next.season.coerceAtLeast(1))
+                if(playerRequest?.playbackId==next.playbackId && selected?.cloudId==next.item.cloudId) {
+                    currentSeason=next.season.coerceAtLeast(1);episodes.replaceWith(rows)
+                }
+            }
+        }}
+    }
+
     fun openLivePlayer(req: PlayerRequest) {
         require(!kidsMode) {tr("TV en vivo no está disponible en Kids.","Live TV is not available in Kids.") }
         invalidatePlaybackWork()
@@ -1739,6 +1776,37 @@ class AppState(context: Context) {
         continueWatching.removeAll {it.cloudId==item.cloudId};kidsContinue.removeAll {it.cloudId==item.cloudId}
         launch {runCatching {pushCloud()}.onFailure {error=it.message}}
     }
+    /** Batch a whole season in one profile sync, without toggling already watched episodes. */
+    suspend fun markSeasonWatched(item: MediaSummary, season: Int) {
+        if(item.type!="series" || season<1) return
+        val account=session;val profile=activeProfile.id
+        fun valid()=session?.userId==account?.userId && activeProfile.id==profile
+        val today=java.time.LocalDate.now().toString()
+        val rows=tmdb.season(item.id,season).filter {it.season==season && it.episode>0 && it.airDate.isNotBlank() && it.airDate<=today}
+        if(!valid()) return
+        require(rows.isNotEmpty()) {tr("Esta temporada no tiene episodios estrenados.","This season has no released episodes.")}
+        profileSyncMutex.lock()
+        try {
+            if(!valid()) return
+            val now=System.currentTimeMillis()
+            val watched=playbackPrefs.getStringSet(watchedEpisodesKey(),emptySet()).orEmpty().toMutableSet()
+            for(ep in rows) {
+                val key="${item.cloudId}:s${season}e${ep.episode}"
+                val duration=progress[key]?.duration?.takeIf {it>0} ?: 1000L
+                progress[key]=PlaybackProgress(100.0,duration,duration,now,season,ep.episode)
+                watched.add(key)
+            }
+            playbackPrefs.edit().putStringSet(watchedEpisodesKey(),watched).apply()
+            val current=progress[item.cloudId]
+            if(current==null || current.season==season) {
+                val last=rows.maxBy {it.episode}
+                progress[item.cloudId]=progress["${item.cloudId}:s${season}e${last.episode}"]!!
+                continueWatching.removeAll {it.cloudId==item.cloudId};kidsContinue.removeAll {it.cloudId==item.cloudId}
+            }
+            if(account!=null) cloud.upsertProfile(account,profile,favorites.toSet(),progress.toMap())
+        } finally {profileSyncMutex.unlock()}
+    }
+
     fun removeContinue(item: MediaSummary) {
         // A timestamped zero-progress row survives the cloud merge and hides the title.
         val old=progress[item.cloudId]
@@ -1862,6 +1930,19 @@ class AppState(context: Context) {
         }
         watchParty = next
         try { cloud.updateWatchParty(s,next) } catch(e: CancellationException) { throw e } catch(e: Exception) { error=e.message }
+    }
+
+    /** Publish the exit pause even if the mini player was closed, without overwriting a new title. */
+    suspend fun publishParkedParty(req: PlayerRequest, position: Long, roomCode: String) = partyPublishMutex.withLock {
+        val account=session ?: return@withLock
+        val room=watchParty ?: return@withLock
+        if(partyRole!=PartyRole.HOST || room.roomCode!=roomCode || room.hostUserId!=account.userId) return@withLock
+        val current=playerRequest
+        if(current!=null && (current.playbackId!=req.playbackId || parkedPlaybackId!=req.playbackId)) return@withLock
+        if(room.cloudId!=req.item.cloudId || room.season!=req.season || room.episode!=req.episode) return@withLock
+        val next=room.copy(positionMs=position.coerceAtLeast(0L),playing=false,updatedAt=System.currentTimeMillis())
+        watchParty=next
+        cloud.updateWatchParty(account,next)
     }
 
     suspend fun refreshParty(): WatchParty? {
@@ -2009,7 +2090,7 @@ class AppState(context: Context) {
             partyClosedNotice=wasGuest
             return
         }
-        if(partyRole==PartyRole.GUEST && screen!=Screen.PLAYER && !miniPlayer) { watchParty=fresh; if(fresh.cloudId.isNotBlank()) switchToPartyState(fresh) }
+        if(partyRole==PartyRole.GUEST && screen!=Screen.PLAYER && !miniPlayer) { watchParty=fresh; if(fresh.cloudId.isNotBlank() && playerRequest?.let {isPlaybackParked(it)}!=true) switchToPartyState(fresh) }
         if(!valid()) return
         val members=if(refreshMembers) social.members(s,p.roomCode) else partyMembers.toList()
         if(!valid()) return

@@ -1,0 +1,25 @@
+'use strict';
+const fs=require('fs'),assert=require('assert');
+const root='app/src/main/java/com/miflix/native2/ui/';
+const read=p=>fs.readFileSync(root+p,'utf8');
+const panel=read('PlayerMenuDialog.kt'),app=read('MiFlixNativeApp.kt'),screen=read('Screens.kt'),moments=read('SharedMoments.kt');
+assert(panel.includes('if(!side)'));
+assert(panel.includes('Alignment.CenterEnd'));
+assert(panel.includes('(maxWidth*.52f).coerceIn(360.dp,560.dp).coerceAtMost(maxWidth)'));
+assert(panel.includes('setDimAmount(0f)'));
+assert(panel.includes('tween(160)') && panel.includes('graphicsLayer'));
+assert(panel.includes('securePolicy=properties.securePolicy'));
+assert(!panel.includes('.blur('));
+assert(app.includes('LocalPlayerMenuSide provides (state.screen==Screen.PLAYER || state.screen==Screen.MULTIVIEW)'));
+assert(app.includes('CompositionLocalProvider(LocalPlayerMenuSide provides true)'));
+const source=screen.slice(screen.indexOf('fun SourcePickerOverlay('),screen.indexOf('private fun SourceLinkCard'));
+assert(source.includes('forceSide = true'));
+assert(source.includes('background(Color.Transparent).padding(20.dp)'));
+assert(source.includes('LazyColumn(Modifier.weight(1f)'));
+assert(moments.includes('MomentFriendCard(friend,enabled=!busy)'));
+assert(moments.includes('ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar)'));
+assert(moments.includes('Modifier.size(48.dp).clip(CircleShape)'));
+for(const file of ['PlayerControls.kt','PlaybackTools.kt','SharedMoments.kt','QueueCalendar.kt','RatingDialog.kt','ContentActions.kt','FriendRecommendations.kt','LivePlayerTools.kt']) assert(read(file).includes('PlayerMenuDialog('),file);
+for(const file of ['PlayerMenuDialog.kt','MiFlixNativeApp.kt','Screens.kt','PlayerControls.kt','PlaybackTools.kt','SharedMoments.kt','QueueCalendar.kt','SocialScreens.kt','RatingDialog.kt','ContentActions.kt','FriendRecommendations.kt','LivePlayerTools.kt','PartyPresentation.kt','UpdateNotes.kt'])
+ assert.equal(read(file),fs.readFileSync('main/java/com/miflix/native2/ui/'+file,'utf8'),file);
+console.log('PASS: scoped right-side panels, bounded widths, transparent outside, lightweight animation, preserved secure/back properties, compact source header/list, friend avatars and matching mirrors.');

@@ -188,7 +188,7 @@ internal fun SocialSettingsDialog(state: AppState,close: () -> Unit) {
     var nick by remember { mutableStateOf(state.nickname) }
     var find by remember { mutableStateOf("") }
     var phrases by remember { mutableStateOf(state.partyPhrases.joinToString("|")) }
-    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    PlayerMenuDialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         LazyColumn(Modifier.width(640.dp).heightIn(max=460.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(24.dp)) {
             item { Text(tr("Mi perfil social","My social profile"),color=Color.White,fontSize=25.sp, lineHeight=30.sp) }
             item { Column(verticalArrangement=Arrangement.spacedBy(16.dp)) { NativeTextField(nick,{ nick=it },tr("Apodo","Nickname")); FocusButton(tr("Guardar nickname","Save nickname")) { state.launch { state.saveNickname(nick) } } } }
@@ -217,7 +217,7 @@ fun AccessRequests(state: AppState) {
 fun PartyActionsDialog(state: AppState, close: () -> Unit) {
     val first=remember { FocusRequester() }
     LaunchedEffect(Unit) { delay(100); first.requestFocus() }
-    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    PlayerMenuDialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Column(Modifier.consumeOpeningPress().widthIn(max=530.dp).background(Panel, RoundedCornerShape(24.dp)).padding(24.dp)) {
             Text(tr("Frases del Party","Party phrases"),color=Color.White,fontSize=24.sp, lineHeight=29.sp)
             Spacer(Modifier.height(12.dp))

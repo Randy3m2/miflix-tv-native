@@ -204,7 +204,7 @@ internal fun PlayerOptionsDialog(menu: String, player: Player, tracks: Tracks, s
     val first=remember(menu) { FocusRequester() }
     LaunchedEffect(menu) { withFrameNanos { }; first.requestFocus() }
     val title=when(menu) { "content" -> tr("Contenido / Party","Content / Party"); "speed" -> tr("Velocidad","Speed"); "audio" -> tr("Pista de audio","Audio track"); else -> tr("Subtítulos","Subtitles") }
-    Dialog(onDismissRequest=onClose,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    PlayerMenuDialog(onDismissRequest=onClose,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Column(Modifier.width(550.dp).heightIn(max=460.dp).background(Color(0xF0181818),RoundedCornerShape(18.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             Text(title,color=Color.White,fontSize=24.sp,lineHeight=29.sp)
             if(menu=="audio" && audioStatus.isNotBlank()) Text(audioStatus,color=Color.White,fontSize=14.sp)

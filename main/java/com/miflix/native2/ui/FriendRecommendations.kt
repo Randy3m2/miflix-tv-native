@@ -33,7 +33,7 @@ fun RecommendTitleDialog(state: AppState, item: MediaSummary, close: () -> Unit)
     var message by remember { mutableStateOf("") }
     val first=remember { FocusRequester() }
     LaunchedEffect(sent) { withFrameNanos { }; first.requestFocus() }
-    Dialog(onDismissRequest={ if(!busy) close() }) {
+    PlayerMenuDialog(onDismissRequest={ if(!busy) close() }) {
         Column(Modifier.width(510.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
             Text(item.title,color=Color.White,fontSize=24.sp)
             Text(if(sent) tr("Recomendación guardada. Tus amigos ya pueden verla.","Recommendation saved. Your friends can now see it.")
@@ -71,7 +71,7 @@ fun FriendRecommendationsDialog(state: AppState, owner: String?=null, ownerName:
     LaunchedEffect(account) { refresh() }
     LaunchedEffect(Unit) { withFrameNanos { };first.requestFocus() }
     val visible=rows.filter { if(owner!=null) it.owner==owner else !mine || it.owner==account }
-    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    PlayerMenuDialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Column(Modifier.fillMaxWidth(.9f).widthIn(max=850.dp).heightIn(max=540.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             Text(if(ownerName!=null) tr("Recomendaciones de ","Recommendations by ")+ownerName else tr("Recomendaciones de amigos","Friends' recommendations"),color=Color.White,fontSize=25.sp)
             Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -126,7 +126,7 @@ fun FriendActionsDialog(state: AppState, friend: FriendActivity, close: () -> Un
         onContentOpened()
         state.launch {try {state.socialAction {state.watchFriendIndependently(friend)}} finally {busy=false} }
     }
-    Dialog(onDismissRequest={ if(!busy) close() }) {
+    PlayerMenuDialog(onDismissRequest={ if(!busy) close() }) {
         LazyColumn(Modifier.width(520.dp).heightIn(max=510.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             item { ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(84.dp)) }
             item { Text("@${friend.nickname}",color=Color.White,fontSize=25.sp) }

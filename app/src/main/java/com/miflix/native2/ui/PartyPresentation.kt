@@ -51,7 +51,7 @@ internal fun PlayerSideSheet(title: String,close: () -> Unit,content: LazyListSc
         }
         LaunchedEffect(Unit) {withFrameNanos { };runCatching {first.requestFocus()} }
         BoxWithConstraints(Modifier.fillMaxSize()) {
-            val panelWidth=(maxWidth*.55f).coerceIn(350.dp,620.dp).coerceAtMost(maxWidth)
+            val panelWidth=(maxWidth*.52f).coerceIn(360.dp,560.dp).coerceAtMost(maxWidth)
             Column(Modifier.align(Alignment.CenterEnd).padding(14.dp).width(panelWidth).fillMaxHeight()
                 .background(Color(0xF01A1A23),RoundedCornerShape(24.dp)).padding(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {

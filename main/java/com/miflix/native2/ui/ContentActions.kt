@@ -28,7 +28,7 @@ internal fun TitleActionsDialog(state: AppState,item: MediaSummary,continuing: B
         check(state.selected?.cloudId==item.cloudId && state.details?.summary?.cloudId==item.cloudId) {tr("Título no disponible","Title unavailable")}
     }
     fun action(block: suspend ()->Unit) {close();state.launch {state.socialAction {block()} } }
-    Dialog(onDismissRequest=close) {
+    PlayerMenuDialog(onDismissRequest=close) {
         Column(Modifier.consumeOpeningPress().widthIn(max=520.dp).background(Panel,RoundedCornerShape(24.dp)).padding(24.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
             Text(item.title,color=Color.White,fontSize=24.sp)
             FocusButton(tr("Ir a detalles","Go to details"),modifier=Modifier.focusRequester(first)) {action {state.open(item)} }
@@ -45,7 +45,7 @@ internal fun TitleActionsDialog(state: AppState,item: MediaSummary,continuing: B
 internal fun EpisodeActionsDialog(state: AppState,item: MediaSummary,ep: EpisodeSummary,beforePlayback: ()->Unit = {},close: ()->Unit) {
     val first=remember {FocusRequester()}
     LaunchedEffect(Unit) {withFrameNanos {};runCatching {first.requestFocus()} }
-    Dialog(onDismissRequest=close) {
+    PlayerMenuDialog(onDismissRequest=close) {
         Column(Modifier.consumeOpeningPress().widthIn(max=510.dp).background(Panel,RoundedCornerShape(24.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Text("S${ep.season} E${ep.episode}",color=Color.White,fontSize=24.sp)
             FocusButton(tr("Elegir enlace","Play manually"),modifier=Modifier.focusRequester(first)) {close();beforePlayback();state.launch {state.socialAction {state.chooseEpisodeSources(ep)} } }

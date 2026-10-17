@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.miflix.native2.ui
 
 import androidx.compose.foundation.background
@@ -62,7 +64,7 @@ fun QueueAddDialog(state: AppState,item: MediaSummary,close: () -> Unit) {
     var episodes by remember { mutableStateOf<List<com.miflix.native2.model.EpisodeSummary>>(emptyList()) }
     var count by remember { mutableStateOf(1) }
     LaunchedEffect(item.cloudId,season) { state.socialAction { count=state.tmdb.details(item).seasonCount;episodes=state.tmdb.season(item.id,season) } }
-    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    PlayerMenuDialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Column(Modifier.width(680.dp).heightIn(max=500.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
             Text(tr("Añadir episodio a la cola","Add episode to queue"),color=Color.White,fontSize=24.sp)
             Text(item.title,color=Muted)
@@ -86,7 +88,7 @@ fun PlayerSocialDialog(state: AppState,onCreate: () -> Unit,onRefreshRequests: (
 fun QueueDialog(state: AppState, close: () -> Unit) {
     val first=remember { FocusRequester() }
     LaunchedEffect(Unit) { withFrameNanos { };first.requestFocus() }
-    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    PlayerMenuDialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Column(Modifier.width(760.dp).heightIn(max=500.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
             Text(tr("Tu cola","Your queue"),color=Color.White,fontSize=26.sp)
             Text(tr("Se reproduce al terminar el contenido actual. La reproducción manual conserva la cola.","Plays when the current title ends. Manual playback preserves your queue."),color=Muted)
@@ -95,7 +97,7 @@ fun QueueDialog(state: AppState, close: () -> Unit) {
                 items(state.queueEntries,key={it.id}) { entry ->
                     Column(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(12.dp)).padding(12.dp)) {
                         Text(entry.title+if(entry.season>0) " · S${entry.season} E${entry.episode}" else "",color=Color.White,maxLines=2)
-                        Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                        FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                             if(state.partyRole!=PartyRole.GUEST) FocusButton(if(state.queueStarting) tr("Cargando…","Loading…") else tr("Reproducir","Play")) {
                                 val req=state.playerRequest
                                 state.launch { state.socialAction { state.playQueued(req,entry);if(state.queueEntries.none { it.id==entry.id }) close() } }
@@ -108,7 +110,7 @@ fun QueueDialog(state: AppState, close: () -> Unit) {
                 }
             }
             state.error?.let { Text(it,color=Color.White,maxLines=3) }
-            Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
+            FlowRow(horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 FocusButton(tr("Vaciar cola","Clear queue")) { state.clearQueue() }
                 FocusButton(tr("Cerrar","Close"),modifier=Modifier.focusRequester(first)) { close() }
             }
@@ -132,7 +134,7 @@ fun CalendarDialog(state: AppState, close: () -> Unit) {
     val month=remember(offset) { Calendar.getInstance().apply { add(Calendar.MONTH,offset);set(Calendar.DAY_OF_MONTH,1) } }
     val prefix=SimpleDateFormat("yyyy-MM",Locale.US).format(month.time)
     LaunchedEffect(Unit) { state.socialAction { state.refreshCalendar();state.refreshFriends() } }
-    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    PlayerMenuDialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Column(Modifier.width(820.dp).heightIn(max=560.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Text(tr("Calendario","Calendar"),color=Color.White,fontSize=26.sp)
             Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
@@ -214,7 +216,7 @@ private fun CreateEventDialog(state: AppState, day: String?, close: () -> Unit) 
             } } finally { loading=false }
         }
     }
-    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    PlayerMenuDialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         LazyColumn(Modifier.width(760.dp).heightIn(max=550.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
             item { Text(tr("Crear evento","Create event"),color=Color.White,fontSize=26.sp) }
             item { Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) { listOf("movie" to tr("Película","Movie"),"series" to tr("Serie","Series"),"live" to "Live TV","sports" to "Live Sports").forEach { (k,name) -> FocusButton(name,primary=kind==k,modifier=if(k=="movie") Modifier.focusRequester(first) else Modifier) { kind=k;item=null;channel=null;channels=emptyList();categories=emptyList();category=null;results=emptyList();query="" } } } }
@@ -290,7 +292,7 @@ fun PlayerPartyChatDialog(state: AppState, close: () -> Unit) {
     val messages=state.partyMessages.filter { it.kind=="chat" }
     LaunchedEffect(Unit) { withFrameNanos { };runCatching { closeFocus.requestFocus() } }
     LaunchedEffect(messages.lastOrNull()?.id) { if(messages.isNotEmpty()) listState.scrollToItem(messages.lastIndex) }
-    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    PlayerMenuDialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Column(Modifier.width(850.dp).heightIn(max=570.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                 Text("${tr("Chat del Party","Party chat")} · ${room.orEmpty()}",color=Color.White,fontSize=26.sp,modifier=Modifier.weight(1f))
@@ -331,7 +333,7 @@ fun PlayerPartyChatDialog(state: AppState, close: () -> Unit) {
             state.error?.let { Text(it,color=Color.White,fontSize=13.sp,maxLines=2) }
         }
     }
-    if(showQr && room!=null) Dialog(onDismissRequest={ showQr=false },properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    if(showQr && room!=null) PlayerMenuDialog(onDismissRequest={ showQr=false },properties=DialogProperties(usePlatformDefaultWidth=false)) {
         val qrClose=remember { FocusRequester() }
         LaunchedEffect(Unit) { withFrameNanos { };runCatching { qrClose.requestFocus() } }
         Column(Modifier.width(440.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp),horizontalAlignment=Alignment.CenterHorizontally) {

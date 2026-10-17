@@ -92,7 +92,7 @@ fun LiveChannelPicker(state: AppState, initialProvider: String, select: (PlayerR
         } catch(e: Exception) { if(e is CancellationException) throw e;message=e.message.orEmpty() }
         finally { busy=false }
     }
-    Dialog(onDismissRequest={ if(!resolving) close() },properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    PlayerMenuDialog(onDismissRequest={ if(!resolving) close() },properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Column(Modifier.fillMaxWidth(.9f).heightIn(max=540.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Text(tr("Elegir canal","Choose channel"),color=Color.White,fontSize=25.sp)
             Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -192,7 +192,7 @@ fun MultiViewScreen(state: AppState) {
 
     selected?.let { id ->
         val req=state.multiViewRequests.firstOrNull { it.playbackId==id }
-        if(req!=null) Dialog(onDismissRequest={ selected=null }) {
+        if(req!=null) PlayerMenuDialog(onDismissRequest={ selected=null }) {
             val focus=remember { FocusRequester() }
             LaunchedEffect(Unit) { withFrameNanos { };focus.requestFocus() }
             Column(Modifier.width(440.dp).heightIn(max=440.dp).verticalScroll(rememberScrollState()).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
@@ -260,7 +260,7 @@ private fun MultiViewSourceDialog(state: AppState,req: PlayerRequest,choose: (co
         catch(e: Exception) {message=e.message ?: tr("No se pudieron cargar las fuentes.","Could not load sources.")}
         finally {loading=false}
     }
-    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    PlayerMenuDialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Column(Modifier.widthIn(max=650.dp).fillMaxWidth(.85f).heightIn(max=430.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Text(tr("Fuente del canal","Channel source")+" · "+req.item.title,color=Color.White,fontSize=22.sp,maxLines=2)
             if(loading) Text(tr("Buscando fuentes…","Finding sources…"),color=Muted)

@@ -50,7 +50,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         config.setLocale(java.util.Locale.forLanguageTag(state.interfaceLanguage))
         android.view.ContextThemeWrapper(baseContext,0).apply { applyOverrideConfiguration(config) }
     }
-    CompositionLocalProvider(LocalContext provides localizedContext,LocalProfileManage provides {state.socialProfileEditor=true},LocalCastPair provides {state.localCastPairing=true},LocalTitleActions provides {item: com.miflix.native2.model.MediaSummary -> state.titleActions(item)}) {
+    CompositionLocalProvider(LocalPlayerMenuSide provides (state.screen==Screen.PLAYER || state.screen==Screen.MULTIVIEW),LocalContext provides localizedContext,LocalProfileManage provides {state.socialProfileEditor=true},LocalCastPair provides {state.localCastPairing=true},LocalTitleActions provides {item: com.miflix.native2.model.MediaSummary -> state.titleActions(item)}) {
     MaterialTheme {
         var bootstrapped by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) {
@@ -136,7 +136,9 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         state.playerRequest?.takeIf { state.screen==Screen.PLAYER || state.miniPlayer }?.let { req ->
             key(req.playbackId) {
                 Box(if(state.miniPlayer && state.screen!=Screen.PLAYER) Modifier.align(Alignment.BottomEnd).padding(20.dp).width(320.dp).height(220.dp) else Modifier.fillMaxSize()) {
+                    CompositionLocalProvider(LocalPlayerMenuSide provides true) {
                     PlayerScreen(state,req) { state.miniPlayer=false;state.screen=req.returnScreen ?: if(req.live) Screen.LIVE_TV else Screen.DETAILS }
+                    }
                 }
             }
         }

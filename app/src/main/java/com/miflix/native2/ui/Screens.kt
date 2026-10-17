@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.miflix.native2.ui
 
 import android.content.Intent
@@ -1630,7 +1632,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 delay(5000)
                 if(playbackError==errorMessage) { playbackError=null;controlsVisible=true;controlInteraction++ }
             }
-            Dialog(onDismissRequest={ playbackError=null;controlsVisible=true },properties=DialogProperties(usePlatformDefaultWidth=false)) {
+            PlayerMenuDialog(onDismissRequest={ playbackError=null;controlsVisible=true },properties=DialogProperties(usePlatformDefaultWidth=false)) {
             val retryFocus=remember { FocusRequester() }
             LaunchedEffect(Unit) { withFrameNanos { };runCatching { retryFocus.requestFocus() } }
             Column(Modifier.width(600.dp).background(Color(0xEE171717),RoundedCornerShape(18.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
@@ -1672,7 +1674,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             if(player.isCurrentMediaItemSeekable) player.seekTo(player.currentPosition)
         },close={ playerMenu=null;controlInteraction++ })
         if(playerMenu=="info") PlaybackInfoDialog(player,request) { playerMenu=null;controlInteraction++ }
-        if(playerMenu=="channel_permission") Dialog(onDismissRequest={ playerMenu=null }) {
+        if(playerMenu=="channel_permission") PlayerMenuDialog(onDismissRequest={ playerMenu=null }) {
             val first=remember { FocusRequester() }
             LaunchedEffect(Unit) { withFrameNanos { };first.requestFocus() }
             Column(Modifier.width(460.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
@@ -1684,7 +1686,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             if(state.partyRole==PartyRole.GUEST) state.error=tr("El host cambia el canal del party","The host changes the party channel")
             else { playerMenu=null;state.openLivePlayer(req) }
         },close={ playerMenu=null;controlInteraction++ })
-        if(confirmMulti) Dialog(onDismissRequest={ confirmMulti=false }) {
+        if(confirmMulti) PlayerMenuDialog(onDismissRequest={ confirmMulti=false }) {
             val first=remember { FocusRequester() }
             LaunchedEffect(Unit) { withFrameNanos { };first.requestFocus() }
             Column(Modifier.width(520.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
@@ -1712,7 +1714,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }
         if(showMomentComposer) MomentComposer(state,request,momentStart,momentEnd,
             position={player.currentPosition},onStart={momentStart=it;momentEnd=null},onEnd={momentEnd=it},close={showMomentComposer=false})
-        if(momentNotice) Dialog(onDismissRequest={momentNotice=false},properties=DialogProperties(usePlatformDefaultWidth=false)) {
+        if(momentNotice) PlayerMenuDialog(onDismissRequest={momentNotice=false},properties=DialogProperties(usePlatformDefaultWidth=false)) {
             Column(Modifier.width(470.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                 Text(if(momentUnavailable) tr("Esta versión no coincide con los tiempos del momento.","This version does not match the moment's timestamps.")
                     else tr("Aquí termina el momento","The moment ends here"),color=Color.White,fontSize=24.sp)
@@ -1732,7 +1734,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
         }
         if(showAccessRequests) {
-            Dialog(onDismissRequest={ showAccessRequests=false },properties=DialogProperties(usePlatformDefaultWidth=false)) {
+            PlayerMenuDialog(onDismissRequest={ showAccessRequests=false },properties=DialogProperties(usePlatformDefaultWidth=false)) {
                 Column(Modifier.width(650.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp)) {
                     AccessRequests(state)
                     if(state.accessRequests.isEmpty()) Text(tr("No hay solicitudes pendientes","No pending requests"),color=Muted)
@@ -1788,13 +1790,13 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }
         if(rateAtEnd) RatingDialog(state,request.item) { rateAtEnd=false; state.launch { recommendations=state.recommendationsFor(request.item) } }
         if(request.momentEndMs<=0 && ended && state.playbackLoading==null && state.partyRole != PartyRole.GUEST && !rateAtEnd && !showQueue && !showPartyActions) {
-            Dialog(onDismissRequest={ cancelAutoplay=true; onClose() },properties=DialogProperties(usePlatformDefaultWidth=false)) {
-                Column(Modifier.width(850.dp).heightIn(max=600.dp).background(Color(0xF00B0B0B),RoundedCornerShape(20.dp)).padding(25.dp)) {
+            PlayerMenuDialog(onDismissRequest={ cancelAutoplay=true; onClose() },properties=DialogProperties(usePlatformDefaultWidth=false)) {
+                Column(Modifier.width(850.dp).heightIn(max=600.dp).verticalScroll(rememberScrollState()).background(Color(0xF00B0B0B),RoundedCornerShape(20.dp)).padding(25.dp)) {
                     Text("${tr("Terminaste","You finished")} ${request.item.title}",color=Color.White,fontSize=26.sp, lineHeight=31.sp)
                     queueNext?.let { entry ->
                         Text(tr("Siguiente en tu cola","Next in your queue")+": "+entry.title+if(entry.season>0) " · S${entry.season} E${entry.episode}" else "",color=Color.White,fontSize=20.sp)
                         Text(queueSynopsis,color=Color.White,fontSize=15.sp,lineHeight=20.sp,maxLines=4)
-                        Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                        FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                             FocusButton(if(!cancelAutoplay) "${tr("Reproducir cola","Play queue")} · ${countdown}s" else tr("Reproducir cola","Play queue")) { cancelAutoplay=true;state.launch { state.socialAction { state.playQueued(request,entry) } } }
                             FocusButton(tr("Cancelar","Cancel")) { cancelAutoplay=true }
                             FocusButton(tr("Editar cola","Edit queue")) { cancelAutoplay=true;showQueue=true }
@@ -1802,7 +1804,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                     }
                     if(queueNext==null && randomMode) {
                         Text(tr("Siguiente episodio aleatorio","Next random episode"),color=Muted,fontSize=20.sp)
-                        Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                        FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                             FocusButton(tr("Reproducir aleatorio","Play random")+if(!cancelAutoplay && state.autoplayNext) " · ${countdown}s" else "") {cancelAutoplay=true;state.launch {state.playRandomEpisode(request.item)}}
                             FocusButton(tr("Detener aleatorio","Stop shuffle")) {cancelAutoplay=true;state.stopRandomEpisodes()}
                         }
@@ -1811,18 +1813,18 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                         val hidden=!state.episodeWatched(request.item,next)
                         Text("${tr("Siguiente","Next")}: S${next.season} E${next.episode} · ${if(hidden) tr("No visto","Not watched") else next.title}",color=Muted)
                         Text(if(hidden) tr("Sinopsis oculta para evitar spoilers","Synopsis hidden to avoid spoilers") else next.overview,color=Color.White,fontSize=15.sp,lineHeight=20.sp,maxLines=4)
-                        Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                        FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                             FocusButton(if(state.autoplayNext && !cancelAutoplay) "${tr("Siguiente episodio","Next episode")} · ${countdown}s" else tr("Siguiente episodio","Next episode"),primary=true) { cancelAutoplay=true; state.launch { state.playNext(request,next) } }
                             FocusButton(tr("Cancelar reproducción automática","Cancel autoplay")) { cancelAutoplay=true }
                         }
                     }
                     Text(tr("También te puede gustar","You may also like"),color=Color.White,fontSize=22.sp, lineHeight=26.sp)
-                    LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.weight(1f,false)) {
+                    LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp),modifier=Modifier.height(280.dp)) {
                         items(recommendations,key={it.cloudId}) { item ->
-                            MediaCard(item,allowContextMenu=false) { cancelAutoplay=true; state.launch { state.open(item) } }
+                            MediaCard(item,compact=true,showCaption=true,allowContextMenu=false) { cancelAutoplay=true; state.launch { state.open(item) } }
                         }
                     }
-                    Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                    FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                         FocusButton(tr("★ Puntuar","★ Rate")) { cancelAutoplay=true; rateAtEnd=true }
                         FocusButton(tr("Volver a detalles","Back to details")) { cancelAutoplay=true; onClose() }
                     }
@@ -1897,14 +1899,13 @@ private fun EpisodePickerOverlay(state: AppState, request: PlayerRequest, onClos
             if(!entered) {episodeFocus.requestFocus();entered=true}
         } else if(!entered) { withFrameNanos { }; closeFocus.requestFocus() }
     }
-    Dialog(onDismissRequest=onClose,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    PlayerMenuDialog(onDismissRequest=onClose,properties=DialogProperties(usePlatformDefaultWidth=false)) {
     Box(Modifier.fillMaxSize().background(Color(0xB8000000))) {
         Column(
             Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(620.dp).background(Color(0xFF0B0B0B)).padding(26.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Text(tr("Episodios","Episodes"), color = Color.White, fontSize = 29.sp, lineHeight=35.sp, fontWeight = FontWeight.Black)
-                Spacer(Modifier.weight(1f))
                 if(state.partyRole!=PartyRole.GUEST) FocusButton(tr("🎲 Aleatorio","🎲 Random")) {onClose();state.launch {state.playRandomEpisode(request.item)}}
                 FocusButton(tr("Cerrar","Close"),modifier=Modifier.focusRequester(closeFocus)) { onClose() }
             }
@@ -2029,18 +2030,21 @@ private fun formatPosition(ms: Long): String {
 fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
     val firstLink = remember(selection) { FocusRequester() }
     LaunchedEffect(selection) { delay(100); firstLink.requestFocus() }
-    Dialog(
+    PlayerMenuDialog(
+        forceSide = true,
         onDismissRequest = { state.sourceSelection = null },
         properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)
     ) {
-        Box(Modifier.fillMaxSize().background(Color(0xFF050505)).padding(40.dp)) {
+        Box(Modifier.fillMaxSize().background(Color.Transparent).padding(20.dp)) {
             Column {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text("${tr("Enlaces de reproducción","Playback links")} · ${selection.streams.size}", color = Color.White, fontSize = 26.sp, lineHeight=31.sp,
-                        fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    Text("${tr("Enlaces de reproducción","Playback links")} · ${selection.streams.size}", color = Color.White, fontSize = 24.sp, lineHeight=29.sp,
+                        fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
+                    Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                     FocusButton(tr("Actualizar enlaces","Refresh links")) { state.launch { state.refreshPlaybackLinks(selection) } }
                     Spacer(Modifier.width(12.dp))
                     FocusButton(tr("Cerrar","Close")) { state.sourceSelection = null }
+                    }
                 }
                 Text(tr("Enlaces guardados hasta 3 horas. Usa Actualizar enlaces si alguno dejó de funcionar.",
                     "Links cached for up to 3 hours. Refresh links if one stops working."),color=Muted,fontSize=14.sp)
@@ -2050,7 +2054,7 @@ fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
                 }
                 if(state.partyRole==PartyRole.GUEST) Text(tr("Este enlace se cambia solo para ti · sigues sincronizado con el host","This link changes only for you · You stay synced with the host"),color=Muted)
                 Spacer(Modifier.height(18.dp))
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 30.dp)) {
+                LazyColumn(Modifier.weight(1f),verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 30.dp)) {
                     items(selection.streams) { stream ->
                         Column {
                         if(state.partyRole==PartyRole.GUEST && com.miflix.native2.data.PartySourcePolicy.key(stream)==state.watchParty?.sourceKey) Text(tr("FUENTE DEL PARTY","PARTY SOURCE"),color=Accent,fontSize=12.sp)
@@ -2072,7 +2076,7 @@ private fun SourceLinkCard(stream: com.miflix.native2.model.StreamChoice,modifie
     var rawDetails by remember(stream) {mutableStateOf(false)}
     val info=remember(stream) {com.miflix.native2.data.StreamPresentation.parse(stream.addonName,stream.name,stream.title,stream.filename,stream.videoSize)}
     val ink=Color.White
-    if(rawDetails) Dialog(onDismissRequest={rawDetails=false}) {
+    if(rawDetails) PlayerMenuDialog(onDismissRequest={rawDetails=false}) {
         val first=remember {FocusRequester()}
         LaunchedEffect(Unit) {withFrameNanos {};runCatching {first.requestFocus()} }
         Column(Modifier.consumeOpeningPress().widthIn(max=650.dp).heightIn(max=460.dp).background(Panel,RoundedCornerShape(24.dp)).padding(24.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {

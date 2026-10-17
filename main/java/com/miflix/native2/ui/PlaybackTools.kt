@@ -1,6 +1,10 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.miflix.native2.ui
 
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,18 +30,18 @@ fun SubtitleTimingDialog(value: Long, apply: (Long) -> Unit, close: () -> Unit) 
     var draft by remember { mutableStateOf(value) }
     val first=remember { FocusRequester() }
     LaunchedEffect(Unit) { withFrameNanos { };first.requestFocus() }
-    Dialog(onDismissRequest=close) {
-        Column(Modifier.width(540.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+    PlayerMenuDialog(onDismissRequest=close) {
+        Column(Modifier.width(540.dp).heightIn(max=460.dp).verticalScroll(rememberScrollState()).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
             Text(tr("Sincronizar subtítulos","Subtitle timing"),color=Color.White,fontSize=24.sp)
             Text(String.format(Locale.US,"%+.2f s",draft/1000.0),color=Color.White,fontSize=32.sp)
             Text(tr("Negativo: aparecen antes. Positivo: aparecen después. Se aplica a este contenido.","Negative: show earlier. Positive: show later. Applies to this playback."),color=Muted)
-            Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+            FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                 FocusButton("−1 s",modifier=Modifier.focusRequester(first)) { draft=(draft-1000).coerceAtLeast(-30000) }
                 FocusButton("−0.25 s") { draft=(draft-250).coerceAtLeast(-30000) }
                 FocusButton("+0.25 s") { draft=(draft+250).coerceAtMost(30000) }
                 FocusButton("+1 s") { draft=(draft+1000).coerceAtMost(30000) }
             }
-            Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+            FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                 FocusButton(tr("Restablecer","Reset")) { draft=0 }
                 FocusButton(tr("Aplicar","Apply")) { apply(draft);close() }
                 FocusButton(tr("Cancelar","Cancel")) { close() }
@@ -65,7 +69,7 @@ fun PlaybackInfoDialog(player: ExoPlayer, request: PlayerRequest, close: () -> U
         val bitrate=f?.averageBitrate?.takeIf { it>0 } ?: f?.peakBitrate?.takeIf { it>0 }
         return bitrate?.let { String.format(Locale.US,"%.2f Mbps",it/1_000_000.0) } ?: "—"
     }
-    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    PlayerMenuDialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         val view=androidx.compose.ui.platform.LocalView.current
         DisposableEffect(view) {
             (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window?.setDimAmount(0f)

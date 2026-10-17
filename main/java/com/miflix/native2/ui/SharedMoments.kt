@@ -1,5 +1,13 @@
 package com.miflix.native2.ui
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.font.FontWeight
+import com.miflix.native2.model.Profile
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,7 +35,7 @@ internal fun MomentComposer(state: AppState,req: PlayerRequest,start: Long?,end:
     var friends by remember(owner) {mutableStateOf<List<SocialPerson>>(emptyList())}
     var busy by remember(owner) {mutableStateOf(false)}
     var note by remember(owner) {mutableStateOf("")}
-    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    PlayerMenuDialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         LazyColumn(Modifier.width(470.dp).heightIn(max=430.dp).background(Panel,RoundedCornerShape(20.dp)).padding(22.dp),
             verticalArrangement=Arrangement.spacedBy(12.dp)) {
             item {Text(tr("Grabar momento","Mark a moment"),color=Color.White,fontSize=25.sp)}
@@ -48,7 +56,7 @@ internal fun MomentComposer(state: AppState,req: PlayerRequest,start: Long?,end:
                 }
             }
             items(friends,key={it.id}) { friend ->
-                FocusButton(tr("Compartir con ","Share with ")+friend.nickname) {
+                MomentFriendCard(friend,enabled=!busy) {
                     if(!busy && start!=null && end!=null && state.session?.userId==owner) {
                         busy=true;state.launch {
                             try {state.sendMoment(req,friend.id,start,end);note=tr("Momento compartido.","Moment shared.")}
@@ -69,7 +77,7 @@ internal fun SharedMomentsInbox(state: AppState,close: () -> Unit) {
     val owner=state.session?.userId
     val rows=if(state.sharedMomentsOwner==owner) state.sharedMoments.toList() else emptyList()
     // Deliberately no LaunchedEffect/network request on open. Only the button loads the inbox.
-    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    PlayerMenuDialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         LazyColumn(Modifier.width(630.dp).heightIn(max=460.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),
             verticalArrangement=Arrangement.spacedBy(14.dp)) {
             item {Text(tr("Momentos compartidos","Shared moments"),color=Color.White,fontSize=26.sp)}
@@ -96,5 +104,24 @@ internal fun SharedMomentsInbox(state: AppState,close: () -> Unit) {
             }
             item {FocusButton(tr("Cerrar","Close")) {close()}}
         }
+    }
+}
+
+
+@Composable
+private fun MomentFriendCard(friend: SocialPerson,enabled: Boolean,onClick: () -> Unit) {
+    var focused by remember(friend.id) {mutableStateOf(false)}
+    val activate: () -> Unit={if(enabled) onClick()}
+    Row(Modifier.fillMaxWidth().onFocusChanged {focused=it.isFocused}.focusable()
+        .tvClick(activate).clickable(onClick=activate)
+        .background(if(focused) FocusedPanel else Bg,RoundedCornerShape(18.dp))
+        .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(18.dp))
+        .padding(14.dp),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
+        ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(48.dp).clip(CircleShape))
+        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+            Text(friend.nickname,color=Color.White,fontSize=20.sp,fontWeight=FontWeight.Bold,maxLines=1)
+            Text(tr("Compartir momento","Share moment"),color=Muted,fontSize=13.sp)
+        }
+        Text("›",color=if(focused) Accent else Muted,fontSize=28.sp)
     }
 }

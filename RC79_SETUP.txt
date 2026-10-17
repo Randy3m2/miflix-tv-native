@@ -1,3 +1,6 @@
+HOTFIX: import TextOverflow corregido en ambos Screens.kt.
+Usa este paquete en lugar del RC79 anterior, sobre RC78 o RC79. Conserva todos los cambios y versionCode 22078.
+
 BruniO RC79 / versionCode 22078
 
 Sube los 22 archivos sobre RC78 y ejecuta el workflow Android TV. Espera APK + update.json publicados antes de Check for Updates. Sin SQL ni Vercel.

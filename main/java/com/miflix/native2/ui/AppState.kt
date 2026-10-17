@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import com.miflix.native2.BuildConfig
 import com.miflix.native2.data.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.CancellationException
 import com.miflix.native2.data.LocalStore
 import com.miflix.native2.data.PairingRepository

@@ -547,6 +547,54 @@ class AppState(context: Context) {
             }
         } finally { accessRequestsLoading=false }
     }
+    val sharedMoments=mutableStateListOf<com.miflix.native2.data.SharedMoment>()
+    var sharedMomentsOwner by mutableStateOf("")
+        private set
+    var sharedMomentsLoading by mutableStateOf(false)
+        private set
+    /** Called only by the explicit Moments → Refresh button, never by a social timer. */
+    suspend fun refreshSharedMoments() {
+        val s=session ?: error(tr("Inicia sesión primero","Sign in first"))
+        if(sharedMomentsLoading) return
+        sharedMomentsLoading=true
+        try {
+            val rows=social.receivedMoments(s)
+            if(session?.userId==s.userId) {sharedMoments.replaceWith(rows);sharedMomentsOwner=s.userId}
+        } finally {sharedMomentsLoading=false}
+    }
+    suspend fun momentRecipients(): List<com.miflix.native2.data.SocialPerson> {
+        val s=session ?: error(tr("Inicia sesión primero","Sign in first"))
+        val rows=social.friends(s).filter {it.status=="accepted"}
+        val ids=rows.map {if(it.sender==s.userId) it.receiver else it.sender}.distinct()
+        if(ids.isEmpty()) return emptyList()
+        val people=social.people(s,ids)
+        return if(session?.userId==s.userId) people else emptyList()
+    }
+    suspend fun sendMoment(req: PlayerRequest,recipient: String,start: Long,end: Long) {
+        val s=session ?: error(tr("Inicia sesión primero","Sign in first"))
+        require(!req.live && playerRequest?.playbackId==req.playbackId)
+        social.shareMoment(s,recipient,req.playbackId,req.item.cloudId,req.item.title,req.season,req.episode,start,end)
+    }
+    suspend fun removeSharedMoment(moment: com.miflix.native2.data.SharedMoment) {
+        val s=session ?: return
+        social.deleteMoment(s,moment.id)
+        if(session?.userId==s.userId) sharedMoments.removeAll {it.id==moment.id}
+    }
+    suspend fun playSharedMoment(moment: com.miflix.native2.data.SharedMoment) {
+        val account=session?.userId ?: error(tr("Inicia sesión primero","Sign in first"))
+        val profile=activeProfile.id
+        val item=tmdb.byCloudId(moment.cloud) ?: error(tr("Contenido no disponible","Content unavailable"))
+        if(session?.userId!=account || activeProfile.id!=profile) return
+        require(moment.startMs>=0 && moment.endMs>moment.startMs)
+        if(watchParty!=null || pendingPartyCode!=null) leaveWatchParty()
+        this.open(item)
+        if(session?.userId!=account || activeProfile.id!=profile) return
+        check(selected?.cloudId==item.cloudId && details?.summary?.cloudId==item.cloudId) {tr("Contenido no disponible","Content unavailable")}
+        val imdb=details?.imdbId ?: error(tr("No se pudo identificar el título","Could not identify title"))
+        playResolved(item,imdb,moment.season,moment.episode,moment.startMs,onStarted={ req ->
+            playerRequest=req.copy(momentStartMs=moment.startMs,momentEndMs=moment.endMs,momentSender=moment.nickname)
+        })
+    }
     suspend fun refreshFriendsDirectory() {
         retrySocialPresenceEvent()
         val s=session ?: return
@@ -1772,7 +1820,10 @@ class AppState(context: Context) {
                 error=tr("El host cambió de contenido. Abre Playback links nuevamente.","The host changed content. Open Playback links again."); switchToPartyState(remote); return
             }
         }
-        if(playbackWork.current(ticket)) playResolved(selection.item,selection.imdb,selection.season,selection.episode,selection.resumeMs,stream)
+        val moment=playerRequest?.takeIf {it.momentEndMs>0 && it.item.cloudId==selection.item.cloudId &&
+            it.season==selection.season && it.episode==selection.episode}
+        if(playbackWork.current(ticket)) playResolved(selection.item,selection.imdb,selection.season,selection.episode,selection.resumeMs,stream,
+            onStarted={ req -> if(moment!=null) playerRequest=req.copy(momentStartMs=moment.momentStartMs,momentEndMs=moment.momentEndMs,momentSender=moment.momentSender) })
     }
 
     private val searchResultCache=linkedMapOf<String,Pair<Long,List<MediaSummary>>>()
@@ -1909,7 +1960,10 @@ class AppState(context: Context) {
             playbackPrefs.getStringSet(watchedEpisodesKey(),emptySet()).orEmpty().contains(key)
     }
 
+    private fun isMomentOnly(req: PlayerRequest): Boolean =
+        if(playerRequest?.playbackId==req.playbackId) (playerRequest?.momentEndMs ?: 0L)>0 else req.momentEndMs>0
     fun updateProgress(req: PlayerRequest, position: Long, duration: Long, ended: Boolean = false) {
+        if(isMomentOnly(req)) return
         if (req.live || duration <= 0) return
         val key = if (req.item.type == "series") "${req.item.cloudId}:s${req.season}e${req.episode}" else req.item.cloudId
         val row = PlaybackProgress(
@@ -2246,6 +2300,7 @@ class AppState(context: Context) {
         pushCloud(); traktStatus=tr("Lista de Trakt importada a Mi lista","Watchlist imported to My List")
     }
     suspend fun traktMarkWatched(req: PlayerRequest, position: Long, duration: Long) {
+        if(isMomentOnly(req)) return
         if(!traktConnected || req.live || duration<=0 || position.toDouble()/duration<0.8)return
         val s=session ?: return
         val event=req.playbackId
@@ -2320,6 +2375,7 @@ class AppState(context: Context) {
     }
 
     fun signOut() {
+        sharedMoments.clear();sharedMomentsOwner=""
         session?.let { presenceEvents.queue(it,"","",0,0,null,System.currentTimeMillis()) }
         playbackLinkCache.clear()
         closeAvatarUpload()
@@ -2362,7 +2418,10 @@ data class PlayerRequest(
     val liveMime: String = "",
     val lidomTeam: String = "",
     val lidomSource: String = "",
-    val returnScreen: Screen? = null
+    val returnScreen: Screen? = null,
+    val momentStartMs: Long = 0L,
+    val momentEndMs: Long = 0L,
+    val momentSender: String = ""
 )
 
 data class SourceSelection(

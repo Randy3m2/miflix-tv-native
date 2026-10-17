@@ -43,6 +43,7 @@ fun SocialBackdrop() {
 
 @Composable
 fun FriendsScreen(state: AppState) {
+    var momentsOpen by remember {mutableStateOf(false)}
     var tab by remember { mutableStateOf(0) }
     var search by remember { mutableStateOf("") }
     var person by remember { mutableStateOf<FriendActivity?>(null) }
@@ -77,6 +78,7 @@ fun FriendsScreen(state: AppState) {
                         FocusButton(if(state.watchParty==null) tr("Crear sala","Create Party") else tr("Mi sala","My Party")) { state.screen=Screen.WATCH_PARTY }
                     }
                     Text(tr("Descubre qué están viendo tus amigos.","Discover what your friends are watching."),color=Muted,fontSize=13.sp, lineHeight=16.sp)
+                    FocusButton(tr("Momentos compartidos · actualizar manualmente","Shared moments · manual refresh")) {momentsOpen=true}
 
                 Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement=Arrangement.spacedBy(16.dp)) {
@@ -160,6 +162,7 @@ fun FriendsScreen(state: AppState) {
         }
     }
     person?.let { friend -> FriendActionsDialog(state,friend,close={ person=null }) }
+    if(momentsOpen) SharedMomentsInbox(state) {momentsOpen=false}
     if(recommendations) FriendRecommendationsDialog(state) { recommendations=false }
 }
 

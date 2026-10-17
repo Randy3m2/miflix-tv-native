@@ -1,0 +1,26 @@
+'use strict';
+const fs=require('fs'),assert=require('assert');
+const root='app/src/main/java/com/miflix/native2/';
+const read=p=>fs.readFileSync(root+p,'utf8');
+const state=read('ui/AppState.kt'),screen=read('ui/Screens.kt'),inbox=read('ui/SharedMoments.kt'),boundary=read('ui/MomentPlayback.kt');
+assert.equal((state.match(/social\.receivedMoments\(s\)/g)||[]).length,1);
+assert.equal((inbox.match(/state\.refreshSharedMoments\(\)/g)||[]).length,1);
+assert(!inbox.includes('LaunchedEffect('));
+assert(!inbox.includes('delay('));assert(!boundary.includes('Http.'));
+assert(boundary.includes('.setPosition(0,req.momentEndMs).setDeleteAfterDelivery(false)'));
+assert(boundary.includes('.setLooper(Looper.getMainLooper())'));
+assert(boundary.includes('onPositionDiscontinuity') && boundary.includes('!gate.claimEnd()'));
+assert(boundary.includes('message?.cancel()'));
+assert(screen.includes('SeekParameters.EXACT'));
+assert(screen.includes('Aquí termina el momento'));
+assert(screen.includes('request.momentEndMs<=0 && ended && !rateAtEnd'));
+assert(state.includes('moment.startMs,onStarted='));
+assert(state.includes('playerRequest=req.copy(momentStartMs=moment.startMs'));
+assert(state.includes('playerRequest=req.copy(momentStartMs=moment.momentStartMs'));
+assert(state.includes('if(isMomentOnly(req)) return'));
+assert(read('ui/PlayerControls.kt').includes('if(!request.live && seekable) PlayerIconButton("moment"'));
+assert(inbox.includes('Leave party and play'));
+assert(state.includes('sharedMomentsOwner=s.userId'));
+for(const rel of ['data/SocialRepository.kt','ui/AppState.kt','ui/PlayerControls.kt','ui/SocialScreens.kt','ui/Screens.kt','ui/SharedMoments.kt','ui/MomentPlayback.kt','ui/UpdateNotes.kt','player/MomentBoundaryGate.java'])
+ assert.equal(read(rel),fs.readFileSync('main/java/com/miflix/native2/'+rel,'utf8'),rel);
+console.log('PASS: inbox only on manual Refresh, local scheduled/end/seek boundary with cleanup, exact seek request, autoplay guard, range retained across source changes, no moment-only watched/progress pollution, VOD-only composer, party-exit label, account guards and mirrors.');

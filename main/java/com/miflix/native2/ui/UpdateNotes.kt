@@ -21,6 +21,8 @@ internal object UpdateNotes {
         "Connect phone / PC abre tu catálogo de Vercel conectado a la TV: QR/enlace sin código manual y botón Play on TV." to "Connect phone / PC opens your Vercel catalog connected to the TV: QR/link with no manual code and a Play on TV button."
     )
     val changes=listOf(
+        "Momentos compartidos: marca inicio y final en el reproductor y envíalos a un amigo, sin subir video." to "Shared moments: mark start/end in the player and share with a friend without uploading video.",
+        "Friends → Momentos: recepción exclusivamente con Refresh manual; reproduce desde el inicio marcado y pausa al final, con Repetir o Continuar." to "Friends → Moments: manual Refresh only; plays from the marked start and pauses at the end, with Replay or Continue.",
         "Selección global entre todos los add-ons: español latino/castellano/España primero; inglés como respaldo, antes de priorizar resolución o tamaño." to "Global selection across all add-ons: Latin American/Castilian/Spain Spanish first, English fallback, before resolution or file size.",
         "Mejor lectura de etiquetas LAT/España, descripciones y audio declarado; VOSE/subtítulos no cuentan como audio español." to "Better LAT/Spain labels, descriptions and declared-audio handling; VOSE/subtitles do not count as Spanish audio.",
         "Home: romance, dramas coreanos y clásicos; Para ti combina historial y puntuaciones con caché local." to "Home: romance, K-dramas and classics; For you combines viewing history and ratings with local caching.",

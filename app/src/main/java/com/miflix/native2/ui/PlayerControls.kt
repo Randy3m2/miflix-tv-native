@@ -52,13 +52,14 @@ internal fun CompactPlayerControls(
     maximized: Boolean, playFocus: FocusRequester, onInteraction: () -> Unit, onPlay: () -> Unit,
     onResize: () -> Unit, onMenu: (String) -> Unit, onLinks: () -> Unit, onSeek: (Long) -> Unit,
     seekable: Boolean, party: Boolean, onParty: () -> Unit, onChat: () -> Unit, onReactions: () -> Unit, onQuickReactions: () -> Unit, onClose: () -> Unit, onMaximize: () -> Unit,
-    nextAvailable: Boolean, onNext: () -> Unit, onEpisodes: () -> Unit, onQueue: () -> Unit, onInfo: () -> Unit, onPip: () -> Unit, onMultiView: () -> Unit
+    nextAvailable: Boolean, onNext: () -> Unit, onEpisodes: () -> Unit, onQueue: () -> Unit, onInfo: () -> Unit, onPip: () -> Unit, onMultiView: () -> Unit, onMoment: () -> Unit
 ) {
     val seekFocus=remember { FocusRequester() }
     var focusedLabel by remember { mutableStateOf("") }
     Box(Modifier.fillMaxSize()) {
         Row(Modifier.align(Alignment.TopEnd).padding(top=20.dp,end=24.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
             PlayerIconButton("info",tr("Información técnica","Playback info"),onInteraction=onInteraction,onClick=onInfo,onLabel={ focusedLabel=it })
+            if(!request.live && seekable) PlayerIconButton("moment",tr("Grabar momento","Mark a moment"),onInteraction=onInteraction,onClick=onMoment,onLabel={ focusedLabel=it })
             PlayerIconButton("pip",tr("Ventana flotante","Picture in Picture"),onInteraction=onInteraction,onClick=onPip,onLabel={ focusedLabel=it })
             if(request.live && request.liveProvider!="lidom") PlayerIconButton("grid",tr("Hasta 4 canales","Up to 4 channels"),onInteraction=onInteraction,onClick=onMultiView,onLabel={ focusedLabel=it })
         }
@@ -122,6 +123,7 @@ private fun PlayerGlyph(icon: String, color: Color, modifier: Modifier) {
             "next" -> { drawPath(Path().apply { moveTo(w*.16f,h*.15f);lineTo(w*.70f,h*.5f);lineTo(w*.16f,h*.85f);close() },color);drawRect(color,Offset(w*.76f,h*.15f),Size(w*.10f,h*.70f)) }
             "queue" -> { line(.12f,.2f,.88f,.2f);line(.12f,.5f,.70f,.5f);line(.12f,.8f,.55f,.8f);line(.78f,.64f,.78f,.94f);line(.64f,.79f,.92f,.79f) }
             "episodes" -> { rectangle(.08f,.12f,.24f,.20f);rectangle(.08f,.42f,.24f,.20f);rectangle(.08f,.72f,.24f,.20f);line(.46f,.22f,.92f,.22f);line(.46f,.52f,.92f,.52f);line(.46f,.82f,.92f,.82f) }
+            "moment" -> { rectangle(.12f,.22f,.76f,.56f);line(.3f,.12f,.3f,.88f);line(.7f,.12f,.7f,.88f) }
             "info" -> { drawCircle(color,w*.4f,Offset(w*.5f,h*.5f),style=stroke);line(.5f,.45f,.5f,.75f);drawCircle(color,w*.04f,Offset(w*.5f,h*.27f)) }
             "pip" -> { rectangle(.05f,.15f,.9f,.7f);drawRect(color,Offset(w*.52f,h*.48f),Size(w*.33f,h*.26f)) }
             "grid" -> { rectangle(.08f,.08f,.35f,.35f);rectangle(.57f,.08f,.35f,.35f);rectangle(.08f,.57f,.35f,.35f);rectangle(.57f,.57f,.35f,.35f) }

@@ -1170,6 +1170,11 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var pendingSubtitleLabel by remember(request.playbackId) { mutableStateOf<String?>(null) }
     var surfaceGeneration by remember(request.playbackId) { mutableStateOf(0) }
     var tracks by remember(request.playbackId) { mutableStateOf(androidx.media3.common.Tracks.EMPTY) }
+    var showMomentComposer by remember(request.playbackId) {mutableStateOf(false)}
+    var momentStart by remember(request.playbackId) {mutableStateOf<Long?>(null)}
+    var momentEnd by remember(request.playbackId) {mutableStateOf<Long?>(null)}
+    var momentNotice by remember(request.playbackId) {mutableStateOf(false)}
+    var momentUnavailable by remember(request.playbackId) {mutableStateOf(false)}
     var showPartyActions by remember { mutableStateOf(false) }
     var showQueue by remember { mutableStateOf(false) }
     var creatingParty by remember { mutableStateOf(false) }
@@ -1216,6 +1221,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             .build().apply {
             setSeekBackIncrementMs(10_000)
             setSeekForwardIncrementMs(10_000)
+            if(request.momentEndMs>0) setSeekParameters(androidx.media3.exoplayer.SeekParameters.EXACT)
             val builder = MediaItem.Builder().setUri(request.stream.url)
             if(request.liveMime.isNotBlank()) builder.setMimeType(request.liveMime)
             if (subtitles.isNotEmpty()) {
@@ -1280,6 +1286,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
         }
     }
+    MomentPlaybackBoundary(player,request,onEnd={
+        cancelAutoplay=true;momentUnavailable=false;momentNotice=true;controlsVisible=true
+    },onUnavailable={cancelAutoplay=true;momentUnavailable=true;momentNotice=true;controlsVisible=true})
     HeadphoneAudioRouting(player) { playbackError=null }
     LaunchedEffect(player) {
         try {
@@ -1315,7 +1324,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }.getOrDefault("") }
     }
     LaunchedEffect(ended,upcoming,queueNext?.id,cancelAutoplay,state.autoplayNext,rateAtEnd,randomMode) {
-        if(ended && !rateAtEnd && !cancelAutoplay && state.partyRole!=PartyRole.GUEST && (queueNext!=null || (randomMode || upcoming!=null) && state.autoplayNext)) {
+        if(request.momentEndMs<=0 && ended && !rateAtEnd && !cancelAutoplay && state.partyRole!=PartyRole.GUEST && (queueNext!=null || (randomMode || upcoming!=null) && state.autoplayNext)) {
             countdown=10
             while(countdown>0) { delay(1000);countdown-- }
             cancelAutoplay=true
@@ -1674,8 +1683,29 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 nextAvailable=(randomMode || upcoming!=null) && state.partyRole!=PartyRole.GUEST,
                 onNext={cancelAutoplay=true;state.launch {state.socialAction {if(randomMode) state.playRandomEpisode(request.item) else upcoming?.let {state.playNext(request,it)} } }},
                 onEpisodes={ if(request.liveProvider=="lidom") state.showLidomSources(request) else if(request.live) playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else "channels" else { episodesResumeAfterClose=false;showEpisodes=true } },onQueue={ showQueue=true },
-                onInfo={ playerMenu="info" },onPip={ parkCurrentPlayback();playerMenu=null;controlsVisible=false;state.miniPlayer=true;state.screen=Screen.HOME },
+                onMoment={momentNotice=false;showMomentComposer=true},onInfo={ playerMenu="info" },onPip={ parkCurrentPlayback();playerMenu=null;controlsVisible=false;state.miniPlayer=true;state.screen=Screen.HOME },
                 onMultiView={ if(state.watchParty!=null || state.pendingPartyCode!=null) confirmMulti=true else state.beginMultiView(request) })
+        }
+        if(showMomentComposer) MomentComposer(state,request,momentStart,momentEnd,
+            position={player.currentPosition},onStart={momentStart=it;momentEnd=null},onEnd={momentEnd=it},close={showMomentComposer=false})
+        if(momentNotice) Dialog(onDismissRequest={momentNotice=false},properties=DialogProperties(usePlatformDefaultWidth=false)) {
+            Column(Modifier.width(470.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+                Text(if(momentUnavailable) tr("Esta versión no coincide con los tiempos del momento.","This version does not match the moment's timestamps.")
+                    else tr("Aquí termina el momento","The moment ends here"),color=Color.White,fontSize=24.sp)
+                if(request.momentSender.isNotBlank()) Text(tr("Compartido por ","Shared by ")+request.momentSender,color=Muted)
+                if(!momentUnavailable) FocusButton(tr("Repetir momento","Replay moment"),primary=true) {
+                    momentNotice=false;ended=false;player.seekTo(request.momentStartMs);player.play()
+                }
+                FocusButton(tr("Continuar película / episodio","Continue movie / episode")) {
+                    momentNotice=false;ended=player.playbackState==Player.STATE_ENDED;cancelAutoplay=false
+                    state.playerRequest=state.playerRequest?.copy(momentStartMs=0L,momentEndMs=0L,momentSender="")
+                    player.play()
+                }
+                FocusButton(tr("Elegir otro enlace","Choose another source")) {
+                    momentNotice=false;state.launch {state.playerSources(request,request.momentStartMs)}
+                }
+                FocusButton(tr("Cerrar · mantener pausa","Close · stay paused")) {momentNotice=false}
+            }
         }
         if(showAccessRequests) {
             Dialog(onDismissRequest={ showAccessRequests=false },properties=DialogProperties(usePlatformDefaultWidth=false)) {
@@ -1694,7 +1724,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 FocusButton("${state.accessRequests.size} ${tr("solicitudes · Sala","requests · Party")}") { showAccessRequests=true }
             }
         }
-        if(pauseSynopsis && !pauseInfoDismissed && !showEpisodes && !showPartyActions && playerMenu == null && !quickReactions && state.sourceSelection == null && !ended) {
+        if(!momentNotice && !showMomentComposer && pauseSynopsis && !pauseInfoDismissed && !showEpisodes && !showPartyActions && playerMenu == null && !quickReactions && state.sourceSelection == null && !ended) {
             Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xC9000000),Color(0x22000000))))) {
                 Column(Modifier.align(Alignment.CenterStart).padding(60.dp).widthIn(max=680.dp)) {
                     Text(tr("Estás viendo","You're watching"),color=Muted,fontSize=18.sp, lineHeight=22.sp)
@@ -1706,7 +1736,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
 
             }
         }
-        if(paused && !pauseInfoDismissed && !ended && !showEpisodes && !showPartyActions && playerMenu == null && !quickReactions && state.sourceSelection == null) {
+        if(!momentNotice && !showMomentComposer && paused && !pauseInfoDismissed && !ended && !showEpisodes && !showPartyActions && playerMenu == null && !quickReactions && state.sourceSelection == null) {
             val clock = android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(clockNow))
             val remaining = (durationMs - positionMs).coerceAtLeast(0L) / 1000
             val remainingText = when {
@@ -1721,7 +1751,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 Text(if(request.live || durationMs <= 0) remainingText else "${tr("Termina a las","Ends at")} · "+android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(clockNow+((durationMs-positionMs).coerceAtLeast(0)/speed.coerceAtLeast(0.1f)).toLong())),color=Color(0xFFE0E0E0),fontSize=19.sp, lineHeight=23.sp)
             }
         }
-        if(!ended && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu==null && !quickReactions && state.sourceSelection==null && state.partyRole != PartyRole.GUEST && durationMs > 0) {
+        if(request.momentEndMs<=0 && !ended && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu==null && !quickReactions && state.sourceSelection==null && state.partyRole != PartyRole.GUEST && durationMs > 0) {
             val intro = segments.intro?.takeIf { it.endMs <= durationMs && positionMs >= it.startMs && positionMs < it.endMs }
             val credits = segments.outro?.takeIf { it.startMs < durationMs && positionMs >= it.startMs && positionMs < it.endMs }
             if(intro != null || credits != null) Box(Modifier.align(Alignment.BottomEnd).padding(end=30.dp,bottom=100.dp)) {
@@ -1733,7 +1763,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
         }
         if(rateAtEnd) RatingDialog(state,request.item) { rateAtEnd=false; state.launch { recommendations=state.recommendationsFor(request.item) } }
-        if(ended && state.playbackLoading==null && state.partyRole != PartyRole.GUEST && !rateAtEnd && !showQueue && !showPartyActions) {
+        if(request.momentEndMs<=0 && ended && state.playbackLoading==null && state.partyRole != PartyRole.GUEST && !rateAtEnd && !showQueue && !showPartyActions) {
             Dialog(onDismissRequest={ cancelAutoplay=true; onClose() },properties=DialogProperties(usePlatformDefaultWidth=false)) {
                 Column(Modifier.width(850.dp).heightIn(max=600.dp).background(Color(0xF00B0B0B),RoundedCornerShape(20.dp)).padding(25.dp)) {
                     Text("${tr("Terminaste","You finished")} ${request.item.title}",color=Color.White,fontSize=26.sp, lineHeight=31.sp)

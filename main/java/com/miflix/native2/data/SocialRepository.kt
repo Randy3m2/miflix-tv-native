@@ -20,6 +20,9 @@ data class Friendship(val sender: String, val receiver: String, val status: Stri
 data class QueueEntry(val id: String, val cloud: String, val title: String, val season: Int, val episode: Int)
 data class CalendarEvent(val id: String, val owner: String, val title: String, val kind: String, val starts: String, val cloud: String?, val season: Int, val episode: Int, val guests: List<String>, val channelId: String="", val channelType: String="tv")
 
+data class SharedMoment(val id: String,val sender: String,val nickname: String,val cloud: String,val title: String,
+    val season: Int,val episode: Int,val startMs: Long,val endMs: Long)
+
 class SocialRepository(private val url: String, private val key: String) {
     private val presenceMutex=Mutex()
     private val avatarMutex=Mutex()
@@ -47,6 +50,26 @@ class SocialRepository(private val url: String, private val key: String) {
     /** Event RPC is deliberately independent of all watch-party control/heartbeat RPCs. */
     internal suspend fun presenceEvent(s: CloudSession, body: JSONObject) = presenceMutex.withLock {
         write(s,"rpc/brunio_presence_event",body)
+    }
+    suspend fun receivedMoments(s: CloudSession): List<SharedMoment> {
+        val a=JSONArray(Http.text("$url/rest/v1/rpc/brunio_received_moments","POST",headers(s),"{}"))
+        return (0 until a.length()).map { a.getJSONObject(it).let { x ->
+            SharedMoment(x.getString("id"),x.getString("sender_id"),x.getString("nickname"),x.getString("cloud_id"),
+                x.getString("title"),x.getInt("season"),x.getInt("episode"),x.getLong("start_ms"),x.getLong("end_ms")) } }
+    }
+    suspend fun shareMoment(s: CloudSession,recipient: String,reqId: String,cloud: String,title: String,
+        season: Int,episode: Int,start: Long,end: Long) {
+        require(start>=0 && end>start && end<=86_400_000L)
+        val id=java.util.UUID.nameUUIDFromBytes("${s.userId}:$recipient:$reqId:$start:$end".toByteArray()).toString()
+        val body=JSONObject().put("id",id).put("sender_id",s.userId).put("recipient_id",recipient)
+            .put("cloud_id",cloud).put("title",title.take(200)).put("season",season).put("episode",episode)
+            .put("start_ms",start).put("end_ms",end)
+        Http.text("$url/rest/v1/brunio_shared_moments?on_conflict=id","POST",
+            headers(s)+("Prefer" to "resolution=ignore-duplicates,return=minimal"),body.toString())
+    }
+    suspend fun deleteMoment(s: CloudSession,id: String) {
+        require(runCatching {java.util.UUID.fromString(id)}.isSuccess)
+        Http.text("$url/rest/v1/brunio_shared_moments?id=eq.$id","DELETE",headers(s))
     }
     suspend fun activity(s: CloudSession): List<FriendActivity> {
         val a=JSONArray(Http.text("$url/rest/v1/rpc/miflix_friend_activity_v30","POST",headers(s),"{}"))

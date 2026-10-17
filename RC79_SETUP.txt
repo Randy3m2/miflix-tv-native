@@ -1,0 +1,15 @@
+BruniO RC79 / versionCode 22078
+
+Sube los 22 archivos sobre RC78 y ejecuta el workflow Android TV. Espera APK + update.json publicados antes de Check for Updates. Sin SQL ni Vercel.
+
+Incluye:
+- Just Added / Recien agregado: titulos nuevos en el catalogo Home observado en este dispositivo/perfil, durante 14 dias. Primera carga y primeros 5 minutos son linea base: no se marca todo como nuevo al instalar. No es una confirmacion de alta en un proveedor ni de disponibilidad de enlaces. Registro local limitado a 3000 titulos; no se inventan fechas anteriores.
+- New Episode / Nuevo episodio: fecha de ultimo episodio emitido en ultimos 7 dias (dias dominicanos). Hasta 20 series del Home por carga, 3 solicitudes simultaneas como maximo, cache local de metadatos en memoria 3 horas. Sin polling y sin peticiones al renderizar tarjetas. Preferencia Nuevo episodio sobre Recien agregado. Las etiquetas de premios no se superponen con las de novedad.
+- Make me forget so I can rewatch: hasta 10 peliculas + 10 series, intercaladas, puntuacion >=8 usando Top Rated ya cargado. Seleccion editorial, no historial de repeticiones del usuario.
+- Horror seguido inmediatamente de Christmas Movies, disponible fuera de diciembre. Navidad usa keyword tematico de TMDB y cache 3 horas. Filas extendidas ocultas en Modo sencillo, como el resto del contenido opcional de ese modo.
+- Because you watched [titulo]: basado en el ultimo titulo visto al menos 5 minutos y sin puntuacion negativa; resultados relacionados de TMDB con cache. Excluye la semilla, contenido completado y puntuaciones negativas. Separacion por cuenta/perfil/idioma; sin solicitudes Supabase.
+- Generos: eleccion determinista despues de cargar candidatos, sin repetir pelicula ni archivo de imagen entre generos. Si no hay candidato distinto, fondo neutro. Nombre dentro de tarjeta con degradado oscuro; sin duplicarlo fuera.
+
+No se agregan consultas a Supabase. Si hay consultas nuevas a TMDB para fechas, Navidad y Terror; son acotadas y con cache. Because you watched reutiliza cache de recomendaciones; puede consultar una ficha para recuperar el nombre de la semilla si no esta cargado.
+
+Validado: 14 casos de ventanas de fechas, fecha futura/invalida y medianoche dominicana; comparacion de sintaxis Kotlin sin nuevos errores; checks de Home, Party y navegacion; archivos espejo identicos. APK, reproduccion y prueba visual en TV pendientes en GitHub/dispositivo.

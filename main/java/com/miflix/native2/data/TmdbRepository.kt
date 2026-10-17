@@ -494,11 +494,17 @@ class TmdbRepository(var token: String) {
         val locale=language
         val key="familiar:$locale:$kind"
         discoveryCache.get(key)?.let {return it}
+        if(kind=="christmas") {
+            val rows=seasonal("christmas")
+            if(rows.isNotEmpty()) discoveryCache.put(key,rows)
+            return rows
+        }
         val type=if(kind=="kdrama") "series" else "movie"
         val params=linkedMapOf("language" to locale,"include_adult" to "false","sort_by" to "popularity.desc",
             "vote_count.gte" to "80","vote_average.gte" to "6")
         when(kind) {
             "romance" -> params["with_genres"]="10749"
+            "horror" -> params["with_genres"]="27"
             "kdrama" -> {params["with_original_language"]="ko";params["with_genres"]="18"}
             "classics" -> {params["primary_release_date.lte"]="1999-12-31";params["sort_by"]="vote_average.desc";params["vote_count.gte"]="500"}
             else -> error("Unknown catalog")
@@ -518,6 +524,16 @@ class TmdbRepository(var token: String) {
 
     suspend fun episodeInfo(item: MediaSummary, season: Int, episode: Int): EpisodeSummary? =
         season(item.id, season).firstOrNull { it.episode == episode }
+
+    private val episodeBadgeDates=PlaybackLinkCache<String,String>(100) {System.currentTimeMillis()}
+    internal suspend fun episodeBadgeDate(item:MediaSummary):String {
+        if(item.type!="series") return ""
+        episodeBadgeDates.get(item.cloudId)?.let {return it}
+        val json=get("/tv/${item.id}")
+        val date=json.optJSONObject("last_episode_to_air")?.optString("air_date").orEmpty()
+        episodeBadgeDates.put(item.cloudId,date)
+        return date
+    }
 
     suspend fun latestRelease(item: MediaSummary): ReleaseNotice? {
         val j = get("/${if(item.type == "series") "tv" else "movie"}/${item.id}")

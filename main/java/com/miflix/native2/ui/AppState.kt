@@ -342,9 +342,74 @@ class AppState(context: Context) {
     }
     val ratings=mutableStateMapOf<String,Int>()
     val forYou=mutableStateListOf<MediaSummary>()
+    private var cardFreshnessOwner by mutableStateOf("")
+    private val newlyAddedCards=mutableStateMapOf<String,Long>()
+    private val episodeCardDates=mutableStateMapOf<String,String>()
+    private val cardFreshnessMutex=Mutex()
+    fun cardFreshness(item:MediaSummary):String? {
+        if(cardFreshnessOwner!=ratingsKey()) return null
+        val now=System.currentTimeMillis()
+        if(item.type=="series" && com.miflix.native2.data.CardFreshnessPolicy.newEpisode(episodeCardDates[item.cloudId],now))
+            return tr("Nuevo episodio","New Episode")
+        if(com.miflix.native2.data.CardFreshnessPolicy.justAdded(newlyAddedCards[item.cloudId] ?: 0L,now))
+            return tr("Recién agregado","Just Added")
+        return null
+    }
+    suspend fun loadCardFreshness(rows:List<MediaSummary>) = cardFreshnessMutex.withLock {
+        val owner=ratingsKey()
+        if(cardFreshnessOwner!=owner) {newlyAddedCards.clear();episodeCardDates.clear();cardFreshnessOwner=owner}
+        val key="catalog_badges:$owner"
+        val initialized=playbackPrefs.contains(key)
+        val known=runCatching {org.json.JSONObject(playbackPrefs.getString(key,"{}"))}.getOrElse {org.json.JSONObject()}
+        val now=System.currentTimeMillis()
+        val baseline=playbackPrefs.getLong(key+":baseline",now)
+        val learning=!initialized || now-baseline<5*60*1000L
+        // Learn asynchronously loaded rails for five minutes on first use, without false new tags.
+        rows.distinctBy {it.cloudId}.take(300).forEach {item ->
+            if(!known.has(item.cloudId) && known.length()<3000) known.put(item.cloudId,if(learning) 0L else now)
+            val added=known.optLong(item.cloudId,0L)
+            if(com.miflix.native2.data.CardFreshnessPolicy.justAdded(added,now)) newlyAddedCards[item.cloudId]=added
+            else newlyAddedCards.remove(item.cloudId)
+        }
+        val edit=playbackPrefs.edit().putString(key,known.toString())
+        if(!initialized) edit.putLong(key+":baseline",now)
+        edit.apply()
+        val slots=Semaphore(3)
+        coroutineScope {
+            rows.filter {it.type=="series"}.distinctBy {it.cloudId}.take(20).map {item ->async {slots.withPermit {
+                val date=try {tmdb.episodeBadgeDate(item)} catch(e:CancellationException) {throw e} catch(_:Exception) {return@withPermit}
+                if(owner==ratingsKey()) episodeCardDates[item.cloudId]=date
+            }}}.awaitAll()
+        }
+    }
     val romancePicks=mutableStateListOf<MediaSummary>()
     val koreanPicks=mutableStateListOf<MediaSummary>()
     val classicPicks=mutableStateListOf<MediaSummary>()
+    val horrorPicks=mutableStateListOf<MediaSummary>()
+    val christmasPicks=mutableStateListOf<MediaSummary>()
+    val becauseWatchedPicks=mutableStateListOf<MediaSummary>()
+    var becauseWatchedTitle by mutableStateOf("")
+        private set
+    private var becauseWatchedKey by mutableStateOf("")
+    private val becauseWatchedMutex=Mutex()
+    val becauseWatchedMatches:Boolean get()=becauseWatchedKey=="${ratingsKey()}:${tmdb.language}:$discoveryHistoryKey"
+    suspend fun loadBecauseWatched() = becauseWatchedMutex.withLock {
+        val owner=ratingsKey();val locale=tmdb.language;val history=discoveryHistoryKey
+        val key="$owner:$locale:$history"
+        if(kidsMode || tmdb.token.isBlank()) {becauseWatchedPicks.clear();becauseWatchedTitle="";return@withLock}
+        if(key==becauseWatchedKey) return@withLock
+        becauseWatchedPicks.clear();becauseWatchedTitle=""
+        val id=history.split("|").firstOrNull {it.isNotBlank()} ?: return@withLock
+        val seed=(continueWatching+movies+series+topRated+bestSeries+myListTitles).firstOrNull {it.cloudId==id}
+            ?: try {tmdb.byCloudId(id)} catch(e:CancellationException) {throw e} catch(_:Exception) {null}
+            ?: return@withLock
+        val rows=try {tmdb.recommendations(seed)} catch(e:CancellationException) {throw e} catch(_:Exception) {return@withLock}
+        if(owner==ratingsKey() && locale==tmdb.language && history==discoveryHistoryKey && !kidsMode) {
+            becauseWatchedPicks.replaceWith(rows.filter {it.cloudId!=id && (progress[it.cloudId]?.percent ?: 0.0)<90.0 && (ratings[it.cloudId] ?: 6)>4})
+            becauseWatchedTitle=seed.title;becauseWatchedKey=key
+        }
+    }
+
     val oscarPicks=mutableStateListOf<MediaSummary>()
     val emmyPicks=mutableStateListOf<MediaSummary>()
     private var simpleHomeRevision by mutableIntStateOf(0)
@@ -361,14 +426,15 @@ class AppState(context: Context) {
     suspend fun loadFamiliarHome() = familiarHomeMutex.withLock {
         if(kidsMode || tmdb.token.isBlank()) return@withLock
         val owner=ratingsKey();val locale=tmdb.language
-        if(!familiarHomeMatches) {romancePicks.clear();koreanPicks.clear();classicPicks.clear();oscarPicks.clear();emmyPicks.clear()}
+        if(!familiarHomeMatches) {romancePicks.clear();koreanPicks.clear();classicPicks.clear();oscarPicks.clear();emmyPicks.clear();horrorPicks.clear();christmasPicks.clear()}
         familiarHomeOwner="$owner:$locale"
         suspend fun load(kind: String,target: MutableList<MediaSummary>) {
             val rows=try {tmdb.familiarCatalog(kind)} catch(e: CancellationException) {throw e} catch(_: Exception) {emptyList()}
             if(owner==ratingsKey() && locale==tmdb.language && !kidsMode) target.replaceWith(rows)
         }
-        // Three bounded requests, cached locally; no Supabase calls or background polling.
+        // Bounded public catalogs, cached locally; no Supabase calls or background polling.
         load("romance",romancePicks);load("kdrama",koreanPicks);load("classics",classicPicks)
+        load("horror",horrorPicks);load("christmas",christmasPicks)
         coroutineScope {
             suspend fun loadAwards(kind:String,target:MutableList<MediaSummary>) {
                 val rows=try {tmdb.awardCatalog(kind)} catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
@@ -923,15 +989,30 @@ class AppState(context: Context) {
         if(loadingDiscovery || tmdb.token.isBlank()) return
         loadingDiscovery=true
         val permits=Semaphore(4)
-        try { supervisorScope {
-            genres.map { genre -> async {
-                if(genre.id !in genreCovers) runCatching {
-                    val rows=permits.withPermit { tmdb.discoverMovieGenre(genre.movieGenreId,pages=1,limit=20) }
-                    rows.firstNotNullOfOrNull { it.backdrop ?: it.poster }
-                }.getOrNull()?.let { genreCovers[genre.id]=it }
-            } }.awaitAll()
-        } } finally { loadingDiscovery=false }
+        try {
+            if(genreCovers.size==genres.size && genreCovers.values.filter {it.isNotBlank()}.distinct().size==genreCovers.values.count {it.isNotBlank()}) return
+            val candidates=supervisorScope {
+                genres.map {genre ->async {
+                    val rows=try {permits.withPermit {tmdb.discoverMovieGenre(genre.movieGenreId,pages=1,limit=20)}}
+                        catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
+                    genre.id to rows
+                }}.awaitAll()
+            }
+            // Assign after all requests complete: stable genre order, no parallel duplicate-selection race.
+            val usedTitles=mutableSetOf<String>();val usedImages=mutableSetOf<String>()
+            candidates.forEach { (id,rows) ->
+                val candidate=rows.firstOrNull {item ->
+                    val image=item.backdrop ?: item.poster
+                    image!=null && item.cloudId !in usedTitles && image.substringAfterLast('/') !in usedImages
+                }
+                val image=candidate?.let {it.backdrop ?: it.poster}
+                if(candidate!=null && image!=null) {
+                    usedTitles.add(candidate.cloudId);usedImages.add(image.substringAfterLast('/'));genreCovers[id]=image
+                } else genreCovers[id]=""
+            }
+        } finally {loadingDiscovery=false}
     }
+
     suspend fun openDirector(group: DirectorCollection) {
         busyMessage="${tr("Cargando","Loading")} ${group.title}…"
         try {

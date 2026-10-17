@@ -21,6 +21,7 @@ internal object UpdateNotes {
         "Connect phone / PC abre tu catálogo de Vercel conectado a la TV: QR/enlace sin código manual y botón Play on TV." to "Connect phone / PC opens your Vercel catalog connected to the TV: QR/link with no manual code and a Play on TV button."
     )
     val changes=listOf(
+        "Home: cabecera compacta y filas completas al navegar arriba/abajo; las tarjetas expandidas empujan a las siguientes; Continue Watching uniforme con título dentro; logos sin nombre repetido." to "Home: compact hero and complete shelves when navigating up/down; expanded cards push neighbors; uniform Continue Watching covers with titles inside; streaming logos without duplicate captions.",
         "Etiquetas globales con fechas reales y ventana de 14 días; Navidad visible con respaldo y reintento; premios 2026 y colección Oscar 2020–2026 por ceremonia." to "Global tags based on real dates over 14 days; visible Christmas row with fallback and retry; 2026 awards and an Oscar collection by ceremony year, 2020–2026.",
         "Géneros: imágenes distintas por título y nombre integrado dentro de la tarjeta, sobre un degradado oscuro." to "Genres: distinct title artwork and genre names integrated inside the cards over a dark gradient.",
         "Home: Christmas Movies debajo de Horror y Because you watched con sugerencias del último título visto; caché y separación por perfil." to "Home: Christmas Movies below Horror and Because you watched recommendations from your latest watched title; cached and scoped to your profile.",

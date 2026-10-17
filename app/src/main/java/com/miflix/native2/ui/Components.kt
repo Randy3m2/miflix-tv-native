@@ -324,7 +324,7 @@ fun CollectionCard(
                 if (focused) Box(Modifier.fillMaxSize().background(Color(0x0DFFFFFF)))
             }
         }
-        Text(tile.title, color = Color.White, fontSize = 14.sp, lineHeight=17.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 8.dp, top = 2.dp))
+
     }
 }
 

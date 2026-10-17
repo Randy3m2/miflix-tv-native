@@ -29,7 +29,6 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.zIndex
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,6 +66,7 @@ internal fun SpotlightRail(
     rows: List<MediaSummary>,
     landscape: Boolean = false,
     progressFor: (MediaSummary) -> Double? = { null },
+    showTitle: Boolean = false,
     eyebrow: String? = null,
     ranked: Boolean = false,
     awardLabels: Boolean = false,
@@ -78,6 +78,8 @@ internal fun SpotlightRail(
     val hold=onLongClick ?: LocalTitleActions.current
     val publishPreview=LocalBrowsePreview.current
     val pinned=publishPreview!=null
+    val homeShelf=LocalHomeShelfPaging.current
+    val cardRowHeight=if(homeShelf) LocalHomeCardRowHeight.current else 188.dp
     if(rows.isEmpty()) return
     var selectedId by rememberSaveable(title) { mutableStateOf(rows.first().cloudId) }
     var active by remember { mutableStateOf(false) }
@@ -86,7 +88,7 @@ internal fun SpotlightRail(
     val railScroll=androidx.compose.foundation.lazy.rememberLazyListState()
     val firstCard=remember {FocusRequester()}
     LaunchedEffect(selectedId,active) { settledId=null;if(active && !simple) { delay(3000);settledId=selectedId } }
-    LaunchedEffect(active) { if(active && !pinned) { delay(50); bring.bringIntoView() } }
+    LaunchedEffect(active) { if(active && !homeShelf) { delay(50); bring.bringIntoView() } }
     val infoVisibility by animateFloatAsState(if(active && settledId==selectedId) 1f else 0f,tween(150),label="railInfo")
     val horizontalSpec=remember {object: BringIntoViewSpec {
         override fun calculateScrollDistance(offset: Float,size: Float,containerSize: Float): Float=when {
@@ -95,21 +97,18 @@ internal fun SpotlightRail(
             else -> 0f
         }
     } }
-    val expansionPx=with(androidx.compose.ui.platform.LocalDensity.current) {322.dp.toPx()}
-    val expandLeft=active && settledId==selectedId && railScroll.layoutInfo.visibleItemsInfo.firstOrNull {it.key==selectedId}?.let {
-        it.offset+expansionPx>railScroll.layoutInfo.viewportEndOffset
-    }==true
     val selected=rows.firstOrNull { it.cloudId==selectedId } ?: rows.first()
-    Column(Modifier.fillMaxWidth().height(if(pinned) {if(eyebrow==null) 224.dp else 245.dp} else if(eyebrow==null) 302.dp else 323.dp)
+    Column(Modifier.fillMaxWidth().height(if(homeShelf) cardRowHeight+(if(eyebrow==null) 40.dp else 60.dp) else if(pinned) {if(eyebrow==null) 232.dp else 252.dp} else if(eyebrow==null) 302.dp else 323.dp)
         .bringIntoViewRequester(bring).onFocusChanged { active=it.hasFocus }.focusGroup()) {
         eyebrow?.let { Text(it,color=Accent,fontSize=11.sp,fontWeight=FontWeight.Bold,
             modifier=Modifier.padding(start=40.dp,bottom=5.dp)) }
         Text(title,color=Color.White,fontSize=if(simple) 27.sp else 22.sp,lineHeight=if(simple) 32.sp else 27.sp,fontWeight=FontWeight.Bold,
+            maxLines=1,overflow=TextOverflow.Ellipsis,
             modifier=Modifier.padding(start=40.dp,end=40.dp,bottom=8.dp))
         CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalSpec) {
-        LazyRow(Modifier.fillMaxWidth().height(188.dp).smoothHorizontalDpad { !railScroll.isScrollInProgress }.firstCardOnDown(railScroll,firstCard),state=railScroll,contentPadding=PaddingValues(horizontal=34.dp,vertical=6.dp)) {
+        LazyRow(Modifier.fillMaxWidth().height(cardRowHeight).smoothHorizontalDpad { !railScroll.isScrollInProgress }.firstCardOnDown(railScroll,firstCard),state=railScroll,contentPadding=PaddingValues(horizontal=34.dp,vertical=6.dp)) {
             items(rows,key={it.cloudId},contentType={"spotlight"}) { item ->
-                SpotlightCard(item,expanded=active && selectedId==item.cloudId && settledId==item.cloudId,landscape=landscape,expandLeft=expandLeft,
+                SpotlightCard(item,expanded=active && selectedId==item.cloudId && settledId==item.cloudId,landscape=landscape,showTitle=showTitle,
                     progress=progressFor(item),rank=if(ranked) rows.indexOf(item)+1 else null,
                     awardLabel=if(awardLabels) com.miflix.native2.data.AwardSelections.label(item.id,item.type,tr("es","en")=="es",awardYear) else null,modifier=if(item.cloudId==rows.first().cloudId) Modifier.focusRequester(firstCard) else Modifier,
                     onFocused={selectedId=item.cloudId;publishPreview?.invoke(item)},onLongClick=hold?.let {action -> {action(item)}},onClick={onClick(item)})
@@ -132,31 +131,32 @@ internal fun SpotlightRail(
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolean,expandLeft: Boolean,progress: Double?,rank:Int?=null,awardLabel:String?=null,modifier: Modifier=Modifier,onFocused: () -> Unit,onLongClick: (() -> Unit)? = null,onClick: () -> Unit) {
+private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolean,showTitle: Boolean,progress: Double?,rank:Int?=null,awardLabel:String?=null,modifier: Modifier=Modifier,onFocused: () -> Unit,onLongClick: (() -> Unit)? = null,onClick: () -> Unit) {
     val freshness=observeCardFreshness(item)
     val simple=LocalSimpleHome.current
     var focused by remember(item.cloudId) { mutableStateOf(false) }
     val cardBring=remember { BringIntoViewRequester() }
     
-    // Keep focus and scroll geometry stable while artwork expands above neighboring slots.
-    val slotWidth=if(landscape) 312f else if(simple) 172f else 130f
-    val displayWidth by animateFloatAsState(if(expanded) 322f else slotWidth-12f,
-        tween(if(expanded) 160 else 0),label="spotlightArtworkWidth")
+    // The measured slot expands with its artwork, so neighboring cards are pushed, never covered.
+    val baseWidth=if(landscape) 312f else if(simple) 172f else 130f
+    val slotWidth by animateFloatAsState(if(expanded) 334f else baseWidth,
+        tween(if(expanded) 160 else 100),label="spotlightSlotWidth")
+    LaunchedEffect(expanded) {if(expanded) {delay(170);cardBring.bringIntoView()}}
     var showBackdrop by remember(item.cloudId) { mutableStateOf(landscape) }
     LaunchedEffect(expanded,landscape) {
         if(expanded) { delay(60); showBackdrop=true } else showBackdrop=landscape
     }
-    Box(modifier.width(slotWidth.dp).fillMaxHeight().padding(horizontal=6.dp).zIndex(if(expanded) 2f else 0f)
+    Box(modifier.width(slotWidth.dp).fillMaxHeight().padding(horizontal=6.dp)
         .bringIntoViewRequester(cardBring)
         .onFocusChanged { focused=it.isFocused; if(it.isFocused) onFocused() }.focusable()
         .then(if(onLongClick==null) Modifier.tvClick(onClick) else Modifier.tvPlaybackClick(onClick,onLongClick)).clickable(onClick=onClick)) {
-        Box(Modifier.fillMaxHeight().wrapContentWidth(if(expandLeft) Alignment.End else Alignment.Start,unbounded=true).requiredWidth(displayWidth.dp)
+        Box(Modifier.fillMaxSize()
         .border(if(focused) {if(simple) 3.dp else 2.dp} else 0.dp,if(focused) Accent else Color.Transparent,RoundedCornerShape(18.dp))
         .padding(3.dp).clip(RoundedCornerShape(16.dp)).background(Panel)) {
         AsyncImage(if(showBackdrop) item.backdrop ?: item.poster else item.poster ?: item.backdrop,
             item.title,Modifier.fillMaxSize(),contentScale=if(simple && !landscape && !expanded) ContentScale.Fit else ContentScale.Crop)
-        if(expanded || simple || rank!=null || awardLabel!=null) Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xD9050505)))))
-        if(expanded || simple) Text(item.title,color=Color.White,fontSize=if(simple) 18.sp else if(expanded) 18.sp else 12.sp,lineHeight=if(simple || expanded) 22.sp else 15.sp,
+        if(expanded || simple || showTitle || rank!=null || awardLabel!=null) Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xD9050505)))))
+        if(expanded || simple || showTitle) Text(item.title,color=Color.White,fontSize=if(simple) 18.sp else if(expanded) 18.sp else 12.sp,lineHeight=if(simple || expanded) 22.sp else 15.sp,
             fontWeight=FontWeight.Bold,maxLines=2,overflow=TextOverflow.Ellipsis,
             modifier=Modifier.align(Alignment.BottomStart).padding(start=10.dp,end=10.dp,top=10.dp,bottom=if(awardLabel!=null && freshness!=null) 68.dp else if(awardLabel!=null || freshness!=null) 38.dp else 10.dp))
         rank?.let {position ->

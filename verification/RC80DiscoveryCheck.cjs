@@ -12,10 +12,10 @@ assert(!state.includes('catalog_badges:'));assert(state.includes('item.releaseDa
 assert(read('ui/CinematicBrowsing.kt').includes('observeCardFreshness(item)'));assert(read('ui/Components.kt').includes('observeCardFreshness(item)'));assert(read('ui/CardFreshness.kt').includes('LaunchedEffect(item.cloudId,item.releaseDate)'));
 assert(!read('ui/CinematicBrowsing.kt').includes('freshness!=null && awardLabel==null'));
 assert(repo.includes('cardDatesCache'));assert(repo.includes('last_episode_to_air'));assert(repo.includes('releaseDate = date'));
-assert(screen.indexOf('item(key="horror_movies")')<screen.indexOf('item(key="christmas_movies")'));assert(screen.includes('state.loadHolidayHome()'));assert(!screen.includes('!simple && state.familiarHomeMatches && state.christmasPicks'));
+assert(screen.indexOf('shelf(key="horror_movies")')<screen.indexOf('shelf(key="christmas_movies")'));assert(screen.includes('state.loadHolidayHome()'));assert(!screen.includes('!simple && state.familiarHomeMatches && state.christmasPicks'));
 assert(repo.includes('listOf(771,10719,508965,5255,360920,1581,5825,508)'));assert(repo.includes('if(themed.isNotEmpty()) themed else'));
 assert(read('ui/MiFlixNativeApp.kt').includes('Screen.OSCARS -> OscarsScreen(state)'));assert(read('ui/OscarsScreen.kt').includes('items(state.oscarYears'));assert(read('ui/OscarsScreen.kt').includes('awardYear=state.oscarYear'));
 assert(repo.includes('awards:v2:$year:$locale:$kind'));assert(read('data/AwardSelections.kt').includes('fun latestYear'));
 for(const rel of ['model/Models.kt','data/AwardSelections.kt','data/CardFreshnessPolicy.java','data/TmdbRepository.kt','ui/AppState.kt','ui/CardFreshness.kt','ui/CinematicBrowsing.kt','ui/Components.kt','ui/Screens.kt','ui/MiFlixNativeApp.kt','ui/OscarsScreen.kt','ui/UpdateNotes.kt']) assert.equal(read(rel),fs.readFileSync('main/java/com/miflix/native2/'+rel,'utf8'),rel);
-assert(fs.readFileSync('app/build.gradle','utf8').includes("versionName '2.0.0-rc80'"));
+assert(fs.readFileSync('app/build.gradle','utf8').includes("versionName '2.0.0-rc81'"));
 console.log('PASS: verified award years/winners, global date metadata, visible-card dedup/cache limits, non-overlapping labels, Christmas fallback/retry/Simple Home, Oscar year navigation and mirrors.');

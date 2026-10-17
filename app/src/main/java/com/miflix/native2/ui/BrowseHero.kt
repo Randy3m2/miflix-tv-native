@@ -60,6 +60,8 @@ private fun FocusedBrowseHero(state: AppState,pending: State<MediaSummary?>,fall
         }
     }
     val item=shown
+    val compact=heroFocus!=null
+    val veryCompact=compact && height<250.dp
     Box(Modifier.fillMaxWidth().height(height).background(Bg)) {
         if(item!=null) {
             Crossfade(item.backdrop ?: item.poster,modifier=Modifier.align(Alignment.CenterEnd).fillMaxHeight().fillMaxWidth(.75f),animationSpec=tween(140),label="browseBackdrop") {image ->
@@ -68,13 +70,13 @@ private fun FocusedBrowseHero(state: AppState,pending: State<MediaSummary?>,fall
             Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(if(headerInset>0.dp) 150.dp else 60.dp).background(Brush.verticalGradient(listOf(Bg,Color.Transparent))))
             Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Bg,Bg.copy(alpha=.92f),Color.Transparent))))
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Bg))))
-            Column(Modifier.align(Alignment.TopStart).fillMaxHeight().padding(start=40.dp,end=22.dp,top=headerInset+8.dp,bottom=12.dp).fillMaxWidth(.65f),verticalArrangement=Arrangement.spacedBy(7.dp)) {
-                Box(Modifier.fillMaxWidth().height(if(height>=200.dp) 64.dp else 44.dp),contentAlignment=Alignment.CenterStart) {
+            Column(Modifier.align(Alignment.TopStart).fillMaxHeight().padding(start=40.dp,end=22.dp,top=headerInset+8.dp,bottom=if(compact) 10.dp else 12.dp).fillMaxWidth(.65f),verticalArrangement=Arrangement.spacedBy(if(compact) 5.dp else 7.dp)) {
+                Box(Modifier.fillMaxWidth().height(if(veryCompact) 36.dp else if(compact) 52.dp else if(height>=200.dp) 64.dp else 44.dp),contentAlignment=Alignment.CenterStart) {
                     if(logo!=null) AsyncImage(logo,item.title,Modifier.widthIn(max=280.dp).fillMaxHeight(),contentScale=ContentScale.Fit)
-                    else Text(item.title,color=Color.White,fontSize=if(height>=200.dp) 28.sp else 23.sp,lineHeight=if(height>=200.dp) 30.sp else 23.sp,fontWeight=FontWeight.Black,maxLines=2,overflow=TextOverflow.Ellipsis)
+                    else Text(item.title,color=Color.White,fontSize=if(veryCompact) 20.sp else if(compact) 23.sp else if(height>=200.dp) 28.sp else 23.sp,lineHeight=if(compact) 24.sp else if(height>=200.dp) 30.sp else 23.sp,fontWeight=FontWeight.Black,maxLines=if(veryCompact) 1 else 2,overflow=TextOverflow.Ellipsis)
                 }
                 Text(listOf(if(item.type=="series") tr("Serie","Series") else tr("Película","Movie"),item.year,"★ ${"%.1f".format(item.rating)}").filter {it.isNotBlank()}.joinToString(" · "),color=Muted,fontSize=12.sp)
-                Text(item.overview,color=Color(0xFFD4D1DA),fontSize=13.sp,lineHeight=17.sp,maxLines=if(height>=200.dp) 3 else 2,overflow=TextOverflow.Ellipsis)
+                Text(item.overview,color=Color(0xFFD4D1DA),fontSize=if(compact) 12.sp else 13.sp,lineHeight=if(compact) 15.sp else 17.sp,maxLines=if(veryCompact) 1 else if(compact) 2 else if(height>=200.dp) 3 else 2,overflow=TextOverflow.Ellipsis)
                 if(heroFocus!=null) Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     FocusButton(tr("Ver detalles","View details"),primary=true,onFocused={heroFocused=it},modifier=Modifier.focusRequester(heroFocus)) {state.launch {state.open(item)}}
                     onRandom?.let {action -> FocusButton(tr("Aleatorio","Random"),onClick=action)}

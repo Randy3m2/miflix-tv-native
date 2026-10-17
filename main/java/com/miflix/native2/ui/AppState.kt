@@ -1955,7 +1955,7 @@ class AppState(context: Context) {
         }
         val moment=playerRequest?.takeIf {it.momentEndMs>0 && it.item.cloudId==selection.item.cloudId &&
             it.season==selection.season && it.episode==selection.episode}
-        if(playbackWork.current(ticket)) playResolved(selection.item,selection.imdb,selection.season,selection.episode,selection.resumeMs,stream,
+        if(playbackWork.current(ticket)) playResolved(selection.item,selection.imdb,selection.season,selection.episode,selection.resumeMs,stream,fallbackStreams=selection.streams,
             onStarted={ req -> if(moment!=null) playerRequest=req.copy(momentStartMs=moment.momentStartMs,momentEndMs=moment.momentEndMs,momentSender=moment.momentSender) })
     }
 
@@ -2001,9 +2001,12 @@ class AppState(context: Context) {
                 val next=budget.nextIndex()
                 if(next<0) throw e
                 index=next
+                playbackLoading=playbackLoading?.copy(message=sourceRetryMessage(index,rows.size))
             }
         }
     }
+    private fun sourceRetryMessage(index: Int,count: Int): String =
+        tr("El enlace falló. Probando el siguiente…","Source failed. Trying the next link…")+" (${index+1}/${count.coerceAtMost(5)})"
     /** Reuses the already loaded list; no add-on search or Supabase read is made here. */
     suspend fun tryNextPlaybackSource(req: PlayerRequest,position: Long,playing: Boolean): Boolean {
         val plan=sourceFallback ?: return false
@@ -2021,6 +2024,7 @@ class AppState(context: Context) {
                 if(index<0) {sourceFallback=null;return false}
                 val candidate=plan.rows[index]
                 beginPlaybackLoading(req.item,req.season,req.episode)
+                playbackLoading=playbackLoading?.copy(message=sourceRetryMessage(index,plan.rows.size))
                 val resolved=try {
                     if(candidate.nativeSource==null) candidate else nativeSources.materialize(candidate,nativeStore.token(plan.owner),::valid)
                 } catch(e: CancellationException) {throw e} catch(_: Exception) {continue}
@@ -2054,7 +2058,7 @@ class AppState(context: Context) {
         return subtitleRepo.resolve(imdb,req.item.type,req.season,req.episode,req.stream)
     }
 
-    private suspend fun playResolved(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeOverride: Long? = null, selectedStream: StreamChoice? = null, onStarted: ((PlayerRequest) -> Unit)? = null) = coroutineScope {
+    private suspend fun playResolved(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeOverride: Long? = null, selectedStream: StreamChoice? = null, fallbackStreams: List<StreamChoice> = emptyList(), onStarted: ((PlayerRequest) -> Unit)? = null) = coroutineScope {
         if(kidsMode) require(tmdb.kidsAllowed(item)) { tr("Este título no está disponible en Kids.","This title is not available in Kids.") }
         if(randomEpisodeCloud!=item.cloudId) randomEpisodeCloud=null
         val ticket=playbackWork.begin()
@@ -2064,7 +2068,7 @@ class AppState(context: Context) {
         if(playbackLoading?.let {it.item.cloudId==item.cloudId && it.season==season && it.episode==episode}!=true) beginPlaybackLoading(item,season,episode)
         busyMessage = tr("Buscando el mejor enlace…","Finding the best source…")
         error = null
-        val streamsJob = async { if (selectedStream != null) listOf(selectedStream).filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) } else resolvePlaybackSources(item,imdb,season,episode) }
+        val streamsJob = async { if (selectedStream != null) (listOf(selectedStream)+fallbackStreams).distinctBy {it.url}.filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) } else resolvePlaybackSources(item,imdb,season,episode) }
         val subtitleKey=subtitleKey(item,season,episode)
         if(playbackSubtitleJobs.size>=16 && subtitleKey !in playbackSubtitleJobs) {
             val oldest=playbackSubtitleJobs.keys.first(); playbackSubtitleJobs.remove(oldest)?.cancel()
@@ -2076,10 +2080,13 @@ class AppState(context: Context) {
         runCatching {
             val streams = streamsJob.await()
             if(!valid()) return@coroutineScope
-            val chosen = StreamOrdering.best(streams,audioLanguage) ?: throw IllegalStateException(tr("No se encontraron enlaces reproducibles","No playable sources found"))
-            val automaticFallback=selectedStream==null && watchParty==null && com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(audioLanguage)
-            val retryRows=if(automaticFallback) StreamOrdering.fallbackCandidates(streams,audioLanguage)
-                .takeIf {it.firstOrNull()?.url==chosen.url} ?: listOf(chosen) else listOf(chosen)
+            val chosen = selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage)
+                ?: throw IllegalStateException(tr("No se encontraron enlaces reproducibles","No playable sources found"))
+            val automaticFallback=watchParty==null
+            val retryRows=if(automaticFallback) {
+                val candidates=StreamOrdering.fallbackCandidates(streams,audioLanguage)
+                (listOf(chosen)+candidates.filter {it.url!=chosen.url}).distinctBy {it.url}.take(5)
+            } else listOf(chosen)
             val budget=com.miflix.native2.player.SourceFallbackBudget(retryRows.size)
             val best=materializeAutomaticSource(retryRows,budget,playbackOwner,::valid)
             val externalSubs = withTimeoutOrNull(800) { subsJob.await() }.orEmpty()

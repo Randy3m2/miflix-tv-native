@@ -3,7 +3,13 @@ const fs=require('fs'),assert=require('assert');
 const root='app/src/main/java/com/miflix/native2/';
 const read=p=>fs.readFileSync(root+p,'utf8');
 const state=read('ui/AppState.kt'),screen=read('ui/Screens.kt'),order=read('data/StreamOrdering.kt');
-assert(order.includes('rows.filter {languageRank(it)==0}.take(3)+rows.filter {languageRank(it)==1}.take(2)'));
+assert(order.includes('if(!StreamLanguagePriority.prefersSpanish(preferredAudio)) return rows.take(5)'));
+assert(order.includes('val spanish=rows.filter {languageRank(it)==0}.take(3)'));
+assert(order.includes('take(5-spanish.size)'));
+assert(state.includes('val automaticFallback=watchParty==null'));
+assert(state.includes('fallbackStreams=selection.streams'));
+assert(fallbackNotice());
+function fallbackNotice() {return state.includes('message=sourceRetryMessage(index,plan.rows.size)') && read('ui/MenuExperience.kt').includes('if(load.message.isNotBlank()) Text(load.message');}
 const fallback=state.slice(state.indexOf('suspend fun tryNextPlaybackSource'),state.indexOf('private val playbackSubtitleJobs'));
 assert(!fallback.includes('resolvePlaybackSources(') && !fallback.includes('streamRepo.resolve('));
 assert(!fallback.includes('social.') && !fallback.includes('cloud.'));

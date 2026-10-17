@@ -31,7 +31,7 @@ internal object MenuActivity {
     fun touch() {lastInput=SystemClock.elapsedRealtime()}
 }
 
-internal data class PlaybackLoading(val item: com.miflix.native2.model.MediaSummary,val season: Int,val episode: Int,val artwork: String?,val playbackId: String?=null)
+internal data class PlaybackLoading(val item: com.miflix.native2.model.MediaSummary,val season: Int,val episode: Int,val artwork: String?,val playbackId: String?=null,val message: String="")
 
 @Composable
 internal fun PlaybackLoadingCover(load: PlaybackLoading,onCancel: (() -> Unit)?=null) {
@@ -43,6 +43,9 @@ internal fun PlaybackLoadingCover(load: PlaybackLoading,onCancel: (() -> Unit)?=
     Box(Modifier.fillMaxSize().background(Color.Black).then(if(onCancel!=null) Modifier.focusRequester(focus).onPreviewKeyEvent {it.nativeKeyEvent.keyCode!=android.view.KeyEvent.KEYCODE_BACK}.focusable() else Modifier),contentAlignment=Alignment.Center) {
         AsyncImage(load.item.poster ?: load.item.backdrop,null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
         if(load.artwork!=null) AsyncImage(load.artwork,null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+        if(load.message.isNotBlank()) Text(load.message,color=Color.White,fontSize=16.sp,
+            modifier=Modifier.align(Alignment.BottomCenter).padding(32.dp)
+                .background(Color.Black.copy(alpha=.82f),androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).padding(horizontal=22.dp,vertical=14.dp))
     }
 }
 

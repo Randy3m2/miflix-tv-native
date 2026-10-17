@@ -62,4 +62,21 @@ class StreamOrderingTest {
         assertEquals(listOf(spanish),StreamOrdering.sorted(listOf(english,spanish),"es"))
     }
 
+    @Test fun englishPlaybackHasFiveDistinctFallbackCandidates() {
+        val rows=(1..7).map {stream("en$it","1080p English",it.toLong())}
+        val result=StreamOrdering.fallbackCandidates(rows+rows,"en")
+        assertEquals(rows.reversed().take(5),result)
+        assertEquals(5,result.map {it.url}.distinct().size)
+    }
+    @Test fun spanishFallbackUsesRemainingSlotsForEnglish() {
+        val spanish=stream("es","720p Latino")
+        val english=(1..6).map {stream("en$it","1080p English",it.toLong())}
+        assertEquals(listOf(spanish)+english.reversed().take(4),StreamOrdering.fallbackCandidates(english+spanish,"es"))
+    }
+    @Test fun spanishFallbackKeepsThreeSpanishBeforeEnglish() {
+        val spanish=(1..5).map {stream("es$it","720p Castellano",it.toLong())}
+        val english=(1..5).map {stream("en$it","1080p English",it.toLong())}
+        assertEquals(spanish.reversed().take(3)+english.reversed().take(2),StreamOrdering.fallbackCandidates(english+spanish,"es"))
+    }
+
 }

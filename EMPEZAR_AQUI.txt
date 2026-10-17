@@ -1,24 +1,13 @@
-BruniO Web v34 - Safari / AirPlay
+BruniO Web v35 - Open in VLC
 
-Sube los 5 archivos de web/ sobre la version web actual en GitHub y espera el redeploy de Vercel. Los archivos verification/ son pruebas opcionales. Sin SQL, Edge Functions ni build de Android TV. Actualiza la pagina/PWA despues del despliegue.
+Sube los 5 archivos de web/ en GitHub y redespliega Vercel. Incluye los archivos del parche v34 para quien aun no lo habia subido. No requiere SQL, funcion nueva ni build TV. Conserva el hotfix HTTP200 de brunio-downloads y despliegalo por separado si no lo has hecho.
 
-Cambios:
-- Apple: controles de video nativos, reproduccion inline y comienzo manual con Play para evitar bloqueo de autoplay. Pantalla completa nativa en iPhone/iPad cuando esta disponible.
-- HLS de peliculas/series y canales: motor nativo Safari primero; hls.js solo cuando hace falta. No se descarga el archivo entero ni se convierte a Blob para reproducirlo.
-- Fuentes en Apple: preferencia por candidatos MP4/M4V/MOV/HLS y H.264/AAC segun nombre de archivo, respetando prioridad de idioma identificable cuando el ajuste es espanol. Son pistas, no una verificacion del contenido del archivo. Todos los enlaces y descarga/player externo se conservan.
-- AirPlay: icono propio, selector de destino iniciado por click, eventos de disponibilidad y conexion; sin sobreescribirlo con Cast al desconectar. Si un navegador Apple no expone la API AirPlay, se conserva su alternativa Cast/Remote Playback cuando exista.
-- Live TV: AirPlay abre los controles BruniO del canal HTTPS; pulsa AirPlay dentro del player para elegir el receptor. Dos pulsaciones por las reglas de gesto de Safari. No se carga Google Cast SDK en esta ruta. Google Cast habitual se conserva para otros navegadores.
-- Se mantiene validacion de URL/privacidad, progreso y subtitulos existentes. Sin peticiones nuevas a Supabase ni proxy de video por Vercel.
+Eliminada la preferencia MP4/HLS y sus etiquetas: todos los dispositivos ven el orden de fuentes devuelto por el backend, sin reclasificacion por formato. Se conserva el limite de tamano configurado.
 
-Limites reales:
-No se transcodifica video/audio. MKV y codecs de audio/video no soportados por Safari pueden seguir fallando; hace falta otra fuente compatible, player externo o una futura conversion en servidor. La preferencia MP4 no garantiza que su codec sea compatible. Las fuentes con headers especiales o solo HTTP no pasan a ser aptas para AirPlay. La recepcion requiere dispositivo AirPlay compatible, misma red y permisos adecuados; las pistas de subtitulos Blob del navegador pueden no transferirse al receptor.
+Despues de Generar enlace, el boton principal en iPhone/iPad dice Open in VLC. Es un enlace nativo vlc-x-callback iniciado directamente por tu click; envia la URL privada de TorBox codificada a VLC. No abre selector de archivos ni inicia el reproductor web en ese click. Incluye iPad en modo escritorio.
 
-Prueba recomendada:
-En Safari, genera una fuente MP4 H.264/AAC y pulsa Play in BruniO, luego Play dentro del player; prueba pantalla completa. Con el receptor en la misma red, pulsa AirPlay y elige destino. Prueba despues un enlace HLS compatible y un canal HTTPS. Si un enlace falla, anota MEDIA_3/MEDIA_4 y formato de archivo, sin compartir su URL privada. En Safari puede ayudar abrir el mismo player en otra pestana si el modo embebido restringe un permiso.
+VLC debe estar instalado y el navegador/iOS puede pedir permiso para abrirlo. La web no puede detectar con certeza si esta instalado ni saltarse ese permiso. La reproduccion es online desde TorBox; no abre una copia local ya descargada. Mac conserva las opciones de navegador y copiar enlace a VLC/Open Network: la apertura automatica de VLC de escritorio no se garantiza por este protocolo de iOS. Android/PC conservan su reproductor web y opciones externas.
 
-Validacion realizada:
-Pruebas simuladas del reproductor existente, flujo Apple, AirPlay disponible/conectado, selector, fullscreen nativo, HLS VOD nativo y liberacion de recursos; Live AirPlay/HTTPS y fallback Google Cast en Mac Chrome; puente de subtitulos y sintaxis JS. No hay prueba fisica en iPhone/iPad/Apple TV ni confirmacion de reproduccion de tus enlaces privados.
+AirPlay de v34 y el player web quedan disponibles como alternativas; no se elimina la reproduccion nativa HLS del player, solo la preferencia de formatos del listado. No se agregan solicitudes Supabase ni proxy de video.
 
-Documentacion:
-https://developer.apple.com/documentation/webkitjs/adding_an_airplay_button_to_your_safari_media_controls
-https://developer.apple.com/documentation/webkit/delivering-video-content-for-safari
+Pruebas simuladas: enlace VLC principal en iPhone/iPad/iPad de escritorio, codificacion exacta de URL firmada, bloqueo de destinos no autorizados, Android sin cambios, orden original de fuentes y puente de subtitulos. Prueba fisica con VLC en iPhone/iPad pendiente.

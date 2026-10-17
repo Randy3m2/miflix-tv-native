@@ -71,6 +71,7 @@ internal fun SpotlightRail(
     onLongClick: ((MediaSummary) -> Unit)? = null,
     onClick: (MediaSummary) -> Unit
 ) {
+    val simple=LocalSimpleHome.current
     val hold=onLongClick ?: LocalTitleActions.current
     val publishPreview=LocalBrowsePreview.current
     val pinned=publishPreview!=null
@@ -81,7 +82,7 @@ internal fun SpotlightRail(
     val bring=remember { BringIntoViewRequester() }
     val railScroll=androidx.compose.foundation.lazy.rememberLazyListState()
     val firstCard=remember {FocusRequester()}
-    LaunchedEffect(selectedId,active) { settledId=null;if(active) { delay(3000);settledId=selectedId } }
+    LaunchedEffect(selectedId,active) { settledId=null;if(active && !simple) { delay(3000);settledId=selectedId } }
     LaunchedEffect(active) { if(active && !pinned) { delay(50); bring.bringIntoView() } }
     val infoVisibility by animateFloatAsState(if(active && settledId==selectedId) 1f else 0f,tween(150),label="railInfo")
     val horizontalSpec=remember {object: BringIntoViewSpec {
@@ -100,7 +101,7 @@ internal fun SpotlightRail(
         .bringIntoViewRequester(bring).onFocusChanged { active=it.hasFocus }.focusGroup()) {
         eyebrow?.let { Text(it,color=Accent,fontSize=11.sp,fontWeight=FontWeight.Bold,
             modifier=Modifier.padding(start=40.dp,bottom=5.dp)) }
-        Text(title,color=Color.White,fontSize=22.sp,lineHeight=27.sp,fontWeight=FontWeight.Bold,
+        Text(title,color=Color.White,fontSize=if(simple) 27.sp else 22.sp,lineHeight=if(simple) 32.sp else 27.sp,fontWeight=FontWeight.Bold,
             modifier=Modifier.padding(start=40.dp,end=40.dp,bottom=8.dp))
         CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalSpec) {
         LazyRow(Modifier.fillMaxWidth().height(188.dp).smoothHorizontalDpad { !railScroll.isScrollInProgress }.firstCardOnDown(railScroll,firstCard),state=railScroll,contentPadding=PaddingValues(horizontal=34.dp,vertical=6.dp)) {
@@ -128,11 +129,12 @@ internal fun SpotlightRail(
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolean,expandLeft: Boolean,progress: Double?,modifier: Modifier=Modifier,onFocused: () -> Unit,onLongClick: (() -> Unit)? = null,onClick: () -> Unit) {
+    val simple=LocalSimpleHome.current
     var focused by remember(item.cloudId) { mutableStateOf(false) }
     val cardBring=remember { BringIntoViewRequester() }
     
     // Keep focus and scroll geometry stable while artwork expands above neighboring slots.
-    val slotWidth=if(landscape) 312f else 130f
+    val slotWidth=if(landscape) 312f else if(simple) 172f else 130f
     val displayWidth by animateFloatAsState(if(expanded) 322f else slotWidth-12f,
         tween(if(expanded) 160 else 0),label="spotlightArtworkWidth")
     var showBackdrop by remember(item.cloudId) { mutableStateOf(landscape) }
@@ -144,12 +146,12 @@ private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolea
         .onFocusChanged { focused=it.isFocused; if(it.isFocused) onFocused() }.focusable()
         .then(if(onLongClick==null) Modifier.tvClick(onClick) else Modifier.tvPlaybackClick(onClick,onLongClick)).clickable(onClick=onClick)) {
         Box(Modifier.fillMaxHeight().wrapContentWidth(if(expandLeft) Alignment.End else Alignment.Start,unbounded=true).requiredWidth(displayWidth.dp)
-        .border(if(focused) 2.dp else 0.dp,if(focused) Accent else Color.Transparent,RoundedCornerShape(18.dp))
+        .border(if(focused) {if(simple) 3.dp else 2.dp} else 0.dp,if(focused) Accent else Color.Transparent,RoundedCornerShape(18.dp))
         .padding(3.dp).clip(RoundedCornerShape(16.dp)).background(Panel)) {
         AsyncImage(if(showBackdrop) item.backdrop ?: item.poster else item.poster ?: item.backdrop,
-            item.title,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
-        if(expanded) Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xD9050505)))))
-        if(expanded) Text(item.title,color=Color.White,fontSize=if(expanded) 18.sp else 12.sp,lineHeight=if(expanded) 22.sp else 15.sp,
+            item.title,Modifier.fillMaxSize(),contentScale=if(simple && !landscape && !expanded) ContentScale.Fit else ContentScale.Crop)
+        if(expanded || simple) Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xD9050505)))))
+        if(expanded || simple) Text(item.title,color=Color.White,fontSize=if(simple) 18.sp else if(expanded) 18.sp else 12.sp,lineHeight=if(simple || expanded) 22.sp else 15.sp,
             fontWeight=FontWeight.Bold,maxLines=2,overflow=TextOverflow.Ellipsis,
             modifier=Modifier.align(Alignment.BottomStart).padding(10.dp))
         progress?.takeIf { it>0.0 && it<100.0 }?.let { value ->

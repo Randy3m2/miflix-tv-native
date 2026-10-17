@@ -21,6 +21,9 @@ internal object UpdateNotes {
         "Connect phone / PC abre tu catálogo de Vercel conectado a la TV: QR/enlace sin código manual y botón Play on TV." to "Connect phone / PC opens your Vercel catalog connected to the TV: QR/link with no manual code and a Play on TV button."
     )
     val changes=listOf(
+        "Home: romance, dramas coreanos y clásicos; Para ti combina historial y puntuaciones con caché local." to "Home: romance, K-dramas and classics; For you combines viewing history and ratings with local caching.",
+        "Modo sencillo opcional por perfil: texto mayor, títulos visibles, menos filas y accesos claros en Inicio." to "Optional per-profile Simple Home: larger text, visible titles, fewer rows and clear shortcuts.",
+        "Motor nativo: búsqueda adicional por título traducido, latino y castellano; español primero e inglés de respaldo." to "Native engine: extra searches by translated title, Latino and Castilian releases; Spanish first with English fallback.",
         "Presencia social por eventos: inicio, cambio, salida y fin del contenido, sin heartbeat. Cola local y vencimiento para cierres inesperados; Watch Party conserva su sincronización." to "Event-driven social presence: start, change, exit and playback end, with no heartbeat. Durable outbox and crash expiry; Watch Party synchronization stays unchanged.",
         "Sports → LIDOM: seis equipos, logos, favoritos, calendario directo, fuentes por equipo, YouTube oficial y URLs HLS/DASH configurables." to "Sports → LIDOM: six teams, logos, favorites, direct schedule, team sources, official YouTube player and configurable HLS/DASH URLs.",
         "Amigos visibles debajo de Create party y Refresh requests en el panel del reproductor, con estado, actividad y acciones." to "Friends visible below Create party and Refresh requests in the player panel, with status, activity and actions.",

@@ -122,6 +122,9 @@ internal fun AppShell(state: AppState, screen: Screen, onNavigate: (Screen) -> U
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
+    val simple=state.simpleHome
+    LaunchedEffect(state.activeProfile.id,state.session?.userId,state.interfaceLanguage) {state.loadFamiliarHome()}
+    LaunchedEffect(state.activeProfile.id,state.discoveryHistoryKey) {state.refreshForYou()}
     val genreScroll=rememberLazyListState()
     val firstGenre=remember {FocusRequester()}
     val scroll=rememberLazyListState()
@@ -142,6 +145,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     val openItem: (MediaSummary) -> Unit={ item -> state.launch { state.open(item) } }
     val openCollection: (CollectionTile) -> Unit={ tile -> state.launch { state.openCollection(tile.id,tile.title) } }
     val returnToTop: () -> Unit={ scope.launch { scroll.animateScrollToItem(0) }; Unit }
+    CompositionLocalProvider(LocalSimpleHome provides simple) {
     Box(Modifier.fillMaxSize().background(Bg)) {
         BrowsingViewport(state,(state.trending+state.movies).firstOrNull {it.type=="movie"},heroHeight=312.dp,headerInset=84.dp,heroFocus=heroFocus,ranked=(state.trending+state.movies).filter {it.type=="movie"}.distinctBy {it.cloudId}.take(10),
             onRandom={if(!state.randomChoosing) state.launch {state.playRandomMovie()}}) {
@@ -154,6 +158,16 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
             }
         }) {
             LazyColumn(Modifier.fillMaxSize().padding(bottom=12.dp).smoothVerticalDpad { !scroll.isScrollInProgress }.focusRequester(contentFocus).focusGroup(),state=scroll,contentPadding=PaddingValues(bottom=32.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                if(simple) item(key="simple-actions") {
+                    Column(Modifier.padding(horizontal=40.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                        Text(tr("Elige una portada y pulsa OK para ver sus opciones.","Choose a cover and press OK to see its options."),color=Color.White,fontSize=20.sp)
+                        Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
+                            FocusButton(tr("Buscar","Search")) {onNavigate(Screen.SEARCH)}
+                            FocusButton(tr("Mi lista","My List")) {onNavigate(Screen.MY_LIST)}
+                            FocusButton(tr("Vista completa","Full view")) {state.saveSimpleHome(false)}
+                        }
+                    }
+                }
                 if(state.continueWatching.isNotEmpty()) item(key="continue") {
                     SpotlightRail(title=tr("Seguir viendo","Continue Watching"),rows=state.continueWatching,landscape=true,
                         progressFor={ state.progress[it.cloudId]?.percent },onLongClick={state.titleActions(it,true)},onClick=openItem)
@@ -168,8 +182,17 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                     FocusButton(tr("Todas las colecciones →","All collections →"),modifier=Modifier.padding(start=40.dp,top=12.dp)) { onNavigate(Screen.COLLECTIONS) }
                     Spacer(Modifier.height(24.dp))
                 } }
-                if(state.forYou.isNotEmpty()) item(key="for_you") { SpotlightRail(title=tr("Para ti · tus puntuaciones","For you · Your ratings"),rows=state.forYou,onClick=openItem) }
-                item(key="franchises_home") {
+                if(state.forYou.isNotEmpty()) item(key="for_you") { SpotlightRail(title=tr("Para ti · según lo que ves","For you · Based on what you watch"),rows=state.forYou,onClick=openItem) }
+                if(state.familiarHomeMatches && state.romancePicks.isNotEmpty()) item(key="romance_picks") {
+                    SpotlightRail(tr("Historias de amor","Romance & love stories"),state.romancePicks,onClick=openItem)
+                }
+                if(state.familiarHomeMatches && state.koreanPicks.isNotEmpty()) item(key="korean_picks") {
+                    SpotlightRail(tr("Dramas coreanos","K-dramas"),state.koreanPicks,onClick=openItem)
+                }
+                if(state.familiarHomeMatches && state.classicPicks.isNotEmpty()) item(key="classic_picks") {
+                    SpotlightRail(tr("Clásicos de siempre","Timeless classics"),state.classicPicks,onClick=openItem)
+                }
+                if(!simple) item(key="franchises_home") {
                     CollectionRail(tr("Franquicias","Franchises"),listOf(CollectionTile("franchise:marvel","Marvel",""),CollectionTile("franchise:dc","DC",""))) { tile ->
                         state.launch { state.openFranchise(tile.id.substringAfter(":")) }
                     }
@@ -180,14 +203,14 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 }
                 item(key="movies") { SpotlightRail(title=tr("Películas populares","Popular · Movies"),rows=state.movies,onClick=openItem) }
                 item(key="series") { SpotlightRail(title=tr("Series populares","Popular · Series"),rows=state.series,onClick=openItem) }
-                item(key="top") { SpotlightRail(title=tr("Mejor valorados","Top Rated"),rows=state.topRated,onClick=openItem) }
-                item(key="now_playing") { SpotlightRail(tr("Estrenos en cartelera","Now playing"),state.newMovies,onClick=openItem) }
-                item(key="best_series") { SpotlightRail(tr("Series mejor valoradas","Top rated series"),state.bestSeries,onClick=openItem) }
-                item(key="action") { SpotlightRail(tr("Acción para esta noche","Action tonight"),state.action,onClick=openItem) }
-                item(key="scifi") { SpotlightRail(tr("Ciencia ficción","Science fiction"),state.sciFi,onClick=openItem) }
+                if(!simple) item(key="top") { SpotlightRail(title=tr("Mejor valorados","Top Rated"),rows=state.topRated,onClick=openItem) }
+                if(!simple) item(key="now_playing") { SpotlightRail(tr("Estrenos en cartelera","Now playing"),state.newMovies,onClick=openItem) }
+                if(!simple) item(key="best_series") { SpotlightRail(tr("Series mejor valoradas","Top rated series"),state.bestSeries,onClick=openItem) }
+                if(!simple) item(key="action") { SpotlightRail(tr("Acción para esta noche","Action tonight"),state.action,onClick=openItem) }
+                if(!simple) item(key="scifi") { SpotlightRail(tr("Ciencia ficción","Science fiction"),state.sciFi,onClick=openItem) }
                 item(key="comedy") { SpotlightRail(tr("Algo para reír","Time for a comedy"),state.comedy,onClick=openItem) }
-                item(key="thrillers") { SpotlightRail(tr("Suspenso y misterio","Thrillers & mystery"),state.thrillers,onClick=openItem) }
-                if(state.comingMovies.isNotEmpty() || state.comingSeries.isNotEmpty()) item(key="coming_soon_home") {
+                if(!simple) item(key="thrillers") { SpotlightRail(tr("Suspenso y misterio","Thrillers & mystery"),state.thrillers,onClick=openItem) }
+                if(!simple && (state.comingMovies.isNotEmpty() || state.comingSeries.isNotEmpty())) item(key="coming_soon_home") {
                     SpotlightRail(tr("Próximamente","Coming soon"),(state.comingMovies+state.comingSeries).distinctBy { it.cloudId }.take(30),onClick={ state.launch { state.open(it,upcoming=true) } })
                 }
             }
@@ -200,6 +223,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 androidx.compose.runtime.withFrameNanos { }
                 if(state.trending.isNotEmpty()) heroFocus.requestFocus() else contentFocus.requestFocus()
             }; Unit }))
+    }
     }
 }
 
@@ -804,6 +828,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(state.audioLanguage)) {
                     Text(tr("Enlaces: español latino y de España primero; inglés como alternativa.",
                         "Links: Latin American and Spain Spanish first; English as fallback."),color=Muted,fontSize=14.sp)
+                    Text(tr("Con BruniO Native activado en Fuentes, también buscamos por el título en español, latino y castellano.","With BruniO Native enabled in Sources, we also search the Spanish title, Latino and Castilian releases."),color=Muted,fontSize=14.sp)
                 }
                 LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(vertical=8.dp)) { item { FlowRow(horizontalArrangement=Arrangement.spacedBy(18.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
                     listOf("" to tr("Automático","Auto"), "es" to "Español", "en" to "English", "pt" to "Português", "fr" to "Français").forEach { (code,label) ->
@@ -849,6 +874,13 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 } } }
                 Spacer(Modifier.height(18.dp))
 
+                        }
+                    }
+                    if(category=="appearance") item(key="simple-home") {
+                        SettingsSectionCard {
+                            Text(tr("Inicio sencillo","Simple Home"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
+                            Text(tr("Letras más grandes, títulos visibles y menos filas. Se guarda para este perfil.","Larger text, visible titles and fewer rows. Saved for this profile."),color=Muted)
+                            FocusButton(tr("Modo sencillo","Simple mode")+": "+if(state.simpleHome) "ON" else "OFF") {state.saveSimpleHome(!state.simpleHome)}
                         }
                     }
                     if(category=="appearance") item(key="focus-theme") {

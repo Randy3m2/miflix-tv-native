@@ -341,15 +341,44 @@ class AppState(context: Context) {
     }
     val ratings=mutableStateMapOf<String,Int>()
     val forYou=mutableStateListOf<MediaSummary>()
+    val romancePicks=mutableStateListOf<MediaSummary>()
+    val koreanPicks=mutableStateListOf<MediaSummary>()
+    val classicPicks=mutableStateListOf<MediaSummary>()
+    private var simpleHomeRevision by mutableIntStateOf(0)
+    val simpleHome: Boolean get() {simpleHomeRevision;return playbackPrefs.getBoolean("simple_home:${ratingsKey()}",false)}
+    fun saveSimpleHome(enabled: Boolean) {
+        playbackPrefs.edit().putBoolean("simple_home:${ratingsKey()}",enabled).apply();simpleHomeRevision++
+    }
+    val discoveryHistoryKey: String get() = progress.entries
+        .filter {it.key.matches(Regex("^tmdb:(movie|series):[0-9]+$")) && it.value.position>=5*60*1000L && (ratings[it.key] ?: 6)>4}
+        .sortedByDescending {it.value.updatedAt}.take(3).joinToString("|") {it.key}
+    private var familiarHomeOwner by mutableStateOf("")
+    val familiarHomeMatches: Boolean get() = familiarHomeOwner=="${ratingsKey()}:${tmdb.language}"
+    private val familiarHomeMutex=Mutex()
+    suspend fun loadFamiliarHome() = familiarHomeMutex.withLock {
+        if(kidsMode || tmdb.token.isBlank()) return@withLock
+        val owner=ratingsKey();val locale=tmdb.language
+        if(!familiarHomeMatches) {romancePicks.clear();koreanPicks.clear();classicPicks.clear()}
+        familiarHomeOwner="$owner:$locale"
+        suspend fun load(kind: String,target: MutableList<MediaSummary>) {
+            val rows=try {tmdb.familiarCatalog(kind)} catch(e: CancellationException) {throw e} catch(_: Exception) {emptyList()}
+            if(owner==ratingsKey() && locale==tmdb.language && !kidsMode) target.replaceWith(rows)
+        }
+        // Three bounded requests, cached locally; no Supabase calls or background polling.
+        load("romance",romancePicks);load("kdrama",koreanPicks);load("classics",classicPicks)
+        if(owner==ratingsKey() && locale==tmdb.language) refreshForYou()
+    }
     val comingMovies=mutableStateListOf<MediaSummary>()
     val comingSeries=mutableStateListOf<MediaSummary>()
     private val ratingRepo=RatingRepository(BuildConfig.SUPABASE_URL,BuildConfig.SUPABASE_KEY)
+    private var loadedRatingsOwner=""
     private fun ratingsKey()="ratings_${session?.userId ?: "local"}_${activeProfile.id}"
     suspend fun loadRatings() {
         val owner=ratingsKey()
         val j=org.json.JSONObject(playbackPrefs.getString(owner,"{}").orEmpty())
         forYou.clear()
         ratings.clear(); j.keys().forEach { id -> j.optInt(id).takeIf { it in 1..10 }?.let { ratings[id]=it } }
+        loadedRatingsOwner=owner
         val cached=ratings.toMap()
         session?.let { s ->
             val remote=runCatching { ratingRepo.load(s,activeProfile.id) }.getOrNull()
@@ -368,30 +397,39 @@ class AppState(context: Context) {
         if(owner!=ratingsKey()) return
         ratings[item.cloudId]=score; persistRatings(); refreshForYou()
     }
+    private fun recommendationSeed(id: String): MediaSummary? {
+        val match=Regex("^tmdb:(movie|series):([0-9]+)$").matchEntire(id) ?: return null
+        return MediaSummary(match.groupValues[2].toIntOrNull() ?: return null,match.groupValues[1],"","",null,null,0.0,"")
+    }
     suspend fun recommendationsFor(context: MediaSummary? = null): List<MediaSummary> = coroutineScope {
-        val scores=ratings.toMap()
+        val scores=if(loadedRatingsOwner==ratingsKey()) ratings.toMap() else emptyMap()
         val seeds=(scores.filterValues { it>=6 }.entries.sortedByDescending { it.value }.take(4)
             +scores.filterValues { it<=4 }.entries.sortedBy { it.value }.take(2))
+        val history=discoveryHistoryKey.split("|").filter {it.isNotBlank() && it !in scores}.take(2)
+        val historyJobs=history.map { id -> async {
+            val rows=runCatching {recommendationSeed(id)?.let {tmdb.recommendations(it)}}.getOrNull().orEmpty()
+            1.5 to rows
+        } }
         val jobs=seeds.map { (id,score) -> async {
-            val rows=runCatching { tmdb.byCloudId(id)?.let { tmdb.recommendations(it) } }.getOrNull().orEmpty()
+            val rows=runCatching { recommendationSeed(id)?.let { tmdb.recommendations(it) } }.getOrNull().orEmpty()
             (score-5).toDouble() to rows
         } }
         val base=context?.let { async { runCatching { tmdb.recommendations(it) }.getOrDefault(emptyList()) } }
-        val weighted=jobs.awaitAll().toMutableList()
+        val weighted=(jobs.awaitAll()+historyJobs.awaitAll()).toMutableList()
         base?.let { weighted.add(1.0 to it.await()) }
         val ranking=mutableMapOf<String,Double>(); val candidates=linkedMapOf<String,MediaSummary>()
         weighted.forEach { (weight,rows) -> rows.forEachIndexed { index,item ->
             candidates[item.cloudId]=item
             ranking[item.cloudId]=(ranking[item.cloudId] ?: 0.0)+weight*(1.0-index/40.0)
         } }
-        candidates.values.filter { it.cloudId!=context?.cloudId && !scores.containsKey(it.cloudId) && (ranking[it.cloudId] ?: 0.0)>0 }
+        candidates.values.filter { it.cloudId!=context?.cloudId && !scores.containsKey(it.cloudId) && it.cloudId !in history && (progress[it.cloudId]?.percent ?: 0.0)<90.0 && (ranking[it.cloudId] ?: 0.0)>0 }
             .sortedWith(compareByDescending<MediaSummary> { ranking[it.cloudId] ?: 0.0 }.thenByDescending { it.rating }).take(30)
     }
     suspend fun refreshForYou() {
         if(kidsMode) {forYou.clear();return}
-        val owner=ratingsKey(); val revision=ratings.toMap()
-        val rows=if(revision.values.any { it>=6 }) recommendationsFor() else emptyList()
-        if(owner==ratingsKey() && revision==ratings.toMap()) { forYou.clear(); forYou.addAll(rows) }
+        val owner=ratingsKey(); val revision=ratings.toMap();val history=discoveryHistoryKey;val locale=tmdb.language
+        val rows=if(revision.values.any { it>=6 } || history.isNotBlank()) recommendationsFor() else emptyList()
+        if(owner==ratingsKey() && revision==ratings.toMap() && history==discoveryHistoryKey && locale==tmdb.language) { forYou.clear(); forYou.addAll(rows) }
     }
     private val comingSoonMutex=Mutex()
     private var comingSoonKey=""
@@ -658,7 +696,10 @@ class AppState(context: Context) {
         val builtIn=try {
             check(token.isNotBlank()) { tr("Vuelve a guardar tu API key de TorBox","Save your TorBox API key again") }
             val detail=details?.takeIf { selected?.cloudId==item.cloudId } ?: tmdb.details(item)
-            kotlinx.coroutines.withTimeout(25000) { nativeSources.search(owner!!,token,listOf(detail.originalTitle,item.title),item.type,item.year,season,episode,streamSizeBytes,audioLanguage) }
+            kotlinx.coroutines.withTimeout(25000) { nativeSources.search(owner!!,token,listOf(detail.originalTitle,
+                if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(audioLanguage))
+                    try {tmdb.spanishTitle(item).ifBlank {item.title}} catch(e: CancellationException) {throw e} catch(_: Exception) {item.title}
+                else item.title),item.type,item.year,season,episode,streamSizeBytes,audioLanguage) }
         } catch(e: kotlinx.coroutines.TimeoutCancellationException) { failure=tr("Motor nativo: tiempo agotado","Native engine: timed out");emptyList() } catch(e: CancellationException) { throw e } catch(e: Exception) { failure=e.message;emptyList() }
         val links=StreamOrdering.sorted((addon.await()+builtIn).filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) }, audioLanguage)
         if(session?.userId==owner) nativeSourceStatus=failure ?: tr("Motor nativo: ","Native engine: ")+builtIn.size+tr(" enlaces disponibles"," available links")

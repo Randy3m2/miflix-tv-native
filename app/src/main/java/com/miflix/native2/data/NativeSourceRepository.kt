@@ -54,13 +54,13 @@ class NativeSourceRepository(private val transport: suspend (String,String,Map<S
         val cacheKey=listOf(fingerprint,names.joinToString("|"),type,year,season,episode,maxBytes,preferredAudio).joinToString(":")
         if(lastOwner==owner && lastQuery==cacheKey && System.currentTimeMillis()-lastAt<120_000) return@withLock lastResults
         // Cache index results by season, but verify TorBox availability for every new episode.
-        val indexKey=listOf(owner,fingerprint,names.joinToString("|"),type,year,season).joinToString(":")
+        val indexKey=listOf(owner,fingerprint,names.joinToString("|"),type,year,season,preferredAudio).joinToString(":")
         val page=pages[indexKey]?.takeIf { System.currentTimeMillis()-it.at<120_000 }
         val hits=page?.hits ?: supervisorScope {
-            val outcomes=names.map { title -> async {
+            val queries=NativeSearchPlan.queries(names,type,year,season,StreamLanguagePriority.prefersSpanish(preferredAudio))
+            val outcomes=queries.map { query -> async {
                 try {
                     currentCoroutineContext().ensureActive()
-                    val query=title+if(type=="series") " S${season.toString().padStart(2,'0')}" else " "+year.take(4)
                     val request=JSONObject().put("search_type","100%").put("search_field","title").put("query",query)
                         .put("size",60).put("order_by","seeders").put("order_direction","desc").put("hide_unsafe",true).put("hide_xxx",true)
                     val a=JSONObject(transport("https://api.knaben.org/v1","Knaben",emptyMap(),request.toString(),"application/json")).optJSONArray("hits") ?: JSONArray()
@@ -77,7 +77,8 @@ class NativeSourceRepository(private val transport: suspend (String,String,Map<S
             val name=h.optString("title")
             h.optString("hash").matches(Regex("(?i)[a-f0-9]{40}")) && NativeSourceMatching.titleMatches(name,names) &&
                 (type!="movie" || names.any { StreamFilters.releaseYear(name,it)==year.take(4).toIntOrNull() })
-        }.distinctBy { it.optString("hash").lowercase(Locale.ROOT) }.take(80)
+        }.distinctBy { it.optString("hash").lowercase(Locale.ROOT) }
+            .sortedBy { if(StreamLanguagePriority.prefersSpanish(preferredAudio)) StreamLanguagePriority.rank("",it.optString("title")) else 0 }.take(80)
         if(candidates.isEmpty()) return@withLock emptyList()
         val hashes=candidates.joinToString(",") { it.getString("hash").lowercase(Locale.ROOT) }
         val cached=api("torrents/checkcached?hash=$hashes&format=object&list_files=true",token).optJSONObject("data") ?: JSONObject()
@@ -88,7 +89,7 @@ class NativeSourceRepository(private val transport: suspend (String,String,Map<S
             val matching=if(type=="series") videos.filter { NativeSourceMatching.episodeMatches(fileName(it),season,episode) }
                 else if(videos.size==1) videos else videos.filter { NativeSourceMatching.titleMatches(fileName(it).substringAfterLast('/'),names) }
             val spanish=StreamLanguagePriority.prefersSpanish(preferredAudio)
-            val file=matching.sortedWith(compareBy<JSONObject> {
+            val file=matching.filter { it.optLong("size")>0 && (maxBytes<=0 || it.optLong("size")<=maxBytes) }.sortedWith(compareBy<JSONObject> {
                 if(spanish) StreamLanguagePriority.rank("",fileName(it)) else 0
             }.thenByDescending { it.optLong("size") }).firstOrNull() ?: return@mapNotNull null
             val name=fileName(file);val size=file.optLong("size")

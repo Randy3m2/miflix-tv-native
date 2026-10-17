@@ -464,8 +464,40 @@ class TmdbRepository(var token: String) {
         val field=if(type=="series") "first_air_date" else "primary_release_date"
         return parseList(get("/discover/${if(type=="series") "tv" else "movie"}",mapOf("$field.gte" to start,"$field.lte" to end,"sort_by" to "popularity.desc","include_adult" to "false")),type,20)
     }
-    suspend fun recommendations(item: MediaSummary): List<MediaSummary> =
-        parseList(get("/${if(item.type == "series") "tv" else "movie"}/${item.id}/recommendations"), item.type, 20)
+    private val discoveryCache=PlaybackLinkCache<String,List<MediaSummary>>(40) { System.currentTimeMillis() }
+    private val spanishTitles=PlaybackLinkCache<String,String>(80) { System.currentTimeMillis() }
+    suspend fun spanishTitle(item: MediaSummary): String {
+        spanishTitles.get(item.cloudId)?.let { return it }
+        val json=get("/${if(item.type=="series") "tv" else "movie"}/${item.id}",mapOf("language" to "es-ES"))
+        val title=json.optString(if(item.type=="series") "name" else "title")
+        if(title.isNotBlank()) spanishTitles.put(item.cloudId,title)
+        return title
+    }
+    suspend fun familiarCatalog(kind: String): List<MediaSummary> {
+        val locale=language
+        val key="familiar:$locale:$kind"
+        discoveryCache.get(key)?.let {return it}
+        val type=if(kind=="kdrama") "series" else "movie"
+        val params=linkedMapOf("language" to locale,"include_adult" to "false","sort_by" to "popularity.desc",
+            "vote_count.gte" to "80","vote_average.gte" to "6")
+        when(kind) {
+            "romance" -> params["with_genres"]="10749"
+            "kdrama" -> {params["with_original_language"]="ko";params["with_genres"]="18"}
+            "classics" -> {params["primary_release_date.lte"]="1999-12-31";params["sort_by"]="vote_average.desc";params["vote_count.gte"]="500"}
+            else -> error("Unknown catalog")
+        }
+        val rows=parseList(get("/discover/${if(type=="series") "tv" else "movie"}",params),type,20)
+        discoveryCache.put(key,rows)
+        return rows
+    }
+    suspend fun recommendations(item: MediaSummary): List<MediaSummary> {
+        val locale=language
+        val key="recommend:$locale:${item.cloudId}"
+        discoveryCache.get(key)?.let {return it}
+        val rows=parseList(get("/${if(item.type == "series") "tv" else "movie"}/${item.id}/recommendations",mapOf("language" to locale)), item.type,20)
+        discoveryCache.put(key,rows)
+        return rows
+    }
 
     suspend fun episodeInfo(item: MediaSummary, season: Int, episode: Int): EpisodeSummary? =
         season(item.id, season).firstOrNull { it.episode == episode }

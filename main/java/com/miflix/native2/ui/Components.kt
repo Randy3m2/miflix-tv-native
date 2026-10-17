@@ -153,13 +153,13 @@ fun FocusButton(
             .clickable(onClick = onClick)
             .background(if (focused) FocusedPanel else if(destructive) Color(0xFF251317) else if(primary) Color(0xFF211D28) else Panel, RoundedCornerShape(50))
             .border(if (focused) 2.dp else 1.dp, if(focused) Accent else if(destructive) Color(0xFF78404B) else if(primary) Color(0xFF74608D) else PanelBorder, RoundedCornerShape(50))
-            .padding(horizontal = horizontalPadding, vertical = 12.dp),
+            .padding(horizontal = horizontalPadding, vertical = if(LocalSimpleHome.current) 16.dp else 12.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text,
             color = if(destructive) Color(0xFFFFB9C3) else Color.White,
-            fontSize = 15.sp, lineHeight=20.sp,
+            fontSize = if(LocalSimpleHome.current) 20.sp else 15.sp, lineHeight=if(LocalSimpleHome.current) 25.sp else 20.sp,
             fontWeight = FontWeight.Bold, maxLines=1, overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis
         )
     }

@@ -1,0 +1,23 @@
+'use strict';
+const fs=require('fs'),assert=require('assert');
+const root='app/src/main/java/com/miflix/native2/';
+const read=p=>fs.readFileSync(root+p,'utf8');
+const state=read('ui/AppState.kt'),ui=read('ui/Screens.kt'),tmdb=read('data/TmdbRepository.kt'),native=read('data/NativeSourceRepository.kt');
+assert(state.includes('simple_home:${ratingsKey()}'));
+assert(state.includes('discoveryHistoryKey') && state.includes('it.value.position>=5*60*1000L'));
+assert(state.includes('history==discoveryHistoryKey && locale==tmdb.language'));
+assert(state.includes('familiarHomeOwner=="${ratingsKey()}:${tmdb.language}"'));
+assert(state.includes('(progress[it.cloudId]?.percent ?: 0.0)<90.0'));
+assert(tmdb.includes('"with_original_language"]="ko"'));
+assert(tmdb.includes('"with_genres"]="10749"'));
+assert(tmdb.includes('discoveryCache.get(key)'));
+assert(ui.includes('item(key="simple-home")') && ui.includes('LocalSimpleHome provides simple'));
+assert(ui.includes('state.romancePicks') && ui.includes('state.koreanPicks') && ui.includes('state.classicPicks'));
+assert(native.includes('NativeSearchPlan.queries'));
+assert(native.indexOf('.sortedBy { if(StreamLanguagePriority')<native.indexOf('.take(80)',native.indexOf('val candidates=')));
+assert(native.includes('matching.filter { it.optLong("size")>0'));
+assert(read('data/StreamOrdering.kt').includes('thenByDescending { quality(it) }'));
+assert(ui.includes('setPreferredAudioLanguages("es", "en")'));
+for(const rel of ['data/NativeSourceRepository.kt','data/NativeSearchPlan.java','data/TmdbRepository.kt','ui/AppState.kt','ui/Screens.kt','ui/Components.kt','ui/CinematicBrowsing.kt','ui/FamiliarHome.kt','ui/UpdateNotes.kt'])
+ assert.equal(read(rel),fs.readFileSync('main/java/com/miflix/native2/'+rel,'utf8'),rel);
+console.log('PASS: profile/history/language guards, negative/seen exclusions, cached discovery, optional Simple Home, Spanish ranking before cap, file-size filtering before selection, English audio fallback and source mirrors.');

@@ -12,7 +12,7 @@ import com.miflix.native2.model.StreamChoice
 
 internal data class LidomTeam(val id:String,val mlb:Int,val name:String,val short:String,val color:String,val website:String,val logo:String)
 internal data class LidomSource(val id:String,val team:String,val name:String,val kind:String,val url:String,val reference:String="",val note:String="",val aliases:List<String> = emptyList())
-internal data class LidomGame(val id:Int,val home:LidomTeam,val away:LidomTeam,val time:String,val status:String)
+internal data class LidomGame(val id:Int,val home:LidomTeam,val away:LidomTeam,val time:String,val status:String,val broadcasts:List<String> = emptyList())
 internal data class LidomVideo(val id:String,val title:String)
 
 internal class LidomRepository(private val context:Context, owner:String) {
@@ -52,7 +52,7 @@ internal class LidomRepository(private val context:Context, owner:String) {
     }
     suspend fun games(date:String):List<LidomGame> {
         require(date.matches(Regex("[0-9]{4}-[0-9]{2}-[0-9]{2}")))
-        val j=JSONObject(Http.text("https://statsapi.mlb.com/api/v1/schedule?sportId=17&leagueId=131&date=$date",timeoutMs=15000))
+        val j=JSONObject(Http.text("https://statsapi.mlb.com/api/v1/schedule?sportId=17&leagueId=131&date=$date&hydrate=broadcasts",timeoutMs=15000))
         val dates=j.optJSONArray("dates") ?: return emptyList()
         return buildList {for(i in 0 until dates.length()) {
             val games=dates.getJSONObject(i).optJSONArray("games") ?: continue
@@ -62,7 +62,16 @@ internal class LidomRepository(private val context:Context, owner:String) {
                 val away=teams.firstOrNull {it.mlb==t.getJSONObject("away").getJSONObject("team").getInt("id")} ?: continue
                 val dateTime=runCatching {SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'",Locale.US).apply {timeZone=TimeZone.getTimeZone("UTC")}.parse(g.getString("gameDate"))}.getOrNull()
                 val time=dateTime?.let {SimpleDateFormat("h:mm a",Locale.US).apply {timeZone=TimeZone.getTimeZone("America/Santo_Domingo")}.format(it)}.orEmpty()
-                add(LidomGame(g.getInt("gamePk"),home,away,time,g.getJSONObject("status").optString("detailedState")))
+                val broadcasts=g.optJSONArray("broadcasts")?.let {rows ->
+                    (0 until rows.length()).mapNotNull {index ->
+                        val broadcast=rows.optJSONObject(index) ?: return@mapNotNull null
+                        broadcast.optString("name").trim().takeIf {
+                            broadcast.optString("type")=="TV" && it.isNotBlank()
+                        }
+                    }.distinct()
+                } ?: emptyList()
+                val start=if(g.getJSONObject("status").optBoolean("startTimeTBD",false)) "" else time
+                add(LidomGame(g.getInt("gamePk"),home,away,start,g.getJSONObject("status").optString("detailedState"),broadcasts))
             }
         }}
     }

@@ -1,6 +1,9 @@
 package com.miflix.native2.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.border
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -75,11 +78,11 @@ internal fun LidomScreen(state:AppState) {
                 if(loading) Text(tr("Cargando calendario…","Loading schedule…"),color=Muted)
                 if(message.isNotBlank()) Text(message,color=Muted)
                 if(!loading && message.isBlank() && games.isEmpty()) Text(tr("No hay partidos publicados para esta fecha.","No published games for this date."),color=Muted)
-                games.forEach {game ->
-                    FocusButton("${game.away.short} @ ${game.home.short} · ${game.time} · ${game.status}",modifier=Modifier.fillMaxWidth()) {team=game.home;state.lidomTeamId=game.home.id}
-                }
                 Text(tr("El estado del partido no confirma qué canal lo transmite. Las fuentes iniciales corresponden al equipo local.","Game status does not confirm a broadcast. Game selection opens the home team's sources."),color=Muted,fontSize=12.sp)
             }}
+            gridItems(games,key={"game:${it.id}"},span={GridItemSpan(maxLineSpan)}) {game ->
+                LidomGameCard(game) {team=game.home;state.lidomTeamId=game.home.id}
+            }
             val visible=revision.let {repo.teams.filter {!onlyFavorites || repo.favorite(it.id)}}
             if(visible.isEmpty()) item(span={GridItemSpan(maxLineSpan)}) {Text(tr("Agrega equipos a favoritos.","Add teams to favorites."),color=Muted)}
             gridItems(visible,key={it.id}) {club ->
@@ -96,6 +99,40 @@ internal fun LidomScreen(state:AppState) {
     key(owner) {
     team?.let {club -> LidomSourcesSheet(state,repo,club,{team=null},{team=null;configure=true})}
     if(configure) LidomSourcesSettings(repo,state.lidomTeamId,{configure=false;revision++})
+    }
+}
+
+@Composable
+private fun LidomGameCard(game:LidomGame,onClick:()->Unit) {
+    var focused by remember(game.id) {mutableStateOf(false)}
+    Column(Modifier.fillMaxWidth().onFocusChanged {focused=it.isFocused}.focusable().tvClick(onClick)
+        .background(if(focused) FocusedPanel else Panel,RoundedCornerShape(20.dp))
+        .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(20.dp))
+        .padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)) {
+            LidomGameTeam(game.away,Modifier.weight(1f))
+            Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                Text(game.time.ifBlank {tr("Hora por confirmar","Time TBD")},color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
+                Text("AST · UTC−4",color=Muted,fontSize=12.sp)
+                Text("VS",color=Accent,fontSize=14.sp,fontWeight=FontWeight.Bold)
+            }
+            LidomGameTeam(game.home,Modifier.weight(1f))
+        }
+        Text(tr("Transmisión anunciada: ","Listed broadcast: ")+
+            game.broadcasts.joinToString(" · ").ifBlank {tr("Por confirmar","To be confirmed")},color=Color.White,fontSize=15.sp)
+        Text(game.status+" · "+tr("Seleccionar fuentes del equipo local","Select home team sources"),color=Muted,fontSize=12.sp)
+        if(game.broadcasts.any {it.contains("MLB.TV",ignoreCase=true)})
+            Text(tr("MLB.TV puede requerir suscripción y abrirse en su plataforma oficial.","MLB.TV may require a subscription and playback on its official platform."),color=Muted,fontSize=12.sp)
+    }
+}
+
+@Composable
+private fun LidomGameTeam(team:LidomTeam,modifier:Modifier) {
+    val context=LocalContext.current
+    val drawable=remember(team.logo) {context.resources.getIdentifier(team.logo,"drawable",context.packageName)}
+    Column(modifier,horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(6.dp)) {
+        if(drawable!=0) Image(painterResource(drawable),team.name,Modifier.size(64.dp))
+        Text(team.short,color=Color.White,fontSize=20.sp,fontWeight=FontWeight.Bold)
     }
 }
 

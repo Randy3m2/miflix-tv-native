@@ -9,10 +9,10 @@ public final class StreamLanguagePriority {
     private StreamLanguagePriority() {}
     private static final String EDGE = "(?<![\\p{L}\\p{N}])";
     private static final String END = "(?![\\p{L}\\p{N}])";
-    private static final Pattern SPANISH = Pattern.compile(EDGE + "(?:es(?:[-_](?:es|mx|419))?|spa|esp|spanish|espanol|castellano|castilian|latino|latina|latam|latin[ ._-]+american|espanol[ ._-]+latino)" + END);
+    private static final Pattern SPANISH = Pattern.compile(EDGE + "(?:es(?:[-_](?:es|mx|ar|co|do|cl|pe|ve|ec|419))?|spa|esp|spanish|espanol|castellano|castilian|espana|spain|lat|latino|latina|latam|latin[ ._-]+american|espanol[ ._-]+latino)" + END);
     private static final Pattern ENGLISH = Pattern.compile(EDGE + "(?:en(?:[-_](?:us|gb))?|eng|english|ingles)" + END);
     private static final Pattern OTHER = Pattern.compile(EDGE + "(?:fr|fra|fre|french|francais|de|deu|ger|german|aleman|it|ita|italian|italiano|pt|por|portuguese|portugues|ru|rus|russian|ruso|ja|jpn|japanese|japones|ko|kor|korean|coreano|hi|hin|hindi)" + END);
-    private static final Pattern SUB = Pattern.compile("\\b(?:subtitles?|subs?|subtitulos?|subbed|hardsubs?|vostfr)\\b");
+    private static final Pattern SUB = Pattern.compile("\\b(?:subtitles?|subs?|subtitulos?|subbed|hardsubs?|vostfr|vose|vosi)\\b");
     private static final Pattern AUDIO = Pattern.compile("\\b(?:audio|dubbed|doblado|doblaje)\\b");
     private static final Pattern LANGUAGE_BEFORE_SUB = Pattern.compile("(?:spanish|espanol|castellano|latino|latam|english|ingles|spa|eng|es|en)\\s+(?:subtitles?|subs?|subtitulos?)\\b.*");
     private static String normalize(String text) {

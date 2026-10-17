@@ -45,14 +45,14 @@ class StreamRepository(initialManifestUrl: String) {
         manifestUrls.remove(value.trim())
     }
 
-    suspend fun resolve(imdbId: String, type: String, season: Int = 0, episode: Int = 0, movieYear: String? = null, maxBytes: Long = 0, movieTitle: String? = null): List<StreamChoice> = coroutineScope {
+    suspend fun resolve(imdbId: String, type: String, season: Int = 0, episode: Int = 0, movieYear: String? = null, maxBytes: Long = 0, movieTitle: String? = null, preferredAudio: String = ""): List<StreamChoice> = coroutineScope {
         val manifests = manifestUrls.toList()
         if (manifests.isEmpty()) throw IllegalStateException("No stream add-on is configured")
         val rows = manifests.map { manifest ->
             async { runCatching { resolveOne(manifest, imdbId, type, season, episode) }.onFailure { if(it is kotlinx.coroutines.CancellationException) throw it }.getOrDefault(emptyList()) }
         }.awaitAll().flatten()
 
-        StreamOrdering.sorted(rows.filter { StreamFilters.allowed(it,type,movieYear,maxBytes,movieTitle) })
+        StreamOrdering.sorted(rows.filter { StreamFilters.allowed(it,type,movieYear,maxBytes,movieTitle) },preferredAudio)
     }
 
     private suspend fun resolveOne(manifest: String, imdbId: String, type: String, season: Int, episode: Int): List<StreamChoice> {
@@ -66,7 +66,7 @@ class StreamRepository(initialManifestUrl: String) {
             val s = a.optJSONObject(i) ?: return@mapNotNull null
             val url = s.optString("url").takeIf { it.startsWith("http") } ?: return@mapNotNull null
             val hints = s.optJSONObject("behaviorHints")
-            val filename = hints?.optString("filename").orEmpty()
+            val filename = hints?.optString("filename").orEmpty().ifBlank {s.optString("filename")}
             val videoHash = hints?.optString("videoHash").orEmpty()
             val videoSize = hints?.optLong("videoSize", 0L) ?: 0L
             // Only explicit audio fields; subtitle language is not audio evidence.
@@ -76,7 +76,7 @@ class StreamRepository(initialManifestUrl: String) {
                 else -> emptyList()
             }
             val audioLanguages = (languageValues(s.opt("audioLanguages")) + languageValues(s.opt("languages")) +
-                languageValues(hints?.opt("audioLanguages"))).distinct()
+                languageValues(s.opt("audioLanguage")) + languageValues(hints?.opt("audioLanguages"))).distinct()
             val subs = s.optJSONArray("subtitles")?.let { sa ->
                 (0 until sa.length()).mapNotNull { si ->
                     val sub = sa.optJSONObject(si) ?: return@mapNotNull null
@@ -86,7 +86,8 @@ class StreamRepository(initialManifestUrl: String) {
             } ?: emptyList()
             StreamChoice(
                 name = s.optString("name", addonName),
-                title = s.optString("title", s.optString("name", "Stream")),
+                title = listOf(s.optString("title").ifBlank {s.optString("name","Stream")},s.optString("description"))
+                    .filter {it.isNotBlank()}.distinct().joinToString("\n"),
                 url = url,
                 subtitles = subs,
                 filename = filename,

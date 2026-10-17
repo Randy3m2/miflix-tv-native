@@ -21,6 +21,8 @@ internal object UpdateNotes {
         "Connect phone / PC abre tu catálogo de Vercel conectado a la TV: QR/enlace sin código manual y botón Play on TV." to "Connect phone / PC opens your Vercel catalog connected to the TV: QR/link with no manual code and a Play on TV button."
     )
     val changes=listOf(
+        "Selección global entre todos los add-ons: español latino/castellano/España primero; inglés como respaldo, antes de priorizar resolución o tamaño." to "Global selection across all add-ons: Latin American/Castilian/Spain Spanish first, English fallback, before resolution or file size.",
+        "Mejor lectura de etiquetas LAT/España, descripciones y audio declarado; VOSE/subtítulos no cuentan como audio español." to "Better LAT/Spain labels, descriptions and declared-audio handling; VOSE/subtitles do not count as Spanish audio.",
         "Home: romance, dramas coreanos y clásicos; Para ti combina historial y puntuaciones con caché local." to "Home: romance, K-dramas and classics; For you combines viewing history and ratings with local caching.",
         "Modo sencillo opcional por perfil: texto mayor, títulos visibles, menos filas y accesos claros en Inicio." to "Optional per-profile Simple Home: larger text, visible titles, fewer rows and clear shortcuts.",
         "Motor nativo: búsqueda adicional por título traducido, latino y castellano; español primero e inglés de respaldo." to "Native engine: extra searches by translated title, Latino and Castilian releases; Spanish first with English fallback.",

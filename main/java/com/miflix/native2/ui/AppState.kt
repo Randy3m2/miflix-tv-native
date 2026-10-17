@@ -687,10 +687,10 @@ class AppState(context: Context) {
         val native=owner!=null && nativeStore.enabled(owner)
         // Disabled is the default and leaves the existing add-on path unchanged.
         if(!native) return@supervisorScope StreamOrdering.sorted(
-            streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title), audioLanguage)
+            streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage), audioLanguage)
         val token=nativeStore.token(owner)
         val addon=async {
-            if(streamRepo.manifests().isEmpty()) emptyList() else streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title)
+            if(streamRepo.manifests().isEmpty()) emptyList() else streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage)
         }
         var failure: String?=null
         val builtIn=try {
@@ -1827,7 +1827,7 @@ class AppState(context: Context) {
         runCatching {
             val streams = streamsJob.await()
             if(!valid()) return@coroutineScope
-            val chosen = streams.firstOrNull() ?: throw IllegalStateException(tr("No se encontraron enlaces reproducibles","No playable sources found"))
+            val chosen = StreamOrdering.best(streams,audioLanguage) ?: throw IllegalStateException(tr("No se encontraron enlaces reproducibles","No playable sources found"))
             val best = if(chosen.nativeSource==null) chosen else {
                 check(nativeStore.enabled(playbackOwner)) { tr("El motor nativo está apagado","Native engine is disabled") }
                 nativeSources.materialize(chosen,nativeStore.token(playbackOwner),::valid)

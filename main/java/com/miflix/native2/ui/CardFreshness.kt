@@ -3,6 +3,7 @@ package com.miflix.native2.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -15,6 +16,15 @@ import androidx.tv.material3.Text
 import com.miflix.native2.model.MediaSummary
 
 internal val LocalCardFreshness=staticCompositionLocalOf<(MediaSummary)->String?> {{null}}
+internal val LocalCardFreshnessLoad=staticCompositionLocalOf<(MediaSummary)->Unit> {{}}
+
+@Composable
+internal fun observeCardFreshness(item:MediaSummary):String? {
+    val load=LocalCardFreshnessLoad.current
+    LaunchedEffect(item.cloudId,item.releaseDate) {load(item)}
+    return LocalCardFreshness.current(item)
+}
+
 
 @Composable
 internal fun CardFreshnessTag(label:String,modifier:Modifier=Modifier) {

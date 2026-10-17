@@ -11,7 +11,12 @@ public class CardFreshnessPolicyCheck {
         check(!CardFreshnessPolicy.justAdded(now+1,now));
         check(CardFreshnessPolicy.newEpisode("2026-10-17",now));
         check(CardFreshnessPolicy.newEpisode("2026-10-11",now));
-        check(!CardFreshnessPolicy.newEpisode("2026-10-10",now));
+        check(CardFreshnessPolicy.newEpisode("2026-10-10",now));
+        check(CardFreshnessPolicy.newEpisode("2026-10-04",now));
+        check(!CardFreshnessPolicy.newEpisode("2026-10-03",now));
+        check(CardFreshnessPolicy.recentRelease("2026-10-04",now));
+        check(!CardFreshnessPolicy.recentRelease("2026-10-03",now));
+        check(!CardFreshnessPolicy.recentRelease("2026-10-18",now));
         check(!CardFreshnessPolicy.newEpisode("2026-10-18",now));
         check(!CardFreshnessPolicy.newEpisode("2026-02-30",now));
         check(!CardFreshnessPolicy.newEpisode(null,now));
@@ -19,6 +24,6 @@ public class CardFreshnessPolicyCheck {
         long earlyUtc=Instant.parse("2026-10-18T02:00:00Z").toEpochMilli();
         check(!CardFreshnessPolicy.newEpisode("2026-10-18",earlyUtc));
         check(CardFreshnessPolicy.newEpisode("2026-10-17",earlyUtc));
-        System.out.println("PASS: 14 freshness boundaries, future/invalid/missing dates and Dominican midnight.");
+        System.out.println("PASS: 14-day release/episode windows, future/invalid/missing dates and Dominican midnight.");
     }
 }

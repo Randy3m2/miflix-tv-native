@@ -70,6 +70,7 @@ internal fun SpotlightRail(
     eyebrow: String? = null,
     ranked: Boolean = false,
     awardLabels: Boolean = false,
+    awardYear: Int? = null,
     onLongClick: ((MediaSummary) -> Unit)? = null,
     onClick: (MediaSummary) -> Unit
 ) {
@@ -110,7 +111,7 @@ internal fun SpotlightRail(
             items(rows,key={it.cloudId},contentType={"spotlight"}) { item ->
                 SpotlightCard(item,expanded=active && selectedId==item.cloudId && settledId==item.cloudId,landscape=landscape,expandLeft=expandLeft,
                     progress=progressFor(item),rank=if(ranked) rows.indexOf(item)+1 else null,
-                    awardLabel=if(awardLabels) com.miflix.native2.data.AwardSelections.label(item.id,item.type,tr("es","en")=="es") else null,modifier=if(item.cloudId==rows.first().cloudId) Modifier.focusRequester(firstCard) else Modifier,
+                    awardLabel=if(awardLabels) com.miflix.native2.data.AwardSelections.label(item.id,item.type,tr("es","en")=="es",awardYear) else null,modifier=if(item.cloudId==rows.first().cloudId) Modifier.focusRequester(firstCard) else Modifier,
                     onFocused={selectedId=item.cloudId;publishPreview?.invoke(item)},onLongClick=hold?.let {action -> {action(item)}},onClick={onClick(item)})
             }
         }
@@ -132,7 +133,7 @@ internal fun SpotlightRail(
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolean,expandLeft: Boolean,progress: Double?,rank:Int?=null,awardLabel:String?=null,modifier: Modifier=Modifier,onFocused: () -> Unit,onLongClick: (() -> Unit)? = null,onClick: () -> Unit) {
-    val freshness=LocalCardFreshness.current(item)
+    val freshness=observeCardFreshness(item)
     val simple=LocalSimpleHome.current
     var focused by remember(item.cloudId) { mutableStateOf(false) }
     val cardBring=remember { BringIntoViewRequester() }
@@ -157,7 +158,7 @@ private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolea
         if(expanded || simple || rank!=null || awardLabel!=null) Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xD9050505)))))
         if(expanded || simple) Text(item.title,color=Color.White,fontSize=if(simple) 18.sp else if(expanded) 18.sp else 12.sp,lineHeight=if(simple || expanded) 22.sp else 15.sp,
             fontWeight=FontWeight.Bold,maxLines=2,overflow=TextOverflow.Ellipsis,
-            modifier=Modifier.align(Alignment.BottomStart).padding(start=10.dp,end=10.dp,top=10.dp,bottom=if(awardLabel!=null || freshness!=null) 38.dp else 10.dp))
+            modifier=Modifier.align(Alignment.BottomStart).padding(start=10.dp,end=10.dp,top=10.dp,bottom=if(awardLabel!=null && freshness!=null) 68.dp else if(awardLabel!=null || freshness!=null) 38.dp else 10.dp))
         rank?.let {position ->
             // Draw inside the existing clipped artwork: no separate rank tile or changing focus geometry.
             Box(Modifier.align(Alignment.TopStart).size(width=86.dp,height=80.dp)
@@ -172,8 +173,8 @@ private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolea
                 modifier=Modifier.align(Alignment.BottomStart).fillMaxWidth()
                     .background(Color(0xD90B0B10)).padding(horizontal=8.dp,vertical=7.dp))
         }
-        if(freshness!=null && awardLabel==null) CardFreshnessTag(freshness,
-            Modifier.align(Alignment.BottomCenter).padding(horizontal=6.dp,vertical=7.dp).widthIn(max=150.dp))
+        if(freshness!=null) CardFreshnessTag(freshness,
+            Modifier.align(Alignment.BottomCenter).padding(start=6.dp,end=6.dp,top=7.dp,bottom=if(awardLabel!=null) 40.dp else 7.dp).widthIn(max=150.dp))
         progress?.takeIf { it>0.0 && it<100.0 }?.let { value ->
             Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color(0x88555555))) {
                 Box(Modifier.fillMaxHeight().fillMaxWidth((value/100.0).toFloat().coerceIn(0f,1f)).background(Color.White))

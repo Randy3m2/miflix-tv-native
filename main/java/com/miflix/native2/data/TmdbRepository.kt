@@ -474,16 +474,30 @@ class TmdbRepository(var token: String) {
         return title
     }
     private val awardSlots=Semaphore(3)
-    internal suspend fun awardCatalog(kind:String):List<MediaSummary> {
+    internal suspend fun awardCatalog(kind:String,year:Int=AwardSelections.latestYear(kind)):List<MediaSummary> {
         val locale=language
-        val key="awards:2024:$locale:$kind"
+        val key="awards:v2:$year:$locale:$kind"
         discoveryCache.get(key)?.let {return it}
-        val type=if(kind=="emmy") "series" else "movie"
-        val ids=if(kind=="emmy") AwardSelections.emmys else AwardSelections.oscars
         val rows=coroutineScope {
-            ids.map {id ->async {awardSlots.withPermit {
-                try {mapItem(get("/${if(type=="series") "tv" else "movie"}/$id",mapOf("language" to locale)),type)}
-                catch(e:CancellationException) {throw e} catch(_:Exception) {null}
+            AwardSelections.entries(kind,year).map {entry ->async {awardSlots.withPermit {
+                try {
+                    val type=entry.type;val path=if(type=="series") "tv" else "movie"
+                    val results=get("/search/$path",mapOf("query" to entry.title,"language" to "en-US","include_adult" to "false")).optJSONArray("results")
+                    fun normalized(value:String)=java.text.Normalizer.normalize(value,java.text.Normalizer.Form.NFD)
+                        .replace(Regex("\\p{M}+"),"").lowercase(Locale.ROOT).replace(Regex("[^a-z0-9]"),"").removeSuffix("themovie")
+                    val expected=normalized(entry.title)
+                    val matches=(0 until (results?.length() ?: 0)).mapNotNull {results?.optJSONObject(it)}.filter {x ->
+                        !x.optBoolean("adult") && listOf(x.optString("title"),x.optString("name"),x.optString("original_title"),x.optString("original_name")).any {normalized(it)==expected}
+                    }
+                    val selected=matches.filter {x ->
+                        val date=x.optString(if(type=="series") "first_air_date" else "release_date").take(4).toIntOrNull()
+                        date!=null && date<=year && (type=="series" || date>=year-2)
+                    }.maxByOrNull {it.optString(if(type=="series") "first_air_date" else "release_date")}
+                    if(selected==null) null else {
+                        val json=if(locale=="en-US") selected else get("/$path/${selected.getInt("id")}",mapOf("language" to locale))
+                        mapItem(json,type).also {AwardSelections.register(it.id,entry)}
+                    }
+                } catch(e:CancellationException) {throw e} catch(_:Exception) {null}
             }}}.awaitAll().filterNotNull()
         }
         if(rows.isNotEmpty()) discoveryCache.put(key,rows)
@@ -495,7 +509,13 @@ class TmdbRepository(var token: String) {
         val key="familiar:$locale:$kind"
         discoveryCache.get(key)?.let {return it}
         if(kind=="christmas") {
-            val rows=seasonal("christmas")
+            val themed=try {seasonal("christmas")} catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
+            val rows=if(themed.isNotEmpty()) themed else coroutineScope {
+                listOf(771,10719,508965,5255,360920,1581,5825,508).map {id ->async {awardSlots.withPermit {
+                    try {mapItem(get("/movie/$id",mapOf("language" to locale)),"movie")}
+                    catch(e:CancellationException) {throw e} catch(_:Exception) {null}
+                }}}.awaitAll().filterNotNull()
+            }
             if(rows.isNotEmpty()) discoveryCache.put(key,rows)
             return rows
         }
@@ -525,14 +545,13 @@ class TmdbRepository(var token: String) {
     suspend fun episodeInfo(item: MediaSummary, season: Int, episode: Int): EpisodeSummary? =
         season(item.id, season).firstOrNull { it.episode == episode }
 
-    private val episodeBadgeDates=PlaybackLinkCache<String,String>(100) {System.currentTimeMillis()}
-    internal suspend fun episodeBadgeDate(item:MediaSummary):String {
-        if(item.type!="series") return ""
-        episodeBadgeDates.get(item.cloudId)?.let {return it}
-        val json=get("/tv/${item.id}")
-        val date=json.optJSONObject("last_episode_to_air")?.optString("air_date").orEmpty()
-        episodeBadgeDates.put(item.cloudId,date)
-        return date
+    private val cardDatesCache=PlaybackLinkCache<String,Pair<String,String>>(500) {System.currentTimeMillis()}
+    internal suspend fun cardDates(item:MediaSummary):Pair<String,String> {
+        cardDatesCache.get(item.cloudId)?.let {return it}
+        val json=get("/${if(item.type=="series") "tv" else "movie"}/${item.id}")
+        val release=json.optString(if(item.type=="series") "first_air_date" else "release_date")
+        val episode=if(item.type=="series") json.optJSONObject("last_episode_to_air")?.optString("air_date").orEmpty() else ""
+        return (release to episode).also {cardDatesCache.put(item.cloudId,it)}
     }
 
     suspend fun latestRelease(item: MediaSummary): ReleaseNotice? {
@@ -575,7 +594,8 @@ class TmdbRepository(var token: String) {
             poster = image(x.optString("poster_path"), "w500"),
             rating = x.optDouble("vote_average", 0.0),
             year = date.take(4),
-            popularity = x.optDouble("popularity", 0.0)
+            popularity = x.optDouble("popularity", 0.0),
+            releaseDate = date
         )
     }
 

@@ -9,7 +9,8 @@ data class MediaSummary(
     val poster: String?,
     val rating: Double,
     val year: String,
-    val popularity: Double = 0.0
+    val popularity: Double = 0.0,
+    val releaseDate: String = ""
 ) {
     val cloudId: String get() = "tmdb:$type:$id"
 }

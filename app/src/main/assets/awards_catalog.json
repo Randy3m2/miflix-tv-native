@@ -1,0 +1,477 @@
+{
+  "oscarCategory": "Best Picture",
+  "oscars": {
+    "2020": [
+      {
+        "title": "Parasite",
+        "type": "movie",
+        "year": 2020,
+        "winner": true
+      },
+      {
+        "title": "Ford v Ferrari",
+        "type": "movie",
+        "year": 2020,
+        "winner": false
+      },
+      {
+        "title": "The Irishman",
+        "type": "movie",
+        "year": 2020,
+        "winner": false
+      },
+      {
+        "title": "Jojo Rabbit",
+        "type": "movie",
+        "year": 2020,
+        "winner": false
+      },
+      {
+        "title": "Joker",
+        "type": "movie",
+        "year": 2020,
+        "winner": false
+      },
+      {
+        "title": "Little Women",
+        "type": "movie",
+        "year": 2020,
+        "winner": false
+      },
+      {
+        "title": "Marriage Story",
+        "type": "movie",
+        "year": 2020,
+        "winner": false
+      },
+      {
+        "title": "1917",
+        "type": "movie",
+        "year": 2020,
+        "winner": false
+      },
+      {
+        "title": "Once upon a Time...in Hollywood",
+        "type": "movie",
+        "year": 2020,
+        "winner": false
+      }
+    ],
+    "2021": [
+      {
+        "title": "Nomadland",
+        "type": "movie",
+        "year": 2021,
+        "winner": true
+      },
+      {
+        "title": "The Father",
+        "type": "movie",
+        "year": 2021,
+        "winner": false
+      },
+      {
+        "title": "Judas and the Black Messiah",
+        "type": "movie",
+        "year": 2021,
+        "winner": false
+      },
+      {
+        "title": "Mank",
+        "type": "movie",
+        "year": 2021,
+        "winner": false
+      },
+      {
+        "title": "Minari",
+        "type": "movie",
+        "year": 2021,
+        "winner": false
+      },
+      {
+        "title": "Promising Young Woman",
+        "type": "movie",
+        "year": 2021,
+        "winner": false
+      },
+      {
+        "title": "Sound of Metal",
+        "type": "movie",
+        "year": 2021,
+        "winner": false
+      },
+      {
+        "title": "The Trial of the Chicago 7",
+        "type": "movie",
+        "year": 2021,
+        "winner": false
+      }
+    ],
+    "2022": [
+      {
+        "title": "CODA",
+        "type": "movie",
+        "year": 2022,
+        "winner": true
+      },
+      {
+        "title": "Belfast",
+        "type": "movie",
+        "year": 2022,
+        "winner": false
+      },
+      {
+        "title": "Don't Look Up",
+        "type": "movie",
+        "year": 2022,
+        "winner": false
+      },
+      {
+        "title": "Drive My Car",
+        "type": "movie",
+        "year": 2022,
+        "winner": false
+      },
+      {
+        "title": "Dune",
+        "type": "movie",
+        "year": 2022,
+        "winner": false
+      },
+      {
+        "title": "King Richard",
+        "type": "movie",
+        "year": 2022,
+        "winner": false
+      },
+      {
+        "title": "Licorice Pizza",
+        "type": "movie",
+        "year": 2022,
+        "winner": false
+      },
+      {
+        "title": "Nightmare Alley",
+        "type": "movie",
+        "year": 2022,
+        "winner": false
+      },
+      {
+        "title": "The Power of the Dog",
+        "type": "movie",
+        "year": 2022,
+        "winner": false
+      },
+      {
+        "title": "West Side Story",
+        "type": "movie",
+        "year": 2022,
+        "winner": false
+      }
+    ],
+    "2023": [
+      {
+        "title": "Everything Everywhere All at Once",
+        "type": "movie",
+        "year": 2023,
+        "winner": true
+      },
+      {
+        "title": "All Quiet on the Western Front",
+        "type": "movie",
+        "year": 2023,
+        "winner": false
+      },
+      {
+        "title": "Avatar: The Way of Water",
+        "type": "movie",
+        "year": 2023,
+        "winner": false
+      },
+      {
+        "title": "The Banshees of Inisherin",
+        "type": "movie",
+        "year": 2023,
+        "winner": false
+      },
+      {
+        "title": "Elvis",
+        "type": "movie",
+        "year": 2023,
+        "winner": false
+      },
+      {
+        "title": "The Fabelmans",
+        "type": "movie",
+        "year": 2023,
+        "winner": false
+      },
+      {
+        "title": "Tár",
+        "type": "movie",
+        "year": 2023,
+        "winner": false
+      },
+      {
+        "title": "Top Gun: Maverick",
+        "type": "movie",
+        "year": 2023,
+        "winner": false
+      },
+      {
+        "title": "Triangle of Sadness",
+        "type": "movie",
+        "year": 2023,
+        "winner": false
+      },
+      {
+        "title": "Women Talking",
+        "type": "movie",
+        "year": 2023,
+        "winner": false
+      }
+    ],
+    "2024": [
+      {
+        "title": "Oppenheimer",
+        "type": "movie",
+        "year": 2024,
+        "winner": true
+      },
+      {
+        "title": "American Fiction",
+        "type": "movie",
+        "year": 2024,
+        "winner": false
+      },
+      {
+        "title": "Anatomy of a Fall",
+        "type": "movie",
+        "year": 2024,
+        "winner": false
+      },
+      {
+        "title": "Barbie",
+        "type": "movie",
+        "year": 2024,
+        "winner": false
+      },
+      {
+        "title": "The Holdovers",
+        "type": "movie",
+        "year": 2024,
+        "winner": false
+      },
+      {
+        "title": "Killers of the Flower Moon",
+        "type": "movie",
+        "year": 2024,
+        "winner": false
+      },
+      {
+        "title": "Maestro",
+        "type": "movie",
+        "year": 2024,
+        "winner": false
+      },
+      {
+        "title": "Past Lives",
+        "type": "movie",
+        "year": 2024,
+        "winner": false
+      },
+      {
+        "title": "Poor Things",
+        "type": "movie",
+        "year": 2024,
+        "winner": false
+      },
+      {
+        "title": "The Zone of Interest",
+        "type": "movie",
+        "year": 2024,
+        "winner": false
+      }
+    ],
+    "2025": [
+      {
+        "title": "Anora",
+        "type": "movie",
+        "year": 2025,
+        "winner": true
+      },
+      {
+        "title": "The Brutalist",
+        "type": "movie",
+        "year": 2025,
+        "winner": false
+      },
+      {
+        "title": "A Complete Unknown",
+        "type": "movie",
+        "year": 2025,
+        "winner": false
+      },
+      {
+        "title": "Conclave",
+        "type": "movie",
+        "year": 2025,
+        "winner": false
+      },
+      {
+        "title": "Dune: Part Two",
+        "type": "movie",
+        "year": 2025,
+        "winner": false
+      },
+      {
+        "title": "Emilia Pérez",
+        "type": "movie",
+        "year": 2025,
+        "winner": false
+      },
+      {
+        "title": "I'm Still Here",
+        "type": "movie",
+        "year": 2025,
+        "winner": false
+      },
+      {
+        "title": "Nickel Boys",
+        "type": "movie",
+        "year": 2025,
+        "winner": false
+      },
+      {
+        "title": "The Substance",
+        "type": "movie",
+        "year": 2025,
+        "winner": false
+      },
+      {
+        "title": "Wicked",
+        "type": "movie",
+        "year": 2025,
+        "winner": false
+      }
+    ],
+    "2026": [
+      {
+        "title": "One Battle after Another",
+        "type": "movie",
+        "year": 2026,
+        "winner": true
+      },
+      {
+        "title": "Bugonia",
+        "type": "movie",
+        "year": 2026,
+        "winner": false
+      },
+      {
+        "title": "F1",
+        "type": "movie",
+        "year": 2026,
+        "winner": false
+      },
+      {
+        "title": "Frankenstein",
+        "type": "movie",
+        "year": 2026,
+        "winner": false
+      },
+      {
+        "title": "Hamnet",
+        "type": "movie",
+        "year": 2026,
+        "winner": false
+      },
+      {
+        "title": "Marty Supreme",
+        "type": "movie",
+        "year": 2026,
+        "winner": false
+      },
+      {
+        "title": "The Secret Agent",
+        "type": "movie",
+        "year": 2026,
+        "winner": false
+      },
+      {
+        "title": "Sentimental Value",
+        "type": "movie",
+        "year": 2026,
+        "winner": false
+      },
+      {
+        "title": "Sinners",
+        "type": "movie",
+        "year": 2026,
+        "winner": false
+      },
+      {
+        "title": "Train Dreams",
+        "type": "movie",
+        "year": 2026,
+        "winner": false
+      }
+    ]
+  },
+  "emmys": {
+    "2026": [
+      {
+        "title": "Widow's Bay",
+        "type": "series",
+        "year": 2026,
+        "winner": true
+      },
+      {
+        "title": "DTF St. Louis",
+        "type": "series",
+        "year": 2026,
+        "winner": true
+      },
+      {
+        "title": "The Bear",
+        "type": "series",
+        "year": 2026,
+        "winner": true
+      },
+      {
+        "title": "Spider-Noir",
+        "type": "series",
+        "year": 2026,
+        "winner": true
+      },
+      {
+        "title": "Fallout",
+        "type": "series",
+        "year": 2026,
+        "winner": true
+      },
+      {
+        "title": "Pluribus",
+        "type": "series",
+        "year": 2026,
+        "winner": true
+      },
+      {
+        "title": "The Pitt",
+        "type": "series",
+        "year": 2026,
+        "winner": true
+      }
+    ]
+  },
+  "sources": [
+    "https://www.oscars.org/oscars/ceremonies/2020",
+    "https://www.oscars.org/oscars/ceremonies/2021",
+    "https://www.oscars.org/oscars/ceremonies/2022",
+    "https://www.oscars.org/oscars/ceremonies/2023",
+    "https://www.oscars.org/oscars/ceremonies/2024",
+    "https://www.oscars.org/oscars/ceremonies/2025",
+    "https://www.oscars.org/oscars/ceremonies/2026",
+    "https://www.televisionacademy.com/news/features/emmy-magazine/articles/cover-2026-12"
+  ]
+}

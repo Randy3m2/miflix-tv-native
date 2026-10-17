@@ -38,6 +38,7 @@ import java.util.Locale
 import java.util.UUID
 
 class AppState(context: Context) {
+    init { com.miflix.native2.data.AwardSelections.configure(context.assets.open("awards_catalog.json").bufferedReader().use {it.readText()}) }
     private val appContext=context.applicationContext
     var clearingCache by mutableStateOf(false)
     var cacheCleared by mutableStateOf(false)
@@ -342,44 +343,39 @@ class AppState(context: Context) {
     }
     val ratings=mutableStateMapOf<String,Int>()
     val forYou=mutableStateListOf<MediaSummary>()
-    private var cardFreshnessOwner by mutableStateOf("")
-    private val newlyAddedCards=mutableStateMapOf<String,Long>()
+    private val releaseCardDates=mutableStateMapOf<String,String>()
     private val episodeCardDates=mutableStateMapOf<String,String>()
-    private val cardFreshnessMutex=Mutex()
+    private val cardDateLoadedAt=mutableMapOf<String,Long>()
+    private val cardDateInflight=mutableSetOf<String>()
+    private val cardDateSlots=Semaphore(3)
     fun cardFreshness(item:MediaSummary):String? {
-        if(cardFreshnessOwner!=ratingsKey()) return null
         val now=System.currentTimeMillis()
         if(item.type=="series" && com.miflix.native2.data.CardFreshnessPolicy.newEpisode(episodeCardDates[item.cloudId],now))
             return tr("Nuevo episodio","New Episode")
-        if(com.miflix.native2.data.CardFreshnessPolicy.justAdded(newlyAddedCards[item.cloudId] ?: 0L,now))
-            return tr("Recién agregado","Just Added")
+        if(com.miflix.native2.data.CardFreshnessPolicy.recentRelease(releaseCardDates[item.cloudId] ?: item.releaseDate,now))
+            return tr("Recién agregado","Recently Added")
         return null
     }
-    suspend fun loadCardFreshness(rows:List<MediaSummary>) = cardFreshnessMutex.withLock {
-        val owner=ratingsKey()
-        if(cardFreshnessOwner!=owner) {newlyAddedCards.clear();episodeCardDates.clear();cardFreshnessOwner=owner}
-        val key="catalog_badges:$owner"
-        val initialized=playbackPrefs.contains(key)
-        val known=runCatching {org.json.JSONObject(playbackPrefs.getString(key,"{}"))}.getOrElse {org.json.JSONObject()}
-        val now=System.currentTimeMillis()
-        val baseline=playbackPrefs.getLong(key+":baseline",now)
-        val learning=!initialized || now-baseline<5*60*1000L
-        // Learn asynchronously loaded rails for five minutes on first use, without false new tags.
-        rows.distinctBy {it.cloudId}.take(300).forEach {item ->
-            if(!known.has(item.cloudId) && known.length()<3000) known.put(item.cloudId,if(learning) 0L else now)
-            val added=known.optLong(item.cloudId,0L)
-            if(com.miflix.native2.data.CardFreshnessPolicy.justAdded(added,now)) newlyAddedCards[item.cloudId]=added
-            else newlyAddedCards.remove(item.cloudId)
-        }
-        val edit=playbackPrefs.edit().putString(key,known.toString())
-        if(!initialized) edit.putLong(key+":baseline",now)
-        edit.apply()
-        val slots=Semaphore(3)
-        coroutineScope {
-            rows.filter {it.type=="series"}.distinctBy {it.cloudId}.take(20).map {item ->async {slots.withPermit {
-                val date=try {tmdb.episodeBadgeDate(item)} catch(e:CancellationException) {throw e} catch(_:Exception) {return@withPermit}
-                if(owner==ratingsKey()) episodeCardDates[item.cloudId]=date
-            }}}.awaitAll()
+    fun requestCardFreshness(item:MediaSummary) {
+        if(tmdb.token.isBlank() || item.type !in listOf("movie","series") || item.id<=0) return
+        val key=item.cloudId;val now=System.currentTimeMillis()
+        if(now-(cardDateLoadedAt[key] ?: 0L)<3*3600000L || key in cardDateInflight) return
+        // Movie catalog rows already carry their release date. Only missing metadata/series need a lookup.
+        if(item.type=="movie" && item.releaseDate.isNotBlank()) return
+        if(cardDateInflight.size>=80) return
+        cardDateInflight.add(key)
+        appScope.launch {
+            try {cardDateSlots.withPermit {
+                val dates=tmdb.cardDates(item)
+                releaseCardDates[key]=dates.first;episodeCardDates[key]=dates.second;cardDateLoadedAt[key]=System.currentTimeMillis()
+                if(cardDateLoadedAt.size>500) {
+                    val oldest=cardDateLoadedAt.minByOrNull {it.value}?.key
+                    oldest?.let {cardDateLoadedAt.remove(it);releaseCardDates.remove(it);episodeCardDates.remove(it)}
+                }
+            }} catch(e:CancellationException) {throw e} catch(_:Exception) {
+                // Brief backoff for unavailable metadata; never retry in a timer or per recomposition.
+                cardDateLoadedAt[key]=System.currentTimeMillis()-3*3600000L+60000L
+            } finally {cardDateInflight.remove(key)}
         }
     }
     val romancePicks=mutableStateListOf<MediaSummary>()
@@ -412,6 +408,51 @@ class AppState(context: Context) {
 
     val oscarPicks=mutableStateListOf<MediaSummary>()
     val emmyPicks=mutableStateListOf<MediaSummary>()
+    var holidayHomeLoading by mutableStateOf(false)
+        private set
+    var holidayHomeMessage by mutableStateOf("")
+        private set
+    private var holidayHomeOwner by mutableStateOf("")
+    private val holidayHomeMutex=Mutex()
+    val holidayHomeMatches:Boolean get()=holidayHomeOwner=="${ratingsKey()}:${tmdb.language}"
+    suspend fun loadHolidayHome() = holidayHomeMutex.withLock {
+        if(kidsMode || tmdb.token.isBlank()) return@withLock
+        val owner=ratingsKey();val locale=tmdb.language
+        if(!holidayHomeMatches) {horrorPicks.clear();christmasPicks.clear()}
+        holidayHomeLoading=true;holidayHomeMessage=""
+        try {supervisorScope {
+            val horror=async {tmdb.familiarCatalog("horror")}
+            val christmas=async {tmdb.familiarCatalog("christmas")}
+            val horrorRows=try {horror.await()} catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
+            val christmasRows=try {christmas.await()} catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
+            if(owner==ratingsKey() && locale==tmdb.language && !kidsMode) {
+                horrorPicks.replaceWith(horrorRows);christmasPicks.replaceWith(christmasRows);holidayHomeOwner="$owner:$locale"
+                if(christmasRows.isEmpty()) holidayHomeMessage=tr("No se pudo cargar Navidad. Reintenta.","Could not load Christmas Movies. Try again.")
+            }
+        }} catch(e:CancellationException) {throw e} finally {holidayHomeLoading=false}
+    }
+    val oscarYears:List<Int> get()=com.miflix.native2.data.AwardSelections.years()
+    var oscarYear by mutableIntStateOf(com.miflix.native2.data.AwardSelections.latestYear("oscar"))
+        private set
+    val oscarYearPicks=mutableStateListOf<MediaSummary>()
+    var oscarYearLoading by mutableStateOf(false)
+        private set
+    var oscarYearMessage by mutableStateOf("")
+        private set
+    private var oscarYearGeneration=0
+    suspend fun loadOscarYear(year:Int) {
+        if(kidsMode || year !in oscarYears) return
+        val generation=++oscarYearGeneration;val owner=ratingsKey();val locale=tmdb.language
+        oscarYear=year;oscarYearPicks.clear();oscarYearLoading=true;oscarYearMessage=""
+        try {
+            val rows=tmdb.awardCatalog("oscar",year)
+            if(generation==oscarYearGeneration && owner==ratingsKey() && locale==tmdb.language && !kidsMode) {
+                oscarYearPicks.replaceWith(rows)
+                if(rows.isEmpty()) oscarYearMessage=tr("No se pudo cargar esta selección.","Could not load this selection.")
+            }
+        } catch(e:CancellationException) {throw e} catch(_:Exception) {if(generation==oscarYearGeneration) oscarYearMessage=tr("No se pudo cargar esta selección.","Could not load this selection.")}
+        finally {if(generation==oscarYearGeneration) oscarYearLoading=false}
+    }
     private var simpleHomeRevision by mutableIntStateOf(0)
     val simpleHome: Boolean get() {simpleHomeRevision;return playbackPrefs.getBoolean("simple_home:${ratingsKey()}",false)}
     fun saveSimpleHome(enabled: Boolean) {
@@ -434,7 +475,6 @@ class AppState(context: Context) {
         }
         // Bounded public catalogs, cached locally; no Supabase calls or background polling.
         load("romance",romancePicks);load("kdrama",koreanPicks);load("classics",classicPicks)
-        load("horror",horrorPicks);load("christmas",christmasPicks)
         coroutineScope {
             suspend fun loadAwards(kind:String,target:MutableList<MediaSummary>) {
                 val rows=try {tmdb.awardCatalog(kind)} catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
@@ -2561,7 +2601,7 @@ class AppState(context: Context) {
 }
 
 enum class Screen {
-    SPLASH, HOME, SEARCH, MOVIES, SERIES, COLLECTIONS, COLLECTION_DETAIL, PLATFORM_DETAIL,
+    SPLASH, HOME, SEARCH, MOVIES, SERIES, COLLECTIONS, OSCARS, COLLECTION_DETAIL, PLATFORM_DETAIL,
     GENRES, GENRE_DETAIL, YEAR_DETAIL, MY_LIST, SETTINGS, PROFILES, WATCH_PARTY, PAIR_DEVICE,
     DETAILS, CUSTOM_FILTER, FRANCHISE, PLAYER, MULTIVIEW, LIVE_TV, LIDOM, FRIENDS, TRAKT, NOTIFICATIONS, DIRECTOR_DETAIL
 }

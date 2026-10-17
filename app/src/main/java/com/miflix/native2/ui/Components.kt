@@ -244,7 +244,7 @@ fun MediaCard(
                     Text("${item.year}  ★ ${"%.1f".format(item.rating)}", color = Color(0xFFD5D5D5), fontSize = 11.sp, lineHeight=13.sp)
                 }
             }
-            LocalCardFreshness.current(item)?.let {label ->
+            observeCardFreshness(item)?.let {label ->
                 CardFreshnessTag(label,Modifier.align(Alignment.TopEnd).padding(7.dp).widthIn(max=150.dp))
             }
             progressPercent?.takeIf { it > 0.0 && it < 100.0 }?.let { p ->

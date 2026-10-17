@@ -127,17 +127,10 @@ internal fun AppShell(state: AppState, screen: Screen, onNavigate: (Screen) -> U
 fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     val simple=state.simpleHome
     LaunchedEffect(state.activeProfile.id,state.session?.userId,state.interfaceLanguage) {state.loadFamiliarHome()}
+    LaunchedEffect(state.activeProfile.id,state.session?.userId,state.interfaceLanguage) {state.loadHolidayHome()}
     LaunchedEffect(state.activeProfile.id,state.session?.userId,state.interfaceLanguage,state.discoveryHistoryKey) {
         state.loadBecauseWatched()
     }
-    val badgeRows=(state.series+state.trending+state.movies+state.newMovies+state.topRated).distinctBy {it.cloudId}
-    LaunchedEffect(state.activeProfile.id,state.session?.userId,badgeRows.map {it.cloudId},state.appForeground) {
-        if(state.appForeground && state.movies.isNotEmpty() && state.series.isNotEmpty()) {
-            delay(800)
-            state.loadCardFreshness(badgeRows)
-        }
-    }
-    LaunchedEffect(state.activeProfile.id,state.discoveryHistoryKey) {state.refreshForYou()}
     val genreScroll=rememberLazyListState()
     val firstGenre=remember {FocusRequester()}
     val scroll=rememberLazyListState()
@@ -193,6 +186,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                         items(state.genres,key={it.id}) { genre -> GenreCard(genre.copy(coverUrl=state.genreCovers[genre.id] ?: genre.coverUrl),modifier=if(genre.id==state.genres.firstOrNull()?.id) Modifier.focusRequester(firstGenre) else Modifier) { state.launch { state.openGenre(genre) } } }
                     }
                     FocusButton(tr("Todas las colecciones →","All collections →"),modifier=Modifier.padding(start=40.dp,top=12.dp)) { onNavigate(Screen.COLLECTIONS) }
+                    FocusButton("🏆 Oscars",modifier=Modifier.padding(start=40.dp,top=8.dp)) {onNavigate(Screen.OSCARS)}
                     Spacer(Modifier.height(24.dp))
                 } }
                 if(state.forYou.isNotEmpty()) item(key="for_you") { SpotlightRail(title=tr("Para ti · según lo que ves","For you · Based on what you watch"),rows=state.forYou,onClick=openItem) }
@@ -207,11 +201,11 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 }
                 if(state.familiarHomeMatches && state.oscarPicks.isNotEmpty()) item(key="oscar_picks") {
                     SpotlightRail(tr("Oscar · Ganadoras y nominadas","Oscar · Winners & nominees"),state.oscarPicks,
-                        awardLabels=true,eyebrow=tr("SELECCIÓN · PREMIOS 2024","CURATED · 2024 AWARDS"),onClick=openItem)
+                        awardLabels=true,eyebrow=tr("SELECCIÓN · PREMIOS ","CURATED · AWARDS ")+com.miflix.native2.data.AwardSelections.latestYear("oscar"),onClick=openItem)
                 }
                 if(state.familiarHomeMatches && state.emmyPicks.isNotEmpty()) item(key="emmy_picks") {
                     SpotlightRail(tr("Emmy · Series premiadas","Emmy · Award-winning series"),state.emmyPicks,
-                        awardLabels=true,eyebrow=tr("SELECCIÓN · PREMIOS 2024","CURATED · 2024 AWARDS"),onClick=openItem)
+                        awardLabels=true,eyebrow=tr("SELECCIÓN · PREMIOS ","CURATED · AWARDS ")+com.miflix.native2.data.AwardSelections.latestYear("emmy"),onClick=openItem)
                 }
                 if(!simple && (state.topRated.isNotEmpty() || state.bestSeries.isNotEmpty())) item(key="rewatch_favorites") {
                     val films=state.topRated.filter {it.rating>=8.0}.distinctBy {it.cloudId}.take(10)
@@ -247,12 +241,18 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 if(!simple) item(key="scifi") { SpotlightRail(tr("Ciencia ficción","Science fiction"),state.sciFi,onClick=openItem) }
                 item(key="comedy") { SpotlightRail(tr("Algo para reír","Time for a comedy"),state.comedy,onClick=openItem) }
                 if(!simple) item(key="thrillers") { SpotlightRail(tr("Suspenso y misterio","Thrillers & mystery"),state.thrillers,onClick=openItem) }
-                if(!simple && state.familiarHomeMatches && state.horrorPicks.isNotEmpty()) item(key="horror_movies") {
+                if(state.holidayHomeMatches && state.horrorPicks.isNotEmpty()) item(key="horror_movies") {
                     SpotlightRail(tr("Terror","Horror"),state.horrorPicks,onClick=openItem)
                 }
-                if(!simple && state.familiarHomeMatches && state.christmasPicks.isNotEmpty()) item(key="christmas_movies") {
-                    SpotlightRail(tr("Películas navideñas","Christmas Movies"),state.christmasPicks,
-                        eyebrow=tr("UN POCO DE MAGIA NAVIDEÑA","A LITTLE CHRISTMAS MAGIC"),onClick=openItem)
+                item(key="christmas_movies") {
+                    if(state.holidayHomeMatches && state.christmasPicks.isNotEmpty()) {
+                        SpotlightRail(tr("Películas navideñas","Christmas Movies"),state.christmasPicks,
+                            eyebrow=tr("UN POCO DE MAGIA NAVIDEÑA","A LITTLE CHRISTMAS MAGIC"),onClick=openItem)
+                    } else Column(Modifier.padding(horizontal=40.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                        Text(tr("Películas navideñas","Christmas Movies"),color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
+                        Text(if(state.holidayHomeLoading) tr("Cargando…","Loading…") else state.holidayHomeMessage.ifBlank {tr("Carga la selección de Navidad.","Load the Christmas selection.")},color=Muted,fontSize=14.sp)
+                        if(!state.holidayHomeLoading) FocusButton(tr("Reintentar","Retry")) {state.launch {state.loadHolidayHome()}}
+                    }
                 }
                 if(!simple && (state.comingMovies.isNotEmpty() || state.comingSeries.isNotEmpty())) item(key="coming_soon_home") {
                     SpotlightRail(tr("Próximamente","Coming soon"),(state.comingMovies+state.comingSeries).distinctBy { it.cloudId }.take(30),onClick={ state.launch { state.open(it,upcoming=true) } })
@@ -435,6 +435,8 @@ fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
                     Text(tr("Plataformas, géneros y películas por año.","Streaming services, genres and movies by year."), color = Muted, fontSize = 14.sp, lineHeight=17.sp)
                     Spacer(Modifier.height(16.dp))
                     FocusButton(tr("Filtro personalizado","Custom filter")) { state.screen=Screen.CUSTOM_FILTER }
+                    Spacer(Modifier.height(12.dp))
+                    FocusButton("🏆 Oscars · "+tr("Por año","By year")) {state.screen=Screen.OSCARS}
                     Spacer(Modifier.height(24.dp))
                 }
             }
@@ -635,6 +637,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                     BackIconButton(onClick = onBack)
                     Spacer(Modifier.height(14.dp))
                     Text(item.title, color = Color.White, fontSize = 40.sp, lineHeight=46.sp, fontWeight = FontWeight.Black, maxLines = 2, overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    observeCardFreshness(item)?.let {label ->CardFreshnessTag(label,Modifier.padding(top=8.dp))}
                     Spacer(Modifier.height(8.dp))
                     Text("${item.year}   ★ ${"%.1f".format(item.rating)}   ${details?.runtimeText.orEmpty()}", color = Color(0xFFD6D6D8), fontSize = 15.sp, lineHeight=18.sp)
                     if (!details?.genres.isNullOrEmpty()) {

@@ -1,0 +1,26 @@
+BruniO RC80 / 2.0.0-rc80 / versionCode 22079
+
+Sube los 30 archivos sobre RC79 corregido. Es indispensable incluir app/src/main/assets/awards_catalog.json y los archivos nuevos. Ejecuta el workflow Android TV y espera APK + update.json publicados antes de Check for Updates. Sin SQL, Vercel ni Edge Functions. Este paquete es solo TV; no incorpora conversion AirPlay.
+
+Etiquetas globales:
+- Recently Added / Recien agregado: estreno de pelicula o primera emision de serie en los ultimos 14 dias, excluyendo fechas futuras. TMDB no proporciona fecha de alta real en Torrentio/Comet/Peerflix; la etiqueta usa estreno, no garantiza disponibilidad de una fuente nueva. Se elimina el criterio anterior de primera observacion local, que dejaba sin etiqueta los estrenos de antes de instalar.
+- New Episode: ultimo episodio emitido en los ultimos 14 dias. Tiene prioridad sobre Recently Added. Fecha desconocida = sin etiqueta hasta disponer de metadatos validos.
+- Home, plataformas, busqueda, generos, colecciones, listas y detalles comparten la misma politica por titulo. No se limita a las primeras 20 series de Home. Las etiquetas conviven con la etiqueta de premios sin superponerse.
+- Fecha de estreno incluida en resultados TMDB para evitar consultas adicionales de peliculas. Las tarjetas visibles sin datos y las series usan metadatos por titulo: maximo 3 solicitudes simultaneas, deduplicacion, cache 3 horas, limite de cache 500. Sin timer/polling ni consultas a Supabase. Cambiar de categoria reutiliza esos datos.
+
+Navidad:
+- Carga independiente de las filas de premios, visible en Home debajo de Horror, incluido Modo sencillo y fuera de diciembre.
+- Consulta tematica con respaldo de peliculas conocidas (Home Alone, Elf, Klaus, The Polar Express, The Grinch, The Holiday, Christmas Vacation y Love Actually).
+- Si la red no permite cargar tampoco el respaldo, conserva el encabezado y muestra Reintentar, sin desaparecer silenciosamente.
+
+Premios:
+- Home: nominadas a Mejor Pelicula de los Oscar 2026 y seleccion de series con Emmy 2026 verificado. Los premios no se infieren de la puntuacion ni del ano de estreno.
+- Collections -> Oscars (tambien acceso en Home): selector por ano de ceremonia 2020-2026, Todas las nominadas o Ganadora de Mejor Pelicula. No es una lista de todas las categorias de los Oscar; el alcance esta indicado en pantalla.
+- Datos editoriales locales verificados en las paginas oficiales enlazadas en awards_catalog.json. No se inventan ediciones futuras ni se presenta 2024 como ano actual.
+- Busqueda de fichas TMDB por titulo coincidente y ventana temporal para evitar remakes errados; omite titulos que no consigue identificar. Resultados por ano e idioma en cache 3 horas. Las ediciones posteriores a 2026 requeriran actualizar el catalogo oficial incluido.
+
+Pruebas:
+- Prueba Java de ventanas de 14 dias, datos ausentes/invalidos/futuros y medianoche dominicana.
+- Revision sintactica Kotlin sin nuevos errores respecto a RC79, espejos identicos, datos Oscar 2020-2026 (un ganador por edicion), verificacion de rutas, caché/deduplicacion y Navidad visible.
+- Checks de Party, navegacion, Home, paneles laterales, fallback espanol, momentos y presencia aprobados.
+- No se compilo el APK ni se realizo validacion visual/control remoto en una TV fisica aqui. Debe validarse en GitHub y dispositivo.

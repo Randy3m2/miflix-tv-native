@@ -50,7 +50,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         config.setLocale(java.util.Locale.forLanguageTag(state.interfaceLanguage))
         android.view.ContextThemeWrapper(baseContext,0).apply { applyOverrideConfiguration(config) }
     }
-    CompositionLocalProvider(LocalCardFreshness provides {item: com.miflix.native2.model.MediaSummary -> state.cardFreshness(item)},LocalPlayerMenuSide provides (state.screen==Screen.PLAYER || state.screen==Screen.MULTIVIEW),LocalContext provides localizedContext,LocalProfileManage provides {state.socialProfileEditor=true},LocalCastPair provides {state.localCastPairing=true},LocalTitleActions provides {item: com.miflix.native2.model.MediaSummary -> state.titleActions(item)}) {
+    CompositionLocalProvider(LocalCardFreshnessLoad provides {item: com.miflix.native2.model.MediaSummary -> state.requestCardFreshness(item)},LocalCardFreshness provides {item: com.miflix.native2.model.MediaSummary -> state.cardFreshness(item)},LocalPlayerMenuSide provides (state.screen==Screen.PLAYER || state.screen==Screen.MULTIVIEW),LocalContext provides localizedContext,LocalProfileManage provides {state.socialProfileEditor=true},LocalCastPair provides {state.localCastPairing=true},LocalTitleActions provides {item: com.miflix.native2.model.MediaSummary -> state.titleActions(item)}) {
     MaterialTheme {
         var bootstrapped by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) {
@@ -108,6 +108,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             Screen.FRANCHISE -> FranchiseScreen(state)
             Screen.CUSTOM_FILTER -> CustomFilterScreen(state)
             Screen.COLLECTIONS -> CollectionsScreen(state) { state.screen = Screen.HOME }
+            Screen.OSCARS -> OscarsScreen(state)
             Screen.COLLECTION_DETAIL -> CatalogScreen(state, state.collectionTitle, state.collectionItems, onBack = { state.screen = Screen.COLLECTIONS })
             Screen.PLATFORM_DETAIL -> PlatformScreen(state) { state.screen = Screen.COLLECTIONS }
             Screen.GENRES -> CollectionsScreen(state) { state.screen = Screen.HOME }

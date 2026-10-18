@@ -143,6 +143,8 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     var discoveryRetry by remember {mutableIntStateOf(0)}
     var showCinemaHub by remember(discoveryOwner) {mutableStateOf(false)}
     if(showCinemaHub) CinemaHub(state) {showCinemaHub=false}
+    var showLocalLists by remember(discoveryOwner) {mutableStateOf(false)}
+    if(showLocalLists && state.localExtras.enabled("lists")) LocalListsRC100(state,null) {showLocalLists=false}
     var showTrailers by remember(discoveryOwner) {mutableStateOf(false)}
     val clock=remember(state.appForeground) {java.util.Calendar.getInstance()}
     val contextualMood=remember(clock) {com.miflix.native2.data.DiscoveryMood.context(clock.get(java.util.Calendar.HOUR_OF_DAY),clock.get(java.util.Calendar.MONTH)+1,clock.get(java.util.Calendar.DAY_OF_MONTH),clock.get(java.util.Calendar.DAY_OF_WEEK) in setOf(java.util.Calendar.SATURDAY,java.util.Calendar.SUNDAY))}
@@ -194,7 +196,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
         }) {
     BoxWithConstraints(Modifier.fillMaxSize().background(Bg)) {
         val homeHeroHeight=(maxHeight*.5f).coerceIn(228.dp,284.dp)
-        BrowsingViewport(state,(state.trending+state.movies).firstOrNull {it.type=="movie"},heroHeight=homeHeroHeight,headerInset=84.dp,heroFocus=heroFocus,ranked=(state.trending+state.movies).filter {it.type=="movie"}.distinctBy {it.cloudId}.take(10),
+        BrowsingViewport(state,(state.localRecommendations(state.trending)+state.localRecommendations(state.movies)).firstOrNull {it.type=="movie"},heroHeight=homeHeroHeight,headerInset=84.dp,heroFocus=heroFocus,ranked=(state.localRecommendations(state.trending)+state.localRecommendations(state.movies)).filter {it.type=="movie"}.distinctBy {it.cloudId}.take(10),
             onRandom={if(!state.randomChoosing) state.launch {state.playRandomMovie()}}) {
         CompositionLocalProvider(LocalBringIntoViewSpec provides object : BringIntoViewSpec {
             // HomeShelfFrame aligns the full group. Child focus must not scroll away its heading.
@@ -204,13 +206,19 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 var shelfIndex=0
                 val homeSections=mutableListOf<HomeSection>()
                 fun shelf(key:String,content:@Composable ()->Unit) {homeSections.add(HomeSection(key,content))}
+                if(state.localExtras.enabled("lists")) shelf(key="local_lists") {
+                    Column(Modifier.padding(40.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                        Text(tr("Mis listas locales","My local lists"),color=Color.White,fontSize=24.sp)
+                        FocusButton(tr("Abrir mis listas","Open my lists")) {showLocalLists=true}
+                    }
+                }
                 shelf(key="discovery-controls") {
                     DiscoveryControls(discoveryMood,discoveryLoading || state.randomChoosing,
                         onMood={discoveryMood=it;discoveryRetry++},onTrailers={showTrailers=true},onTools={showCinemaHub=true},
-                        onSurprise={if(!discoveryLoading && !state.randomChoosing) {if(discoveryRows.isEmpty()) state.error=tr("La selección aún no está disponible. Elige otro ánimo o reintenta.","Picks are not available yet. Choose another mood or retry.") else state.launch {state.surpriseDiscovery(discoveryRows)}}})
+                        onSurprise={if(!discoveryLoading && !state.randomChoosing) {if(state.localRecommendations(discoveryRows).isEmpty()) state.error=tr("La selección aún no está disponible. Elige otro ánimo o reintenta.","Picks are not available yet. Choose another mood or retry.") else state.launch {state.surpriseDiscovery(state.localRecommendations(discoveryRows))}}})
                 }
-                if(discoveryRows.isNotEmpty()) shelf(key="discovery-picks") {
-                    SpotlightRail(moodTitle(effectiveMood),discoveryRows,eyebrow=if(discoveryMood.isEmpty()) tr("PARA ESTE MOMENTO","FOR THIS MOMENT") else tr("TU ÁNIMO · TU SELECCIÓN","YOUR MOOD · YOUR PICKS"),onClick=openItem)
+                if(state.localRecommendations(discoveryRows).isNotEmpty()) shelf(key="discovery-picks") {
+                    SpotlightRail(moodTitle(effectiveMood),state.localRecommendations(discoveryRows),eyebrow=if(discoveryMood.isEmpty()) tr("PARA ESTE MOMENTO","FOR THIS MOMENT") else tr("TU ÁNIMO · TU SELECCIÓN","YOUR MOOD · YOUR PICKS"),onClick=openItem)
                 }
                 if(discoveryError) shelf(key="discovery-retry") {
                     FeatureActionCard(tr("No se pudo cargar la selección","Could not load picks"),tr("Pulsa para reintentar","Press to retry"),modifier=Modifier.padding(40.dp)) {discoveryRetry++}
@@ -244,64 +252,64 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                     }
                     Spacer(Modifier.height(8.dp))
                 } }
-                if(state.forYou.isNotEmpty()) shelf(key="for_you") { SpotlightRail(title=tr("Para ti · según lo que ves","For you · Based on what you watch"),rows=state.forYou,onClick=openItem) }
-                if(state.becauseWatchedMatches && state.becauseWatchedPicks.isNotEmpty()) shelf(key="because_you_watched") {
-                    SpotlightRail(tr("Porque viste ","Because you watched ")+state.becauseWatchedTitle,state.becauseWatchedPicks,
+                if(state.localRecommendations(state.forYou).isNotEmpty()) shelf(key="for_you") { SpotlightRail(title=tr("Para ti · según lo que ves","For you · Based on what you watch"),rows=state.localRecommendations(state.forYou),onClick=openItem) }
+                if(state.becauseWatchedMatches && state.localRecommendations(state.becauseWatchedPicks).isNotEmpty()) shelf(key="because_you_watched") {
+                    SpotlightRail(tr("Porque viste ","Because you watched ")+state.becauseWatchedTitle,state.localRecommendations(state.becauseWatchedPicks),
                         eyebrow=tr("MÁS HISTORIAS PARA TI","MORE STORIES FOR YOU"),onClick=openItem)
                 }
-                if(!simple && state.trending.isNotEmpty()) shelf(key="ranked_movies") {
+                if(!simple && state.localRecommendations(state.trending).isNotEmpty()) shelf(key="ranked_movies") {
                     SpotlightRail(tr("Top 10 · Películas","Top 10 · Movies"),
-                        (state.trending+state.movies).filter {it.type=="movie"}.distinctBy {it.cloudId}.take(10),
+                        (state.localRecommendations(state.trending)+state.localRecommendations(state.movies)).filter {it.type=="movie"}.distinctBy {it.cloudId}.take(10),
                         ranked=true,eyebrow=tr("TENDENCIAS EN BRUNIO","TRENDING ON BRUNIO"),onClick=openItem)
                 }
-                if(state.familiarHomeMatches && state.oscarPicks.isNotEmpty()) shelf(key="oscar_picks") {
-                    SpotlightRail(tr("Oscar · Ganadoras y nominadas","Oscar · Winners & nominees"),state.oscarPicks,
+                if(state.familiarHomeMatches && state.localRecommendations(state.oscarPicks).isNotEmpty()) shelf(key="oscar_picks") {
+                    SpotlightRail(tr("Oscar · Ganadoras y nominadas","Oscar · Winners & nominees"),state.localRecommendations(state.oscarPicks),
                         awardLabels=true,eyebrow=tr("SELECCIÓN · PREMIOS ","CURATED · AWARDS ")+com.miflix.native2.data.AwardSelections.latestYear("oscar"),onClick=openItem)
                 }
-                if(state.familiarHomeMatches && state.emmyPicks.isNotEmpty()) shelf(key="emmy_picks") {
-                    SpotlightRail(tr("Emmy · Series premiadas","Emmy · Award-winning series"),state.emmyPicks,
+                if(state.familiarHomeMatches && state.localRecommendations(state.emmyPicks).isNotEmpty()) shelf(key="emmy_picks") {
+                    SpotlightRail(tr("Emmy · Series premiadas","Emmy · Award-winning series"),state.localRecommendations(state.emmyPicks),
                         awardLabels=true,eyebrow=tr("SELECCIÓN · PREMIOS ","CURATED · AWARDS ")+com.miflix.native2.data.AwardSelections.latestYear("emmy"),onClick=openItem)
                 }
-                if(!simple && (state.topRated.isNotEmpty() || state.bestSeries.isNotEmpty())) shelf(key="rewatch_favorites") {
-                    val films=state.topRated.filter {it.rating>=8.0}.distinctBy {it.cloudId}.take(10)
-                    val shows=state.bestSeries.filter {it.rating>=8.0}.distinctBy {it.cloudId}.take(10)
+                if(!simple && (state.localRecommendations(state.topRated).isNotEmpty() || state.localRecommendations(state.bestSeries).isNotEmpty())) shelf(key="rewatch_favorites") {
+                    val films=state.localRecommendations(state.topRated).filter {it.rating>=8.0}.distinctBy {it.cloudId}.take(10)
+                    val shows=state.localRecommendations(state.bestSeries).filter {it.rating>=8.0}.distinctBy {it.cloudId}.take(10)
                     val rewatch=(0 until maxOf(films.size,shows.size)).flatMap {index ->listOfNotNull(films.getOrNull(index),shows.getOrNull(index))}
                     SpotlightRail(tr("Ojalá olvidarlas para verlas otra vez","Make me forget so I can rewatch"),rewatch,
                         eyebrow=tr("PELÍCULAS Y SERIES · HISTORIAS INOLVIDABLES","MOVIES & SERIES · UNFORGETTABLE STORIES"),onClick=openItem)
                 }
-                if(state.familiarHomeMatches && state.romancePicks.isNotEmpty()) shelf(key="romance_picks") {
-                    SpotlightRail(tr("Historias de amor","Romance & love stories"),state.romancePicks,onClick=openItem)
+                if(state.familiarHomeMatches && state.localRecommendations(state.romancePicks).isNotEmpty()) shelf(key="romance_picks") {
+                    SpotlightRail(tr("Historias de amor","Romance & love stories"),state.localRecommendations(state.romancePicks),onClick=openItem)
                 }
-                if(state.familiarHomeMatches && state.koreanPicks.isNotEmpty()) shelf(key="korean_picks") {
-                    SpotlightRail(tr("Dramas coreanos","K-dramas"),state.koreanPicks,onClick=openItem)
+                if(state.familiarHomeMatches && state.localRecommendations(state.koreanPicks).isNotEmpty()) shelf(key="korean_picks") {
+                    SpotlightRail(tr("Dramas coreanos","K-dramas"),state.localRecommendations(state.koreanPicks),onClick=openItem)
                 }
-                if(state.familiarHomeMatches && state.classicPicks.isNotEmpty()) shelf(key="classic_picks") {
-                    SpotlightRail(tr("Clásicos de siempre","Timeless classics"),state.classicPicks,onClick=openItem)
+                if(state.familiarHomeMatches && state.localRecommendations(state.classicPicks).isNotEmpty()) shelf(key="classic_picks") {
+                    SpotlightRail(tr("Clásicos de siempre","Timeless classics"),state.localRecommendations(state.classicPicks),onClick=openItem)
                 }
                 if(!simple) shelf(key="franchises_home") {
                     CollectionRail(tr("Franquicias","Franchises"),listOf(CollectionTile("franchise:marvel","Marvel",""),CollectionTile("franchise:dc","DC",""))) { tile ->
                         state.launch { state.openFranchise(tile.id.substringAfter(":")) }
                     }
                 }
-                if(state.seasonalItems.isNotEmpty()) shelf(key="seasonal") {
-                    SpotlightRail(seasonalTitle(state.seasonalTheme),state.seasonalItems,onClick=openItem,
+                if(state.localRecommendations(state.seasonalItems).isNotEmpty()) shelf(key="seasonal") {
+                    SpotlightRail(seasonalTitle(state.seasonalTheme),state.localRecommendations(state.seasonalItems),onClick=openItem,
                         eyebrow=tr("SELECCIÓN DE TEMPORADA","SEASONAL SPOTLIGHT"))
                 }
-                shelf(key="movies") { SpotlightRail(title=tr("Películas populares","Popular · Movies"),rows=state.movies,onClick=openItem) }
-                shelf(key="series") { SpotlightRail(title=tr("Series populares","Popular · Series"),rows=state.series,onClick=openItem) }
-                if(!simple) shelf(key="top") { SpotlightRail(title=tr("Mejor valorados","Top Rated"),rows=state.topRated,onClick=openItem) }
-                if(!simple) shelf(key="now_playing") { SpotlightRail(tr("Estrenos en cartelera","Now playing"),state.newMovies,onClick=openItem) }
-                if(!simple) shelf(key="best_series") { SpotlightRail(tr("Series mejor valoradas","Top rated series"),state.bestSeries,onClick=openItem) }
-                if(!simple) shelf(key="action") { SpotlightRail(tr("Acción para esta noche","Action tonight"),state.action,onClick=openItem) }
-                if(!simple) shelf(key="scifi") { SpotlightRail(tr("Ciencia ficción","Science fiction"),state.sciFi,onClick=openItem) }
-                shelf(key="comedy") { SpotlightRail(tr("Algo para reír","Time for a comedy"),state.comedy,onClick=openItem) }
-                if(!simple) shelf(key="thrillers") { SpotlightRail(tr("Suspenso y misterio","Thrillers & mystery"),state.thrillers,onClick=openItem) }
-                if(state.holidayHomeMatches && state.horrorPicks.isNotEmpty()) shelf(key="horror_movies") {
-                    SpotlightRail(tr("Terror","Horror"),state.horrorPicks,onClick=openItem)
+                shelf(key="movies") { SpotlightRail(title=tr("Películas populares","Popular · Movies"),rows=state.localRecommendations(state.movies),onClick=openItem) }
+                shelf(key="series") { SpotlightRail(title=tr("Series populares","Popular · Series"),rows=state.localRecommendations(state.series),onClick=openItem) }
+                if(!simple) shelf(key="top") { SpotlightRail(title=tr("Mejor valorados","Top Rated"),rows=state.localRecommendations(state.topRated),onClick=openItem) }
+                if(!simple) shelf(key="now_playing") { SpotlightRail(tr("Estrenos en cartelera","Now playing"),state.localRecommendations(state.newMovies),onClick=openItem) }
+                if(!simple) shelf(key="best_series") { SpotlightRail(tr("Series mejor valoradas","Top rated series"),state.localRecommendations(state.bestSeries),onClick=openItem) }
+                if(!simple) shelf(key="action") { SpotlightRail(tr("Acción para esta noche","Action tonight"),state.localRecommendations(state.action),onClick=openItem) }
+                if(!simple) shelf(key="scifi") { SpotlightRail(tr("Ciencia ficción","Science fiction"),state.localRecommendations(state.sciFi),onClick=openItem) }
+                shelf(key="comedy") { SpotlightRail(tr("Algo para reír","Time for a comedy"),state.localRecommendations(state.comedy),onClick=openItem) }
+                if(!simple) shelf(key="thrillers") { SpotlightRail(tr("Suspenso y misterio","Thrillers & mystery"),state.localRecommendations(state.thrillers),onClick=openItem) }
+                if(state.holidayHomeMatches && state.localRecommendations(state.horrorPicks).isNotEmpty()) shelf(key="horror_movies") {
+                    SpotlightRail(tr("Terror","Horror"),state.localRecommendations(state.horrorPicks),onClick=openItem)
                 }
                 shelf(key="christmas_movies") {
-                    if(state.holidayHomeMatches && state.christmasPicks.isNotEmpty()) {
-                        SpotlightRail(tr("Películas navideñas","Christmas Movies"),state.christmasPicks,
+                    if(state.holidayHomeMatches && state.localRecommendations(state.christmasPicks).isNotEmpty()) {
+                        SpotlightRail(tr("Películas navideñas","Christmas Movies"),state.localRecommendations(state.christmasPicks),
                             eyebrow=tr("UN POCO DE MAGIA NAVIDEÑA","A LITTLE CHRISTMAS MAGIC"),onClick=openItem)
                     } else Column(Modifier.padding(horizontal=40.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                         Text(tr("Películas navideñas","Christmas Movies"),color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
@@ -309,8 +317,8 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                         if(!state.holidayHomeLoading) FocusButton(tr("Reintentar","Retry")) {state.launch {state.loadHolidayHome()}}
                     }
                 }
-                if(!simple && (state.comingMovies.isNotEmpty() || state.comingSeries.isNotEmpty())) shelf(key="coming_soon_home") {
-                    SpotlightRail(tr("Próximamente","Coming soon"),(state.comingMovies+state.comingSeries).distinctBy { it.cloudId }.take(30),onClick={ state.launch { state.open(it,upcoming=true) } })
+                if(!simple && (state.localRecommendations(state.comingMovies).isNotEmpty() || state.localRecommendations(state.comingSeries).isNotEmpty())) shelf(key="coming_soon_home") {
+                    SpotlightRail(tr("Próximamente","Coming soon"),(state.localRecommendations(state.comingMovies)+state.localRecommendations(state.comingSeries)).distinctBy { it.cloudId }.take(30),onClick={ state.launch { state.open(it,upcoming=true) } })
                 }
                 val order=state.homeRowOrder
                 homeSections.filter {it.key !in state.hiddenHomeRows &&
@@ -329,7 +337,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                     shelfMotion.reset();scroll.scrollToItem(0)
                     for(attempt in 0 until 3) {
                         androidx.compose.runtime.withFrameNanos { }
-                        val target=if(state.trending.isNotEmpty()) heroFocus else contentFocus
+                        val target=if(state.localRecommendations(state.trending).isNotEmpty()) heroFocus else contentFocus
                         if(runCatching {target.requestFocus()}.getOrDefault(false)) break
                     }
                 })
@@ -456,6 +464,10 @@ private fun CollectionRail(title: String, rows: List<CollectionTile>, onClick: (
 @Composable
 fun CatalogScreen(state: AppState, title: String, catalog: List<MediaSummary>, onBack: () -> Unit, footer: (@Composable () -> Unit)? = null, header: (@Composable () -> Unit)? = null) {
     BackHandler(onBack = onBack)
+    val localCatalogKey=state.localCatalogKeyRC100(title)
+    var showLocalFilters by remember(localCatalogKey) {mutableStateOf(false)}
+    if(showLocalFilters) LocalCatalogFiltersRC100(state,localCatalogKey,catalog) {showLocalFilters=false}
+    val visibleCatalog=localCatalogRC100(state,localCatalogKey,catalog)
     val catalogScroll=androidx.compose.runtime.saveable.rememberSaveable(title,saver=androidx.compose.foundation.lazy.grid.LazyGridState.Saver) { androidx.compose.foundation.lazy.grid.LazyGridState() }
     var previousCount by remember(title) {mutableIntStateOf(catalog.size)}
     var newBatchStart by remember(title) {mutableIntStateOf(-1)}
@@ -463,7 +475,7 @@ fun CatalogScreen(state: AppState, title: String, catalog: List<MediaSummary>, o
     LaunchedEffect(catalog.size,title) {
         val before=previousCount
         previousCount=catalog.size
-        if(state.screen==Screen.GENRE_DETAIL && before>0 && catalog.size>before) {
+        if(state.screen==Screen.GENRE_DETAIL && before>0 && catalog.size>before && visibleCatalog.size==catalog.size) {
             newBatchStart=before
             catalogScroll.scrollToItem(before)
             withFrameNanos { }
@@ -472,17 +484,18 @@ fun CatalogScreen(state: AppState, title: String, catalog: List<MediaSummary>, o
     }
     BrowseReturnScope("catalog:$title") {
     AppShell(state, state.screen, { state.screen = it }) {
-        BrowsingViewport(state,catalog.firstOrNull(),heroHeight=152.dp) {
+        BrowsingViewport(state,visibleCatalog.firstOrNull(),heroHeight=152.dp) {
         Column(Modifier.fillMaxSize().padding(start = 34.dp, top = 8.dp, end = 34.dp)) {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                 Text(title,color=Color.White,fontSize=24.sp,lineHeight=29.sp,fontWeight=FontWeight.Black,modifier=Modifier.weight(1f))
-                Text("${catalog.size} "+tr("cargados","loaded"),color=Muted,fontSize=12.sp)
+                Text("${visibleCatalog.size}/${catalog.size} "+tr("cargados","loaded"),color=Muted,fontSize=12.sp)
+                if(state.localExtras.enabled("filters")) FocusButton(tr("Filtros locales","Local filters")) {showLocalFilters=true}
             }
             header?.invoke()
             Spacer(Modifier.height(8.dp))
             LazyVerticalGrid(columns=GridCells.Adaptive(220.dp),state=catalogScroll,modifier=Modifier.weight(1f).fillMaxWidth().smoothVerticalDpad(),
                 horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(bottom=48.dp,top=8.dp)) {
-                gridItems(catalog,key={it.cloudId}) { item -> MediaCard(item,landscape=true,compact=true,modifier=Modifier.fillMaxWidth().then(homeReturnFocus("catalog:$title:${item.cloudId}"))
+                gridItems(visibleCatalog,key={it.cloudId}) { item -> MediaCard(item,landscape=true,compact=true,modifier=Modifier.fillMaxWidth().then(homeReturnFocus("catalog:$title:${item.cloudId}"))
                     .then(if(item.cloudId==catalog.getOrNull(newBatchStart)?.cloudId) Modifier.focusRequester(newBatchFocus) else Modifier),progressPercent=state.progress[item.cloudId]?.percent,onLongClick={state.titleActions(item)}) { state.launch { state.open(item,upcoming=state.screen==Screen.GENRE_DETAIL && state.genreUpcoming) } } }
                 if(footer!=null) item(span={ androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { footer() }
             }
@@ -652,6 +665,10 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
     val item = state.selected ?: return
     val details = state.details
     val saved = state.progress[item.cloudId]
+    var showLocalListAdd by remember(item.cloudId) {mutableStateOf(false)}
+    var showNotToday by remember(item.cloudId) {mutableStateOf(false)}
+    if(showLocalListAdd) LocalListsRC100(state,item) {showLocalListAdd=false}
+    if(showNotToday) LocalNotTodayRC100(state,item) {showNotToday=false}
     var showMore by remember(item.cloudId) { mutableStateOf(false) }
     var showRecommend by remember(item.cloudId) { mutableStateOf(false) }
     var showTaste by remember(item.cloudId) {mutableStateOf(false)}
@@ -700,6 +717,8 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
         LaunchedEffect(Unit) { withFrameNanos { };runCatching { moreFocus.requestFocus() } }
         Column(Modifier.consumeOpeningPress().widthIn(max=520.dp).heightIn(max=480.dp).background(Panel,RoundedCornerShape(24.dp)).padding(24.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Text(tr("Más opciones","More options"),color=Color.White,fontSize=24.sp)
+            if(state.localExtras.enabled("lists")) FocusButton(tr("Añadir a lista local","Add to local list")) {showMore=false;showLocalListAdd=true}
+            if(state.localExtras.enabled("hide")) FocusButton(tr("Hoy no quiero ver esto","Not today")) {showMore=false;showNotToday=true}
             if(!state.selectedUpcoming) FocusButton(tr("Desde el principio","Play from beginning"),modifier=Modifier.focusRequester(moreFocus)) { showMore=false;state.launch { if(item.type=="movie") state.playMovie(true) else state.playSeriesFromStart() } }
             FocusButton(tr("Añadir a cola","Add to queue"),modifier=if(state.selectedUpcoming) Modifier.focusRequester(moreFocus) else Modifier) { showMore=false;if(item.type=="series") showQueueAdd=true else state.enqueue(item) }
             FocusButton(tr("Ver cola","View queue")+" · ${state.queueEntries.size}") { showMore=false;showQueue=true }
@@ -839,6 +858,8 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var addonUrl by remember { mutableStateOf("") }
+    var showLocalExtras by remember {mutableStateOf(false)}
+    if(showLocalExtras) LocalExtrasSettingsRC100(state) {showLocalExtras=false}
     var showHomeOrder by remember {mutableStateOf(false)}
     var showCinemaHub by remember {mutableStateOf(false)}
     var showHomeVisibility by remember {mutableStateOf(false)}
@@ -998,6 +1019,9 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
 
                         }
                     }
+                    if(category in listOf("playback","appearance","system")) item(key="local-extras-rc100") {SettingsSectionCard {
+                        FocusButton(tr("Funciones locales · Listas y preferencias","Local features · Lists and preferences")) {showLocalExtras=true}
+                    }}
                     if(category=="appearance") item(key="home-order") {SettingsSectionCard {
                         FocusButton(tr("Orden de filas de Home","Home row order")) {showHomeOrder=true}
                         FocusButton(tr("Mostrar u ocultar filas de Home","Show or hide Home rows")) {showHomeVisibility=true}
@@ -1323,8 +1347,9 @@ fun WatchPartyScreen(state: AppState,onBack: () -> Unit) = PartyLobby(state,onBa
 fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     val context = LocalContext.current
     val mini=state.miniPlayer && state.screen!=Screen.PLAYER
-    val timing=remember(request.playbackId) { com.miflix.native2.player.SubtitleTiming() }
-    var timingMs by remember(request.playbackId) { mutableStateOf(0L) }
+    val savedSeriesTracks=remember(request.playbackId) {state.localExtras.trackChoice(state.localExtrasScope(),request.item)}
+    val timing=remember(request.playbackId) { com.miflix.native2.player.SubtitleTiming().also {it.delayMs=savedSeriesTracks?.optLong("delay",0L) ?: 0L} }
+    var timingMs by remember(request.playbackId) { mutableStateOf(savedSeriesTracks?.optLong("delay",0L) ?: 0L) }
     var confirmMulti by remember { mutableStateOf(false) }
     val playbackView = LocalView.current
     var quickReactions by remember(request.playbackId) { mutableStateOf(false) }
@@ -1360,7 +1385,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var showEpisodes by remember(request.playbackId) { mutableStateOf(false) }
     var episodesResumeAfterClose by remember(request.playbackId) { mutableStateOf(false) }
     val subtitles = request.stream.subtitles
-    val preferredText = state.subtitleLanguage.takeUnless { it == "off" }
+    val seriesTextOff=savedSeriesTracks?.optBoolean("textOff") ?: (state.subtitleLanguage=="off")
+    val preferredText = if(seriesTextOff) null else savedSeriesTracks?.optString("text")?.takeIf {it.isNotBlank()} ?: state.subtitleLanguage.takeUnless {it=="off"}
     var paused by remember(request.playbackId) { mutableStateOf(false) }
     var pauseSynopsis by remember(request.playbackId) { mutableStateOf(false) }
     var pauseInfoDismissed by remember(request.playbackId) { mutableStateOf(false) }
@@ -1418,7 +1444,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 trackBuilder.setPreferredAudioLanguages("es", "en")
             } else trackBuilder.setPreferredAudioLanguage(state.audioLanguage.takeIf { it.isNotBlank() })
             if (preferredText != null) trackBuilder.setPreferredTextLanguage(preferredText)
-            trackBuilder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT,state.subtitleLanguage == "off")
+            savedSeriesTracks?.optString("audio")?.takeIf {it.isNotBlank()}?.let {trackBuilder.setPreferredAudioLanguage(it)}
+            trackBuilder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT,seriesTextOff)
             trackSelectionParameters = trackBuilder.build()
             videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
             prepare()
@@ -1500,8 +1527,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             if(entry.season>0) state.tmdb.episodeInfo(nextItem,entry.season,entry.episode)?.overview.orEmpty() else nextItem.overview
         }.getOrDefault("") }
     }
-    LaunchedEffect(ended,upcoming,queueNext?.id,cancelAutoplay,state.autoplayNext,rateAtEnd,randomMode) {
-        if(request.momentEndMs<=0 && ended && !rateAtEnd && !cancelAutoplay && state.partyRole!=PartyRole.GUEST && (queueNext!=null || (randomMode || upcoming!=null) && state.autoplayNext)) {
+    LaunchedEffect(ended,upcoming,queueNext?.id,cancelAutoplay,state.autoplayNext,rateAtEnd,randomMode,state.localExtras.sleepStopped,state.localExtras.stillPrompt) {
+        if(!state.localExtras.sleepStopped && !state.localExtras.stillPrompt && request.momentEndMs<=0 && ended && !rateAtEnd && !cancelAutoplay && state.partyRole!=PartyRole.GUEST && (queueNext!=null || (randomMode || upcoming!=null) && state.autoplayNext)) {
             countdown=10
             while(countdown>0) { delay(1000);countdown-- }
             cancelAutoplay=true
@@ -1559,6 +1586,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 )
         }
         var triedLiveHls=false
+        var restoredSeriesAudio=false
         val listener = object : Player.Listener {
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                 // Some IPTV endpoints have no extension and return generic content types.
@@ -1575,10 +1603,20 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
             override fun onTracksChanged(value: androidx.media3.common.Tracks) {
                 tracks = value
+                if(!restoredSeriesAudio && savedSeriesTracks!=null && value.groups.any {it.type==C.TRACK_TYPE_AUDIO}) {
+                    restoredSeriesAudio=true
+                    val language=savedSeriesTracks.optString("audio")
+                    val label=savedSeriesTracks.optString("audioLabel")
+                    if(language.isNotBlank() || label.isNotBlank()) {
+                        val matches=value.groups.filter {it.type==C.TRACK_TYPE_AUDIO}.flatMap {g -> (0 until g.length).filter {i ->g.isTrackSupported(i) && (language.isBlank() || g.getTrackFormat(i).language==language)}.map {i ->g to i}}
+                        val match=matches.firstOrNull {(g,i) ->label.isNotBlank() && g.getTrackFormat(i).label==label} ?: matches.firstOrNull()
+                        match?.let {(g,i) ->player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().setOverrideForType(androidx.media3.common.TrackSelectionOverride(g.mediaTrackGroup,i)).build()}
+                    }
+                }
                 // Reject a falsely labelled English release only when every supported
                 // audio track has an explicit language and none is English.
                 if(!request.live && state.watchParty==null &&
-                    com.miflix.native2.data.StreamLanguagePriority.prefersEnglish(state.audioLanguage) &&
+                    com.miflix.native2.data.StreamLanguagePriority.prefersEnglish(savedSeriesTracks?.optString("audio")?.takeIf {it.isNotBlank()} ?: state.audioLanguage) &&
                     com.miflix.native2.data.StreamOrdering.hasEnglishAudio(request.stream)) {
                     val languages=value.groups.filter {it.type==C.TRACK_TYPE_AUDIO}.flatMap {group ->
                         (0 until group.length).filter {group.isTrackSupported(it)}.map {group.getTrackFormat(it).language.orEmpty().trim().lowercase(java.util.Locale.ROOT)}
@@ -1619,6 +1657,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 if(playbackState==Player.STATE_READY) state.socialPlaybackReady(request,player.currentPosition,player.duration)
                 if (playbackState == Player.STATE_ENDED) {
                     state.socialPlaybackEnded(request)
+                    if(state.watchParty==null && !request.live && request.momentEndMs<=0) state.localExtras.episodeEnded(request.playbackId,request.item.type=="series")
                     ended = true; paused = false
                     val duration = player.duration.coerceAtLeast(0)
                     if (duration > 0) state.updateProgress(request, duration, duration, ended = true)
@@ -1743,7 +1782,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     LaunchedEffect(exitArmedAt) { if(exitArmedAt!=0L) { delay(2200);exitArmedAt=0L } }
     BackHandler(enabled=!mini) {
         if (quickReactions) { quickReactions=false;controlsVisible=true;controlInteraction++ }
-        else if (playerMenu != null) playerMenu = null
+        else if (playerMenu != null) {if(playerMenu in listOf("audio","subtitles","timing")) state.localExtras.rememberTracks(state.localExtrasScope(),request.item,player,timingMs);playerMenu = null}
         else if (showEpisodes) { showEpisodes=false; if(episodesResumeAfterClose) player.play() }
         else if (paused && !pauseInfoDismissed) {
             pauseSynopsis = false; pauseInfoDismissed = true
@@ -1752,6 +1791,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     }
 
     Box(Modifier.fillMaxSize().consumeOpeningPress().background(Color.Black).focusRequester(surfaceFocus).onPreviewKeyEvent { event ->
+        if(event.type==KeyEventType.KeyDown) state.localExtras.touch()
         if(mini || quickReactions) return@onPreviewKeyEvent false
         val code = event.nativeKeyEvent.keyCode
         if(code!=android.view.KeyEvent.KEYCODE_BACK && event.type==KeyEventType.KeyDown && code !in listOf(android.view.KeyEvent.KEYCODE_DPAD_CENTER,android.view.KeyEvent.KEYCODE_ENTER)) exitArmedAt=0L
@@ -1869,9 +1909,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             onEpisodes={ episodesResumeAfterClose=player.playWhenReady; player.pause(); showEpisodes=true },
             onParty={ openPlayerParty() },
             onTiming={ playerMenu="timing" },
-            onClose={ playerMenu=null; controlInteraction++ })
+            onClose={ state.localExtras.rememberTracks(state.localExtrasScope(),request.item,player,timingMs);playerMenu=null; controlInteraction++ })
         if(playerMenu=="timing") SubtitleTimingDialog(timingMs,apply={ value ->
             timingMs=value;timing.delayMs=value
+            state.localExtras.rememberTracks(state.localExtrasScope(),request.item,player,value)
             // Explicit user adjustment, not a recovery loop. Re-read subtitle cues at this position.
             if(player.isCurrentMediaItemSeekable) player.seekTo(player.currentPosition)
         },close={ playerMenu=null;controlInteraction++ })
@@ -2033,6 +2074,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 }
             }
         }
+        if(state.watchParty==null) LocalPlayerToolsRC100(state,request,player,
+            visible=!mini && controlsVisible && playerMenu==null && !showEpisodes && !showQueue && !showPartyActions && playbackError==null && !ended,
+            onPause={cancelAutoplay=true;userPlayback(false)})
         if(playerMenu=="party-chat") PlayerPartyChatDialog(state) { playerMenu=null;controlInteraction++ }
         if(playerMenu=="party-reactions") PartyActionsDialog(state) { playerMenu=null;controlInteraction++ }
         if(quickReactions && state.watchParty!=null && !mini) QuickReactionBar(

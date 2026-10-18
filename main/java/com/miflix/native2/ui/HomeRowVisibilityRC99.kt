@@ -20,6 +20,7 @@ import androidx.compose.ui.window.Dialog
 @Composable
 internal fun HomeRowVisibilityRC99(state:AppState,close:()->Unit) {
     val rows=listOf(
+        "local_lists" to tr("Mis listas locales","My local lists"),
         "discovery-controls" to tr("Elige tu ánimo · Dazzle Me","Pick your vibe · Dazzle Me"),
         "discovery-picks" to tr("Tu ánimo · Tu selección","Your Mood · Your Picks"),
         "continue" to tr("Seguir viendo","Continue Watching"),

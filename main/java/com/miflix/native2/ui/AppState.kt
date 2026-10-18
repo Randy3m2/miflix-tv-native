@@ -67,6 +67,37 @@ class AppState(context: Context) {
         playbackPrefs.edit().putBoolean("autoplay_next_link",enabled).apply()
         if(!enabled) sourceFallback=null
     }
+    internal val localExtras=LocalExtrasRC100(context.getSharedPreferences("brunio_local_extras",Context.MODE_PRIVATE))
+    internal fun localExtrasScope()=ratingsKey()
+    internal fun localRecommendations(rows:List<MediaSummary>)=rows.filterNot {localExtras.hidden(ratingsKey(),it.cloudId)}
+    internal fun exportLocalBackupRC100():org.json.JSONObject=org.json.JSONObject()
+        .put("brunioLocalBackup",100).put("extras",localExtras.export(ratingsKey()))
+        .put("homeOrder",org.json.JSONArray(homeRowOrder)).put("hiddenRows",org.json.JSONArray(hiddenHomeRows.toList()))
+        .put("interface",interfaceLanguage).put("audio",audioLanguage).put("subtitle",subtitleLanguage)
+        .put("autoplay",autoplayNext).put("nextLink",autoplayNextLink).put("adaptive",adaptiveSource)
+        .put("subtitleColor",subtitleColor).put("subtitleScale",subtitleScale.toDouble()).put("focusColor",focusColor)
+    internal fun validateLocalBackupRC100(body:org.json.JSONObject) {
+        require(body.getInt("brunioLocalBackup")==100)
+        localExtras.validateImport(ratingsKey(),body.getJSONObject("extras"))
+        for(key in listOf("homeOrder","hiddenRows")) {val a=body.getJSONArray(key);require(a.length()<=100);for(i in 0 until a.length()) require(a.getString(i).length in 1..100)}
+        require(body.getString("interface") in listOf("en","es"))
+        require(body.getString("audio").length<=10 && body.getString("subtitle").length<=10)
+        for(key in listOf("autoplay","nextLink","adaptive")) body.getBoolean(key)
+        body.getInt("subtitleColor");body.getInt("focusColor");require(body.getDouble("subtitleScale") in 0.8..1.4)
+    }
+    internal suspend fun importLocalBackupRC100(body:org.json.JSONObject) {
+        validateLocalBackupRC100(body)
+        localExtras.importData(ratingsKey(),body.getJSONObject("extras"))
+        val order=body.getJSONArray("homeOrder");saveHomeRowOrder((0 until order.length()).map {order.getString(it)})
+        val hidden=body.getJSONArray("hiddenRows")
+        playbackPrefs.edit().putStringSet("hidden_home_rows:${ratingsKey()}",(0 until hidden.length()).map {hidden.getString(it)}.toSet()).apply();homeOrderRevision++
+        savePlaybackPreferences(body.getString("audio"),body.getString("subtitle"),body.getBoolean("autoplay"))
+        saveAutoplayNextLink(body.getBoolean("nextLink"));saveAdaptiveSource(body.getBoolean("adaptive"))
+        saveSubtitleStyle(body.getInt("subtitleColor"),body.getDouble("subtitleScale").toFloat())
+        focusColor=body.getInt("focusColor");FocusTheme.argb=focusColor;playbackPrefs.edit().putInt("focus_color",focusColor).apply()
+        restoreCustomFilterRC100()
+        setInterfaceLanguage(body.getString("interface"))
+    }
     private val cinemaStats=LocalCinemaStats(playbackPrefs)
     fun recordViewing(req:PlayerRequest,ms:Long) {
         if(!req.live && !isMomentOnly(req) && appForeground && screen==Screen.PLAYER && playerRequest?.playbackId==req.playbackId)
@@ -124,17 +155,35 @@ class AppState(context: Context) {
         val ids=playbackPrefs.getStringSet(readNoticesKey(),emptySet()).orEmpty().toSet()+(id?.let {setOf(it)} ?: (notifications.map {it.id}.toSet()+UpdateNotes.id))
         playbackPrefs.edit().putStringSet(readNoticesKey(),ids).apply();noticesRevision++
     }
-    var interfaceLanguage by mutableStateOf(playbackPrefs.getString("interface", "en") ?: "en")
+    private val legacyInterfaceLanguage=playbackPrefs.getString("interface","en").takeIf {it in listOf("en","es")} ?: "en"
+    var interfaceLanguage by mutableStateOf(legacyInterfaceLanguage)
+        private set
     init { UiLanguage.code=interfaceLanguage }
+    private fun interfaceLanguageKey()="interface:${ratingsKey()}"
+    private fun applyProfileInterfaceLanguage() {
+        val key=interfaceLanguageKey()
+        val code=playbackPrefs.getString(key,legacyInterfaceLanguage).takeIf {it in listOf("en","es")} ?: "en"
+        // Pin the legacy default once; edits in another profile never change it.
+        if(!playbackPrefs.contains(key)) playbackPrefs.edit().putString(key,code).apply()
+        val changed=interfaceLanguage!=code
+        interfaceLanguage=code;UiLanguage.code=code
+        tmdb.language=if(code=="es") "es-ES" else "en-US"
+        if(changed) clearTranslatedCatalogRC100()
+    }
+    private fun clearTranslatedCatalogRC100() {
+        extrasLoaded=false
+        trending.clear();movies.clear();series.clear();topRated.clear()
+        action.clear();sciFi.clear();netflix.clear();disney.clear();prime.clear();apple.clear();hbo.clear()
+        newMovies.clear();bestSeries.clear();comedy.clear();thrillers.clear()
+        comingMovies.clear();comingSeries.clear();forYou.clear()
+        seasonalItems.clear();seasonalKey="";seasonalRetryAt=0L;comingSoonKey=""
+    }
     suspend fun setInterfaceLanguage(code: String) {
         require(code in listOf("en","es"))
-        interfaceLanguage=code; UiLanguage.code=code
-        playbackPrefs.edit().putString("interface",code).apply()
-        tmdb.language=if(code=="es") "es-ES" else "en-US"
-        extrasLoaded=false
-        comingMovies.clear(); comingSeries.clear(); forYou.clear()
-        seasonalItems.clear(); seasonalKey=""; seasonalRetryAt=0L; comingSoonKey=""
-        if(tmdb.token.isNotBlank()) loadHome()
+        playbackPrefs.edit().putString(interfaceLanguageKey(),code).apply()
+        val changed=interfaceLanguage!=code
+        applyProfileInterfaceLanguage()
+        if(changed && tmdb.token.isNotBlank()) loadHome()
     }
     private val playbackWork = PlaybackWorkGate()
     private var partyEpoch = 0L
@@ -977,13 +1026,27 @@ class AppState(context: Context) {
     var customFilterPage=0
     var customFilterScrollIndex=0
     var customFilterScrollOffset=0
+    internal fun restoreCustomFilterRC100() {
+        val f=if(localExtras.enabled("filters")) localExtras.preference(ratingsKey(),"filter:custom") else org.json.JSONObject()
+        customFilter=runCatching {CustomCatalogFilter().copy(
+            type=f.optString("type","movie"),fromYear=f.optString("fromYear"),toYear=f.optString("toYear"),
+            sort=f.optString("sort","popular"),minimumRating=f.optDouble("minimumRating",0.0),
+            genre=f.optJSONObject("genre")?.let {CatalogGenre(it.getInt("id"),it.getString("name"))}
+        )}.getOrDefault(CustomCatalogFilter())
+        appliedCustomFilter=null;customFilterResults.clear();customFilterPage=0;customFilterScrollIndex=0;customFilterScrollOffset=0
+    }
     suspend fun applyCustomFilter(filter: CustomCatalogFilter,more: Boolean=false) {
         if(customFilterLoading) return
         customFilterLoading=true;customFilterError=""
         try {
             filter.validate()
+            val filterOwner=ratingsKey();val filterLanguage=interfaceLanguage
             val page=if(more) customFilterPage+1 else 1
             val result=tmdb.customCatalog(filter,page)
+            if(filterOwner!=ratingsKey() || filterLanguage!=interfaceLanguage) return
+            if(localExtras.enabled("filters")) localExtras.savePreference(filterOwner,"filter:custom",org.json.JSONObject()
+                .put("type",filter.type).put("fromYear",filter.fromYear).put("toYear",filter.toYear).put("sort",filter.sort)
+                .put("minimumRating",filter.minimumRating).put("genre",filter.genre?.let {org.json.JSONObject().put("id",it.id).put("name",it.name)} ?: org.json.JSONObject.NULL))
             if(!more) { customFilterResults.clear();customFilterScrollIndex=0;customFilterScrollOffset=0 }
             customFilterResults.addAll(result.items.filter { row -> customFilterResults.none { it.cloudId==row.cloudId } })
             customFilter=filter;appliedCustomFilter=filter;customFilterPage=page;customFilterMore=result.hasMore
@@ -1355,6 +1418,8 @@ class AppState(context: Context) {
         profiles.clear(); profiles.addAll(local.offlineProfiles().ifEmpty { listOf(Profile("default","Main",primary=true)) })
         ensureKidsProfile();local.saveOfflineProfiles(profiles.toList())
         activeProfile=profiles.firstOrNull { it.id==local.profileId() } ?: profiles.first()
+        applyProfileInterfaceLanguage()
+        restoreCustomFilterRC100()
     }
     suspend fun bootstrap() {
         if(session==null) loadOfflineProfiles()
@@ -1421,6 +1486,8 @@ class AppState(context: Context) {
         activeProfile = profiles.firstOrNull { it.id == wanted }
             ?: profiles.firstOrNull { it.primary }
             ?: profiles.first()
+        applyProfileInterfaceLanguage()
+        restoreCustomFilterRC100()
         local.saveProfileId(activeProfile.id)
 
         val (fav, prog) = cloud.profileState(s, activeProfile.id)
@@ -1434,6 +1501,8 @@ class AppState(context: Context) {
         playerRequest=null;sourceSelection=null;miniPlayer=false;selected=null;details=null;profilePhotoEditor=null
         favorites.clear();progress.clear();continueWatching.clear();kidsContinue.clear();notifications.clear()
         activeProfile = p
+        applyProfileInterfaceLanguage()
+        restoreCustomFilterRC100()
         randomEpisodeCloud=null
         contextTitle=null;socialProfileEditor=false;localCastPairing=false
         if(kidsMode) detachParty()
@@ -1574,19 +1643,23 @@ class AppState(context: Context) {
 
     suspend fun loadHome() = supervisorScope {
         if(kidsMode) return@supervisorScope
+        val owner=ratingsKey();val language=interfaceLanguage
+        fun current()=owner==ratingsKey() && language==interfaceLanguage
         val a = async { runCatching { tmdb.trending() } }
         val b = async { runCatching { tmdb.popularMovies() } }
         val c = async { runCatching { tmdb.popularSeries() } }
         val d = async { runCatching { tmdb.topRatedMovies() } }
 
-        a.await().onSuccess { trending.replaceWith(it) }
-        b.await().onSuccess { movies.replaceWith(it) }
-        c.await().onSuccess { series.replaceWith(it) }
-        d.await().onSuccess { topRated.replaceWith(it) }
+        a.await().onSuccess { if(current()) trending.replaceWith(it) }
+        b.await().onSuccess { if(current()) movies.replaceWith(it) }
+        c.await().onSuccess { if(current()) series.replaceWith(it) }
+        d.await().onSuccess { if(current()) topRated.replaceWith(it) }
     }
 
     suspend fun loadHomeExtras() {
         if (kidsMode || extrasLoaded || extrasLoading || tmdb.token.isBlank()) return
+        val owner=ratingsKey();val language=interfaceLanguage
+        fun current()=owner==ratingsKey() && language==interfaceLanguage
         extrasLoading = true
         try {
             supervisorScope {
@@ -1603,20 +1676,20 @@ class AppState(context: Context) {
                 val comedyJob=async { runCatching { tmdb.discoverMovieGenre(35,pages=1,limit=20) } }
                 val thrillerJob=async { runCatching { tmdb.discoverMovieGenre(53,pages=1,limit=20) } }
 
-                actionJob.await().onSuccess { action.replaceWith(it) }
-                sciFiJob.await().onSuccess { sciFi.replaceWith(it) }
-                netflixJob.await().onSuccess { netflix.replaceWith(it) }
-                disneyJob.await().onSuccess { disney.replaceWith(it) }
-                primeJob.await().onSuccess { prime.replaceWith(it) }
-                appleJob.await().onSuccess { apple.replaceWith(it) }
-                hboJob.await().onSuccess { hbo.replaceWith(it) }
-                continueJob.await().onSuccess { continueWatching.replaceWith(it) }
-                newJob.await().onSuccess { newMovies.replaceWith(it) }
-                bestTvJob.await().onSuccess { bestSeries.replaceWith(it) }
-                comedyJob.await().onSuccess { comedy.replaceWith(it) }
-                thrillerJob.await().onSuccess { thrillers.replaceWith(it) }
+                actionJob.await().onSuccess { if(current()) action.replaceWith(it) }
+                sciFiJob.await().onSuccess { if(current()) sciFi.replaceWith(it) }
+                netflixJob.await().onSuccess { if(current()) netflix.replaceWith(it) }
+                disneyJob.await().onSuccess { if(current()) disney.replaceWith(it) }
+                primeJob.await().onSuccess { if(current()) prime.replaceWith(it) }
+                appleJob.await().onSuccess { if(current()) apple.replaceWith(it) }
+                hboJob.await().onSuccess { if(current()) hbo.replaceWith(it) }
+                continueJob.await().onSuccess { if(current()) continueWatching.replaceWith(it) }
+                newJob.await().onSuccess { if(current()) newMovies.replaceWith(it) }
+                bestTvJob.await().onSuccess { if(current()) bestSeries.replaceWith(it) }
+                comedyJob.await().onSuccess { if(current()) comedy.replaceWith(it) }
+                thrillerJob.await().onSuccess { if(current()) thrillers.replaceWith(it) }
             }
-            extrasLoaded = true
+            if(current()) extrasLoaded = true
         } finally {
             extrasLoading = false
         }
@@ -1722,6 +1795,7 @@ class AppState(context: Context) {
         loadMoreGenre()
     }
     val genreUpcoming:Boolean get()=currentGenre?.id=="home:coming_soon_home"
+    internal fun localCatalogKeyRC100(title:String)=if(screen==Screen.GENRE_DETAIL) "genre:${currentGenre?.id ?: title}" else "${screen}:$title"
     private var currentGenre: GenreDefinition?=null
     private var genrePageNumber=0
     private var genreRemoteMore=true

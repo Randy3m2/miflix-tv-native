@@ -282,7 +282,7 @@ fun CollectionCard(
     var animationFailed by remember(tile.id) { mutableStateOf(false) }
     var coverFailed by remember(tile.id) { mutableStateOf(false) }
     LaunchedEffect(tile.id,focused) {
-        if(focused && !tile.focusGifUrl.isNullOrBlank()) { delay(160);animationReady=true }
+        if(focused && !tile.focusGifUrl.isNullOrBlank()) { delay(420);animationReady=true }
     }
     val model = if (focused && animationReady && !animationFailed && !tile.focusGifUrl.isNullOrBlank()) tile.focusGifUrl else tile.coverUrl
 

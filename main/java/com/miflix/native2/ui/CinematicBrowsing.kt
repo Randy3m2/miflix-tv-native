@@ -1,5 +1,7 @@
 package com.miflix.native2.ui
 
+import androidx.compose.animation.animateColorAsState
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -93,11 +95,8 @@ internal fun SpotlightRail(
     LaunchedEffect(active) { if(active && !homeShelf) { delay(50); bring.bringIntoView() } }
     val infoVisibility by animateFloatAsState(if(active && settledId==selectedId) 1f else 0f,tween(150),label="railInfo")
     val horizontalSpec=remember {object: BringIntoViewSpec {
-        override fun calculateScrollDistance(offset: Float,size: Float,containerSize: Float): Float=when {
-            offset<0 -> offset
-            offset+size>containerSize -> offset+size-containerSize
-            else -> 0f
-        }
+        override fun calculateScrollDistance(offset: Float,size: Float,containerSize: Float): Float =
+            com.miflix.native2.data.BrowseFocusMotion.horizontalDistance(offset,size,containerSize)
     } }
     val selected=rows.firstOrNull { it.cloudId==selectedId } ?: rows.first()
     Column(Modifier.fillMaxWidth().height(if(homeShelf) cardRowHeight+(if(eyebrow==null) 40.dp else 60.dp) else if(pinned) {if(eyebrow==null) 232.dp else 252.dp} else if(eyebrow==null) 302.dp else 323.dp)
@@ -141,13 +140,15 @@ private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolea
     val freshness=observeCardFreshness(item)
     val simple=LocalSimpleHome.current
     var focused by remember(item.cloudId) { mutableStateOf(false) }
+    val focusInk by animateColorAsState(if(focused) Accent else Color.Transparent,tween(120),label="posterFocusInk")
+    val focusScale by animateFloatAsState(if(focused) 1.012f else 1f,tween(120),label="posterFocusScale")
     val cardBring=remember { BringIntoViewRequester() }
     
     // The measured slot expands with its artwork, so neighboring cards are pushed, never covered.
     val baseWidth=if(landscape) 312f else if(simple) 172f else 130f
     val slotWidth by animateFloatAsState(if(expanded) 334f else baseWidth,
-        tween(if(expanded) 160 else 100),label="spotlightSlotWidth")
-    LaunchedEffect(expanded) {if(expanded) {delay(170);cardBring.bringIntoView()}}
+        tween(if(expanded) 220 else 160),label="spotlightSlotWidth")
+    LaunchedEffect(expanded) {if(expanded) {delay(230);cardBring.bringIntoView()}}
     var showBackdrop by remember(item.cloudId) { mutableStateOf(landscape) }
     LaunchedEffect(expanded,landscape) {
         if(expanded) { delay(60); showBackdrop=true } else showBackdrop=landscape
@@ -156,8 +157,8 @@ private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolea
         .bringIntoViewRequester(cardBring)
         .onFocusChanged { focused=it.isFocused; if(it.isFocused) onFocused() }.focusable()
         .then(if(onLongClick==null) Modifier.tvClick(onClick) else Modifier.tvPlaybackClick(onClick,onLongClick)).clickable(onClick=onClick)) {
-        Box(Modifier.fillMaxSize()
-        .border(if(focused) {if(simple) 3.dp else 2.dp} else 0.dp,if(focused) Accent else Color.Transparent,RoundedCornerShape(18.dp))
+        Box(Modifier.fillMaxSize().graphicsLayer {scaleX=focusScale;scaleY=focusScale}
+        .border(if(simple) 3.dp else 2.dp,focusInk,RoundedCornerShape(18.dp))
         .padding(3.dp).clip(RoundedCornerShape(16.dp)).background(Panel)) {
         AsyncImage(if(showBackdrop) item.backdrop ?: item.poster else item.poster ?: item.backdrop,
             item.title,Modifier.fillMaxSize(),contentScale=if(simple && !landscape && !expanded) ContentScale.Fit else ContentScale.Crop)

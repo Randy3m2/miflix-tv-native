@@ -31,7 +31,7 @@ internal fun HomeShelfFrame(index:Int,scroll:LazyListState,modifier:Modifier=Mod
         if(active && returning?.pending==null) {
             withFrameNanos { }
             val row=scroll.layoutInfo.visibleItemsInfo.firstOrNull {it.index==index}
-            if(row!=null) scroll.animateScrollBy(row.offset.toFloat(),tween(140))
+            if(row!=null) scroll.animateScrollBy(row.offset.toFloat(),tween(220))
             else scroll.animateScrollToItem(index)
         }
     }
@@ -50,11 +50,8 @@ internal fun HomeHorizontalRail(content:@Composable ()->Unit) {
         return
     }
     val horizontalSpec=remember {object: BringIntoViewSpec {
-        override fun calculateScrollDistance(offset:Float,size:Float,containerSize:Float):Float=when {
-            offset<0f -> offset
-            offset+size>containerSize -> offset+size-containerSize
-            else -> 0f
-        }
+        override fun calculateScrollDistance(offset:Float,size:Float,containerSize:Float):Float =
+            com.miflix.native2.data.BrowseFocusMotion.horizontalDistance(offset,size,containerSize)
     }}
     CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalSpec) {content()}
 }

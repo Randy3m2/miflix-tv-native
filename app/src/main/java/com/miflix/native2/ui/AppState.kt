@@ -60,6 +60,13 @@ class AppState(context: Context) {
     var adaptiveSource by mutableStateOf(playbackPrefs.getBoolean("adaptive_source",false))
         private set
     fun saveAdaptiveSource(enabled:Boolean) {adaptiveSource=enabled;playbackPrefs.edit().putBoolean("adaptive_source",enabled).apply()}
+    var autoplayNextLink by mutableStateOf(playbackPrefs.getBoolean("autoplay_next_link",true))
+        private set
+    fun saveAutoplayNextLink(enabled:Boolean) {
+        autoplayNextLink=enabled
+        playbackPrefs.edit().putBoolean("autoplay_next_link",enabled).apply()
+        if(!enabled) sourceFallback=null
+    }
     private val cinemaStats=LocalCinemaStats(playbackPrefs)
     fun recordViewing(req:PlayerRequest,ms:Long) {
         if(!req.live && !isMomentOnly(req) && appForeground && screen==Screen.PLAYER && playerRequest?.playbackId==req.playbackId)
@@ -70,6 +77,20 @@ class AppState(context: Context) {
     private var homeOrderRevision by mutableIntStateOf(0)
     val homeRowOrder:List<String> get() {homeOrderRevision;val a=runCatching {org.json.JSONArray(playbackPrefs.getString("home_order:${ratingsKey()}","[]"))}.getOrDefault(org.json.JSONArray());return (0 until a.length()).map {a.getString(it)}.distinct()}
     fun saveHomeRowOrder(keys:List<String>) {playbackPrefs.edit().putString("home_order:${ratingsKey()}",org.json.JSONArray(keys.distinct()).toString()).apply();homeOrderRevision++}
+
+    val hiddenHomeRows:Set<String> get() {
+        homeOrderRevision
+        return playbackPrefs.getStringSet("hidden_home_rows:${ratingsKey()}",emptySet()).orEmpty().toSet()
+    }
+    fun setHomeRowVisible(key:String,visible:Boolean) {
+        val hidden=hiddenHomeRows
+        playbackPrefs.edit().putStringSet("hidden_home_rows:${ratingsKey()}",if(visible) hidden-key else hidden+key).apply()
+        homeOrderRevision++
+    }
+    fun restoreHomeRows() {
+        playbackPrefs.edit().remove("hidden_home_rows:${ratingsKey()}").apply()
+        homeOrderRevision++
+    }
 
     var hiddenAvatars by mutableStateOf(playbackPrefs.getStringSet("hidden_avatars",emptySet()).orEmpty().toSet())
     fun hideAvatar(key: String) {
@@ -2198,6 +2219,7 @@ class AppState(context: Context) {
                         ?: throw java.io.IOException("Source preparation timed out")
                 }
             } catch(e: CancellationException) {throw e} catch(e: Exception) {
+                if(!autoplayNextLink) throw e
                 val next=budget.nextIndex()
                 if(next<0) throw e
                 index=next
@@ -2209,8 +2231,9 @@ class AppState(context: Context) {
         tr("El enlace falló. Probando el siguiente…","Source failed. Trying the next link…")+" (${index+1}/${count.coerceAtMost(com.miflix.native2.player.SourceFallbackBudget.MAX_ATTEMPTS)})"
     /** Reuses the already loaded list; no add-on search or Supabase read is made here. */
     suspend fun tryNextPlaybackSource(req: PlayerRequest,position: Long,playing: Boolean): Boolean {
+        if(!autoplayNextLink) return false
         val plan=sourceFallback ?: return false
-        fun valid()=sourceFallback===plan && plan.playbackId==req.playbackId && playerRequest?.playbackId==req.playbackId &&
+        fun valid()=autoplayNextLink && sourceFallback===plan && plan.playbackId==req.playbackId && playerRequest?.playbackId==req.playbackId &&
             session?.userId==plan.owner && activeProfile.id==plan.profile && playbackWork.generation==plan.generation &&
             screen==Screen.PLAYER && appForeground && watchParty==null && !req.live
         if(!valid() || plan.busy) return false
@@ -2286,7 +2309,7 @@ class AppState(context: Context) {
             val seconds=(details?.takeIf {it.summary.cloudId==item.cloudId}?.runtimeMinutes ?: 0)*60
             val chosen = selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds)
                 ?: throw IllegalStateException(tr("No se encontraron enlaces reproducibles","No playable sources found"))
-            val automaticFallback=watchParty==null
+            val automaticFallback=autoplayNextLink && watchParty==null
             val retryRows=if(automaticFallback) {
                 val candidates=StreamOrdering.fallbackCandidates(streams,audioLanguage,bandwidth,seconds).filter {it.url!=chosen.url}
                 val alternatives=if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(audioLanguage) && StreamOrdering.languageRank(chosen)==0)

@@ -313,7 +313,8 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                     SpotlightRail(tr("Próximamente","Coming soon"),(state.comingMovies+state.comingSeries).distinctBy { it.cloudId }.take(30),onClick={ state.launch { state.open(it,upcoming=true) } })
                 }
                 val order=state.homeRowOrder
-                homeSections.sortedWith(compareBy<HomeSection> {order.indexOf(it.key).let {i ->if(i<0) Int.MAX_VALUE else i}}).forEach {section ->
+                homeSections.filter {it.key !in state.hiddenHomeRows &&
+                    (it.key!="discovery-retry" || "discovery-picks" !in state.hiddenHomeRows)}.sortedWith(compareBy<HomeSection> {order.indexOf(it.key).let {i ->if(i<0) Int.MAX_VALUE else i}}).forEach {section ->
                     val index=shelfIndex++
                     item(key=section.key) {CompositionLocalProvider(LocalHomeShelfKey provides section.key) {HomeShelfFrame(index,scroll,Modifier.fillParentMaxHeight().fillMaxWidth(),section.content)}}
                 }
@@ -840,6 +841,8 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
     var addonUrl by remember { mutableStateOf("") }
     var showHomeOrder by remember {mutableStateOf(false)}
     var showCinemaHub by remember {mutableStateOf(false)}
+    var showHomeVisibility by remember {mutableStateOf(false)}
+    if(showHomeVisibility) HomeRowVisibilityRC99(state) {showHomeVisibility=false}
     if(showHomeOrder) HomeOrderDialog(state) {showHomeOrder=false}
     if(showCinemaHub) CinemaHub(state) {showCinemaHub=false}
     var showUpdates by remember { mutableStateOf(false) }
@@ -997,6 +1000,12 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     }
                     if(category=="appearance") item(key="home-order") {SettingsSectionCard {
                         FocusButton(tr("Orden de filas de Home","Home row order")) {showHomeOrder=true}
+                        FocusButton(tr("Mostrar u ocultar filas de Home","Show or hide Home rows")) {showHomeVisibility=true}
+                    }}
+                    if(category=="playback") item(key="autoplay-next-link") {SettingsSectionCard {
+                        Text(tr("Siguiente enlace automático","Autoplay next link"),color=Color.White,fontSize=22.sp)
+                        Text(tr("Si un enlace falla o se queda cargando, intenta el siguiente. Al apagarlo, muestra el error para que elijas otro enlace manualmente.","If a source fails or stalls, try the next link. When OFF, show the error so you can choose another link manually."),color=Muted)
+                        FocusButton(if(state.autoplayNextLink) "ON" else "OFF") {state.saveAutoplayNextLink(!state.autoplayNextLink)}
                     }}
                     if(category=="playback") item(key="adaptive-source") {SettingsSectionCard {
                         Text(tr("Seleccionar la mejor fuente","Select the best source"),color=Color.White,fontSize=22.sp)
@@ -1537,7 +1546,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 advanceSourceOrShow(playerFailureDetails(failure))
             } else if(watchdog.shouldAdvance(android.os.SystemClock.elapsedRealtime(),firstFrame,
                     player.playbackState==Player.STATE_BUFFERING,eligible)) {
-                advanceSourceOrShow(tr("La fuente se quedó cargando. Probando otro enlace.","The source stalled. Trying another link."))
+                advanceSourceOrShow(if(state.autoplayNextLink) tr("La fuente se quedó cargando. Probando otro enlace.","The source stalled. Trying another link.") else tr("La fuente se quedó cargando. Elige otro enlace manualmente.","The source stalled. Choose another link manually."))
             }
         }
     }

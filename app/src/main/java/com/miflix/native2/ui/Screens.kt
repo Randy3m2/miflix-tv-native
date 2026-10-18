@@ -163,6 +163,9 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     val contentFocus=remember { FocusRequester() }
     val scope=rememberCoroutineScope()
     val shelfMotion=remember(scroll) {HomeShelfMotion(scope)}
+    val headerWork=remember {mutableListOf<kotlinx.coroutines.Job>()}
+    fun cancelHeaderWork() {headerWork.forEach {it.cancel()};headerWork.clear()}
+
     val headerShade by remember { derivedStateOf { if(scroll.firstVisibleItemIndex>0) .88f else (scroll.firstVisibleItemScrollOffset/320f).coerceIn(0f,.88f) } }
     LaunchedEffect(state.interfaceLanguage) { delay(550); state.loadHomeExtras(); runCatching { state.loadComingSoon() } }
     LaunchedEffect(Unit) { state.loadDiscoveryArt() }
@@ -172,7 +175,13 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     }
     val openItem: (MediaSummary) -> Unit={ item -> state.launch { state.open(item) } }
     val openCollection: (CollectionTile) -> Unit={ tile -> state.launch { state.openCollection(tile.id,tile.title) } }
-    val returnToTop: () -> Unit={ if(homeReturn.pending==null) scope.launch { shelfMotion.reset();scroll.animateScrollToItem(0) }; Unit }
+    val returnToTop: () -> Unit={
+        if(homeReturn.pending==null) {
+            cancelHeaderWork()
+            headerWork.add(scope.launch {shelfMotion.reset();scroll.animateScrollToItem(0)})
+        }
+        Unit
+    }
     CompositionLocalProvider(LocalSimpleHome provides simple,LocalHomeReturnFocus provides homeReturn,LocalHomeShelfMotion provides shelfMotion,
         LocalHomeShelfMore provides {key,title,rows ->
             when(key) {
@@ -312,11 +321,18 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
         } // fixed browse viewport
         Sidebar(Screen.HOME,state.activeProfile.name,onNavigate,state.unreadNoticeCount,state.activeProfile,
             backgroundAlpha=headerShade,onHeaderFocused=returnToTop,onEditPicture={ state.profilePhotoEditor=state.activeProfile },kids=state.kidsMode,
-            onMoveDown=({ scope.launch {
-                shelfMotion.reset();scroll.scrollToItem(0)
-                androidx.compose.runtime.withFrameNanos { }
-                if(state.trending.isNotEmpty()) heroFocus.requestFocus() else contentFocus.requestFocus()
-            }; Unit }))
+            onMoveDown=({
+                cancelHeaderWork()
+                headerWork.add(scope.launch {
+                    shelfMotion.reset();scroll.scrollToItem(0)
+                    for(attempt in 0 until 3) {
+                        androidx.compose.runtime.withFrameNanos { }
+                        val target=if(state.trending.isNotEmpty()) heroFocus else contentFocus
+                        if(runCatching {target.requestFocus()}.getOrDefault(false)) break
+                    }
+                })
+                Unit
+            }))
     }
     }
 }

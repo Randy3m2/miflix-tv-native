@@ -149,7 +149,8 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     var showCinemaHub by remember(discoveryOwner) {mutableStateOf(false)}
     if(showCinemaHub) CinemaHub(state) {showCinemaHub=false}
     var showLocalLists by remember(discoveryOwner) {mutableStateOf(false)}
-    if(showLocalLists && state.localExtras.enabled("lists")) LocalListsRC100(state,null) {showLocalLists=false}
+    var initialLocalList by remember(discoveryOwner) {mutableStateOf<String?>(null)}
+    if(showLocalLists && state.localExtras.enabled("lists")) LocalListsRC100(state,null,initialListId=initialLocalList) {showLocalLists=false}
     var showTrailers by remember(discoveryOwner) {mutableStateOf(false)}
     val clock=remember(state.appForeground) {java.util.Calendar.getInstance()}
     val contextualMood=remember(clock) {com.miflix.native2.data.DiscoveryMood.context(clock.get(java.util.Calendar.HOUR_OF_DAY),clock.get(java.util.Calendar.MONTH)+1,clock.get(java.util.Calendar.DAY_OF_MONTH),clock.get(java.util.Calendar.DAY_OF_WEEK) in setOf(java.util.Calendar.SATURDAY,java.util.Calendar.SUNDAY))}
@@ -212,10 +213,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 val homeSections=mutableListOf<HomeSection>()
                 fun shelf(key:String,content:@Composable ()->Unit) {homeSections.add(HomeSection(key,content))}
                 if(state.localExtras.enabled("lists")) shelf(key="local_lists") {
-                    Column(Modifier.padding(40.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                        Text(tr("Mis listas locales","My local lists"),color=Color.White,fontSize=24.sp)
-                        FocusButton(tr("Abrir mis listas","Open my lists")) {showLocalLists=true}
-                    }
+                    LocalListsHomeRC104(state) {id ->initialLocalList=id;showLocalLists=true}
                 }
                 shelf(key="discovery-controls") {
                     DiscoveryControls(discoveryMood,discoveryLoading || state.randomChoosing,

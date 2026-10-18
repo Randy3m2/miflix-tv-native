@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RC104: fila de listas personales con nombre, cantidad y collage de carátulas; acceso directo a cada colección y administrador visual renovado." to "RC104: personal-list shelf with names, counts and poster collages; direct access to each collection and a refreshed visual manager.",
         "RC103: ajustes locales con tarjetas, iconos e interruptores; mejor foco para TV, ayuda a la derecha al enfocar o pasar el cursor y selección visual de filas de Home." to "RC103: local settings with cards, icons and switches; clearer TV focus, right-side help on focus or hover and visual Home row selection.",
         "RC102: selección visual de gustos por perfil, recomendaciones con aprendizaje local, novelas cerca del inicio de Home, moods con fotos y opción de add-ons propios al crear perfiles." to "RC102: visual per-profile taste setup, recommendations with local learning, an early Home telenovela shelf, photo-backed moods and optional independent profile add-ons.",
         "RC101: corrige el choque JVM de stillLimit y añade Canal anterior en la barra de Live TV, con historial por perfil y actualización solo al reproducir." to "RC101: fixes the stillLimit JVM clash and adds Previous channel to the Live TV control bar, with per-profile history updated only after playback starts.",

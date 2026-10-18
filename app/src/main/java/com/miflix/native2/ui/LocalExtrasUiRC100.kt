@@ -6,6 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -109,39 +110,58 @@ internal fun LocalExtrasSettingsRC100(state:AppState,close:()->Unit) {
 }
 
 @Composable
-internal fun LocalListsRC100(state:AppState,adding:MediaSummary?,close:()->Unit) {
+internal fun LocalListsRC100(state:AppState,adding:MediaSummary?,initialListId:String?=null,close:()->Unit) {
     val extras=state.localExtras;val owner=state.localExtrasScope()
-    var selected by remember(owner) {mutableStateOf<String?>(null)}
-    var name by remember(owner) {mutableStateOf("")}
+    var selected by remember(owner,initialListId) {mutableStateOf(initialListId)}
+    var name by remember(owner,initialListId) {mutableStateOf(extras.lists(owner).firstOrNull {it.optString("id")==initialListId}?.optString("name").orEmpty())}
     var message by remember(owner) {mutableStateOf("")}
     var deleting by remember(owner) {mutableStateOf(false)}
     val rows=extras.lists(owner)
     var shown by remember(selected) {mutableIntStateOf(25)}
     val current=rows.firstOrNull {it.optString("id")==selected}
-    LocalPanelRC100(if(adding==null) tr("Mis listas locales","My local lists") else tr("Añadir a lista local","Add to local list"),close) {
-        NativeTextField(name,{name=it.take(60)},tr("Nombre de la lista","List name"),modifier=Modifier.fillMaxWidth())
-        if(name.isNotBlank()) FocusButton(tr("Crear lista","Create list")) {runCatching {val id=extras.createList(owner,name);if(adding!=null) {extras.add(owner,id,adding);message=tr("Añadido.","Added.")} else selected=id;name=""}.onFailure {message=it.message.orEmpty()}}
-        if(message.isNotBlank()) Text(message,color=Muted)
+    val currentItems=remember(owner,selected,extras.revision) {current?.let {extras.listItems(it)} ?: emptyList()}
+    LocalListsPanelRC104(if(adding!=null) tr("Añadir a una colección","Add to a collection") else current?.optString("name") ?: tr("Tus listas, tus historias","Your lists, your stories"),close) {
+        if(message.isNotBlank()) Text(message,color=Color.White,fontSize=14.sp)
         if(current==null) {
-            if(rows.isEmpty()) Text(tr("Crea tu primera lista.","Create your first list."),color=Muted)
-            rows.forEach {row ->FocusButton(row.getString("name")+" · "+extras.listItems(row).size) {
-                if(adding!=null) {runCatching {extras.add(owner,row.getString("id"),adding)}.onSuccess {message=tr("Añadido a ","Added to ")+row.getString("name")}.onFailure {message=it.message.orEmpty()}}
-                else {selected=row.getString("id");name=row.getString("name")}
-            }}
-        } else {
-            Text(current.getString("name"),color=Color.White,fontSize=20.sp)
-            FocusButton(tr("Volver a mis listas","Back to my lists")) {selected=null;name="";deleting=false}
-            if(name.isNotBlank()) FocusButton(tr("Renombrar","Rename")) {extras.renameList(owner,current.getString("id"),name)}
-            FocusButton(tr("Eliminar lista","Delete list")) {deleting=true}
-            if(deleting) FocusButton(tr("Confirmar eliminación","Confirm deletion")) {extras.deleteList(owner,current.getString("id"));selected=null;name="";deleting=false}
-            extras.listItems(current).take(shown).forEach {item ->
-                Text(item.title,color=Color.White)
-                Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                    FocusButton(tr("Ver título","View title")) {close();state.launch {state.open(item)}}
-                    FocusButton(tr("Quitar","Remove")) {extras.remove(owner,current.getString("id"),item.cloudId)}
+            SettingsHeadingRC103(tr("Dale un nombre a tu colección","Give your collection a name"),if(adding==null) tr("Agrupa películas y series para cada ocasión.","Group movies and series for every occasion.") else tr("Crea una lista o elige una para guardar este título.","Create a list or choose one to save this title."))
+            NativeTextField(name,{name=it.take(60)},tr("Ej.: Noches de suspenso","E.g. Thriller nights"),modifier=Modifier.fillMaxWidth())
+            if(name.isNotBlank()) SettingsTileRC103(tr("Crear colección","Create collection"),if(adding==null) tr("Después añade títulos desde sus fichas.","Then add titles from their details.") else tr("Crea la lista y guarda este título en ella.","Create the list and save this title in it."),"lists") {
+                runCatching {
+                    val title=name.trim();val id=extras.createList(owner,title)
+                    if(adding!=null) {extras.add(owner,id,adding);message=tr("Añadido a ","Added to ")+title;name=""}
+                    else {selected=id;name=title;message=""}
+                }.onFailure {message=it.message.orEmpty()}
+            }
+            if(rows.isEmpty()) Text(tr("Tu primera colección comienza con un nombre. Agrega películas o series desde su ficha → Añadir a lista local.","Your first collection starts with a name. Add movies or series from their details → Add to local list."),color=Muted,fontSize=14.sp)
+            else {
+                SettingsHeadingRC103(tr("Tus colecciones","Your collections"),if(adding==null) tr("Abre una tarjeta para ver y organizar sus títulos.","Open a card to see and organize its titles.") else tr("Pulsa una colección para añadir el título.","Select a collection to add the title."))
+                val previews=remember(owner,extras.revision) {rows.map(::localListPreviewRC104)}
+                LazyRow(Modifier.fillMaxWidth().focusGroup(),horizontalArrangement=Arrangement.spacedBy(16.dp),contentPadding=PaddingValues(8.dp)) {
+                    items(previews,key={it.id}) {preview ->LocalListCardRC104(preview,Modifier.width(304.dp)) {
+                        if(adding!=null) runCatching {extras.add(owner,preview.id,adding)}.onSuccess {message=tr("Añadido a ","Added to ")+preview.name}.onFailure {message=it.message.orEmpty()}
+                        else {selected=preview.id;name=preview.name;message="";deleting=false}
+                    }}
                 }
             }
-            if(extras.listItems(current).size>shown) FocusButton(tr("Cargar 25 más","Load 25 more")) {shown+=25}
+        } else {
+            val preview=remember(owner,selected,extras.revision) {localListPreviewRC104(current)}
+            LocalListCardRC104(preview,Modifier.fillMaxWidth())
+            FocusButton(tr("Volver a mis colecciones","Back to my collections")) {selected=null;name="";deleting=false;message=""}
+            NativeTextField(name,{name=it.take(60)},tr("Nombre de la colección","Collection name"),modifier=Modifier.fillMaxWidth())
+            if(name.isNotBlank() && name.trim()!=current.optString("name")) FocusButton(tr("Guardar nombre","Save name")) {runCatching {extras.renameList(owner,current.getString("id"),name)}.onFailure {message=it.message.orEmpty()}}
+            FocusButton(tr("Eliminar colección","Delete collection"),destructive=true) {deleting=true}
+            if(deleting) {
+                Text(tr("Se elimina esta lista; los títulos siguen disponibles en BruniO.","This list will be deleted; its titles remain available in BruniO."),color=Muted,fontSize=13.sp)
+                Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                    FocusButton(tr("Confirmar eliminación","Confirm deletion"),destructive=true) {extras.deleteList(owner,current.getString("id"));selected=null;name="";deleting=false;message=""}
+                    FocusButton(tr("Cancelar","Cancel")) {deleting=false}
+                }
+            }
+            if(currentItems.isEmpty()) Text(tr("Lista vacía. Abre una película o serie y elige Añadir a lista local para comenzar.","Empty list. Open a movie or series and choose Add to local list to begin."),color=Muted,fontSize=14.sp)
+            currentItems.take(shown).forEach {item ->
+                key(item.cloudId) {LocalListTitleRC104(item,onOpen={close();state.launch {state.open(item)}},onRemove={extras.remove(owner,current.getString("id"),item.cloudId)})}
+            }
+            if(currentItems.size>shown) FocusButton(tr("Cargar 25 más","Load 25 more")) {shown+=25}
         }
     }
 }

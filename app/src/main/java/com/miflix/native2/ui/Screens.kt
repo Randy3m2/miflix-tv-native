@@ -1026,6 +1026,11 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         FocusButton(tr("Orden de filas de Home","Home row order")) {showHomeOrder=true}
                         FocusButton(tr("Mostrar u ocultar filas de Home","Show or hide Home rows")) {showHomeVisibility=true}
                     }}
+                    if(category=="playback") item(key="previous-live-channel") {SettingsSectionCard {
+                        Text(tr("TV en vivo · Canal anterior","Live TV · Previous channel"),color=Color.White,fontSize=22.sp)
+                        Text(tr("Alterna entre los dos últimos canales reproducidos. Historial por perfil durante esta sesión.","Switch between the last two played channels. Per-profile history for this session."),color=Muted)
+                        FocusButton(if(state.previousLiveChannelEnabled) "ON" else "OFF") {state.savePreviousLiveChannelEnabled(!state.previousLiveChannelEnabled)}
+                    }}
                     if(category=="playback") item(key="autoplay-next-link") {SettingsSectionCard {
                         Text(tr("Siguiente enlace automático","Autoplay next link"),color=Color.White,fontSize=22.sp)
                         Text(tr("Si un enlace falla o se queda cargando, intenta el siguiente. Al apagarlo, muestra el error para que elijas otro enlace manualmente.","If a source fails or stalls, try the next link. When OFF, show the error so you can choose another link manually."),color=Muted)
@@ -1652,7 +1657,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 updateScreenAwake()
             }
 
-            override fun onRenderedFirstFrame() {state.socialPlaybackStarted(request,player.currentPosition,player.duration);if(!firstFrame) state.markLidomSourceWorking(request);firstFrame=true;state.finishPlaybackLoading(request.playbackId)}
+            override fun onRenderedFirstFrame() {state.recordSuccessfulLiveChannel(request);state.socialPlaybackStarted(request,player.currentPosition,player.duration);if(!firstFrame) state.markLidomSourceWorking(request);firstFrame=true;state.finishPlaybackLoading(request.playbackId)}
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if(playbackState==Player.STATE_READY) state.socialPlaybackReady(request,player.currentPosition,player.duration)
                 if (playbackState == Player.STATE_ENDED) {
@@ -1940,6 +1945,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }
         if((firstFrame || hadPlaybackError) && controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !showEpisodes && !showPartyActions && !ended) {
             CompactPlayerControls(request, paused, positionMs, durationMs, speed, maximized, playFocus,
+                previousChannelVisible=request.live && state.previousLiveChannelEnabled,
+                previousChannelAvailable=state.previousLiveChannel(request)!=null && state.partyRole!=PartyRole.GUEST,
+                previousChannelName=state.previousLiveChannel(request)?.item?.title.orEmpty(),
+                onPreviousChannel={controlInteraction++;state.returnToPreviousLiveChannel(request)},
                 onInteraction={ controlInteraction++ },
                 onPlay={ userPlayback(!player.playWhenReady) },
                 onResize={ resizeMode=if(resizeMode == androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT) androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM else androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT },

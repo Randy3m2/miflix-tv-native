@@ -91,7 +91,7 @@ internal fun LocalExtrasSettingsRC100(state:AppState,close:()->Unit) {
         names.forEach { (key,title) ->FocusButton(title+" · "+if(extras.enabled(key)) "ON" else "OFF") {extras.enable(key,!extras.enabled(key));if(key=="filters") state.restoreCustomFilterRC100()} }
         if(extras.enabled("still")) {
             Text(tr("Preguntar tras episodios consecutivos sin usar el mando:","Ask after consecutive episodes without remote interaction:"),color=Muted)
-            Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {listOf(2,3,5).forEach {n -> FocusButton("$n",primary=extras.stillLimit==n) {extras.setStillLimit(n)}}}
+            Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {listOf(2,3,5).forEach {n -> FocusButton("$n",primary=extras.stillLimit==n) {extras.saveStillLimit(n)}}}
         }
         if(extras.enabled("sleep")) Text(tr("En el reproductor: Funciones locales → 30/60/90 minutos o 1/2/3 episodios. Pausa al vencer; no apaga físicamente la TV.","In the player: Local features → 30/60/90 minutes or 1/2/3 episodes. Pauses playback; does not power off the TV."),color=Muted)
         if(extras.enabled("lists")) FocusButton(tr("Administrar mis listas","Manage my lists")) {showLists=true}

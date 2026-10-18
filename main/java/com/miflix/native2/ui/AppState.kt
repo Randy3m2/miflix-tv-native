@@ -75,6 +75,7 @@ class AppState(context: Context) {
         .put("homeOrder",org.json.JSONArray(homeRowOrder)).put("hiddenRows",org.json.JSONArray(hiddenHomeRows.toList()))
         .put("interface",interfaceLanguage).put("audio",audioLanguage).put("subtitle",subtitleLanguage)
         .put("autoplay",autoplayNext).put("nextLink",autoplayNextLink).put("adaptive",adaptiveSource)
+        .put("previousLiveChannel",previousLiveChannelEnabled)
         .put("subtitleColor",subtitleColor).put("subtitleScale",subtitleScale.toDouble()).put("focusColor",focusColor)
     internal fun validateLocalBackupRC100(body:org.json.JSONObject) {
         require(body.getInt("brunioLocalBackup")==100)
@@ -83,6 +84,7 @@ class AppState(context: Context) {
         require(body.getString("interface") in listOf("en","es"))
         require(body.getString("audio").length<=10 && body.getString("subtitle").length<=10)
         for(key in listOf("autoplay","nextLink","adaptive")) body.getBoolean(key)
+        if(body.has("previousLiveChannel")) body.getBoolean("previousLiveChannel")
         body.getInt("subtitleColor");body.getInt("focusColor");require(body.getDouble("subtitleScale") in 0.8..1.4)
     }
     internal suspend fun importLocalBackupRC100(body:org.json.JSONObject) {
@@ -93,6 +95,7 @@ class AppState(context: Context) {
         playbackPrefs.edit().putStringSet("hidden_home_rows:${ratingsKey()}",(0 until hidden.length()).map {hidden.getString(it)}.toSet()).apply();homeOrderRevision++
         savePlaybackPreferences(body.getString("audio"),body.getString("subtitle"),body.getBoolean("autoplay"))
         saveAutoplayNextLink(body.getBoolean("nextLink"));saveAdaptiveSource(body.getBoolean("adaptive"))
+        savePreviousLiveChannelEnabled(body.optBoolean("previousLiveChannel",true))
         saveSubtitleStyle(body.getInt("subtitleColor"),body.getDouble("subtitleScale").toFloat())
         focusColor=body.getInt("focusColor");FocusTheme.argb=focusColor;playbackPrefs.edit().putInt("focus_color",focusColor).apply()
         restoreCustomFilterRC100()
@@ -1281,6 +1284,33 @@ class AppState(context: Context) {
             com.miflix.native2.data.LidomRepository(appContext,"${session?.userId ?: "local"}:${activeProfile.id}").working(req.lidomTeam,req.lidomSource)
     }
 
+    var previousLiveChannelEnabled by mutableStateOf(playbackPrefs.getBoolean("previous_live_channel",true))
+        private set
+    private val previousLiveChannels=com.miflix.native2.player.PreviousLiveChannelHistory<PlayerRequest>()
+    private var previousLiveRevision by mutableIntStateOf(0)
+    private fun liveHistoryKey(req:PlayerRequest)=if(req.liveProvider=="lidom") "lidom:${req.lidomTeam.ifBlank {req.item.cloudId}}" else "${req.liveProvider}:${req.liveChannelId.ifBlank {req.item.cloudId}}"
+    fun savePreviousLiveChannelEnabled(enabled:Boolean) {
+        previousLiveChannelEnabled=enabled
+        playbackPrefs.edit().putBoolean("previous_live_channel",enabled).apply()
+        if(!enabled) {previousLiveChannels.clear();previousLiveRevision++}
+        else playerRequest?.takeIf {it.playbackId==socialReadyPlaybackId}?.let {recordSuccessfulLiveChannel(it)}
+    }
+    fun recordSuccessfulLiveChannel(req:PlayerRequest) {
+        if(!previousLiveChannelEnabled || !req.live || playerRequest?.playbackId!=req.playbackId || kidsMode) return
+        previousLiveChannels.started(ratingsKey(),liveHistoryKey(req),req)
+        previousLiveRevision++
+    }
+    fun previousLiveChannel(req:PlayerRequest):PlayerRequest? {
+        previousLiveRevision
+        if(!previousLiveChannelEnabled || !req.live || kidsMode) return null
+        return previousLiveChannels.previous(ratingsKey(),liveHistoryKey(req))
+    }
+    fun returnToPreviousLiveChannel(req:PlayerRequest) {
+        if(!req.live || playerRequest?.playbackId!=req.playbackId || partyRole==PartyRole.GUEST || kidsMode) return
+        val previous=previousLiveChannel(req) ?: return
+        // Reuse the last successful request, but start a new live playback at its live edge.
+        openLivePlayer(previous.copy(playbackId=UUID.randomUUID().toString(),resumeMs=0L,sourceFallbackPlaying=null))
+    }
     fun openLivePlayer(req: PlayerRequest) {
         require(!kidsMode) {tr("TV en vivo no está disponible en Kids.","Live TV is not available in Kids.") }
         invalidatePlaybackWork()
@@ -2888,6 +2918,7 @@ class AppState(context: Context) {
     }
 
     fun signOut() {
+        previousLiveChannels.clear();previousLiveRevision++
         sharedMoments.clear();sharedMomentsOwner=""
         session?.let { presenceEvents.queue(it,"","",0,0,null,System.currentTimeMillis()) }
         playbackLinkCache.clear()

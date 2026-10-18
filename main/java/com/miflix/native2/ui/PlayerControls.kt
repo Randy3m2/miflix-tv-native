@@ -52,7 +52,8 @@ internal fun CompactPlayerControls(
     maximized: Boolean, playFocus: FocusRequester, onInteraction: () -> Unit, onPlay: () -> Unit,
     onResize: () -> Unit, onMenu: (String) -> Unit, onLinks: () -> Unit, onSeek: (Long) -> Unit,
     seekable: Boolean, party: Boolean, onParty: () -> Unit, onChat: () -> Unit, onReactions: () -> Unit, onQuickReactions: () -> Unit, onClose: () -> Unit, onMaximize: () -> Unit,
-    nextAvailable: Boolean, onNext: () -> Unit, onEpisodes: () -> Unit, onQueue: () -> Unit, onInfo: () -> Unit, onPip: () -> Unit, onMultiView: () -> Unit, onMoment: () -> Unit
+    nextAvailable: Boolean, onNext: () -> Unit, onEpisodes: () -> Unit, onQueue: () -> Unit, onInfo: () -> Unit, onPip: () -> Unit, onMultiView: () -> Unit, onMoment: () -> Unit,
+    previousChannelVisible:Boolean=false,previousChannelAvailable:Boolean=false,previousChannelName:String="",onPreviousChannel:()->Unit={}
 ) {
     val seekFocus=remember { FocusRequester() }
     var focusedLabel by remember { mutableStateOf("") }
@@ -82,6 +83,9 @@ internal fun CompactPlayerControls(
                     PlayerIconButton("next",tr("Siguiente episodio","Next episode"),onInteraction=onInteraction,onClick=onNext,onLabel={ focusedLabel=it },enabled=nextAvailable)
                     PlayerIconButton("episodes",tr("Episodios","Episodes"),onInteraction=onInteraction,onClick=onEpisodes,onLabel={ focusedLabel=it })
                 }
+                if(request.live && previousChannelVisible) PlayerIconButton("previous",
+                    tr("Canal anterior","Previous channel")+previousChannelName.takeIf {it.isNotBlank()}?.let {" · $it"}.orEmpty(),
+                    onInteraction=onInteraction,onClick=onPreviousChannel,onLabel={focusedLabel=it},enabled=previousChannelAvailable)
                 if(request.live) PlayerIconButton("episodes",if(request.liveProvider=="lidom") tr("Fuentes del equipo","Team sources") else tr("Canales","Channels"),onInteraction=onInteraction,onClick=onEpisodes,onLabel={ focusedLabel=it })
                 PlayerIconButton("cc",tr("Subtítulos","Subtitles"),onInteraction=onInteraction,onClick={onMenu("subtitles")},onLabel={ focusedLabel=it })
                 PlayerIconButton("audio",tr("Pista de audio","Audio track"),onInteraction=onInteraction,onClick={onMenu("audio")},onLabel={ focusedLabel=it })
@@ -120,6 +124,7 @@ private fun PlayerGlyph(icon: String, color: Color, modifier: Modifier) {
         when(icon) {
             "play" -> drawPath(Path().apply { moveTo(w*.28f,h*.15f); lineTo(w*.85f,h*.5f); lineTo(w*.28f,h*.85f); close() },color)
             "pause" -> { drawRect(color,Offset(w*.22f,h*.17f),Size(w*.18f,h*.66f)); drawRect(color,Offset(w*.60f,h*.17f),Size(w*.18f,h*.66f)) }
+            "previous" -> { drawPath(Path().apply {moveTo(w*.84f,h*.15f);lineTo(w*.30f,h*.5f);lineTo(w*.84f,h*.85f);close()},color);drawRect(color,Offset(w*.14f,h*.15f),Size(w*.10f,h*.70f)) }
             "next" -> { drawPath(Path().apply { moveTo(w*.16f,h*.15f);lineTo(w*.70f,h*.5f);lineTo(w*.16f,h*.85f);close() },color);drawRect(color,Offset(w*.76f,h*.15f),Size(w*.10f,h*.70f)) }
             "queue" -> { line(.12f,.2f,.88f,.2f);line(.12f,.5f,.70f,.5f);line(.12f,.8f,.55f,.8f);line(.78f,.64f,.78f,.94f);line(.64f,.79f,.92f,.79f) }
             "episodes" -> { rectangle(.08f,.12f,.24f,.20f);rectangle(.08f,.42f,.24f,.20f);rectangle(.08f,.72f,.24f,.20f);line(.46f,.22f,.92f,.22f);line(.46f,.52f,.92f,.52f);line(.46f,.82f,.92f,.82f) }

@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RC101: corrige el choque JVM de stillLimit y añade Canal anterior en la barra de Live TV, con historial por perfil y actualización solo al reproducir." to "RC101: fixes the stillLimit JVM clash and adds Previous channel to the Live TV control bar, with per-profile history updated only after playback starts.",
         "RC100: funciones locales opcionales: temporizador, ¿Sigues viendo?, listas personales, ocultar recomendaciones, filtros persistentes, memoria de pistas por serie, panel técnico y backup JSON. Idioma de interfaz independiente por perfil." to "RC100: optional local features: sleep timer, still-watching prompt, personal lists, recommendation hiding, persistent filters, per-series track memory, technical panel and JSON backup. Independent interface language per profile.",
         "RC99: opción para activar o desactivar el siguiente enlace automático; mostrar u ocultar filas de Home por perfil, conservando su orden." to "RC99: toggle automatic next-link retries; show or hide Home rows per profile while preserving their order.",
         "RC98: Your Mood · Your Picks conserva el ánimo elegido y permite cargar 25 títulos más al final del catálogo, sin duplicados." to "RC98: Your Mood · Your Picks keeps the selected mood and loads 25 more titles at the end of its catalog without duplicates.",

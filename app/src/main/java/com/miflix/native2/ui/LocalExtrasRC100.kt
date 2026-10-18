@@ -90,7 +90,7 @@ internal class LocalExtrasRC100(private val prefs:SharedPreferences) {
     private var safetyScope=""
     var stillLimit by mutableIntStateOf(prefs.getInt("still_limit",3))
         private set
-    fun setStillLimit(value:Int) {require(value in listOf(2,3,5));stillLimit=value;prefs.edit().putInt("still_limit",value).apply()}
+    fun saveStillLimit(value:Int) {require(value in listOf(2,3,5));stillLimit=value;prefs.edit().putInt("still_limit",value).apply()}
     fun startMinutes(minutes:Int) {require(minutes in listOf(30,60,90));clearTimer();timerDeadline=SystemClock.elapsedRealtime()+minutes*60_000L}
     fun startEpisodes(count:Int) {require(count in 1..5);clearTimer();timerEpisodes=count}
     fun clearTimer() {timerDeadline=0;timerEpisodes=0;sleepStopped=false}

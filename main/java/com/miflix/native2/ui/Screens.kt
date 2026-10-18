@@ -224,11 +224,11 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                     SpotlightRail(moodTitle(effectiveMood),state.localRecommendations(discoveryRows),eyebrow=if(discoveryMood.isEmpty()) tr("PARA ESTE MOMENTO","FOR THIS MOMENT") else tr("TU ÁNIMO · TU SELECCIÓN","YOUR MOOD · YOUR PICKS"),onClick=openItem)
                 }
                 if(discoveryError) shelf(key="discovery-retry") {
-                    FeatureActionCard(tr("No se pudo cargar la selección","Could not load picks"),tr("Pulsa para reintentar","Press to retry"),modifier=Modifier.padding(40.dp)) {discoveryRetry++}
+                    FeatureActionCard(tr("No se pudo cargar la selección","Could not load picks"),tr("Presiona para reintentar","Press to retry"),modifier=Modifier.padding(40.dp)) {discoveryRetry++}
                 }
                 if(simple) shelf(key="simple-actions") {
                     Column(Modifier.padding(horizontal=40.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                        Text(tr("Elige una portada y pulsa OK para ver sus opciones.","Choose a cover and press OK to see its options."),color=Color.White,fontSize=20.sp)
+                        Text(tr("Elige una portada y presiona OK para ver sus opciones.","Choose a cover and press OK to see its options."),color=Color.White,fontSize=20.sp)
                         Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
                             FocusButton(tr("Buscar","Search")) {onNavigate(Screen.SEARCH)}
                             FocusButton(tr("Mi lista","My List")) {onNavigate(Screen.MY_LIST)}
@@ -918,7 +918,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
 
     val helpValue = visualHelp?.value ?: when(helpIndex) {
         0 -> "BruniO ${BuildConfig.VERSION_NAME}"
-        1 -> if(state.interfaceLanguage=="en") "English" else "Español"
+        1 -> if(state.interfaceLanguage=="en") "English" else "Español (Latinoamérica)"
         2 -> state.session?.email ?: tr("Sin sesión","Not signed in")
         3 -> state.audioLanguage.ifBlank { tr("Automático","Automatic") }
         4 -> if(state.streamSizeLimitGb==0.0) tr("Sin límite","Unlimited") else "${state.streamSizeLimitGb} GB"
@@ -942,7 +942,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
             }
         }) {
         Column(Modifier.fillMaxSize().padding(horizontal=34.dp)) {
-            Text(tr("Ajustes","Settings"),color=Color.White,fontSize=34.sp,lineHeight=41.sp,fontWeight=FontWeight.Black,
+            Text(tr("Configuración","Settings"),color=Color.White,fontSize=34.sp,lineHeight=41.sp,fontWeight=FontWeight.Black,
                 modifier=Modifier.padding(top=24.dp))
             Text(tr("Tu experiencia, a tu manera.","Make BruniO yours."),color=Muted,fontSize=15.sp,modifier=Modifier.padding(top=4.dp,bottom=18.dp))
             LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(vertical=4.dp)) {
@@ -976,7 +976,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 Text(tr("Idioma de la app","App language"),color=Color.White,fontSize=22.sp, lineHeight=26.sp)
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
-                    FocusButton("Español",primary=state.interfaceLanguage=="es") { state.launch { state.setInterfaceLanguage("es") } }
+                    FocusButton("Español (Latinoamérica)",primary=state.interfaceLanguage=="es") { state.launch { state.setInterfaceLanguage("es") } }
                     FocusButton("English",primary=state.interfaceLanguage=="en") { state.launch { state.setInterfaceLanguage("en") } }
                 }
 
@@ -1484,7 +1484,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             setMediaItem(builder.build(), request.resumeMs)
             val trackBuilder = TrackSelectionParameters.Builder(context)
             if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(state.audioLanguage)) {
-                trackBuilder.setPreferredAudioLanguages("es", "en")
+                trackBuilder.setPreferredAudioLanguages("es-419", "es-MX", "es-AR", "es-CO", "es-DO", "es-CL", "es-PE", "es-VE", "es-EC", "es-ES", "es", "en")
             } else trackBuilder.setPreferredAudioLanguage(state.audioLanguage.takeIf { it.isNotBlank() })
             if (preferredText != null) trackBuilder.setPreferredTextLanguage(preferredText)
             savedSeriesTracks?.optString("audio")?.takeIf {it.isNotBlank()}?.let {trackBuilder.setPreferredAudioLanguage(it)}
@@ -2171,7 +2171,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
 
 
         } // full-size controls
-        if(!mini && exitArmedAt!=0L) Text(tr("Pulsa dos veces para salir","Double tap to exit"),color=Color.White,fontSize=18.sp,
+        if(!mini && exitArmedAt!=0L) Text(tr("Presiona dos veces para salir","Double tap to exit"),color=Color.White,fontSize=18.sp,
             modifier=Modifier.align(Alignment.TopCenter).padding(top=32.dp).background(Color(0xE6222222),RoundedCornerShape(16.dp)).padding(horizontal=24.dp,vertical=14.dp))
     }
 }

@@ -42,6 +42,8 @@ internal object StreamOrdering {
         val english = StreamLanguagePriority.prefersEnglish(preferredAudio)
         return streams.filter { playable(it) }
             .sortedWith(compareBy<StreamChoice> { if(spanish) languageRank(it) else if(english) {if(hasEnglishAudio(it)) 0 else if(languageRank(it)==2) 1 else 2} else 0 }
+                .thenBy {if(spanish && languageRank(it)==0) StreamLanguagePriority.spanishVariantRank(
+                    it.audioLanguages.joinToString(" "),"${it.name}\n${it.title}\n${it.filename}") else 0}
                 .thenBy {providerOrder.indexOf(it.addonName).let {index ->if(index<0) Int.MAX_VALUE else index}}
                 .thenBy {if(bandwidthBps>0 && !AdaptiveSourcePolicy.fits(AdaptiveSourcePolicy.rate(bytes(it),durationSeconds,quality(it)),bandwidthBps)) 1 else 0}
                 .thenBy {if(bandwidthBps>0 && !AdaptiveSourcePolicy.fits(AdaptiveSourcePolicy.rate(bytes(it),durationSeconds,quality(it)),bandwidthBps)) AdaptiveSourcePolicy.rate(bytes(it),durationSeconds,quality(it)) else 0L}

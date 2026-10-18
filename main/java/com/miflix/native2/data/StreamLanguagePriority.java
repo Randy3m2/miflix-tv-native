@@ -51,6 +51,22 @@ public final class StreamLanguagePriority {
         if (declared != 2) return declared;
         return category(audioEvidence(labels));
     }
+    /** Regional audio preference; keep the broad rank() contract unchanged. */
+    public static int spanishVariantRank(String declaredAudioLanguages, String labels) {
+        String declared=normalize(declaredAudioLanguages);
+        // Regional declarations are authoritative; generic Spanish can be refined by audio labels.
+        if(category(declared)!=2 && category(declared)!=0) return 3;
+        int region=variant(declared);
+        return region<3 ? region : variant(audioEvidence(labels));
+    }
+    private static int variant(String text) {
+        if(Pattern.compile(EDGE+"(?:es[-](?:mx|ar|co|do|cl|pe|ve|ec|419)|lat|latino|latina|latam|latin[ ._-]+american)"+END).matcher(text).find()
+            || text.contains("🇲🇽") || text.contains("🇦🇷") || text.contains("🇨🇴") || text.contains("🇩🇴")
+            || text.contains("🇨🇱") || text.contains("🇵🇪") || text.contains("🇻🇪") || text.contains("🇪🇨")) return 0;
+        if(Pattern.compile(EDGE+"(?:es-es|espana|spain)"+END).matcher(text).find() || text.contains("🇪🇸")) return 1;
+        if(Pattern.compile(EDGE+"(?:castellano|castilian)"+END).matcher(text).find()) return 2;
+        return 3;
+    }
     private static String audioEvidence(String labels) {
         StringBuilder evidence = new StringBuilder();
         for (String line : normalize(labels).split("\\r?\\n")) {

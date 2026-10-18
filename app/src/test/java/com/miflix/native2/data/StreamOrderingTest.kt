@@ -36,7 +36,7 @@ class StreamOrderingTest {
         val english=stream("en","2160p English",9000)
         val latin=stream("lat","720p Latino",100)
         val spain=stream("es","1080p Castellano",200)
-        assertEquals(listOf(spain,latin,english),StreamOrdering.sorted(listOf(english,latin,spain),"es"))
+        assertEquals(listOf(latin,spain,english),StreamOrdering.sorted(listOf(english,latin,spain),"es"))
     }
     @Test fun englishFallbackPrecedesUnknownAndOtherAudio() {
         val french=stream("fr","2160p French",9000)
@@ -133,6 +133,23 @@ class StreamOrderingTest {
         val english=stream("en","1080p English")
         assertEquals(listOf(spanish,english),StreamOrdering.fallbackCandidates(
             listOf(duplicate,english,spanish),"es",providerOrder=listOf("LAT-Add","Umbra","Comet")))
+    }
+
+    @Test fun spanishRegionalPriorityPrecedesProviderAndQuality() {
+        val latin=stream("lat","720p Latino").copy(addonName="Umbra")
+        val spain=stream("spain","1080p España")
+        val castilian=stream("cast","2160p Castellano")
+        val generic=stream("generic","2160p Spanish")
+        val english=stream("en","4K English")
+        assertEquals(listOf(latin,spain,castilian,generic,english),
+            StreamOrdering.fallbackCandidates(listOf(english,generic,castilian,spain,latin),"es",providerOrder=listOf("Comet","Umbra")))
+    }
+    @Test fun regionalMetadataAndSubtitlesAreNotConfused() {
+        assertEquals(0,StreamLanguagePriority.spanishVariantRank("es-419",""))
+        assertEquals(1,StreamLanguagePriority.spanishVariantRank("es-ES","Latino"))
+        assertEquals(2,StreamLanguagePriority.spanishVariantRank("es","Audio Castellano"))
+        assertEquals(3,StreamLanguagePriority.spanishVariantRank("en","Audio Latino"))
+        assertEquals(3,StreamLanguagePriority.spanishVariantRank("es","Latino subtitles"))
     }
 
 }

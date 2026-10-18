@@ -12,6 +12,8 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP6: audio latino primero, España después y etiquetas castellano a continuación; todo el español antes de inglés." to "RP6: Latin American audio first, Spain next, then Castilian labels; all Spanish before English.",
+        "RP5: español latinoamericano por perfil; títulos y sinopsis en es-MX, con imágenes disponibles en el catálogo." to "RP5: per-profile Latin American Spanish; es-MX titles and synopses with available catalog artwork.",
         "RP4: cuatro add-ons incluidos por defecto, eliminables individualmente desde Settings." to "RP4: four default add-ons, individually removable from Settings.",
         "RP3: add-on MG incluido por defecto y eliminable desde Settings; recuerda la eliminación en esta TV." to "RP3: MG add-on included by default and removable from Settings; removal is remembered on this TV.",
         "RP2: prioridad de add-ons por idioma, orden personalizable por perfil y audio; información de reproducción y detalles de enlace a pantalla completa sobre el vídeo." to "RP2: language-based add-on priority, editable order per profile and audio language; full-screen playback information and source details over the video.",

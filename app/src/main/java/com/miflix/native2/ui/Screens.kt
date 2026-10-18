@@ -1187,7 +1187,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                                 .replace("Returned:","Recibidos:").replace("Available:","Disponibles:")
                                 .replace("Hidden (unknown size):","Ocultos (sin tamaño):") else status,color=Muted,fontSize=12.sp)
                         }
-                        AddonLimitControlRP7(state,manifest)
+                        AddonLimitButtonRP8(state,manifest)
                         FocusButton(tr("Eliminar","Remove"),destructive=true) { state.launch { state.socialAction { state.removeAddonManifest(manifest) } } }
                     }
                 }
@@ -2533,6 +2533,33 @@ private fun EpisodeArtwork(ep: EpisodeSummary, hidden: Boolean, modifier: Modifi
             }
             Box(Modifier.fillMaxSize().background(Color(0xDB10131A)))
             Text(tr("No visto","Not watched"),color=Color(0xFFCED1D8),fontSize=14.sp)
+        }
+    }
+}
+
+
+@Composable
+private fun AddonLimitButtonRP8(state:AppState,manifest:String) {
+    var showLimits by remember(manifest,state.activeProfile.id) {mutableStateOf(false)}
+    val limit=state.addonLimitRP7(manifest)
+    FocusButton(tr("Enlaces: ","Links: ")+(if(limit==0) tr("Todos","All") else limit.toString())) {showLimits=true}
+    if(showLimits) {
+        var custom by remember {mutableStateOf(if(limit>0) limit.toString() else "")}
+        var error by remember {mutableStateOf("")}
+        SettingsDialogRC103(tr("Límite de enlaces","Link limit"),state.streamRepo.addonLabel(manifest),{showLimits=false}) {
+            Text(tr("Se guarda por perfil en esta TV. Conserva primero los enlaces del idioma preferido y después el orden de calidad.","Saved per profile on this TV. Keeps preferred-audio links first, then quality order."),color=Muted)
+            FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                listOf(0,5,10,15).forEach {n ->
+                    FocusButton(if(n==0) tr("Todos","All") else n.toString(),primary=limit==n) {state.saveAddonLimitRP7(manifest,n);showLimits=false}
+                }
+            }
+            NativeTextField(custom,{custom=it.filter {c ->c.isDigit()}.take(4)},tr("Personalizado · 1 a 1000","Custom · 1 to 1000"),modifier=Modifier.fillMaxWidth())
+            if(error.isNotBlank()) Text(error,color=Color.White)
+            FocusButton(tr("Aplicar","Apply")) {
+                val n=custom.toIntOrNull()
+                if(n==null || n !in 1..1000) error=tr("Escribe un número entre 1 y 1000.","Enter a number from 1 to 1000.")
+                else {state.saveAddonLimitRP7(manifest,n);showLimits=false}
+            }
         }
     }
 }

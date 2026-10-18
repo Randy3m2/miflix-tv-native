@@ -1030,7 +1030,7 @@ class AppState(context: Context) {
         val f=if(localExtras.enabled("filters")) localExtras.preference(ratingsKey(),"filter:custom") else org.json.JSONObject()
         customFilter=runCatching {CustomCatalogFilter().copy(
             type=f.optString("type","movie"),fromYear=f.optString("fromYear"),toYear=f.optString("toYear"),
-            sort=f.optString("sort","popular"),minimumRating=f.optDouble("minimumRating",0.0),
+            sort=f.optString("sort","popular"),minimumRating=f.optInt("minimumRating",CustomCatalogFilter().minimumRating),
             genre=f.optJSONObject("genre")?.let {CatalogGenre(it.getInt("id"),it.getString("name"))}
         )}.getOrDefault(CustomCatalogFilter())
         appliedCustomFilter=null;customFilterResults.clear();customFilterPage=0;customFilterScrollIndex=0;customFilterScrollOffset=0

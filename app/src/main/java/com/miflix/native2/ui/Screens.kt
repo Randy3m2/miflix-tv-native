@@ -872,6 +872,8 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var addonUrl by remember { mutableStateOf("") }
+    var showAddonOrder by remember {mutableStateOf(false)}
+    if(showAddonOrder) AddonPrioritySettingsRP2(state) {showAddonOrder=false}
     var showTasteEditor by remember {mutableStateOf(false)}
     if(showTasteEditor && !state.kidsMode) TasteOnboardingRC102(state) {showTasteEditor=false}
     var showLocalExtras by remember {mutableStateOf(false)}
@@ -1166,6 +1168,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     if(category=="sources") item(key="setting-8") {
                         SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Stream Add-ons";helpDescription="Use the main profile add-ons or configure sources for this profile on this TV.";helpIndex=8 }) {
                 Text(tr("Complementos de reproducción","Stream Add-ons"), color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold)
+                SettingsTileRC103(tr("Orden de los add-ons","Add-on priority"),tr("Prioridades independientes para español e inglés, guardadas para este perfil en esta TV.","Separate Spanish and English priorities, saved for this profile on this TV."),"lists") {showAddonOrder=true}
                 Spacer(Modifier.height(8.dp))
                 Text(tr("Añade las URLs de manifiesto de tus complementos compatibles. Cada perfil puede heredar las fuentes del principal o usar las suyas en esta TV.","Add manifest URLs for your compatible add-ons. Each profile can inherit the main profile sources or use its own on this TV."), color = Muted, fontSize = 14.sp, lineHeight=17.sp, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(12.dp))
@@ -2319,7 +2322,7 @@ private fun formatPosition(ms: Long): String {
 @Composable
 fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
     var addonFilter by remember(selection.item.cloudId,selection.season,selection.episode) {mutableStateOf("")}
-    val addonNames=(state.streamRepo.sourceAddonNames()+selection.streams.map {it.addonName.ifBlank {"Add-on"}}).distinct()
+    val addonNames=(state.orderedSourceAddonsRP2().map {it.name}+selection.streams.map {it.addonName.ifBlank {"Add-on"}}).distinct()
     val visibleStreams=selection.streams.filter {addonFilter.isBlank() || it.addonName.ifBlank {"Add-on"}==addonFilter}
     LaunchedEffect(addonNames) {if(addonFilter.isNotBlank() && addonFilter !in addonNames) addonFilter=""}
     val firstLink = remember(selection) { FocusRequester() }
@@ -2389,15 +2392,18 @@ private fun SourceLinkCard(stream: com.miflix.native2.model.StreamChoice,modifie
     var rawDetails by remember(stream) {mutableStateOf(false)}
     val info=remember(stream) {com.miflix.native2.data.StreamPresentation.parse(stream.addonName,stream.name,stream.title,stream.filename,stream.videoSize)}
     val ink=Color.White
-    if(rawDetails) PlayerMenuDialog(onDismissRequest={rawDetails=false}) {
+    if(rawDetails) PlayerMenuDialog(fullScreen=true,onDismissRequest={rawDetails=false},properties=DialogProperties(usePlatformDefaultWidth=false)) {
         val first=remember {FocusRequester()}
         LaunchedEffect(Unit) {withFrameNanos {};runCatching {first.requestFocus()} }
-        Column(Modifier.consumeOpeningPress().widthIn(max=650.dp).heightIn(max=460.dp).background(Panel,RoundedCornerShape(24.dp)).padding(24.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-            Text(info.heading,color=Color.White,fontSize=23.sp)
-            Text(listOf(stream.title,stream.filename).filter {it.isNotBlank()}.distinct().joinToString("\n\n"),color=Muted,fontSize=14.sp,modifier=Modifier.contentFocusBorder().focusable().padding(6.dp))
-            FocusButton(tr("Cerrar","Close"),modifier=Modifier.focusRequester(first)) {rawDetails=false}
+        Column(Modifier.consumeOpeningPress().fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0x90000000),Color(0x40000000),Color.Transparent))).padding(40.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)) {
+                Text(info.heading,color=Color.White,fontSize=26.sp,modifier=Modifier.weight(1f))
+                FocusButton(tr("Cerrar","Close"),modifier=Modifier.focusRequester(first)) {rawDetails=false}
+            }
+            Text(listOf(stream.title,stream.filename).filter {it.isNotBlank()}.distinct().joinToString("\n\n"),color=Color.White,fontSize=17.sp,lineHeight=24.sp,modifier=Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).contentFocusBorder().focusable().padding(6.dp))
         }
     }
+
     Column(modifier.onFocusChanged {focused=it.isFocused}.focusable().tvPlaybackClick(onClick,{rawDetails=true}).clickable(onClick=onClick)
         .background(if(focused) FocusedPanel else if(playing) Accent.copy(alpha=.18f) else Color(0xFF252528),RoundedCornerShape(18.dp))
         .border(if(focused || playing) 2.dp else 1.dp,if(focused || playing) Accent else PanelBorder,RoundedCornerShape(18.dp)).padding(20.dp),

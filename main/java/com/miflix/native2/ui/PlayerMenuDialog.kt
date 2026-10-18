@@ -23,7 +23,24 @@ internal val LocalPlayerMenuSide=staticCompositionLocalOf {false}
 /** A single right-side surface; the rest of the video is transparent, with no blur or dim. */
 @Composable
 internal fun PlayerMenuDialog(onDismissRequest: () -> Unit,properties: DialogProperties=DialogProperties(),
-    forceSide: Boolean=false,content: @Composable () -> Unit) {
+    forceSide: Boolean=false,fullScreen:Boolean=false,content: @Composable () -> Unit) {
+    if(fullScreen) {
+        Dialog(onDismissRequest=onDismissRequest,properties=DialogProperties(
+            dismissOnBackPress=properties.dismissOnBackPress,dismissOnClickOutside=properties.dismissOnClickOutside,
+            securePolicy=properties.securePolicy,usePlatformDefaultWidth=false,
+            decorFitsSystemWindows=properties.decorFitsSystemWindows)) {
+            val view=LocalView.current
+            DisposableEffect(view) {
+                (view.parent as? DialogWindowProvider)?.window?.let {window ->
+                    window.setDimAmount(0f)
+                    window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+                }
+                onDispose { }
+            }
+            Box(Modifier.fillMaxSize()) {CompositionLocalProvider(LocalPlayerMenuSide provides false) {content()}}
+        }
+        return
+    }
     val side=forceSide || LocalPlayerMenuSide.current
     if(!side) {
         Dialog(onDismissRequest=onDismissRequest,properties=properties,content=content)

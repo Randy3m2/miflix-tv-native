@@ -15,6 +15,13 @@ class StreamRepository(initialManifestUrl: String) {
         val host=runCatching {URI(manifest).host}.getOrNull().orEmpty().ifBlank {"Add-on"}
         return (metadata[manifest]?.name?.takeIf {it.isNotBlank()} ?: host)+" · "+(position+1)
     }
+    suspend fun inspectSourceAddons() = coroutineScope {
+        manifests().map {manifest ->async {info(manifest)}}.awaitAll()
+        Unit
+    }
+    internal fun sourceAddons():List<InstalledSourceAddonRP2> = manifests().mapIndexedNotNull {index,url ->
+        if(metadata[url]?.streams==false) null else InstalledSourceAddonRP2(AddonPriorityRP2.id(url),label(url,index),runCatching {URI(url).host.orEmpty()}.getOrDefault(""))
+    }
     fun sourceAddonNames():List<String> = manifests().mapIndexedNotNull {index,url ->if(metadata[url]?.streams==false) null else label(url,index)}
     private suspend fun info(manifest:String):ManifestInfo {
         val now=System.currentTimeMillis()

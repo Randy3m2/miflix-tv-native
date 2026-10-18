@@ -69,7 +69,7 @@ fun PlaybackInfoDialog(player: ExoPlayer, request: PlayerRequest, close: () -> U
         val bitrate=f?.averageBitrate?.takeIf { it>0 } ?: f?.peakBitrate?.takeIf { it>0 }
         return bitrate?.let { String.format(Locale.US,"%.2f Mbps",it/1_000_000.0) } ?: "—"
     }
-    PlayerMenuDialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    PlayerMenuDialog(fullScreen=true,onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         val view=androidx.compose.ui.platform.LocalView.current
         DisposableEffect(view) {
             (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window?.setDimAmount(0f)
@@ -77,7 +77,7 @@ fun PlaybackInfoDialog(player: ExoPlayer, request: PlayerRequest, close: () -> U
         }
         LaunchedEffect(Unit) {withFrameNanos { };runCatching {first.requestFocus()} }
         Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(
-            listOf(Color(0xEC08080E),Color(0xC408080E),Color(0x6008080E)))).padding(horizontal=40.dp,vertical=26.dp)) {
+            listOf(Color(0x90000000),Color(0x40000000),Color.Transparent))).padding(horizontal=40.dp,vertical=26.dp)) {
             Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                 Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
                     Text(tr("Información de reproducción","Playback information"),color=Color.White,fontSize=25.sp,modifier=Modifier.weight(1f))

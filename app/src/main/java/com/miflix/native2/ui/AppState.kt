@@ -1039,7 +1039,7 @@ class AppState(context: Context) {
         streamRepo.manifests().toList(),nativeSourceEnabled,nativeRevision,streamSizeBytes,audioLanguage)
     private suspend fun resolvePlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = playbackCacheMutex.withLock {
         val key=playbackCacheKey(item,imdb,season,episode)
-        playbackLinkCache.get(key)?.let { return@withLock it }
+        playbackLinkCache.get(key)?.let { return@withLock StreamOrdering.sorted(it,audioLanguage,providerOrder=sourceProviderOrderRP2()) }
         val streams=fetchPlaybackSources(item,imdb,season,episode)
         // Cache successful lists only; account/settings changes cannot publish stale results.
         if(streams.isNotEmpty() && key==playbackCacheKey(item,imdb,season,episode)) playbackLinkCache.put(key,streams)
@@ -1050,7 +1050,7 @@ class AppState(context: Context) {
         val native=owner!=null && nativeStore.enabled(owner)
         // Disabled is the default and leaves the existing add-on path unchanged.
         if(!native) return@supervisorScope StreamOrdering.sorted(
-            streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage), audioLanguage)
+            streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage), audioLanguage,providerOrder=sourceProviderOrderRP2())
         val token=nativeStore.token(owner)
         val addon=async {
             if(streamRepo.manifests().isEmpty()) emptyList() else streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage)
@@ -1064,10 +1064,40 @@ class AppState(context: Context) {
                     try {tmdb.spanishTitle(item).ifBlank {item.title}} catch(e: CancellationException) {throw e} catch(_: Exception) {item.title}
                 else item.title),item.type,item.year,season,episode,streamSizeBytes,audioLanguage) }
         } catch(e: kotlinx.coroutines.TimeoutCancellationException) { failure=tr("Motor nativo: tiempo agotado","Native engine: timed out");emptyList() } catch(e: CancellationException) { throw e } catch(e: Exception) { failure=e.message;emptyList() }
-        val links=StreamOrdering.sorted((addon.await()+builtIn).filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) }, audioLanguage)
+        val links=StreamOrdering.sorted((addon.await()+builtIn).filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) }, audioLanguage,providerOrder=sourceProviderOrderRP2())
         if(session?.userId==owner) nativeSourceStatus=failure ?: tr("Motor nativo: ","Native engine: ")+builtIn.size+tr(" enlaces disponibles"," available links")
         if(links.isEmpty() && failure!=null) throw IllegalStateException(failure)
         links
+    }
+    private var addonOrderRevision by mutableIntStateOf(0)
+    var addonOrderLoading by mutableStateOf(false)
+        private set
+    private fun addonOrderKey(language:String)="addon_order_rp2:${profileAddonScope()}:${AddonPriorityRP2.language(language)}"
+    private fun savedAddonOrder(language:String):List<String> {
+        addonOrderRevision
+        val a=runCatching {org.json.JSONArray(playbackPrefs.getString(addonOrderKey(language),"[]"))}.getOrDefault(org.json.JSONArray())
+        return (0 until a.length()).map {a.optString(it)}.filter {it.length==64}.distinct()
+    }
+    internal fun orderedSourceAddonsRP2(language:String=audioLanguage):List<InstalledSourceAddonRP2> {
+        addonOrderRevision;profileAddonRevision
+        return AddonPriorityRP2.ordered(streamRepo.sourceAddons(),savedAddonOrder(language),language)
+    }
+    private fun sourceProviderOrderRP2()=orderedSourceAddonsRP2().map {it.name}
+    suspend fun inspectAddonOrderRP2() {
+        val scope=profileAddonScope();val manifests=streamRepo.manifests()
+        addonOrderLoading=true
+        try {streamRepo.inspectSourceAddons();if(scope==profileAddonScope() && manifests==streamRepo.manifests()) addonOrderRevision++}
+        finally {addonOrderLoading=false}
+    }
+    internal fun moveSourceAddonRP2(id:String,delta:Int,language:String) {
+        val rows=orderedSourceAddonsRP2(language).toMutableList();val index=rows.indexOfFirst {it.id==id};val target=index+delta
+        if(index<0 || target !in rows.indices) return
+        java.util.Collections.swap(rows,index,target)
+        playbackPrefs.edit().putString(addonOrderKey(language),org.json.JSONArray(rows.map {it.id}).toString()).apply()
+        addonOrderRevision++;invalidatePlaybackWork()
+    }
+    fun resetSourceAddonOrderRP2(language:String) {
+        playbackPrefs.edit().remove(addonOrderKey(language)).apply();addonOrderRevision++;invalidatePlaybackWork()
     }
     val addonManifests=mutableStateListOf<String>()
     private var primaryAddonManifests:List<String> = emptyList()
@@ -2564,11 +2594,11 @@ class AppState(context: Context) {
             if(!valid()) return@coroutineScope
             val bandwidth=if(adaptiveSource) androidx.media3.exoplayer.upstream.DefaultBandwidthMeter.getSingletonInstance(appContext).bitrateEstimate else 0L
             val seconds=(details?.takeIf {it.summary.cloudId==item.cloudId}?.runtimeMinutes ?: 0)*60
-            val chosen = selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds)
+            val chosen = selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2())
                 ?: throw IllegalStateException(tr("No se encontraron enlaces reproducibles","No playable sources found"))
             val automaticFallback=autoplayNextLink && watchParty==null
             val retryRows=if(automaticFallback) {
-                val candidates=StreamOrdering.fallbackCandidates(streams,audioLanguage,bandwidth,seconds).filter {it.url!=chosen.url}
+                val candidates=StreamOrdering.fallbackCandidates(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2()).filter {it.url!=chosen.url}
                 val ordered=(listOf(chosen)+candidates).distinctBy {it.url}
                 if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(audioLanguage)) ordered else ordered.take(com.miflix.native2.player.SourceFallbackBudget.MAX_ATTEMPTS)
             } else listOf(chosen)

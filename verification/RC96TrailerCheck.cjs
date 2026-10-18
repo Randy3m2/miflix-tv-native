@@ -1,0 +1,17 @@
+const fs=require('fs'),assert=require('assert');
+const b='app/src/main/java/com/miflix/native2/ui/';
+const d=fs.readFileSync(b+'DiscoveryHome.kt','utf8').split('internal fun DiscoveryTrailers')[1];
+const h=fs.readFileSync(b+'Screens.kt','utf8');
+assert(h.includes('mood=discoveryMood'));
+assert(d.includes('if(mood.isBlank()) candidates else state.discoveryRun(mood)'));
+assert.equal((d.match(/Dialog\(onDismissRequest/g)||[]).length,1);
+assert(d.indexOf('Dialog(onDismissRequest')<d.indexOf('if(item!=null && playing!=null)'));
+assert(d.includes('embedded=true'));
+assert(d.includes('fillMaxSize().background(Color.Black)'));
+assert(d.includes('trailers:$mood'));
+const p=fs.readFileSync(b+'LidomYoutubePlayer.kt','utf8');
+assert(p.includes('if(embedded) playerContent() else Dialog'));
+const a=fs.readFileSync('app/src/main/assets/discovery_youtube.html','utf8');
+assert(a.includes('controls:0'));assert(a.includes('disablekb:1'));assert(a.includes('fs:0'));
+for(const n of ['DiscoveryHome.kt','LidomYoutubePlayer.kt','Screens.kt','UpdateNotes.kt'])assert(fs.readFileSync(b+n).equals(fs.readFileSync('main/java/com/miflix/native2/ui/'+n)));
+console.log('PASS: explicit mood vs random catalog, persistent fullscreen dialog, isolated embedded player, official hidden controls and mirrors. TV test pending.');

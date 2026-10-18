@@ -154,7 +154,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
         try {val contextual=state.discoveryRun(effectiveMood);discoveryRows=state.freshDiscoveryRows("mood:$effectiveMood",(if(discoveryMood.isEmpty()) state.forYou+contextual else contextual).distinctBy {it.cloudId})}
         catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {discoveryError=true} finally {discoveryLoading=false}
     }
-    if(showTrailers) DiscoveryTrailers(state,(discoveryRows+state.forYou+state.trending+state.movies+state.series).distinctBy {it.cloudId}) {showTrailers=false}
+    if(showTrailers) DiscoveryTrailers(state,(state.forYou+state.trending+state.movies+state.series).distinctBy {it.cloudId},mood=discoveryMood) {showTrailers=false}
     val genreScroll=rememberLazyListState()
     val firstGenre=remember {FocusRequester()}
     val scroll=rememberLazyListState()

@@ -65,7 +65,7 @@ private class LidomYoutubeBridge(val callback:(String)->Unit) {
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
-    preview:Boolean=false,caption:String="",previous:(()->Unit)?=null,next:(()->Unit)?=null,
+    preview:Boolean=false,embedded:Boolean=false,caption:String="",previous:(()->Unit)?=null,next:(()->Unit)?=null,
     onEnded:(()->Unit)?=null,details:(()->Unit)?=null,watch:(()->Unit)?=null,swipe:Modifier=Modifier) {
     val context=LocalContext.current
     val previewFocus=remember(video) {FocusRequester()}
@@ -101,7 +101,7 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
             true
         } else false
     }
-    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
+    val playerContent: @Composable () -> Unit = {
         Column(Modifier.fillMaxSize().background(Color.Black).then(if(preview) remoteController else Modifier)) {
             if(preview) {
                 Text(caption,color=Color.White,fontSize=20.sp,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.fillMaxWidth().padding(start=24.dp,end=24.dp,top=10.dp,bottom=4.dp))
@@ -147,4 +147,5 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
 
     }
 }
+    if(embedded) playerContent() else Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {playerContent()}
 }

@@ -107,14 +107,22 @@ internal fun DiscoveryControls(mood:String,loading:Boolean,onMood:(String)->Unit
 
 /** Touch drags and remote arrows advance horizontally; only the current YouTube player exists. */
 @Composable
-internal fun DiscoveryTrailers(state:AppState,candidates:List<MediaSummary>,close:()->Unit) {
+internal fun DiscoveryTrailers(state:AppState,candidates:List<MediaSummary>,mood:String="",close:()->Unit) {
     DisposableEffect(state) {
         state.discoveryPreviewActive=true
         onDispose {state.discoveryPreviewActive=false;MenuActivity.touch()}
     }
-    val rows=remember {
-        val today=java.text.SimpleDateFormat("yyyy-MM-dd",java.util.Locale.US).format(java.util.Date())
-        state.discoveryOrder("trailers",candidates.distinctBy {it.cloudId}.filter {it.releaseDate.isBlank() || it.releaseDate<=today}).take(40)
+    var rows by remember {mutableStateOf<List<MediaSummary>>(emptyList())}
+    var queueLoading by remember {mutableStateOf(true)}
+    var queueError by remember {mutableStateOf(false)}
+    var queueRetry by remember {mutableIntStateOf(0)}
+    LaunchedEffect(mood,queueRetry) {
+        queueLoading=true;queueError=false
+        try {
+            val pool=if(mood.isBlank()) candidates else state.discoveryRun(mood)
+            val today=java.text.SimpleDateFormat("yyyy-MM-dd",java.util.Locale.US).format(java.util.Date())
+            rows=state.discoveryOrder("trailers:$mood",pool.distinctBy {it.cloudId}.filter {it.releaseDate.isBlank() || it.releaseDate<=today}).take(40)
+        } catch(e:CancellationException) {throw e} catch(_:Exception) {queueError=true} finally {queueLoading=false}
     }
     var index by remember {mutableIntStateOf(0)}
     var trailer by remember {mutableStateOf<TrailerSummary?>(null)}
@@ -146,22 +154,24 @@ internal fun DiscoveryTrailers(state:AppState,candidates:List<MediaSummary>,clos
         }) {change,amount ->change.consume();drag+=amount}
     }
     val playing=trailer.takeIf {loadedCloud==item?.cloudId}
+    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
     if(item!=null && playing!=null) key(item.cloudId,playing.key) {
-        LidomYoutubePlayer(playing.key,onWorking={state.recordDiscovery("trailers",item)},close=close,preview=true,
+        LidomYoutubePlayer(playing.key,onWorking={state.recordDiscovery("trailers:$mood",item)},close=close,preview=true,embedded=true,
             caption="${index+1}/${rows.size} · ${item.title}",
             previous=if(index>0) ({index--; Unit}) else null,next={next()},onEnded={next()},
             details={close();state.launch {state.open(item)}},
             watch={close();state.launch {state.surpriseDiscovery(listOf(item))}},swipe=swipe)
-    } else Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
-        Column(Modifier.fillMaxWidth(.8f).background(Color(0xff101016)).padding(28.dp).then(swipe),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+    } else {
+        Column(Modifier.fillMaxSize().background(Color.Black).padding(28.dp).then(swipe),verticalArrangement=Arrangement.spacedBy(18.dp)) {
             Text(item?.title ?: tr("Tráileres","Trailers"),color=Color.White,fontSize=24.sp)
-            Text(if(loading) tr("Cargando tráiler…","Loading trailer…") else message,color=Muted)
+            Text(if(queueLoading || loading && item!=null) tr("Cargando tráiler…","Loading trailer…") else if(queueError) tr("No se pudo cargar esta selección.","Could not load this selection.") else if(rows.isEmpty()) tr("No hay tráileres disponibles para esta selección.","No trailers available for this selection.") else message,color=Muted)
             Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                 if(index>0) FocusButton("←") {index--}
-                if(!loading) FocusButton(tr("Reintentar","Retry")) {retry++}
+                if(!queueLoading && (!loading || item==null)) FocusButton(tr("Reintentar","Retry")) {if(item==null) queueRetry++ else retry++}
                 if(index<rows.lastIndex) FocusButton(tr("Siguiente →","Next →")) {next()}
                 FocusButton(tr("Cerrar","Close"),onClick=close)
             }
         }
     }
+}
 }

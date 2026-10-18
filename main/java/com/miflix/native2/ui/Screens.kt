@@ -141,15 +141,17 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     var discoveryLoading by remember(discoveryOwner) {mutableStateOf(false)}
     var discoveryError by remember(discoveryOwner) {mutableStateOf(false)}
     var discoveryRetry by remember {mutableIntStateOf(0)}
+    var showCinemaHub by remember(discoveryOwner) {mutableStateOf(false)}
+    if(showCinemaHub) CinemaHub(state) {showCinemaHub=false}
     var showTrailers by remember(discoveryOwner) {mutableStateOf(false)}
     val clock=remember(state.appForeground) {java.util.Calendar.getInstance()}
     val contextualMood=remember(clock) {com.miflix.native2.data.DiscoveryMood.context(clock.get(java.util.Calendar.HOUR_OF_DAY),clock.get(java.util.Calendar.MONTH)+1,clock.get(java.util.Calendar.DAY_OF_MONTH),clock.get(java.util.Calendar.DAY_OF_WEEK) in setOf(java.util.Calendar.SATURDAY,java.util.Calendar.SUNDAY))}
     val effectiveMood=discoveryMood.ifEmpty {contextualMood}
     val holiday=if(effectiveMood=="christmas") state.christmasPicks.toList() else if(effectiveMood=="halloween") state.horrorPicks.toList() else emptyList()
-    LaunchedEffect(discoveryOwner,effectiveMood,holiday,discoveryRetry,state.appForeground) {
+    LaunchedEffect(discoveryOwner,effectiveMood,holiday,discoveryRetry,state.appForeground,state.forYou.toList()) {
         if(!state.appForeground) return@LaunchedEffect
         discoveryRows=emptyList();discoveryLoading=true;discoveryError=false
-        try {discoveryRows=if(effectiveMood in setOf("christmas","halloween")) holiday else state.discoveryPicks(effectiveMood)}
+        try {val contextual=if(effectiveMood in setOf("christmas","halloween")) holiday else state.discoveryPicks(effectiveMood);discoveryRows=(if(discoveryMood.isEmpty()) state.forYou+contextual else contextual).distinctBy {it.cloudId}.take(40)}
         catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {discoveryError=true} finally {discoveryLoading=false}
     }
     if(showTrailers) DiscoveryTrailers(state,(discoveryRows+state.forYou+state.trending+state.movies+state.series).distinctBy {it.cloudId}) {showTrailers=false}
@@ -190,13 +192,11 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
         }) {
             LazyColumn(Modifier.fillMaxSize().smoothVerticalDpad { !scroll.isScrollInProgress }.focusRequester(contentFocus).focusGroup(),state=scroll,contentPadding=PaddingValues(0.dp)) {
                 var shelfIndex=0
-                fun shelf(key:String,content:@Composable ()->Unit) {
-                    val index=shelfIndex++
-                    item(key=key) {CompositionLocalProvider(LocalHomeShelfKey provides key) {HomeShelfFrame(index,scroll,Modifier.fillParentMaxHeight().fillMaxWidth(),content)}}
-                }
+                val homeSections=mutableListOf<HomeSection>()
+                fun shelf(key:String,content:@Composable ()->Unit) {homeSections.add(HomeSection(key,content))}
                 shelf(key="discovery-controls") {
                     DiscoveryControls(discoveryMood,discoveryLoading || state.randomChoosing,
-                        onMood={discoveryMood=it},onTrailers={showTrailers=true},
+                        onMood={discoveryMood=it},onTrailers={showTrailers=true},onTools={showCinemaHub=true},
                         onSurprise={if(!discoveryLoading && !state.randomChoosing) {if(discoveryRows.isEmpty()) state.error=tr("La selección aún no está disponible. Elige otro ánimo o reintenta.","Picks are not available yet. Choose another mood or retry.") else state.launch {state.surpriseDiscovery(discoveryRows)}}})
                 }
                 if(discoveryRows.isNotEmpty()) shelf(key="discovery-picks") {
@@ -301,6 +301,11 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 }
                 if(!simple && (state.comingMovies.isNotEmpty() || state.comingSeries.isNotEmpty())) shelf(key="coming_soon_home") {
                     SpotlightRail(tr("Próximamente","Coming soon"),(state.comingMovies+state.comingSeries).distinctBy { it.cloudId }.take(30),onClick={ state.launch { state.open(it,upcoming=true) } })
+                }
+                val order=state.homeRowOrder
+                homeSections.sortedWith(compareBy<HomeSection> {order.indexOf(it.key).let {i ->if(i<0) Int.MAX_VALUE else i}}).forEach {section ->
+                    val index=shelfIndex++
+                    item(key=section.key) {CompositionLocalProvider(LocalHomeShelfKey provides section.key) {HomeShelfFrame(index,scroll,Modifier.fillParentMaxHeight().fillMaxWidth(),section.content)}}
                 }
             }
         }
@@ -631,6 +636,8 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
     val saved = state.progress[item.cloudId]
     var showMore by remember(item.cloudId) { mutableStateOf(false) }
     var showRecommend by remember(item.cloudId) { mutableStateOf(false) }
+    var showTaste by remember(item.cloudId) {mutableStateOf(false)}
+    if(showTaste) TasteTuning(state,item) {showTaste=false}
     var showRating by remember(item.cloudId) { mutableStateOf(false) }
     var episodeChoice by remember(item.cloudId) { mutableStateOf<EpisodeSummary?>(null) }
     var showQueueAdd by remember(item.cloudId) { mutableStateOf(false) }
@@ -751,6 +758,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                         }
                         if(!state.kidsMode) FocusButton(tr("Sala compartida","Watch Party")) { state.screen = Screen.WATCH_PARTY }
                         if(!state.kidsMode) FocusButton("★ "+(state.ratings[item.cloudId]?.let {"$it/10"} ?: tr("Puntuar","Rate"))) {showRating=true}
+                        if(!state.kidsMode) FocusButton(tr("Afinar mis gustos","Tune my taste")) {showTaste=true}
                     }
                     Spacer(Modifier.height(38.dp))
                 }
@@ -813,6 +821,10 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var addonUrl by remember { mutableStateOf("") }
+    var showHomeOrder by remember {mutableStateOf(false)}
+    var showCinemaHub by remember {mutableStateOf(false)}
+    if(showHomeOrder) HomeOrderDialog(state) {showHomeOrder=false}
+    if(showCinemaHub) CinemaHub(state) {showCinemaHub=false}
     var showUpdates by remember { mutableStateOf(false) }
     if(showUpdates) AppUpdateDialog(state) { showUpdates=false }
     val context = LocalContext.current
@@ -966,6 +978,17 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
 
                         }
                     }
+                    if(category=="appearance") item(key="home-order") {SettingsSectionCard {
+                        FocusButton(tr("Orden de filas de Home","Home row order")) {showHomeOrder=true}
+                    }}
+                    if(category=="playback") item(key="adaptive-source") {SettingsSectionCard {
+                        Text(tr("Seleccionar la mejor fuente","Select the best source"),color=Color.White,fontSize=22.sp)
+                        Text(tr("Conserva el idioma y los filtros; adapta calidad y tamaño a la velocidad estimada. No hace un test de velocidad adicional.","Keeps language and filters; adapts quality and size to estimated throughput. No extra speed test."),color=Muted)
+                        FocusButton(if(state.adaptiveSource) "ON" else "OFF") {state.saveAdaptiveSource(!state.adaptiveSource)}
+                    }}
+                    if(category=="system") item(key="cinema-stats") {SettingsSectionCard {
+                        FocusButton(tr("Mi universo de cine · Estadísticas","My cinema hub · Statistics")) {showCinemaHub=true}
+                    }}
                     if(category=="playback") item(key="setting-4") {
                         SettingsSectionCard(onFocused={ helpTitle="Playback link size limit";helpDescription="Choose a maximum file size. A cap also hides links with unknown size.";helpIndex=4 }) {
                 var customLimit by remember(state.streamSizeLimitGb) { mutableStateOf(if(state.streamSizeLimitGb>0) state.streamSizeLimitGb.toString() else "") }
@@ -1601,9 +1624,14 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         if(!state.appForeground || mini) parkCurrentPlayback()
     }
 
+    DisposableEffect(player) {onDispose {state.flushCinemaStats()}}
     LaunchedEffect(player, request.stream.url) {
+        var lastTick=android.os.SystemClock.elapsedRealtime()
         while (true) {
             delay(4000)
+            val now=android.os.SystemClock.elapsedRealtime()
+            if(player.isPlaying && state.appForeground) state.recordViewing(request,(now-lastTick).coerceIn(0,6000))
+            lastTick=now
             val d = player.duration
             if (d > 0) state.updateProgress(request, player.currentPosition, d)
             if (d > 0 && player.currentPosition.toDouble()/d>=0.8) state.launch { state.traktMarkWatched(request,player.currentPosition,d) }

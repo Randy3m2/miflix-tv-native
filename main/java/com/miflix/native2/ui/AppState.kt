@@ -57,6 +57,20 @@ class AppState(context: Context) {
 
     private val socialPrefs = context.getSharedPreferences("miflix_social", Context.MODE_PRIVATE)
     private val playbackPrefs = context.getSharedPreferences("miflix_playback", Context.MODE_PRIVATE)
+    var adaptiveSource by mutableStateOf(playbackPrefs.getBoolean("adaptive_source",false))
+        private set
+    fun saveAdaptiveSource(enabled:Boolean) {adaptiveSource=enabled;playbackPrefs.edit().putBoolean("adaptive_source",enabled).apply()}
+    private val cinemaStats=LocalCinemaStats(playbackPrefs)
+    fun recordViewing(req:PlayerRequest,ms:Long) {
+        if(!req.live && !isMomentOnly(req) && appForeground && screen==Screen.PLAYER && playerRequest?.playbackId==req.playbackId)
+            cinemaStats.record(ratingsKey(),req.item,details?.takeIf {it.summary.cloudId==req.item.cloudId},ms)
+    }
+    fun flushCinemaStats()=cinemaStats.flush()
+    fun cinemaReport()=cinemaStats.snapshot(ratingsKey())
+    private var homeOrderRevision by mutableIntStateOf(0)
+    val homeRowOrder:List<String> get() {homeOrderRevision;val a=runCatching {org.json.JSONArray(playbackPrefs.getString("home_order:${ratingsKey()}","[]"))}.getOrDefault(org.json.JSONArray());return (0 until a.length()).map {a.getString(it)}.distinct()}
+    fun saveHomeRowOrder(keys:List<String>) {playbackPrefs.edit().putString("home_order:${ratingsKey()}",org.json.JSONArray(keys.distinct()).toString()).apply();homeOrderRevision++}
+
     var hiddenAvatars by mutableStateOf(playbackPrefs.getStringSet("hidden_avatars",emptySet()).orEmpty().toSet())
     fun hideAvatar(key: String) {
         hiddenAvatars=hiddenAvatars+key
@@ -547,7 +561,10 @@ class AppState(context: Context) {
         if(kidsMode) {forYou.clear();return}
         val owner=ratingsKey(); val revision=ratings.toMap();val history=discoveryHistoryKey;val locale=tmdb.language
         val rows=if(revision.values.any { it>=6 } || history.isNotBlank()) recommendationsFor() else emptyList()
-        if(owner==ratingsKey() && revision==ratings.toMap() && history==discoveryHistoryKey && locale==tmdb.language) { forYou.clear(); forYou.addAll(rows) }
+        val refined=try {refinedTastePicks()} catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
+        if(owner==ratingsKey() && revision==ratings.toMap() && history==discoveryHistoryKey && locale==tmdb.language) {
+            forYou.clear();forYou.addAll((refined+rows).filter {(ratings[it.cloudId] ?: 10)>4 && (progress[it.cloudId]?.percent ?: 0.0)<90}.distinctBy {it.cloudId}.take(30))
+        }
     }
     private val comingSoonMutex=Mutex()
     private var comingSoonKey=""
@@ -2017,6 +2034,41 @@ class AppState(context: Context) {
     }
 
     private val searchResultCache=linkedMapOf<String,Pair<Long,List<MediaSummary>>>()
+    fun tasteAspects(item:MediaSummary):Set<String> = playbackPrefs.getStringSet("taste:${ratingsKey()}:${item.cloudId}",emptySet()).orEmpty().toSet()
+    fun saveTasteAspects(item:MediaSummary,traits:Set<String>) {
+        val owner=ratingsKey()
+        playbackPrefs.edit().putStringSet("taste:$owner:${item.cloudId}",traits).putString("taste_recent:$owner",item.cloudId).apply()
+    }
+    private val refinedTasteCache=linkedMapOf<String,Pair<Long,List<MediaSummary>>>()
+    private suspend fun refinedTastePicks():List<MediaSummary> {
+        val owner=ratingsKey();val locale=tmdb.language
+        val seedId=playbackPrefs.getString("taste_recent:$owner","").orEmpty()
+        val traits=playbackPrefs.getStringSet("taste:$owner:$seedId",emptySet()).orEmpty().toSet()
+        if(seedId.isBlank() || traits.isEmpty()) return emptyList()
+        val key="$owner:$locale:$seedId:${traits.sorted().joinToString()}"
+        refinedTasteCache[key]?.takeIf {System.currentTimeMillis()-it.first<30*60*1000L}?.let {return it.second}
+        val rows=withTimeoutOrNull(12_000) {
+            val seed=tmdb.byCloudId(seedId) ?: return@withTimeoutOrNull emptyList<MediaSummary>()
+            tmdb.tasteMatches(seed,traits,6)
+        } ?: return emptyList()
+        if(refinedTasteCache.size>=6) refinedTasteCache.remove(refinedTasteCache.keys.first())
+        refinedTasteCache[key]=System.currentTimeMillis() to rows
+        return rows
+    }
+    suspend fun findTasteMatches(item:MediaSummary,traits:Set<String>) {
+        val owner=ratingsKey();val locale=tmdb.language
+        val rows=tmdb.tasteMatches(item,traits)
+        if(owner!=ratingsKey() || locale!=tmdb.language) return
+        if(rows.isEmpty()) {error=tr("No hay coincidencias verificables con esos aspectos. Prueba otro aspecto.","No metadata matches for these aspects. Try another aspect.");return}
+        forYou.clear();forYou.addAll(rows)
+        openHomeShelf("taste",tr("Más como ","More like ")+item.title,rows)
+    }
+
+    fun savedCinemaJourney()=playbackPrefs.getString("journey:${ratingsKey()}","").orEmpty()
+    fun saveCinemaJourney(value:String) {playbackPrefs.edit().putString("journey:${ratingsKey()}",value).apply()}
+    fun cinemaJourneyChronological()=playbackPrefs.getBoolean("journey_order:${ratingsKey()}",false)
+    fun saveCinemaJourneyChronological(value:Boolean) {playbackPrefs.edit().putBoolean("journey_order:${ratingsKey()}",value).apply()}
+
     var discoveryPreviewActive by mutableStateOf(false)
         internal set
 
@@ -2063,6 +2115,11 @@ class AppState(context: Context) {
         return FlexibleSearch.rank(rows.distinctBy {it.cloudId}.filter {FlexibleSearch.score(it.title,normalized)>=650},normalized).take(30)
     }
     suspend fun searchFlexible(query: String): List<MediaSummary> = supervisorScope {
+        TasteQuery.parse(query)?.let {request ->
+            val seed=FlexibleSearch.rank(tmdb.search(request[0]),request[0]).firstOrNull() ?: return@supervisorScope emptyList()
+            val matches=tmdb.tasteMatches(seed,setOf(request[1]))
+            return@supervisorScope if(kidsMode) tmdb.kidsFilter(matches) else matches
+        }
         val intent=DiscoveryMood.intent(query)
         if(intent.isNotBlank()) return@supervisorScope discoveryPicks(intent)
         val normalized=FlexibleSearch.normalize(query)
@@ -2190,11 +2247,13 @@ class AppState(context: Context) {
         runCatching {
             val streams = streamsJob.await()
             if(!valid()) return@coroutineScope
-            val chosen = selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage)
+            val bandwidth=if(adaptiveSource) androidx.media3.exoplayer.upstream.DefaultBandwidthMeter.getSingletonInstance(appContext).bitrateEstimate else 0L
+            val seconds=(details?.takeIf {it.summary.cloudId==item.cloudId}?.runtimeMinutes ?: 0)*60
+            val chosen = selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds)
                 ?: throw IllegalStateException(tr("No se encontraron enlaces reproducibles","No playable sources found"))
             val automaticFallback=watchParty==null
             val retryRows=if(automaticFallback) {
-                val candidates=StreamOrdering.fallbackCandidates(streams,audioLanguage).filter {it.url!=chosen.url}
+                val candidates=StreamOrdering.fallbackCandidates(streams,audioLanguage,bandwidth,seconds).filter {it.url!=chosen.url}
                 val alternatives=if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(audioLanguage) && StreamOrdering.languageRank(chosen)==0)
                     candidates.filter {StreamOrdering.languageRank(it)==0}.take(2)+candidates.filter {StreamOrdering.languageRank(it)!=0}
                     else candidates

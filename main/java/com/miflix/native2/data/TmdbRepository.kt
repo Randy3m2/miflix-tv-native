@@ -223,9 +223,36 @@ class TmdbRepository(var token: String) {
     suspend fun topRatedMovies(): List<MediaSummary> = parseList(get("/movie/top_rated"), "movie", 20)
     suspend fun nowPlayingMovies(): List<MediaSummary> = parseList(get("/movie/now_playing"),"movie",20)
     suspend fun topRatedSeries(): List<MediaSummary> = parseList(get("/tv/top_rated"),"series",20)
+    private val tasteKeywords=linkedMapOf<String,Set<Int>>()
+    private suspend fun keywordIds(item:MediaSummary):Set<Int> {
+        tasteKeywords[item.cloudId]?.let {return it}
+        val j=get("/${if(item.type=="series") "tv" else "movie"}/${item.id}/keywords")
+        val a=j.optJSONArray(if(item.type=="series") "results" else "keywords") ?: org.json.JSONArray()
+        val ids=(0 until a.length()).map {a.getJSONObject(it).optInt("id")}.filter {it>0}.toSet()
+        if(tasteKeywords.size>=80) tasteKeywords.remove(tasteKeywords.keys.first())
+        tasteKeywords[item.cloudId]=ids;return ids
+    }
+    suspend fun tasteMatches(seed:MediaSummary,traits:Set<String>,maxCandidates:Int=16):List<MediaSummary> = coroutineScope {
+        val original=details(seed)
+        val keys=keywordIds(seed)
+        val candidates=recommendations(seed).filter {it.cloudId!=seed.cloudId}.take(maxCandidates.coerceIn(1,16))
+        val gate=Semaphore(3)
+        candidates.map {candidate ->async {gate.withPermit {
+            try {
+                val d=details(candidate)
+                if("action" in traits && 28 !in d.genreIds) return@withPermit null
+                val sharedKeys=if(traits.any {it in setOf("themes","plot","ending","pace")}) keywordIds(candidate).intersect(keys).size else 0
+                val acting=if("acting" in traits) d.cast.count {c ->c.id>0 && original.cast.any {it.id==c.id}} else 0
+                val visual=if("visual" in traits) d.cinematographers.intersect(original.cinematographers.toSet()).size else 0
+                val score=sharedKeys*2+acting*3+visual*5+if("action" in traits) 5 else 0
+                if(score>0) candidate to score else null
+            } catch(e:CancellationException) {throw e} catch(_:Exception) {null}
+        }}}.awaitAll().filterNotNull().sortedWith(compareByDescending<Pair<MediaSummary,Int>> {it.second}.thenByDescending {it.first.rating}).map {it.first}
+    }
+
     private val moodCache=linkedMapOf<String,Pair<Long,List<MediaSummary>>>()
     suspend fun moodPicks(mood: String): List<MediaSummary> {
-        require(mood in setOf("quick","marathon","meaningful","background","comfort","family","twist"))
+        require(mood in setOf("quick","marathon","meaningful","background","comfort","family","twist","happy","sad","documentary","cozy","romantic","adrenaline","mindbending","nostalgia"))
         val locale=language
         val key="$locale:$mood"
         moodCache[key]?.takeIf {System.currentTimeMillis()-it.first<30*60*1000L}?.let {return it.second}
@@ -234,6 +261,13 @@ class TmdbRepository(var token: String) {
         params[if(tv) "first_air_date.lte" else "primary_release_date.lte"]=java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US).format(java.util.Date())
         when(mood) {
             "quick" -> {params["with_runtime.gte"]="1";params["with_runtime.lte"]="30"}
+            "happy","cozy" -> {params["with_genres"]="35|10751";params["without_genres"]="27,53"}
+            "sad" -> {params["with_genres"]="18";params["vote_average.gte"]="7"}
+            "documentary" -> params["with_genres"]="99"
+            "romantic" -> params["with_genres"]="10749"
+            "adrenaline" -> params["with_genres"]="28|12"
+            "mindbending" -> params["with_genres"]="878,9648"
+            "nostalgia" -> {params["primary_release_date.lte"]="1999-12-31";params["vote_average.gte"]="7"}
             "background" -> params["with_genres"]="35"
             "meaningful" -> {params["with_genres"]="18|99";params["vote_average.gte"]="7.5"}
             "comfort" -> {params["with_genres"]="35|10749";params["without_genres"]="27,53"}
@@ -470,7 +504,11 @@ class TmdbRepository(var token: String) {
         }.awaitAll().flatten().distinctBy { it.cloudId }.take(limit)
     }
 
+    private val detailCache=linkedMapOf<String,Pair<Long,MediaDetails>>()
     suspend fun details(item: MediaSummary): MediaDetails {
+        val detailKey="$language:${item.cloudId}"
+        detailCache[detailKey]?.takeIf {System.currentTimeMillis()-it.first<30*60*1000L}?.let {return it.second}
+
         val kind = if (item.type == "series") "tv" else "movie"
         val j = get("/$kind/${item.id}", mapOf("append_to_response" to "external_ids,credits,images", "include_image_language" to "${language.substringBefore('-')},en,null"))
         val ext = j.optJSONObject("external_ids")
@@ -520,6 +558,10 @@ class TmdbRepository(var token: String) {
             summary = item,
             imdbId = imdb?.takeIf { it.isNotBlank() },
             runtimeText = runtime,
+            runtimeMinutes = if(kind=="movie") j.optInt("runtime",0) else j.optJSONArray("episode_run_time")?.optInt(0,0) ?: 0,
+            genreIds = j.optJSONArray("genres")?.let {a -> (0 until a.length()).map {a.getJSONObject(it).optInt("id")} } ?: emptyList(),
+            cinematographers = j.optJSONObject("credits")?.optJSONArray("crew")?.let {a -> (0 until a.length()).map {a.getJSONObject(it)}.filter {it.optString("job")=="Director of Photography"}.map {it.optString("name")}.distinct()} ?: emptyList(),
+            directors = j.optJSONObject("credits")?.optJSONArray("crew")?.let {a -> (0 until a.length()).map {a.getJSONObject(it)}.filter {it.optString("job")=="Director"}.map {it.optString("name")}.distinct()} ?: emptyList(),
             genres = genres,
             seasonCount = j.optInt("number_of_seasons", 0),
             releaseInfo = release.take(4).ifBlank { item.year },
@@ -529,7 +571,7 @@ class TmdbRepository(var token: String) {
             cast = cast,
             logo = logo,
             originalTitle = j.optString(if(kind=="movie") "original_title" else "original_name")
-        )
+        ).also {if(detailCache.size>=64) detailCache.remove(detailCache.keys.first());detailCache[detailKey]=System.currentTimeMillis() to it}
     }
 
     suspend fun season(showId: Int, season: Int): List<EpisodeSummary> {
@@ -578,13 +620,16 @@ class TmdbRepository(var token: String) {
         error(if(language.startsWith("es")) "No hay episodios estrenados disponibles" else "No aired episodes available")
     }
 
+    private val summaryCache=linkedMapOf<String,Pair<Long,MediaSummary>>()
     suspend fun byCloudId(cloudId: String): MediaSummary? {
+        val summaryKey="$language:$cloudId"
+        summaryCache[summaryKey]?.takeIf {System.currentTimeMillis()-it.first<30*60*1000L}?.let {return it.second}
         val m = Regex("^tmdb:(movie|series):(\\d+)$").find(cloudId) ?: return null
         val type = m.groupValues[1]
         val id = m.groupValues[2].toIntOrNull() ?: return null
         val kind = if (type == "series") "tv" else "movie"
         val j = get("/$kind/$id")
-        return mapItem(j, type)
+        return mapItem(j, type).also {if(summaryCache.size>=128) summaryCache.remove(summaryCache.keys.first());summaryCache[summaryKey]=System.currentTimeMillis() to it}
     }
 
     suspend fun comingSoon(type: String): List<MediaSummary> {

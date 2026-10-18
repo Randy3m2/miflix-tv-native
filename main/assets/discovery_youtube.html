@@ -1,8 +1,10 @@
-<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="strict-origin-when-cross-origin"><style>html,body,#player{width:100%;height:100%;margin:0;background:#000;overflow:hidden}</style></head><body><div id="player"></div><script>
+<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="strict-origin-when-cross-origin"><style>html,body{width:100%;height:100%;margin:0;background:#000;overflow:hidden}#player,iframe{position:fixed;inset:0;width:100%!important;height:100%!important;border:0;display:block}</style></head><body><div id="player"></div><script>
 var player,previewSeconds=0,finished=false;
 function finishPreview(){if(finished)return;finished=true;brunioPause();report('ended');}
 setInterval(function(){if(!finished&&player&&player.getPlayerState&&player.getPlayerState()===1){previewSeconds++;if(previewSeconds>=60)finishPreview();}},1000);function report(v){if(window.BruniO)BruniO.status(v);}
-function onYouTubeIframeAPIReady(){player=new YT.Player('player',{videoId:'__VIDEO_ID__',playerVars:{origin:'__ORIGIN__',autoplay:1,controls:1,playsinline:1,fs:0,loop:0},events:{onReady:function(){report('ready');},onStateChange:function(e){if(e.data===1)report('playing');if(e.data===0)finishPreview();},onError:function(e){report('error:'+e.data);},onAutoplayBlocked:function(){report('blocked');}}});}
+function onYouTubeIframeAPIReady(){player=new YT.Player('player',{width:'100%',height:'100%',videoId:'__VIDEO_ID__',playerVars:{origin:'__ORIGIN__',autoplay:1,controls:1,playsinline:1,fs:0,loop:0},events:{onReady:function(){resizePlayer();report('ready');player.playVideo();},onStateChange:function(e){if(e.data===1)report('playing');if(e.data===0)finishPreview();},onError:function(e){report('error:'+e.data);},onAutoplayBlocked:function(){report('blocked');}}});}
+function resizePlayer(){if(player&&player.setSize)player.setSize(window.innerWidth,window.innerHeight);}
+window.addEventListener('resize',resizePlayer);
 function brunioPlayPause(){if(player&&player.getPlayerState){if(player.getPlayerState()===1)player.pauseVideo();else player.playVideo();}}
 function brunioPause(){if(player&&player.pauseVideo)player.pauseVideo();}
 function brunioSeek(delta){if(player&&player.getCurrentTime)player.seekTo(Math.max(0,player.getCurrentTime()+delta),true);}

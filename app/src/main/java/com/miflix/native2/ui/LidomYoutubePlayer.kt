@@ -88,18 +88,24 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
         onDispose {lifecycle?.removeObserver(observer)}
     }
     DisposableEffect(video) {onDispose {bridge.active=false;view?.let {it.evaluateJavascript("brunioPause()",null);it.stopLoading();it.removeJavascriptInterface("BruniO");it.onPause();it.destroy()};view=null}}
+    val remoteController=Modifier.onPreviewKeyEvent {event ->
+        val key=event.nativeKeyEvent
+        if(preview && TrailerRemotePolicy.handles(key.keyCode)) {
+            when(TrailerRemotePolicy.action(key.keyCode,key.action==android.view.KeyEvent.ACTION_DOWN,key.repeatCount)) {
+                "previous" ->previous?.invoke()
+                "next" ->next?.invoke()
+                "details" ->details?.invoke()
+                "watch" ->watch?.invoke()
+                "pause" ->view?.evaluateJavascript("brunioPlayPause()",null)
+            }
+            true
+        } else false
+    }
     Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
-        Column(Modifier.fillMaxSize().background(Color.Black)) {
+        Column(Modifier.fillMaxSize().background(Color.Black).then(if(preview) remoteController else Modifier)) {
             if(preview) {
-                Text(caption,color=Color.White,fontSize=20.sp,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=10.dp))
-                Row(Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=6.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                    FocusButton(tr("Cerrar","Close"),onClick=close)
-                    previous?.let {FocusButton("←",onClick=it)}
-                    next?.let {FocusButton(tr("Siguiente →","Next →"),onClick=it)}
-                    FocusButton(tr("Pausa / Reproducir","Pause / Play")) {view?.evaluateJavascript("brunioPlayPause()",null)}
-                    details?.let {FocusButton(tr("Detalles","Details"),onClick=it)}
-                    watch?.let {FocusButton(tr("Ver título","Watch title"),primary=true,onClick=it)}
-                }
+                Text(caption,color=Color.White,fontSize=20.sp,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.fillMaxWidth().padding(start=24.dp,end=24.dp,top=10.dp,bottom=4.dp))
+                Text(tr("OK · Pausa / Reproducir     Atrás · Cerrar","OK · Pause / Play     Back · Close"),color=Muted,fontSize=11.sp,modifier=Modifier.padding(start=24.dp,bottom=8.dp))
             } else Row(Modifier.fillMaxWidth().padding(10.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                 FocusButton(tr("Volver a fuentes","Back to sources"),onClick=close)
                 FocusButton(tr("Pausa / Reproducir","Pause / Play")) {view?.evaluateJavascript("brunioPlayPause()",null)}
@@ -111,16 +117,12 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
                 Text(tr("YouTube no permite reproducir aquí o requiere interacción. ","YouTube playback is blocked here or needs interaction. ")+status,color=Color.White,modifier=Modifier.weight(1f))
                 FocusButton(if(preview) tr("Siguiente tráiler","Next trailer") else tr("Probar otra fuente","Try another source"),onClick=next ?: close)
             }
-            AndroidView(modifier=Modifier.weight(1f).fillMaxWidth().onPreviewKeyEvent {event ->
-                val key=event.nativeKeyEvent
-                val action=if(key.keyCode==android.view.KeyEvent.KEYCODE_DPAD_RIGHT) next else if(key.keyCode==android.view.KeyEvent.KEYCODE_DPAD_LEFT) previous else null
-                if(preview && action!=null) {if(key.action==android.view.KeyEvent.ACTION_DOWN && key.repeatCount==0) action();true}
-                else if(preview && key.keyCode in setOf(android.view.KeyEvent.KEYCODE_DPAD_CENTER,android.view.KeyEvent.KEYCODE_ENTER)) {
-                    if(key.action==android.view.KeyEvent.ACTION_DOWN && key.repeatCount==0) view?.evaluateJavascript("brunioPlayPause()",null)
-                    true
-                } else false
-            }.then(if(preview) Modifier.focusRequester(previewFocus).focusable() else Modifier),factory={c ->
-                WebView(c).apply {
+            AndroidView(modifier=Modifier.weight(1f).fillMaxWidth().then(if(preview) Modifier.focusRequester(previewFocus).focusable() else Modifier),factory={c ->
+                val frame=android.widget.FrameLayout(c)
+                val web=WebView(c).apply {
+                    layoutParams=android.widget.FrameLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT,android.view.ViewGroup.LayoutParams.MATCH_PARENT)
+                    setLayerType(android.view.View.LAYER_TYPE_HARDWARE,null)
+                    settings.offscreenPreRaster=true
                     keepScreenOn=true
                     setBackgroundColor(android.graphics.Color.BLACK)
                     settings.javaScriptEnabled=true;settings.domStorageEnabled=true
@@ -139,8 +141,11 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
                     loadDataWithBaseURL(origin+"/",html,"text/html","UTF-8",null)
                     view=this
                 }
+                frame.addView(web)
+                frame
             })
-            if(preview) Text(tr("← Desliza aquí o usa izquierda / derecha · Vista previa de hasta 60 s →","← Swipe here or use left / right · Preview up to 60 s →"),color=Muted,fontSize=13.sp,modifier=Modifier.fillMaxWidth().height(48.dp).then(swipe).padding(12.dp))
+            if(preview) TrailerActionBar(previous,next,details,watch,swipe)
+
         }
     }
 }

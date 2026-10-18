@@ -5,7 +5,7 @@ const youtube=read('assets/discovery_youtube.html');
 const script=youtube.match(/<script>([\s\S]*?)<\/script>/)[1];
 let tick,events=[],state=1,paused=0;
 const env={window:{BruniO:{status:s=>events.push(s)}},setInterval:f=>{tick=f}};
-env.BruniO=env.window.BruniO;
+env.BruniO=env.window.BruniO;env.window.addEventListener=()=>{};env.window.innerWidth=960;env.window.innerHeight=430;
 vm.createContext(env);vm.runInContext(script,env);
 env.player={getPlayerState:()=>state,pauseVideo:()=>{paused++;state=2}};
 for(let i=0;i<30;i++) tick();
@@ -19,7 +19,7 @@ for(const file of ['data/DiscoveryMood.java','data/TmdbRepository.kt','ui/AppSta
 const ui=read(root+'ui/DiscoveryHome.kt'),host=read(root+'ui/LidomYoutubePlayer.kt'),repo=read(root+'data/TmdbRepository.kt');
 assert(ui.includes('detectHorizontalDragGestures'));assert(!ui.includes('VerticalPager'));assert(ui.includes('key(item.cloudId,playing.key)'));assert(!ui.includes('{{index--}}'));
 assert(host.includes('loadDataWithBaseURL(origin+"/"'));assert(host.includes('if(preview) "discovery_youtube.html" else "lidom_youtube.html"'));
-assert(host.includes('removeJavascriptInterface("BruniO")'));assert(host.includes('it.destroy()'));assert(host.includes('KEYCODE_DPAD_RIGHT'));assert(host.includes('previewFocus.requestFocus()'));
+assert(host.includes('removeJavascriptInterface("BruniO")'));assert(host.includes('it.destroy()'));assert(host.includes('TrailerRemotePolicy.action'));assert(host.includes('previewFocus.requestFocus()'));
 assert(read(root+'ui/MenuExperience.kt').includes('!state.discoveryPreviewActive'));
 const app=read(root+'ui/AppState.kt');const surprise=app.slice(app.indexOf('suspend fun surpriseDiscovery'),app.indexOf('fun localSearch'));
 assert(surprise.includes('playResolved(item,imdb,season,season,resumeOverride=0)'));assert(!surprise.includes('open(item)'));assert(surprise.includes('playbackWork.current(ticket)'));

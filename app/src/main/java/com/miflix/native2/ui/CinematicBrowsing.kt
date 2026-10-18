@@ -230,7 +230,7 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
         searchError=false
         if(query.trim().length<2) {results=emptyList();searching=false;return@LaunchedEffect}
         results=state.localSearch(query);searching=true
-        try {delay(250);results=state.searchFlexible(query.trim())}
+        try {delay(if(com.miflix.native2.data.TasteQuery.parse(query)!=null) 650 else 250);results=state.searchFlexible(query.trim())}
         catch(e: CancellationException) {throw e}
         catch(_: Exception) {searchError=true}
         finally {searching=false}
@@ -317,6 +317,7 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
                 Column(Modifier.weight(1f).fillMaxHeight()) {
                     Text(if(query.trim().length<2) tr("Tus recomendaciones de búsqueda","Your Search Recommendations") else tr("Resultados para","Results for")+" “${query.trim()}”",
                         color=Color.White,fontSize=20.sp,lineHeight=24.sp,fontWeight=FontWeight.Bold,maxLines=2,modifier=Modifier.padding(bottom=6.dp))
+                    if(com.miflix.native2.data.TasteQuery.parse(query)!=null) Text(tr("Coincidencias por temas, reparto y fotografía disponibles","Matches based on available themes, cast and cinematography"),color=Muted,fontSize=12.sp)
                     if(com.miflix.native2.data.DiscoveryMood.intent(query).isNotBlank()) Text(tr("Selección por ánimo · basada en géneros y tus preferencias","Mood picks · based on genres and your preferences"),color=Muted,fontSize=12.sp)
                     if(searching || searchError) Text(if(searching) tr("Buscando más…","Finding more…") else tr("No pudimos completar la búsqueda.","Could not complete the search."),color=Muted,fontSize=12.sp)
                     if(!searching && !searchError && query.trim().length>=2 && display.isEmpty()) Text(tr("Prueba otro título.","Try another title."),color=Muted,fontSize=14.sp)

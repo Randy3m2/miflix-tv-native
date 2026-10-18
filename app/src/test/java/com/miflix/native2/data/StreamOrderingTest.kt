@@ -68,15 +68,15 @@ class StreamOrderingTest {
         assertEquals(rows.reversed().take(10),result)
         assertEquals(10,result.map {it.url}.distinct().size)
     }
-    @Test fun spanishFallbackUsesRemainingSlotsForEnglish() {
+    @Test fun spanishFallbackAddsUpToTenEnglishAfterSpanish() {
         val spanish=stream("es","720p Latino")
         val english=(1..12).map {stream("en$it","1080p English",it.toLong())}
-        assertEquals(listOf(spanish)+english.reversed().take(9),StreamOrdering.fallbackCandidates(english+spanish,"es"))
+        assertEquals(listOf(spanish)+english.reversed().take(10),StreamOrdering.fallbackCandidates(english+spanish,"es"))
     }
-    @Test fun spanishFallbackKeepsThreeSpanishBeforeEnglish() {
+    @Test fun spanishFallbackKeepsAllSpanishBeforeEnglish() {
         val spanish=(1..5).map {stream("es$it","720p Castellano",it.toLong())}
         val english=(1..10).map {stream("en$it","1080p English",it.toLong())}
-        assertEquals(spanish.reversed().take(3)+english.reversed().take(7),StreamOrdering.fallbackCandidates(english+spanish,"es"))
+        assertEquals(spanish.reversed()+english.reversed(),StreamOrdering.fallbackCandidates(english+spanish,"es"))
     }
 
     @Test fun untaggedSourcesRemainLastResortForSpanishSettings() {
@@ -106,6 +106,33 @@ class StreamOrderingTest {
         val other=stream("other","1080p Italian")
         assertEquals(other,StreamOrdering.best(listOf(other),"en"))
         assertEquals(listOf(other),StreamOrdering.fallbackCandidates(listOf(other),"en"))
+    }
+
+    @Test fun spanishFallbackExhaustsMoreThanTenSpanishAcrossProviders() {
+        val spanish=(1..16).map {
+            stream("es$it","720p Latino",it.toLong()).copy(addonName=if(it%2==0) "LAT-Add" else "Umbra")
+        }
+        val english=(1..12).map {stream("en$it","2160p English",it.toLong())}
+        val result=StreamOrdering.fallbackCandidates(english+spanish+spanish,"es")
+        assertEquals(spanish.reversed()+english.reversed().take(10),result)
+        assertEquals(26,result.map {it.url}.distinct().size)
+    }
+    @Test fun savedProviderOrderAppliesWithinAudioPreference() {
+        val spanishComet=stream("es-comet","2160p Latino").copy(addonName="Comet")
+        val spanishLat=stream("es-lat","720p Latino").copy(addonName="LAT-Add")
+        val englishComet=stream("en-comet","2160p English").copy(addonName="Comet")
+        val rows=listOf(englishComet,spanishComet,spanishLat)
+        assertEquals(listOf(spanishLat,spanishComet,englishComet),
+            StreamOrdering.fallbackCandidates(rows,"es",providerOrder=listOf("LAT-Add","Comet")))
+        assertEquals(listOf(spanishComet,spanishLat,englishComet),
+            StreamOrdering.fallbackCandidates(rows,"es",providerOrder=listOf("Comet","LAT-Add")))
+    }
+    @Test fun spanishFallbackDoesNotRetryDuplicateUrlsAcrossProviders() {
+        val spanish=stream("shared","720p Latino").copy(addonName="LAT-Add")
+        val duplicate=spanish.copy(addonName="Umbra")
+        val english=stream("en","1080p English")
+        assertEquals(listOf(spanish,english),StreamOrdering.fallbackCandidates(
+            listOf(duplicate,english,spanish),"es",providerOrder=listOf("LAT-Add","Umbra","Comet")))
     }
 
 }

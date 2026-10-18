@@ -31,11 +31,11 @@ internal object StreamOrdering {
     fun fallbackCandidates(streams: List<StreamChoice>,preferredAudio: String,bandwidthBps: Long=0,durationSeconds: Int=0): List<StreamChoice> {
         val rows=sorted(streams,preferredAudio,bandwidthBps,durationSeconds)
         if(!StreamLanguagePriority.prefersSpanish(preferredAudio)) return rows.take(fallbackLimit)
-        val spanish=rows.filter {languageRank(it)==0}.take(3)
-        val english=rows.filter {languageRank(it)==1}.take(fallbackLimit-spanish.size)
-        // Untagged Comet/Torrentio releases are not proven Spanish or English, but
-        // must remain available as a last resort instead of disabling recovery.
-        return spanish+english+rows.filter {languageRank(it)==2}.take(fallbackLimit-spanish.size-english.size)
+        // Exhaust every returned Spanish source across providers before English.
+        val spanish=rows.filter {languageRank(it)==0}.distinctBy {it.url}
+        val english=rows.filter {languageRank(it)==1}.distinctBy {it.url}.take(fallbackLimit)
+        val unknown=rows.filter {languageRank(it)==2}.distinctBy {it.url}.take((fallbackLimit-english.size).coerceAtLeast(0))
+        return (spanish+english+unknown).distinctBy {it.url}
     }
     fun sorted(streams: List<StreamChoice>, preferredAudio: String = "",bandwidthBps: Long=0,durationSeconds: Int=0): List<StreamChoice> {
         val spanish = StreamLanguagePriority.prefersSpanish(preferredAudio)
@@ -45,6 +45,6 @@ internal object StreamOrdering {
                 .thenBy {if(bandwidthBps>0 && !AdaptiveSourcePolicy.fits(AdaptiveSourcePolicy.rate(bytes(it),durationSeconds,quality(it)),bandwidthBps)) 1 else 0}
                 .thenBy {if(bandwidthBps>0 && !AdaptiveSourcePolicy.fits(AdaptiveSourcePolicy.rate(bytes(it),durationSeconds,quality(it)),bandwidthBps)) AdaptiveSourcePolicy.rate(bytes(it),durationSeconds,quality(it)) else 0L}
                 .thenByDescending { quality(it) }.thenByDescending { bytes(it) })
-            .distinctBy { it.url }
+            .distinctBy { it.addonName to it.url }
     }
 }

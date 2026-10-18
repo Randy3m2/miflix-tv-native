@@ -9,6 +9,23 @@ import org.json.JSONObject
 import java.net.URI
 
 class StreamRepository(initialManifestUrl: String) {
+    private data class ManifestInfo(val name:String,val streams:Boolean,val at:Long)
+    private val metadata=java.util.concurrent.ConcurrentHashMap<String,ManifestInfo>()
+    private fun label(manifest:String,position:Int):String {
+        val host=runCatching {URI(manifest).host}.getOrNull().orEmpty().ifBlank {"Add-on"}
+        return (metadata[manifest]?.name?.takeIf {it.isNotBlank()} ?: host)+" · "+(position+1)
+    }
+    fun sourceAddonNames():List<String> = manifests().mapIndexedNotNull {index,url ->if(metadata[url]?.streams==false) null else label(url,index)}
+    private suspend fun info(manifest:String):ManifestInfo {
+        val now=System.currentTimeMillis()
+        metadata[manifest]?.takeIf {now-it.at<6*60*60_000L}?.let {return it}
+        return try {
+            val json=JSONObject(Http.text(manifest,timeoutMs=8000))
+            val resources=json.optJSONArray("resources")
+            val streams=resources==null || (0 until resources.length()).any {i ->val r=resources.opt(i);r=="stream" || (r as? JSONObject)?.optString("name")=="stream"}
+            ManifestInfo(json.optString("name").replace(Regex("[\\r\\n]")," ").take(64),streams,now).also {metadata[manifest]=it}
+        } catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {ManifestInfo("",true,now).also {metadata[manifest]=it}}
+    }
     private val manifestUrls = linkedSetOf<String>()
 
     init {
@@ -48,18 +65,19 @@ class StreamRepository(initialManifestUrl: String) {
     suspend fun resolve(imdbId: String, type: String, season: Int = 0, episode: Int = 0, movieYear: String? = null, maxBytes: Long = 0, movieTitle: String? = null, preferredAudio: String = ""): List<StreamChoice> = coroutineScope {
         val manifests = manifestUrls.toList()
         if (manifests.isEmpty()) throw IllegalStateException("No stream add-on is configured")
-        val rows = manifests.map { manifest ->
-            async { runCatching { resolveOne(manifest, imdbId, type, season, episode) }.onFailure { if(it is kotlinx.coroutines.CancellationException) throw it }.getOrDefault(emptyList()) }
+        val rows = manifests.mapIndexed { index,manifest ->
+            async { runCatching { resolveOne(manifest, index, imdbId, type, season, episode) }.onFailure { if(it is kotlinx.coroutines.CancellationException) throw it }.getOrDefault(emptyList()) }
         }.awaitAll().flatten()
 
         StreamOrdering.sorted(rows.filter { StreamFilters.allowed(it,type,movieYear,maxBytes,movieTitle) },preferredAudio)
     }
 
-    private suspend fun resolveOne(manifest: String, imdbId: String, type: String, season: Int, episode: Int): List<StreamChoice> {
+    private suspend fun resolveOne(manifest: String, index:Int, imdbId: String, type: String, season: Int, episode: Int): List<StreamChoice> {
         val base = manifest.removeSuffix("/manifest.json")
         val stremioType = if (type == "series") "series" else "movie"
         val mediaId = if (stremioType == "series") "$imdbId:$season:$episode" else imdbId
-        val addonName = runCatching { URI(manifest).host ?: "Add-on" }.getOrDefault("Add-on")
+        if(!info(manifest).streams) return emptyList()
+        val addonName = label(manifest,index)
         val json = JSONObject(Http.text("$base/stream/$stremioType/$mediaId.json", timeoutMs = 18000))
         val a = json.optJSONArray("streams") ?: return emptyList()
         return (0 until a.length()).mapNotNull { i ->

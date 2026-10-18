@@ -163,9 +163,9 @@ class SupabaseRepository(private val url: String, private val key: String) {
             .put("expires_at", isoFromMillis(System.currentTimeMillis() + 8 * 60 * 60 * 1000L))
             .toString()
         Http.text(
-            "$url/rest/v1/miflix_watch_parties?on_conflict=room_code",
+            "$url/rest/v1/rp1_miflix_watch_parties?on_conflict=room_code",
             "POST",
-            headers(session) + ("Prefer" to "resolution=merge-duplicates,return=minimal"),
+            ProfileSocialIdentityRP1.headers(session,url,key) + ("Prefer" to "resolution=merge-duplicates,return=minimal"),
             body
         )
     }
@@ -174,9 +174,9 @@ class SupabaseRepository(private val url: String, private val key: String) {
         val body = JSONObject().put("state", partyStateJson(party)).put("updated_at", isoNow()).put("expires_at", isoFromMillis(System.currentTimeMillis() + 8 * 60 * 60 * 1000L)).toString()
         val code = URLEncoder.encode(party.roomCode, "UTF-8")
         Http.text(
-            "$url/rest/v1/miflix_watch_parties?room_code=eq.$code",
+            "$url/rest/v1/rp1_miflix_watch_parties?room_code=eq.$code",
             "PATCH",
-            headers(session) + ("Prefer" to "return=minimal"),
+            ProfileSocialIdentityRP1.headers(session,url,key) + ("Prefer" to "return=minimal"),
             body
         )
     }
@@ -184,8 +184,8 @@ class SupabaseRepository(private val url: String, private val key: String) {
     suspend fun readWatchParty(session: CloudSession, roomCode: String): WatchParty? {
         val code = URLEncoder.encode(roomCode.uppercase(Locale.US), "UTF-8")
         val text = Http.text(
-            "$url/rest/v1/miflix_watch_parties?room_code=eq.$code&select=room_code,host_user_id,state,updated_at,expires_at",
-            headers = headers(session)
+            "$url/rest/v1/rp1_miflix_watch_parties?room_code=eq.$code&select=room_code,host_user_id,state,updated_at,expires_at",
+            headers = ProfileSocialIdentityRP1.headers(session,url,key)
         )
         val a = JSONArray(text)
         val row = a.optJSONObject(0) ?: return null
@@ -214,7 +214,7 @@ class SupabaseRepository(private val url: String, private val key: String) {
 
     suspend fun deleteWatchParty(session: CloudSession, roomCode: String) {
         val code = URLEncoder.encode(roomCode.uppercase(Locale.US), "UTF-8")
-        Http.text("$url/rest/v1/miflix_watch_parties?room_code=eq.$code", "DELETE", headers(session) + ("Prefer" to "return=minimal"))
+        Http.text("$url/rest/v1/rp1_miflix_watch_parties?room_code=eq.$code", "DELETE", ProfileSocialIdentityRP1.headers(session,url,key) + ("Prefer" to "return=minimal"))
     }
 
     private fun partyStateJson(p: WatchParty) = JSONObject()
@@ -234,18 +234,18 @@ class SupabaseRepository(private val url: String, private val key: String) {
 
     suspend fun sharePartySource(session: CloudSession,p: WatchParty,stream: com.miflix.native2.model.StreamChoice?) {
         val code=URLEncoder.encode(p.roomCode,"UTF-8")
-        if(stream==null) { Http.text("$url/rest/v1/miflix_party_sources?room_code=eq.$code","DELETE",headers(session));return }
+        if(stream==null) { Http.text("$url/rest/v1/rp1_miflix_party_sources?room_code=eq.$code","DELETE",ProfileSocialIdentityRP1.headers(session,url,key));return }
         require(stream.url.startsWith("https://") || stream.url.startsWith("http://")) {"This source cannot be shared"}
         val requestHeaders=JSONObject();stream.requestHeaders.forEach {(k,v) -> requestHeaders.put(k,v)}
         val body=JSONObject().put("room_code",p.roomCode).put("cloud_id",p.cloudId).put("season",p.season).put("episode",p.episode)
             .put("source_key",p.sourceKey).put("url",stream.url).put("request_headers",requestHeaders)
             .put("expires_at",isoFromMillis(System.currentTimeMillis()+3*60*60*1000L))
-        Http.text("$url/rest/v1/miflix_party_sources?on_conflict=room_code","POST",headers(session)+("Prefer" to "resolution=merge-duplicates,return=minimal"),body.toString())
+        Http.text("$url/rest/v1/rp1_miflix_party_sources?on_conflict=room_code","POST",ProfileSocialIdentityRP1.headers(session,url,key)+("Prefer" to "resolution=merge-duplicates,return=minimal"),body.toString())
     }
     suspend fun readPartySource(session: CloudSession,p: WatchParty): com.miflix.native2.model.StreamChoice? {
         if(!p.shareStream) return null
         val code=URLEncoder.encode(p.roomCode,"UTF-8")
-        val a=JSONArray(Http.text("$url/rest/v1/miflix_party_sources?room_code=eq.$code&select=*",headers=headers(session)))
+        val a=JSONArray(Http.text("$url/rest/v1/rp1_miflix_party_sources?room_code=eq.$code&select=*",headers=ProfileSocialIdentityRP1.headers(session,url,key)))
         val x=a.optJSONObject(0) ?: return null
         if(x.optString("cloud_id")!=p.cloudId || x.optInt("season")!=p.season || x.optInt("episode")!=p.episode || x.optString("source_key")!=p.sourceKey) return null
         val h=x.optJSONObject("request_headers") ?: JSONObject();val parsed=mutableMapOf<String,String>()

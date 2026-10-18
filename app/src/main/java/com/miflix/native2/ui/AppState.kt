@@ -299,7 +299,7 @@ class AppState(context: Context) {
         playbackSubtitleJobs.values.forEach { it.cancel() }; playbackSubtitleJobs.clear()
     }
     private fun sameParty(epoch: Long, owner: String, room: String): Boolean =
-        partyEpoch==epoch && session?.userId==owner && watchParty?.roomCode==room
+        partyEpoch==epoch && socialIdentityId==owner && watchParty?.roomCode==room
     var partyClosedNotice by mutableStateOf(false)
     var partyJoinedNotice by mutableStateOf<String?>(null)
     private var joinedNoticeSequence=0L
@@ -318,7 +318,7 @@ class AppState(context: Context) {
         launch {delay(3500);if(playbackNoticeSequence==sequence) partyPlaybackNotice=null}
     }
     suspend fun publishPartyPlaybackNotice(playing: Boolean) {
-        val account=session ?: return;val room=watchParty ?: return;val epoch=partyEpoch
+        val account=profileSocialSession() ?: return;val room=watchParty ?: return;val epoch=partyEpoch
         if(kidsMode) return
         val localOnly=partyRole==PartyRole.GUEST && room.hostOnlyControls
         val action=(if(playing) "resumed" else "paused")+(if(localOnly) "-local" else "")
@@ -393,12 +393,12 @@ class AppState(context: Context) {
 
     val calendarEvents=mutableStateListOf<CalendarEvent>()
     suspend fun refreshCalendar() {
-        val owner=session ?: return
+        val owner=profileSocialSession() ?: return
         val events=social.calendar(owner)
-        if(session?.userId==owner.userId) { calendarEvents.clear();calendarEvents.addAll(events) }
+        if(isCurrentSocialSession(owner)) { calendarEvents.clear();calendarEvents.addAll(events) }
     }
     suspend fun createCalendarEvent(title: String, kind: String, date: String, cloud: String?, season: Int, episode: Int, guests: List<String>, channel: LiveChannel?=null) {
-        val owner=session ?: throw IllegalStateException(tr("Inicia sesión","Sign in first"))
+        val owner=profileSocialSession() ?: throw IllegalStateException(tr("Inicia sesión","Sign in first"))
         require(title.trim().isNotEmpty() && title.length<=160) { tr("Escribe un título","Enter a title") }
         val parser=java.text.SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.US).apply { isLenient=false }
         val value=parser.parse(date) ?: throw IllegalArgumentException(tr("Fecha inválida","Invalid date"))
@@ -429,7 +429,7 @@ class AppState(context: Context) {
             this.open(media)
         }
     }
-    suspend fun deleteCalendarEvent(id: String) { session?.let { social.deleteCalendar(it,id);refreshCalendar() } }
+    suspend fun deleteCalendarEvent(id: String) { profileSocialSession()?.let { social.deleteCalendar(it,id);refreshCalendar() } }
     private fun noticesKey() = "notices_${session?.userId ?: "local"}_${activeProfile.id}"
     private fun knownKey() = "known_${session?.userId ?: "local"}_${activeProfile.id}"
     private fun persistNotices() {
@@ -502,24 +502,24 @@ class AppState(context: Context) {
     private val partyPlaybackMutex=Mutex()
     suspend fun requestPartyPlayback(req: PlayerRequest, playing: Boolean) {
         if(watchParty?.hostOnlyControls==true && partyRole==PartyRole.GUEST) return
-        val s=session ?: return; val room=watchParty?.roomCode ?: return
+        val s=profileSocialSession() ?: return; val room=watchParty?.roomCode ?: return
         partyPlaybackMutex.withLock {
-            if(session?.userId==s.userId && watchParty?.roomCode==room && playerRequest?.playbackId==req.playbackId) {
+            if(isCurrentSocialSession(s) && watchParty?.roomCode==room && playerRequest?.playbackId==req.playbackId) {
                 social.playback(s,room,req.item.cloudId,req.season,req.episode,playing)
             }
         }
     }
     suspend fun takePartyPlayback(): Boolean? {
         if(watchParty?.hostOnlyControls==true) return null
-        val s=session ?: return null; val room=watchParty?.roomCode ?: return null
+        val s=profileSocialSession() ?: return null; val room=watchParty?.roomCode ?: return null
         return social.takePlayback(s,room)
     }
     suspend fun requestPartyPause(req: PlayerRequest) {
-        val s = session ?: return; val room = watchParty?.roomCode ?: return
+        val s = profileSocialSession() ?: return; val room = watchParty?.roomCode ?: return
         social.pause(s,room,req.item.cloudId,req.season,req.episode)
     }
     suspend fun takePartyPause(): Boolean {
-        val s = session ?: return false; val room = watchParty?.roomCode ?: return false
+        val s = profileSocialSession() ?: return false; val room = watchParty?.roomCode ?: return false
         return social.takePause(s,room)
     }
     val ratings=mutableStateMapOf<String,Int>()
@@ -754,6 +754,13 @@ class AppState(context: Context) {
         }
     }
     private val livePrefs = context.getSharedPreferences("miflix_live", Context.MODE_PRIVATE)
+    val socialIdentityId:String? get()=session?.let {ProfileSocialIdentityRP1.actor(it.userId,activeProfile.id,activeProfile.primary)}
+    private fun profileSocialSession(account:CloudSession?=session):CloudSession? = if(kidsMode) null else account?.let {ProfileSocialIdentityRP1.session(it,activeProfile)}
+    private fun isCurrentSocialSession(actor:CloudSession):Boolean {
+        val scope=ProfileSocialIdentityRP1.scope(actor)
+        return session?.userId==scope.account && activeProfile.id==scope.profile && !kidsMode
+    }
+    private fun socialRoomKey()="room_rp1_${session?.userId}:${activeProfile.id}"
     private val social = SocialRepository(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY)
     val trakt = TraktRepository(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY)
     var nickname by mutableStateOf("")
@@ -763,14 +770,14 @@ class AppState(context: Context) {
         private set
     private var sharedSourcePlaybackId: String? = null
     suspend fun inviteToParty(friendId: String) {
-        val account=session ?: return;val room=watchParty ?: return
+        val account=profileSocialSession() ?: return;val room=watchParty ?: return
         check(partyRole==PartyRole.HOST)
         social.inviteParty(account,room.roomCode,friendId)
         partyStatus=tr("Invitación enviada","Invitation sent")
     }
     suspend fun previewParty(code: String): org.json.JSONObject? {
         if(!code.matches(Regex("[0-9]{6}"))) return null
-        return social.previewParty(session ?: return null,code).takeIf {it.length()>0}
+        return social.previewParty(profileSocialSession() ?: return null,code).takeIf {it.length()>0}
     }
     private fun partyPresentation(p: WatchParty,req: PlayerRequest): WatchParty = p.copy(
         title=req.item.title,overview=req.item.overview.take(800),poster=req.item.poster,
@@ -779,7 +786,7 @@ class AppState(context: Context) {
         sourceFilename=PartySourcePolicy.label(req.stream.filename),sourceSize=req.stream.videoSize,
         sourceKey=PartySourcePolicy.key(req.stream))
     suspend fun configureParty(share: Boolean?=null,hostOnly: Boolean?=null) = partyPublishMutex.withLock {
-        val account=session ?: return@withLock;val old=watchParty ?: return@withLock
+        val account=profileSocialSession() ?: return@withLock;val old=watchParty ?: return@withLock
         check(partyRole==PartyRole.HOST)
         if(partyOptionsBusy) return@withLock
         partyOptionsBusy=true
@@ -795,12 +802,12 @@ class AppState(context: Context) {
                 sharedSourcePlaybackId=req.playbackId
             }
             cloud.updateWatchParty(account,next)
-            if(session?.userId==account.userId && watchParty?.roomCode==old.roomCode) watchParty=next
+            if(isCurrentSocialSession(account) && watchParty?.roomCode==old.roomCode) watchParty=next
             if(share==false) sharedSourcePlaybackId=null
         } finally { partyOptionsBusy=false }
     }
     suspend fun usePartySource() {
-        val account=session ?: return;val remote=refreshParty() ?: return;val epoch=partyEpoch
+        val account=profileSocialSession() ?: return;val remote=refreshParty() ?: return;val epoch=partyEpoch
         val stream=cloud.readPartySource(account,remote) ?: error(tr("El host ya no comparte ese enlace o expiró","The host stopped sharing this source or it expired"))
         if(!sameParty(epoch,account.userId,remote.roomCode)) return
         val current=playerRequest ?: return
@@ -813,13 +820,13 @@ class AppState(context: Context) {
     val accessRequests = mutableStateListOf<AccessRequest>()
     var pendingPartyCode by mutableStateOf<String?>(null)
     suspend fun friendRecommendations(): List<FriendRecommendation> = social.recommendations(
-        session ?: error(tr("Inicia sesión primero","Sign in first")))
+        profileSocialSession() ?: error(tr("Inicia sesión primero","Sign in first")))
     suspend fun recommendToFriends(item: MediaSummary) {
-        val account=session ?: error(tr("Inicia sesión primero","Sign in first"))
+        val account=profileSocialSession() ?: error(tr("Inicia sesión primero","Sign in first"))
         social.recommend(account,item)
     }
     suspend fun removeFriendRecommendation(cloudId: String) {
-        social.removeRecommendation(session ?: error(tr("Inicia sesión primero","Sign in first")),cloudId)
+        social.removeRecommendation(profileSocialSession() ?: error(tr("Inicia sesión primero","Sign in first")),cloudId)
     }
     suspend fun openRecommendation(cloudId: String) {
         val item=tmdb.byCloudId(cloudId) ?: error(tr("Contenido no disponible","Content unavailable"))
@@ -840,13 +847,13 @@ class AppState(context: Context) {
         private set
     /** Incoming requests are fetched only from explicit Refresh requests controls. */
     suspend fun refreshPartyRequests() {
-        val s=session ?: return
+        val s=profileSocialSession() ?: return
         if(accessRequestsLoading) return
         val epoch=partyEpoch
         accessRequestsLoading=true
         try {
             val requests=social.requests(s)
-            if(session?.userId==s.userId && partyEpoch==epoch) {
+            if(isCurrentSocialSession(s) && partyEpoch==epoch) {
                 accessRequests.clear();accessRequests.addAll(requests)
             }
         } finally { accessRequestsLoading=false }
@@ -858,31 +865,31 @@ class AppState(context: Context) {
         private set
     /** Called only by the explicit Moments → Refresh button, never by a social timer. */
     suspend fun refreshSharedMoments() {
-        val s=session ?: error(tr("Inicia sesión primero","Sign in first"))
+        val s=profileSocialSession() ?: error(tr("Inicia sesión primero","Sign in first"))
         if(sharedMomentsLoading) return
         sharedMomentsLoading=true
         try {
             val rows=social.receivedMoments(s)
-            if(session?.userId==s.userId) {sharedMoments.replaceWith(rows);sharedMomentsOwner=s.userId}
+            if(isCurrentSocialSession(s)) {sharedMoments.replaceWith(rows);sharedMomentsOwner=session?.userId.orEmpty()}
         } finally {sharedMomentsLoading=false}
     }
     suspend fun momentRecipients(): List<com.miflix.native2.data.SocialPerson> {
-        val s=session ?: error(tr("Inicia sesión primero","Sign in first"))
+        val s=profileSocialSession() ?: error(tr("Inicia sesión primero","Sign in first"))
         val rows=social.friends(s).filter {it.status=="accepted"}
         val ids=rows.map {if(it.sender==s.userId) it.receiver else it.sender}.distinct()
         if(ids.isEmpty()) return emptyList()
         val people=social.people(s,ids)
-        return if(session?.userId==s.userId) people else emptyList()
+        return if(isCurrentSocialSession(s)) people else emptyList()
     }
     suspend fun sendMoment(req: PlayerRequest,recipient: String,start: Long,end: Long) {
-        val s=session ?: error(tr("Inicia sesión primero","Sign in first"))
+        val s=profileSocialSession() ?: error(tr("Inicia sesión primero","Sign in first"))
         require(!req.live && playerRequest?.playbackId==req.playbackId)
         social.shareMoment(s,recipient,req.playbackId,req.item.cloudId,req.item.title,req.season,req.episode,start,end)
     }
     suspend fun removeSharedMoment(moment: com.miflix.native2.data.SharedMoment) {
-        val s=session ?: return
+        val s=profileSocialSession() ?: return
         social.deleteMoment(s,moment.id)
-        if(session?.userId==s.userId) sharedMoments.removeAll {it.id==moment.id}
+        if(isCurrentSocialSession(s)) sharedMoments.removeAll {it.id==moment.id}
     }
     suspend fun playSharedMoment(moment: com.miflix.native2.data.SharedMoment) {
         val account=session?.userId ?: error(tr("Inicia sesión primero","Sign in first"))
@@ -901,18 +908,18 @@ class AppState(context: Context) {
     }
     suspend fun refreshFriendsDirectory() {
         retrySocialPresenceEvent()
-        val s=session ?: return
+        val s=profileSocialSession() ?: return
         refreshFriends()
         val people=social.activity(s)
         val invitations=try {social.partyInvitations(s)} catch(e: CancellationException) {throw e} catch(_: Exception) {emptyList()}
-        if(session?.userId!=s.userId) return
+        if(!isCurrentSocialSession(s)) return
         friendActivity.clear(); friendActivity.addAll(people)
         partyInvitations.clear();partyInvitations.addAll(invitations)
     }
     suspend fun refreshSocialActivity() {
-        val s=session ?: return
+        val s=profileSocialSession() ?: return
         val epoch=partyEpoch
-        fun valid()=partyEpoch==epoch && session?.userId==s.userId
+        fun valid()=partyEpoch==epoch && isCurrentSocialSession(s)
         social.publishAvatar(s,activeProfile.avatarValue ?: ProfileAvatars[(activeProfile.id.hashCode() and Int.MAX_VALUE)%4].key)
         pendingPartyCode?.let { code ->
             val decision=try { social.requestAccess(s,code) } catch(e: Exception) {
@@ -928,15 +935,19 @@ class AppState(context: Context) {
         }
     }
     suspend fun decideAccess(request: AccessRequest, approve: Boolean) = socialAction {
-        val s=session ?: return@socialAction
+        val s=profileSocialSession() ?: return@socialAction
         social.decide(s,request,approve); accessRequests.remove(request)
     }
     val friendRows = mutableStateListOf<Friendship>()
     val friendPeople = mutableStateMapOf<String, String>()
     val partyMessages = mutableStateListOf<PartyEvent>()
     val floatingEvents = mutableStateListOf<PartyEvent>()
-    val partyPhrases = mutableStateListOf<String>().apply {
-        addAll(socialPrefs.getString("phrases", tr("¡Qué buena escena!|Un momento, por favor|¡No spoilers!","What a great scene!|One moment, please|No spoilers!")).orEmpty().split("|").filter { it.isNotBlank() })
+    val partyPhrases = mutableStateListOf<String>()
+    private fun restoreProfileSocialLocalRP1() {
+        val defaults=tr("¡Qué buena escena!|Un momento, por favor|¡No spoilers!","What a great scene!|One moment, please|No spoilers!")
+        val legacy=if(activeProfile.primary) socialPrefs.getString("phrases",defaults) else defaults
+        val value=socialPrefs.getString("phrases_rp1_${session?.userId ?: "local"}:${activeProfile.id}",legacy).orEmpty()
+        partyPhrases.clear();partyPhrases.addAll(value.split("|").filter {it.isNotBlank()})
     }
     private var lastEventId = -1L
     private val traktSent = mutableSetOf<String>()
@@ -975,14 +986,14 @@ class AppState(context: Context) {
         if(playerRequest?.playbackId==req.playbackId) socialEndedPlaybackId=req.playbackId
     }
     fun publishSocialPresenceEvent() {
-        val s=session ?: return
+        val s=profileSocialSession() ?: return
         val req=playerRequest?.takeIf { appForeground && (screen==Screen.PLAYER || miniPlayer) &&
             it.playbackId==socialReadyPlaybackId && it.playbackId!=socialEndedPlaybackId }
         presenceEvents.queue(s,req?.item?.title.orEmpty(),req?.item?.cloudId.orEmpty(),
             req?.season ?: 0,req?.episode ?: 0,if(req!=null) watchParty?.roomCode else null,
             if(req!=null) socialExpiresAt else System.currentTimeMillis())
     }
-    fun retrySocialPresenceEvent() { session?.takeUnless {sessionNeedsSignIn}?.let {presenceEvents.retry(it)} }
+    fun retrySocialPresenceEvent() { profileSocialSession()?.takeUnless {sessionNeedsSignIn}?.let {presenceEvents.retry(it)} }
 
     val tmdb = TmdbRepository(BuildConfig.MIFLIX_TMDB_TOKEN).also { it.language=if(interfaceLanguage=="es") "es-ES" else "en-US" }
     val streamRepo = StreamRepository("")
@@ -1572,6 +1583,7 @@ class AppState(context: Context) {
         applyProfileInterfaceLanguage()
         applyProfileAddons()
         restoreCustomFilterRC100()
+        restoreProfileSocialLocalRP1()
     }
     suspend fun bootstrap() {
         if(session==null) loadOfflineProfiles()
@@ -1586,12 +1598,13 @@ class AppState(context: Context) {
         }
         session?.let { account ->
             runCatching { trakt.call(account,"status").optBoolean("connected") }.onSuccess { traktConnected=it }
-            runCatching { nickname = social.nickname(account) }
-            val room = socialPrefs.getString("room_${account.userId}", "").orEmpty()
-            if (room.isNotBlank() && !kidsMode) runCatching {
-                cloud.readWatchParty(account, room)?.let { party ->
-                    watchParty = party; partyRole = if (party.hostUserId == account.userId) PartyRole.HOST else PartyRole.GUEST
-                    social.join(account, room)
+            profileSocialSession(account)?.let {actor ->runCatching {val name=social.nickname(actor);if(isCurrentSocialSession(actor)) nickname=name}}
+            val actor=profileSocialSession(account)
+            val room = socialPrefs.getString(socialRoomKey(), "").orEmpty()
+            if (room.isNotBlank() && actor!=null) runCatching {
+                cloud.readWatchParty(actor, room)?.let { party ->
+                    watchParty = party; partyRole = if (party.hostUserId == actor.userId) PartyRole.HOST else PartyRole.GUEST
+                    social.join(actor, room)
                 }
             }
         }
@@ -1641,6 +1654,7 @@ class AppState(context: Context) {
         applyProfileInterfaceLanguage()
         applyProfileAddons()
         restoreCustomFilterRC100()
+        restoreProfileSocialLocalRP1()
         local.saveProfileId(activeProfile.id)
 
         val (fav, prog) = cloud.profileState(s, activeProfile.id)
@@ -1650,6 +1664,12 @@ class AppState(context: Context) {
     }
 
     suspend fun selectProfile(p: Profile) {
+        if(p.id!=activeProfile.id) {
+            profileSocialSession()?.let {presenceEvents.queue(it,"","",0,0,null,System.currentTimeMillis())}
+            leaveWatchParty()
+            nickname="";friendRows.clear();friendPeople.clear();friendActivity.clear();partyInvitations.clear();accessRequests.clear();sharedMoments.clear();sharedMomentsOwner=""
+            calendarEvents.clear();partyMembers.clear();partyMessages.clear();floatingEvents.clear()
+        }
         invalidatePlaybackWork()
         playerRequest=null;sourceSelection=null;miniPlayer=false;selected=null;details=null;profilePhotoEditor=null
         favorites.clear();progress.clear();continueWatching.clear();kidsContinue.clear();notifications.clear()
@@ -1657,6 +1677,7 @@ class AppState(context: Context) {
         applyProfileInterfaceLanguage()
         applyProfileAddons()
         restoreCustomFilterRC100()
+        restoreProfileSocialLocalRP1()
         randomEpisodeCloud=null
         contextTitle=null;socialProfileEditor=false;localCastPairing=false
         if(kidsMode) detachParty()
@@ -2464,7 +2485,7 @@ class AppState(context: Context) {
         }
     }
     private fun sourceRetryMessage(index: Int,count: Int): String =
-        tr("El enlace falló. Probando el siguiente…","Source failed. Trying the next link…")+" (${index+1}/${count.coerceAtMost(com.miflix.native2.player.SourceFallbackBudget.MAX_ATTEMPTS)})"
+        tr("El enlace falló. Probando el siguiente…","Source failed. Trying the next link…")+" (${index+1}/${count})"
     /** Reuses the already loaded list; no add-on search or Supabase read is made here. */
     suspend fun tryNextPlaybackSource(req: PlayerRequest,position: Long,playing: Boolean): Boolean {
         if(!autoplayNextLink) return false
@@ -2548,12 +2569,10 @@ class AppState(context: Context) {
             val automaticFallback=autoplayNextLink && watchParty==null
             val retryRows=if(automaticFallback) {
                 val candidates=StreamOrdering.fallbackCandidates(streams,audioLanguage,bandwidth,seconds).filter {it.url!=chosen.url}
-                val alternatives=if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(audioLanguage) && StreamOrdering.languageRank(chosen)==0)
-                    candidates.filter {StreamOrdering.languageRank(it)==0}.take(2)+candidates.filter {StreamOrdering.languageRank(it)!=0}
-                    else candidates
-                (listOf(chosen)+alternatives).distinctBy {it.url}.take(com.miflix.native2.player.SourceFallbackBudget.MAX_ATTEMPTS)
+                val ordered=(listOf(chosen)+candidates).distinctBy {it.url}
+                if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(audioLanguage)) ordered else ordered.take(com.miflix.native2.player.SourceFallbackBudget.MAX_ATTEMPTS)
             } else listOf(chosen)
-            val budget=com.miflix.native2.player.SourceFallbackBudget(retryRows.size)
+            val budget=com.miflix.native2.player.SourceFallbackBudget(retryRows.size,com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(audioLanguage))
             val best=materializeAutomaticSource(retryRows,budget,playbackOwner,::valid)
             val externalSubs = withTimeoutOrNull(800) { subsJob.await() }.orEmpty()
             val mergedSubs = (best.subtitles + externalSubs)
@@ -2660,7 +2679,7 @@ class AppState(context: Context) {
     }
 
     suspend fun createWatchParty(withCurrentTitle: Boolean = false): WatchParty? {
-        val s = session ?: run { error = tr("Inicia sesión antes de crear una sala","Sign in before creating a Watch Party"); return null }
+        val s = profileSocialSession() ?: run { error = tr("Inicia sesión antes de crear una sala","Sign in before creating a Watch Party"); return null }
         watchParty?.let { return it }
         val item = if (withCurrentTitle) playerRequest?.item ?: selected else null
         val req = if (withCurrentTitle && playerRequest?.item?.cloudId == item?.cloudId) playerRequest else null
@@ -2685,7 +2704,7 @@ class AppState(context: Context) {
         val epoch=partyEpoch
         return runCatching {
             cloud.createWatchParty(s,party); social.join(s,room)
-            if(partyEpoch!=epoch || session?.userId!=s.userId) return@runCatching null
+            if(partyEpoch!=epoch || !isCurrentSocialSession(s)) return@runCatching null
             partyEpoch++; invalidatePlaybackWork(); knownPartyMembers=setOf(s.userId)
             watchParty=party; partyRole=PartyRole.HOST; partyStatus=tr("Sala lista · elige un contenido","Room ready · choose any title")
             rememberRoom(room); lastEventId=-1; party
@@ -2695,12 +2714,12 @@ class AppState(context: Context) {
 
     suspend fun joinWatchParty(code: String) {
         require(!kidsMode) {tr("Watch Party no está disponible en Kids.","Watch Party is not available in Kids.") }
-        val s = session ?: run { error = tr("Inicia sesión antes de unirte a una sala","Sign in before joining a Watch Party"); return }
+        val s = profileSocialSession() ?: run { error = tr("Inicia sesión antes de unirte a una sala","Sign in before joining a Watch Party"); return }
         require(code.trim().matches(Regex("[0-9]{6}"))) { tr("Usa el código de 6 dígitos","Use the 6-digit code") }
         if(watchParty!=null && watchParty?.roomCode!=code.trim()) { error=tr("Sal del party actual antes de solicitar otra sesión","Leave your current party before requesting another session"); return }
         val epoch=partyEpoch
         val decision=social.requestAccess(s,code.trim())
-        if(partyEpoch!=epoch || session?.userId!=s.userId) return
+        if(partyEpoch!=epoch || !isCurrentSocialSession(s)) return
         if(decision!="approved") {
             pendingPartyCode=if(decision=="pending") code.trim() else null
             partyStatus=if(decision=="pending") tr("Solicitud enviada · esperando aprobación del host","Request sent · Waiting for host approval") else tr("El host rechazó la solicitud","The host rejected your request")
@@ -2708,9 +2727,9 @@ class AppState(context: Context) {
         }
         pendingPartyCode=null
         social.join(s, code.trim())
-        if(partyEpoch!=epoch || session?.userId!=s.userId) return
+        if(partyEpoch!=epoch || !isCurrentSocialSession(s)) return
         val party = cloud.readWatchParty(s, code.trim()) ?: run { error = tr("No se encontró la sala","Watch Party room not found"); return }
-        if(partyEpoch!=epoch || session?.userId!=s.userId) return
+        if(partyEpoch!=epoch || !isCurrentSocialSession(s)) return
         partyEpoch++; invalidatePlaybackWork(); knownPartyMembers=null
         partyFollowHost=true
         watchParty = party
@@ -2724,7 +2743,7 @@ class AppState(context: Context) {
 
     private val partyPublishMutex=Mutex()
     suspend fun hostPartyUpdate(req: PlayerRequest, positionMs: Long, playing: Boolean) = partyPublishMutex.withLock {
-        val s = session ?: return@withLock
+        val s = profileSocialSession() ?: return@withLock
         if (partyRole != PartyRole.HOST || playerRequest?.playbackId!=req.playbackId) return@withLock
         val current = watchParty ?: return@withLock
         var next = partyPresentation(current,req).copy(
@@ -2750,7 +2769,7 @@ class AppState(context: Context) {
 
     /** Publish the exit pause even if the mini player was closed, without overwriting a new title. */
     suspend fun publishParkedParty(req: PlayerRequest, position: Long, roomCode: String) = partyPublishMutex.withLock {
-        val account=session ?: return@withLock
+        val account=profileSocialSession() ?: return@withLock
         val room=watchParty ?: return@withLock
         if(partyRole!=PartyRole.HOST || room.roomCode!=roomCode || room.hostUserId!=account.userId) return@withLock
         val current=playerRequest
@@ -2762,7 +2781,7 @@ class AppState(context: Context) {
     }
 
     suspend fun refreshParty(): WatchParty? {
-        val s=session ?: return null; val current=watchParty ?: return null; val epoch=partyEpoch
+        val s=profileSocialSession() ?: return null; val current=watchParty ?: return null; val epoch=partyEpoch
         val fresh=try { cloud.readWatchParty(s,current.roomCode) } catch(e: CancellationException) { throw e } catch(_: Exception) { null }
         if(!sameParty(epoch,s.userId,current.roomCode)) return null
         return fresh?.also { watchParty=it }
@@ -2770,7 +2789,7 @@ class AppState(context: Context) {
 
     suspend fun switchToPartyState(remote: WatchParty, openPlayer: Boolean = false) {
         if(kidsMode) return
-        val owner=session?.userId ?: return; val epoch=partyEpoch
+        val owner=profileSocialSession()?.userId ?: return; val epoch=partyEpoch
         fun valid()=sameParty(epoch,owner,remote.roomCode)
         if(!valid() || switchingPartyEpoch==epoch) return
         switchingPartyEpoch=epoch
@@ -2786,7 +2805,7 @@ class AppState(context: Context) {
             if(openPlayer) {partyFollowHost=true;miniPlayer=false}
             if(remote.cloudId.isBlank()) return
             if(remote.shareStream) {
-                val shared=try {cloud.readPartySource(session ?: return,remote)} catch(e: CancellationException) {throw e} catch(_: Exception) {null}
+                val shared=try {cloud.readPartySource(profileSocialSession() ?: return,remote)} catch(e: CancellationException) {throw e} catch(_: Exception) {null}
                 if(!valid()) return
                 if(shared!=null) {
                     val item=if(remote.liveChannelId.isNotBlank()) MediaSummary(remote.liveChannelId.hashCode(),"live",remote.title,remote.overview,null,remote.poster,0.0,"LIVE") else tmdb.byCloudId(remote.cloudId)
@@ -2823,7 +2842,7 @@ class AppState(context: Context) {
     private fun detachParty() {
         miniPlayer=false
         partyEpoch++; switchingPartyEpoch=null; invalidatePlaybackWork()
-        session?.let { socialPrefs.edit().remove("room_${it.userId}").apply() }
+        session?.let { socialPrefs.edit().remove(socialRoomKey()).apply() }
         watchParty=null; partyRole=null;partyFollowHost=true; pendingPartyCode=null; accessRequests.clear()
         partyMessages.clear(); floatingEvents.clear(); partyMembers.clear(); lastEventId=-1
         knownPartyMembers=null; partyJoinedNotice=null; joinedNoticeSequence++;sharedSourcePlaybackId=null
@@ -2833,7 +2852,7 @@ class AppState(context: Context) {
         playerRequest=null
     }
     suspend fun leaveWatchParty() {
-        val s=session; val p=watchParty; val role=partyRole
+        val s=profileSocialSession(); val p=watchParty; val role=partyRole
         // Release player and pending work immediately, before waiting for the network.
         detachParty()
         if(s!=null && p!=null) {
@@ -2842,7 +2861,7 @@ class AppState(context: Context) {
         }
     }
 
-    private fun rememberRoom(code: String) { session?.let { socialPrefs.edit().putString("room_${it.userId}", code).apply() } }
+    private fun rememberRoom(code: String) { session?.let { socialPrefs.edit().putString(socialRoomKey(), code).apply() } }
 
     suspend fun refreshAccountSession() {
         val account=session ?: return
@@ -2856,46 +2875,47 @@ class AppState(context: Context) {
         }
     }
     suspend fun saveNickname(value: String) = socialAction {
-        val s = session ?: error(tr("Inicia sesión primero","Sign in first"))
+        val s = profileSocialSession() ?: error(tr("Inicia sesión primero","Sign in first"))
         val nick = value.trim().lowercase(Locale.US)
-        social.saveNickname(s, nick); nickname = nick
+        social.saveNickname(s, nick); if(isCurrentSocialSession(s)) nickname = nick
     }
     fun savePhrases(value: String) {
         val values = value.split("|").map { it.trim().take(120) }.filter { it.isNotEmpty() }.distinct().take(8)
         partyPhrases.clear(); partyPhrases.addAll(values)
-        socialPrefs.edit().putString("phrases", values.joinToString("|")).apply()
+        socialPrefs.edit().putString("phrases_rp1_${session?.userId ?: "local"}:${activeProfile.id}", values.joinToString("|")).apply()
     }
     suspend fun sendPartyEvent(kind: String, text: String) = socialAction {
-        val s = session ?: error(tr("Inicia sesión primero","Sign in first"))
+        val s = profileSocialSession() ?: error(tr("Inicia sesión primero","Sign in first"))
         val room = watchParty?.roomCode ?: error(tr("Únete primero a una sala","Join a room first"))
         social.send(s, room, kind, text)
     }
     suspend fun refreshFriends() = socialAction {
-        val s = session ?: return@socialAction
+        val s = profileSocialSession() ?: return@socialAction
         val name=social.nickname(s)
         val rows=social.friends(s)
         val ids=rows.flatMap { listOf(it.sender,it.receiver) }.distinct()
         val people=social.people(s,ids)
-        if(session?.userId!=s.userId) return@socialAction
+        if(!isCurrentSocialSession(s)) return@socialAction
         nickname=name;friendRows.clear();friendRows.addAll(rows)
         friendPeople.clear();people.forEach { friendPeople[it.id]=it.nickname }
     }
     suspend fun addFriend(id: String) = socialAction {
-        val s = session ?: error(tr("Inicia sesión primero","Sign in first"))
+        val s = profileSocialSession() ?: error(tr("Inicia sesión primero","Sign in first"))
         require(id != s.userId) { tr("Esta es tu cuenta","This is your account") }
         val existing = social.friends(s).firstOrNull { it.sender == id || it.receiver == id }
+        if(!isCurrentSocialSession(s)) return@socialAction
         if (existing?.status == "accepted") return@socialAction
         if (existing?.receiver == s.userId) social.accept(s, id)
         else if (existing == null) social.requestFriend(s, id)
         refreshFriends()
     }
     suspend fun findAndAddFriend(nick: String) = socialAction {
-        val s = session ?: error(tr("Inicia sesión primero","Sign in first"))
+        val s = profileSocialSession() ?: error(tr("Inicia sesión primero","Sign in first"))
         val person = social.find(s, nick.trim()) ?: error(tr("No se encontró el apodo","Nickname not found"))
-        addFriend(person.id)
+        if(isCurrentSocialSession(s)) addFriend(person.id)
     }
     suspend fun pollSocialRoom(refreshMembers: Boolean = true) {
-        val s=session ?: return; val p=watchParty ?: return; val epoch=partyEpoch
+        val s=profileSocialSession() ?: return; val p=watchParty ?: return; val epoch=partyEpoch
         fun valid()=sameParty(epoch,s.userId,p.roomCode)
         val fresh=if((screen==Screen.PLAYER || miniPlayer) && !refreshMembers) p else cloud.readWatchParty(s,p.roomCode)
         if(!valid()) return
@@ -2936,7 +2956,7 @@ class AppState(context: Context) {
     }
 
     suspend fun heartbeatRoom() = partyPublishMutex.withLock {
-        val s=session ?: return@withLock
+        val s=profileSocialSession() ?: return@withLock
         if(partyRole==PartyRole.HOST && screen!=Screen.PLAYER && !miniPlayer) watchParty?.let { cloud.updateWatchParty(s,it) }
     }
 
@@ -3053,7 +3073,7 @@ class AppState(context: Context) {
     fun signOut() {
         previousLiveChannels.clear();previousLiveRevision++
         sharedMoments.clear();sharedMomentsOwner=""
-        session?.let { presenceEvents.queue(it,"","",0,0,null,System.currentTimeMillis()) }
+        profileSocialSession()?.let { presenceEvents.queue(it,"","",0,0,null,System.currentTimeMillis()) }
         playbackLinkCache.clear()
         closeAvatarUpload()
         detachParty()

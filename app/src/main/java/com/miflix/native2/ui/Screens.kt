@@ -2318,20 +2318,25 @@ private fun formatPosition(ms: Long): String {
 
 @Composable
 fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
+    var addonFilter by remember(selection.item.cloudId,selection.season,selection.episode) {mutableStateOf("")}
+    val addonNames=(state.streamRepo.sourceAddonNames()+selection.streams.map {it.addonName.ifBlank {"Add-on"}}).distinct()
+    val visibleStreams=selection.streams.filter {addonFilter.isBlank() || it.addonName.ifBlank {"Add-on"}==addonFilter}
+    LaunchedEffect(addonNames) {if(addonFilter.isNotBlank() && addonFilter !in addonNames) addonFilter=""}
     val firstLink = remember(selection) { FocusRequester() }
     val activeRequest=state.playerRequest?.takeIf {it.item.cloudId==selection.item.cloudId &&
         it.season==selection.season && it.episode==selection.episode}
     val playingUrl=activeRequest?.stream?.let {it.sourceUrl.ifBlank {it.url}}
-    val currentIndex=selection.streams.indexOfFirst {it.sourceUrl.ifBlank {it.url}==playingUrl}
+    val currentIndex=visibleStreams.indexOfFirst {it.sourceUrl.ifBlank {it.url}==playingUrl}
     val focusIndex=currentIndex.coerceAtLeast(0)
     val linkScroll=rememberLazyListState(initialFirstVisibleItemIndex=focusIndex)
-    LaunchedEffect(selection,focusIndex) {
+    LaunchedEffect(selection) {
         if(selection.streams.isNotEmpty()) {
             linkScroll.scrollToItem(focusIndex)
             withFrameNanos { }
             runCatching {firstLink.requestFocus()}
         }
     }
+    LaunchedEffect(addonFilter) {linkScroll.scrollToItem(focusIndex)}
     PlayerMenuDialog(
         forceSide = true,
         onDismissRequest = { state.sourceSelection = null },
@@ -2340,7 +2345,7 @@ fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
         Box(Modifier.fillMaxSize().background(Color.Transparent).padding(20.dp)) {
             Column {
                 Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                    Text("${tr("Enlaces de reproducción","Playback links")} · ${selection.streams.size}", color = Color.White, fontSize = 24.sp, lineHeight=29.sp,
+                    Text("${tr("Enlaces de reproducción","Playback links")} · ${visibleStreams.size} / ${selection.streams.size}", color = Color.White, fontSize = 24.sp, lineHeight=29.sp,
                         fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth())
                     Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                     FocusButton(tr("Actualizar enlaces","Refresh links")) { state.launch { state.refreshPlaybackLinks(selection) } }
@@ -2355,10 +2360,15 @@ fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
                     if(state.watchParty?.shareStream==true) FocusButton(tr("Usar fuente del party","Use party source")) {state.launch {state.socialAction {state.usePartySource()}}}
                 }
                 if(state.partyRole==PartyRole.GUEST) Text(tr("Este enlace se cambia solo para ti · sigues sincronizado con el host","This link changes only for you · You stay synced with the host"),color=Muted)
-                Spacer(Modifier.height(18.dp))
+                LazyRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp),contentPadding=PaddingValues(vertical=10.dp)) {
+                    item {FocusButton("All",primary=addonFilter.isBlank()) {addonFilter=""}}
+                    items(addonNames,key={it}) {name ->FocusButton(name,primary=addonFilter==name) {addonFilter=name}}
+                }
+                if(visibleStreams.isEmpty()) Text(tr("Este add-on no devolvió enlaces para este título.","This add-on returned no links for this title."),color=Muted,fontSize=14.sp)
+                Spacer(Modifier.height(10.dp))
                 LazyColumn(Modifier.weight(1f),state=linkScroll,verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 30.dp)) {
-                    items(selection.streams.size) { index ->
-                        val stream=selection.streams[index]
+                    items(visibleStreams.size) { index ->
+                        val stream=visibleStreams[index]
                         Column {
                         if(state.partyRole==PartyRole.GUEST && com.miflix.native2.data.PartySourcePolicy.key(stream)==state.watchParty?.sourceKey) Text(tr("FUENTE DEL PARTY","PARTY SOURCE"),color=Accent,fontSize=12.sp)
                         SourceLinkCard(stream,Modifier.fillMaxWidth().then(

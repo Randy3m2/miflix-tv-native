@@ -43,22 +43,21 @@ fun SocialBackdrop() {
 
 @Composable
 fun FriendsScreen(state: AppState) {
-    var momentsOpen by remember {mutableStateOf(false)}
     var tab by remember { mutableStateOf(0) }
     var search by remember { mutableStateOf("") }
     var person by remember { mutableStateOf<FriendActivity?>(null) }
     var recommendations by remember { mutableStateOf(false) }
     var showAllFriends by remember { mutableStateOf(false) }
     var previewRevision by remember { mutableIntStateOf(0) }
-    var recommendationsPreview by remember(state.session?.userId) { mutableStateOf<List<com.miflix.native2.data.FriendRecommendation>>(emptyList()) }
+    var recommendationsPreview by remember(state.socialIdentityId) { mutableStateOf<List<com.miflix.native2.data.FriendRecommendation>>(emptyList()) }
     var previewsLoading by remember { mutableStateOf(false) }
     var previewError by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(state.session?.userId,previewRevision) {
-        val owner=state.session?.userId ?: return@LaunchedEffect
+    LaunchedEffect(state.socialIdentityId,previewRevision) {
+        val owner=state.socialIdentityId ?: return@LaunchedEffect
         previewsLoading=true;previewError=null
         try {
             val rows=state.friendRecommendations()
-            if(state.session?.userId==owner) recommendationsPreview=rows
+            if(state.socialIdentityId==owner) recommendationsPreview=rows
             state.refreshCalendar()
         } catch(e: kotlinx.coroutines.CancellationException) { throw e }
         catch(e: Exception) { previewError=e.message }
@@ -78,7 +77,6 @@ fun FriendsScreen(state: AppState) {
                         FocusButton(if(state.watchParty==null) tr("Crear sala","Create Party") else tr("Mi sala","My Party")) { state.screen=Screen.WATCH_PARTY }
                     }
                     Text(tr("Descubre qué están viendo tus amigos.","Discover what your friends are watching."),color=Muted,fontSize=13.sp, lineHeight=16.sp)
-                    FeatureActionCard(tr("Momentos compartidos","Shared moments"),tr("De tus amigos · Actualización manual","From your friends · Manual refresh"),glyph="◷",modifier=Modifier.width(390.dp).padding(top=12.dp)) {momentsOpen=true}
 
                 Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement=Arrangement.spacedBy(16.dp)) {
@@ -105,7 +103,7 @@ fun FriendsScreen(state: AppState) {
                     if(tab==2) {
                         item { AccessRequests(state) }
                         items(state.friendRows.filter { it.status=="pending" }) { row ->
-                            val me=state.session?.userId; val other=if(row.sender==me) row.receiver else row.sender
+                            val me=state.socialIdentityId; val other=if(row.sender==me) row.receiver else row.sender
                             val name=state.friendPeople[other] ?: "Friend"
                             Row(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(16.dp)).padding(18.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
                                 Text("@$name",color=Color.White,modifier=Modifier.weight(1f))
@@ -162,7 +160,6 @@ fun FriendsScreen(state: AppState) {
         }
     }
     person?.let { friend -> FriendActionsDialog(state,friend,close={ person=null }) }
-    if(momentsOpen) SharedMomentsInbox(state) {momentsOpen=false}
     if(recommendations) FriendRecommendationsDialog(state) { recommendations=false }
 }
 
@@ -185,13 +182,13 @@ private fun FriendTile(friend: FriendActivity,modifier: Modifier,onClick: () -> 
 
 @Composable
 internal fun SocialSettingsDialog(state: AppState,close: () -> Unit) {
-    var nick by remember { mutableStateOf(state.nickname) }
+    var nick by remember(state.socialIdentityId,state.nickname) { mutableStateOf(state.nickname) }
     var find by remember { mutableStateOf("") }
     var phrases by remember { mutableStateOf(state.partyPhrases.joinToString("|")) }
-    PlayerMenuDialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         LazyColumn(Modifier.width(640.dp).heightIn(max=460.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(24.dp)) {
-            item { Text(tr("Mi perfil social","My social profile"),color=Color.White,fontSize=25.sp, lineHeight=30.sp) }
-            item { Column(verticalArrangement=Arrangement.spacedBy(16.dp)) { NativeTextField(nick,{ nick=it },tr("Apodo","Nickname")); FocusButton(tr("Guardar nickname","Save nickname")) { state.launch { state.saveNickname(nick) } } } }
+            item { Text(tr("Perfil social · ","Social profile · ")+state.activeProfile.name,color=Color.White,fontSize=25.sp, lineHeight=30.sp) }
+            item { Column(verticalArrangement=Arrangement.spacedBy(16.dp)) { NativeTextField(nick,{ nick=it },tr("Usuario de este perfil","This profile username")); FocusButton(tr("Guardar nickname","Save nickname")) { state.launch { state.saveNickname(nick) } } } }
             item { Column(verticalArrangement=Arrangement.spacedBy(16.dp)) { NativeTextField(find,{ find=it },tr("Apodo de tu amigo","Your friend's nickname")); FocusButton(tr("Agregar amigo","Add friend")) { state.launch { state.findAndAddFriend(find) } } } }
             item { Column(verticalArrangement=Arrangement.spacedBy(16.dp)) { NativeTextField(phrases,{ phrases=it },tr("Frases separadas por |","Phrases separated by |")); FocusButton(tr("Guardar frases","Save phrases")) { state.savePhrases(phrases) } } }
             item { FocusButton(tr("Cerrar","Close")) { close() } }
@@ -217,7 +214,7 @@ fun AccessRequests(state: AppState) {
 fun PartyActionsDialog(state: AppState, close: () -> Unit) {
     val first=remember { FocusRequester() }
     LaunchedEffect(Unit) { delay(100); first.requestFocus() }
-    PlayerMenuDialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Column(Modifier.consumeOpeningPress().widthIn(max=530.dp).background(Panel, RoundedCornerShape(24.dp)).padding(24.dp)) {
             Text(tr("Frases del Party","Party phrases"),color=Color.White,fontSize=24.sp, lineHeight=29.sp)
             Spacer(Modifier.height(12.dp))

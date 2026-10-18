@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP1: selector All o add-on en enlaces; agota las fuentes identificadas en español antes de inglés. Usuario, amigos y Watch Party independientes por perfil; requiere SQL RP1." to "RP1: All or individual add-on link filter; exhausts identified Spanish sources before English. Independent per-profile usernames, friends and Watch Party; requires RP1 SQL.",
         "RC105: ajustes nuevos en el negro del tema existente; listas con fondos negros y tarjeta Crear lista compacta para evitar texto cortado." to "RC105: new settings match the existing black theme; black list backgrounds and a compact Create list card to prevent clipped text.",
         "RC104: fila de listas personales con nombre, cantidad y collage de carátulas; acceso directo a cada colección y administrador visual renovado." to "RC104: personal-list shelf with names, counts and poster collages; direct access to each collection and a refreshed visual manager.",
         "RC103: ajustes locales con tarjetas, iconos e interruptores; mejor foco para TV, ayuda a la derecha al enfocar o pasar el cursor y selección visual de filas de Home." to "RC103: local settings with cards, icons and switches; clearer TV focus, right-side help on focus or hover and visual Home row selection.",

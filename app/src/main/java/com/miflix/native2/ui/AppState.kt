@@ -67,6 +67,92 @@ class AppState(context: Context) {
         playbackPrefs.edit().putBoolean("autoplay_next_link",enabled).apply()
         if(!enabled) sourceFallback=null
     }
+    internal val tasteProfile=TasteProfileRC102(context.getSharedPreferences("brunio_taste",Context.MODE_PRIVATE))
+    var tasteSetupPromptEnabled by mutableStateOf(playbackPrefs.getBoolean("taste_setup_prompt",true))
+        private set
+    fun saveTasteSetupPrompt(enabled:Boolean) {tasteSetupPromptEnabled=enabled;playbackPrefs.edit().putBoolean("taste_setup_prompt",enabled).apply()}
+    internal fun shouldOfferTasteSetup()=!kidsMode && tasteSetupPromptEnabled && !tasteProfile.done(ratingsKey())
+    internal fun moodArtworkRC102():Map<String,String> {
+        fun art(rows:List<MediaSummary>,offset:Int=0):String? {val images=rows.mapNotNull {it.backdrop ?: it.poster}.distinct();return if(images.isEmpty()) null else images[offset%images.size]}
+        val fallback=art(trending+movies)
+        return listOf(
+            "" to (art(forYou) ?: fallback),"christmas" to (art(christmasPicks) ?: genreCovers["family"]),
+            "happy" to art(comedy),"sad" to art(romancePicks,1),"documentary" to genreCovers["documentary"],
+            "marathon" to art(series),"background" to art(comedy,2),"twist" to art(thrillers),
+            "cozy" to art(romancePicks,3),"romantic" to art(romancePicks),"adrenaline" to art(action),
+            "mindbending" to art(sciFi),"family" to genreCovers["family"],"nostalgia" to art(classicPicks),
+            "quick" to art(newMovies,2),"meaningful" to art(topRated,2),"halloween" to art(horrorPicks)
+        ).mapNotNull {(key,value) ->(value ?: fallback)?.takeIf {it.isNotBlank()}?.let {key to it}}.toMap()
+    }
+
+    val novelasPicks=mutableStateListOf<MediaSummary>()
+    var novelasLoading by mutableStateOf(false)
+        private set
+    var novelasMessage by mutableStateOf("")
+        private set
+    private var novelasLocale by mutableStateOf("")
+    val novelasMatch:Boolean get()=!kidsMode && novelasLocale==tmdb.language
+    private val novelasMutex=Mutex()
+    internal suspend fun loadNovelasHome()=novelasMutex.withLock {
+        if(kidsMode || tmdb.token.isBlank()) return@withLock
+        val locale=tmdb.language
+        fun publish(rows:List<MediaSummary>) {if(locale==tmdb.language && !kidsMode) {novelasPicks.clear();novelasPicks.addAll(rows);novelasLocale=locale}}
+        val cacheKey="novelas:$locale"
+        val cached=tasteProfile.cached(cacheKey,24*60*60_000L)
+        if(cached!=null) {val a=cached.optJSONArray("rows") ?: org.json.JSONArray();publish((0 until a.length()).mapNotNull {runCatching {LocalExtrasRC100.decode(a.getJSONObject(it))}.getOrNull()});return@withLock}
+        novelasLoading=true;novelasMessage=""
+        try {
+            val rows=tmdb.novelaPage(1).rows
+            if(rows.isNotEmpty()) {tasteProfile.cache(cacheKey,org.json.JSONObject().put("rows",org.json.JSONArray(rows.map {LocalExtrasRC100.encode(it)})));publish(rows)}
+            else novelasMessage=tr("No se pudieron cargar las novelas. Reintenta.","Telenovelas could not be loaded. Try again.")
+        } catch(e:CancellationException) {throw e} catch(_:Exception) {novelasMessage=tr("No se pudieron cargar las novelas. Reintenta.","Telenovelas could not be loaded. Try again.")}
+        finally {novelasLoading=false}
+    }
+    private val tasteActorMutex=Mutex()
+    internal suspend fun onboardingActors(query:String=""):List<DirectorPerson> = tasteActorMutex.withLock {
+        val locale=tmdb.language
+        if(query.isNotBlank()) return@withLock tmdb.tasteActors(query)
+        val key="actors:$locale"
+        tasteProfile.cached(key,24*60*60_000L)?.optJSONArray("rows")?.let {a ->return@withLock (0 until a.length()).map {val p=a.getJSONObject(it);DirectorPerson(p.getInt("id"),p.getString("name"),p.optString("photo").takeIf {it.isNotBlank()})}}
+        val actors=coroutineScope {
+            val popular=async {tmdb.tasteActors()}
+            val latin=listOf("William Levy","Danna García","Mario Cimarro","Carmen Villalobos").map {name ->async {
+                try {tmdb.tasteActors(name).firstOrNull {FlexibleSearch.normalize(it.name)==FlexibleSearch.normalize(name)}} catch(e:CancellationException) {throw e} catch(_:Exception) {null}
+            }}.awaitAll().filterNotNull()
+            (latin+popular.await()).distinctBy {it.id}.take(24)
+        }
+        if(actors.isNotEmpty()) tasteProfile.cache(key,org.json.JSONObject().put("rows",org.json.JSONArray(actors.map {org.json.JSONObject().put("id",it.id).put("name",it.name).put("photo",it.photo ?: "")})))
+        actors
+    }
+    private val personalTasteMutex=Mutex()
+    private suspend fun initialTasteRecommendations():List<MediaSummary> = personalTasteMutex.withLock {
+        if(kidsMode || !tasteProfile.enabled(ratingsKey()) || tmdb.token.isBlank()) return@withLock emptyList()
+        val owner=ratingsKey();val locale=tmdb.language;val day=System.currentTimeMillis()/86_400_000L
+        val version=tasteProfile.version(owner);val signature="$version:$day:${ratings.toMap().hashCode()}"
+        val cacheKey="recommendations:$owner:$locale"
+        val cached=tasteProfile.cached(cacheKey,6*60*60_000L)
+        if(cached?.optString("signature")==signature) {val a=cached.optJSONArray("rows") ?: org.json.JSONArray();return@withLock (0 until a.length()).mapNotNull {runCatching {LocalExtrasRC100.decode(a.getJSONObject(it))}.getOrNull()}}
+        fun <T> rotate(rows:List<T>):List<T> {if(rows.isEmpty()) return rows;val offset=(day%rows.size).toInt();return rows.drop(offset)+rows.take(offset)}
+        val manual=rotate(tasteProfile.seeds(owner).filter {(ratings[it.cloudId] ?: 10)>4}).take(3)
+        val learned=tasteProfile.learned(owner).filter {(ratings[it.cloudId] ?: 10)>4 && it.cloudId !in manual.map {m ->m.cloudId}}.take(2)
+        val actors=rotate(tasteProfile.actorIds(owner)).take(2)
+        val genres=rotate(TasteGenresRC102.filter {it.key in tasteProfile.genres(owner)}).take(2)
+        if(manual.isEmpty() && learned.isEmpty() && actors.isEmpty() && genres.isEmpty()) return@withLock emptyList()
+        val batches=coroutineScope {
+            val jobs=mutableListOf<Deferred<Pair<Double,List<MediaSummary>>>>()
+            for(seed in manual+learned) jobs.add(async {val rows=try {tmdb.recommendations(seed)} catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()};(if(seed in manual) 1.5 else .8) to rows})
+            for(actor in actors) jobs.add(async {val rows=try {tmdb.actorCredits(actor)} catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()};1.2 to rows.take(30)})
+            for(genre in genres) jobs.add(async {val rows=try {when {genre.key=="soap" ->tmdb.novelaPage(1).rows;genre.movie<=0 ->tmdb.discoverTvGenre(genre.tv,pages=1,limit=25);genre.tv<=0 ->tmdb.discoverMovieGenre(genre.movie,pages=1,limit=25);else ->tmdb.discoverGenreMixed(genre.movie,genre.tv,25)}} catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()};1.0 to rows})
+            jobs.awaitAll()
+        }
+        val scores=mutableMapOf<String,Double>();val items=linkedMapOf<String,MediaSummary>()
+        for((weight,rows) in batches) rows.forEachIndexed {index,item ->items[item.cloudId]=item;scores[item.cloudId]=(scores[item.cloudId] ?: 0.0)+weight*(1.0-index.coerceAtMost(39)/40.0)}
+        val selected=tasteProfile.seeds(owner).map {it.cloudId}.toSet()
+        val rows=items.values.filter {it.cloudId !in selected && (ratings[it.cloudId] ?: 10)>4 && (progress[it.cloudId]?.percent ?: 0.0)<90.0}
+            .sortedWith(compareByDescending<MediaSummary> {scores[it.cloudId] ?: 0.0}.thenByDescending {it.rating}).take(40)
+        if(owner==ratingsKey() && locale==tmdb.language && version==tasteProfile.version(owner) && rows.isNotEmpty()) tasteProfile.cache(cacheKey,org.json.JSONObject().put("signature",signature).put("rows",org.json.JSONArray(rows.map {LocalExtrasRC100.encode(it)})))
+        rows
+    }
     internal val localExtras=LocalExtrasRC100(context.getSharedPreferences("brunio_local_extras",Context.MODE_PRIVATE))
     internal fun localExtrasScope()=ratingsKey()
     internal fun localRecommendations(rows:List<MediaSummary>)=rows.filterNot {localExtras.hidden(ratingsKey(),it.cloudId)}
@@ -76,7 +162,9 @@ class AppState(context: Context) {
         .put("interface",interfaceLanguage).put("audio",audioLanguage).put("subtitle",subtitleLanguage)
         .put("autoplay",autoplayNext).put("nextLink",autoplayNextLink).put("adaptive",adaptiveSource)
         .put("previousLiveChannel",previousLiveChannelEnabled)
+        .put("tasteProfile",tasteProfile.data(ratingsKey())).put("tastePrompt",tasteSetupPromptEnabled)
         .put("subtitleColor",subtitleColor).put("subtitleScale",subtitleScale.toDouble()).put("focusColor",focusColor)
+        .also {require(it.toString().toByteArray(Charsets.UTF_8).size<=2_000_000) {"Backup exceeds 2 MB"}}
     internal fun validateLocalBackupRC100(body:org.json.JSONObject) {
         require(body.getInt("brunioLocalBackup")==100)
         localExtras.validateImport(ratingsKey(),body.getJSONObject("extras"))
@@ -84,6 +172,8 @@ class AppState(context: Context) {
         require(body.getString("interface") in listOf("en","es"))
         require(body.getString("audio").length<=10 && body.getString("subtitle").length<=10)
         for(key in listOf("autoplay","nextLink","adaptive")) body.getBoolean(key)
+        body.optJSONObject("tasteProfile")?.let {tasteProfile.validate(it)}
+        if(body.has("tastePrompt")) body.getBoolean("tastePrompt")
         if(body.has("previousLiveChannel")) body.getBoolean("previousLiveChannel")
         body.getInt("subtitleColor");body.getInt("focusColor");require(body.getDouble("subtitleScale") in 0.8..1.4)
     }
@@ -95,6 +185,8 @@ class AppState(context: Context) {
         playbackPrefs.edit().putStringSet("hidden_home_rows:${ratingsKey()}",(0 until hidden.length()).map {hidden.getString(it)}.toSet()).apply();homeOrderRevision++
         savePlaybackPreferences(body.getString("audio"),body.getString("subtitle"),body.getBoolean("autoplay"))
         saveAutoplayNextLink(body.getBoolean("nextLink"));saveAdaptiveSource(body.getBoolean("adaptive"))
+        body.optJSONObject("tasteProfile")?.let {tasteProfile.restore(ratingsKey(),it)}
+        if(body.has("tastePrompt")) saveTasteSetupPrompt(body.getBoolean("tastePrompt"))
         savePreviousLiveChannelEnabled(body.optBoolean("previousLiveChannel",true))
         saveSubtitleStyle(body.getInt("subtitleColor"),body.getDouble("subtitleScale").toFloat())
         focusColor=body.getInt("focusColor");FocusTheme.argb=focusColor;playbackPrefs.edit().putInt("focus_color",focusColor).apply()
@@ -104,12 +196,14 @@ class AppState(context: Context) {
     private val cinemaStats=LocalCinemaStats(playbackPrefs)
     fun recordViewing(req:PlayerRequest,ms:Long) {
         if(!req.live && !isMomentOnly(req) && appForeground && screen==Screen.PLAYER && playerRequest?.playbackId==req.playbackId)
-            cinemaStats.record(ratingsKey(),req.item,details?.takeIf {it.summary.cloudId==req.item.cloudId},ms)
+            {cinemaStats.record(ratingsKey(),req.item,details?.takeIf {it.summary.cloudId==req.item.cloudId},ms)
+             if(!kidsMode) tasteProfile.viewing(ratingsKey(),req.item,ms)}
     }
     fun flushCinemaStats()=cinemaStats.flush()
     fun cinemaReport()=cinemaStats.snapshot(ratingsKey())
     private var homeOrderRevision by mutableIntStateOf(0)
-    val homeRowOrder:List<String> get() {homeOrderRevision;val a=runCatching {org.json.JSONArray(playbackPrefs.getString("home_order:${ratingsKey()}","[]"))}.getOrDefault(org.json.JSONArray());return (0 until a.length()).map {a.getString(it)}.distinct()}
+    val homeRowOrder:List<String> get() {homeOrderRevision;val a=runCatching {org.json.JSONArray(playbackPrefs.getString("home_order:${ratingsKey()}","[]"))}.getOrDefault(org.json.JSONArray());val keys=(0 until a.length()).map {a.getString(it)}.distinct().toMutableList()
+        if(keys.isNotEmpty() && "novelas" !in keys) {val anchor=listOf("genres_home","streaming","continue").firstOrNull {it in keys};keys.add(if(anchor!=null) keys.indexOf(anchor)+1 else 0,"novelas")};return keys}
     fun saveHomeRowOrder(keys:List<String>) {playbackPrefs.edit().putString("home_order:${ratingsKey()}",org.json.JSONArray(keys.distinct()).toString()).apply();homeOrderRevision++}
 
     val hiddenHomeRows:Set<String> get() {
@@ -632,11 +726,13 @@ class AppState(context: Context) {
     }
     suspend fun refreshForYou() {
         if(kidsMode) {forYou.clear();return}
-        val owner=ratingsKey(); val revision=ratings.toMap();val history=discoveryHistoryKey;val locale=tmdb.language
+        val owner=ratingsKey(); val revision=ratings.toMap();val history=discoveryHistoryKey;val locale=tmdb.language;val tasteVersion=tasteProfile.version(owner)
         val rows=if(revision.values.any { it>=6 } || history.isNotBlank()) recommendationsFor() else emptyList()
+        val personalized=try {initialTasteRecommendations()} catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
         val refined=try {refinedTastePicks()} catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
-        if(owner==ratingsKey() && revision==ratings.toMap() && history==discoveryHistoryKey && locale==tmdb.language) {
-            forYou.clear();forYou.addAll((refined+rows).filter {(ratings[it.cloudId] ?: 10)>4 && (progress[it.cloudId]?.percent ?: 0.0)<90}.distinctBy {it.cloudId}.take(30))
+        if(owner==ratingsKey() && revision==ratings.toMap() && history==discoveryHistoryKey && locale==tmdb.language && tasteVersion==tasteProfile.version(owner)) {
+            val mixed=(0 until maxOf(personalized.size,refined.size,rows.size)).flatMap {index ->listOfNotNull(personalized.getOrNull(index),refined.getOrNull(index),rows.getOrNull(index))}
+            forYou.clear();forYou.addAll((mixed).filter {(ratings[it.cloudId] ?: 10)>4 && (progress[it.cloudId]?.percent ?: 0.0)<90}.distinctBy {it.cloudId}.take(30))
         }
     }
     private val comingSoonMutex=Mutex()
@@ -963,10 +1059,35 @@ class AppState(context: Context) {
         links
     }
     val addonManifests=mutableStateListOf<String>()
-    private fun setAccountManifests(values: List<String>) {
+    private var primaryAddonManifests:List<String> = emptyList()
+    private var profileAddonRevision by mutableIntStateOf(0)
+    private fun profileAddonScope(profileId:String=activeProfile.id)="${session?.userId ?: "local"}:$profileId"
+    val profileAddonsInherited:Boolean get() {profileAddonRevision;return activeProfile.primary || playbackPrefs.getBoolean("addon_inherit:${profileAddonScope()}",true)}
+    private fun profileOwnAddons(profileId:String):List<String> {
+        val a=runCatching {org.json.JSONArray(playbackPrefs.getString("profile_addons:${profileAddonScope(profileId)}","[]"))}.getOrDefault(org.json.JSONArray())
+        return (0 until a.length()).map {a.optString(it)}.filter {it.startsWith("https://") || it.startsWith("http://")}.distinct()
+    }
+    private fun applyEffectiveManifests(values:List<String>) {
         invalidatePlaybackWork()
         streamRepo.setManifests(values)
-        addonManifests.clear(); addonManifests.addAll(streamRepo.manifests())
+        addonManifests.clear();addonManifests.addAll(streamRepo.manifests())
+    }
+    private fun applyProfileAddons() {
+        applyEffectiveManifests(if(profileAddonsInherited) primaryAddonManifests else profileOwnAddons(activeProfile.id))
+        profileAddonRevision++
+    }
+    private fun clearAccountManifests() {primaryAddonManifests=emptyList();applyEffectiveManifests(emptyList())}
+    private fun setAccountManifests(values: List<String>) {primaryAddonManifests=values.distinct();applyProfileAddons()}
+    fun saveProfileAddonInheritance(inherit:Boolean) {
+        if(activeProfile.primary) return
+        val scope=profileAddonScope();val edit=playbackPrefs.edit().putBoolean("addon_inherit:$scope",inherit)
+        if(!inherit && !playbackPrefs.contains("profile_addons:$scope")) edit.putString("profile_addons:$scope",org.json.JSONArray(streamRepo.manifests()).toString())
+        edit.apply();applyProfileAddons()
+    }
+    private fun saveOwnProfileAddons(values:List<String>) {
+        val scope=profileAddonScope()
+        playbackPrefs.edit().putBoolean("addon_inherit:$scope",false).putString("profile_addons:$scope",org.json.JSONArray(values.distinct()).toString()).apply()
+        applyProfileAddons()
     }
 
     private var currentScreen by mutableStateOf(Screen.SPLASH)
@@ -1449,6 +1570,7 @@ class AppState(context: Context) {
         ensureKidsProfile();local.saveOfflineProfiles(profiles.toList())
         activeProfile=profiles.firstOrNull { it.id==local.profileId() } ?: profiles.first()
         applyProfileInterfaceLanguage()
+        applyProfileAddons()
         restoreCustomFilterRC100()
     }
     suspend fun bootstrap() {
@@ -1480,7 +1602,7 @@ class AppState(context: Context) {
         busyMessage = tr("Iniciando sesión…","Signing in…")
         error = null
         runCatching { cloud.login(email, password) }.onSuccess {
-            setAccountManifests(emptyList())
+            clearAccountManifests()
             sourceSelection=null
             playerRequest=null
             detachParty()
@@ -1496,7 +1618,7 @@ class AppState(context: Context) {
 
     suspend fun syncFromCloud() {
         val s = session ?: return
-        setAccountManifests(emptyList())
+        clearAccountManifests()
         val (remoteProfiles, remoteSetup) = cloud.account(s)
         if(session?.userId!=s.userId) return
 
@@ -1517,6 +1639,7 @@ class AppState(context: Context) {
             ?: profiles.firstOrNull { it.primary }
             ?: profiles.first()
         applyProfileInterfaceLanguage()
+        applyProfileAddons()
         restoreCustomFilterRC100()
         local.saveProfileId(activeProfile.id)
 
@@ -1532,6 +1655,7 @@ class AppState(context: Context) {
         favorites.clear();progress.clear();continueWatching.clear();kidsContinue.clear();notifications.clear()
         activeProfile = p
         applyProfileInterfaceLanguage()
+        applyProfileAddons()
         restoreCustomFilterRC100()
         randomEpisodeCloud=null
         contextTitle=null;socialProfileEditor=false;localCastPairing=false
@@ -1546,17 +1670,23 @@ class AppState(context: Context) {
         screen = Screen.HOME
     }
 
-    suspend fun createProfile(name: String, avatar: String = "ai:astronaut") {
+    suspend fun createProfile(name: String, avatar: String = "ai:astronaut",inheritMainAddons:Boolean=true) {
         val clean = name.trim().take(24)
         if (clean.isBlank()) return
+        val createOwner=session?.userId
         val p = Profile(UUID.randomUUID().toString(), clean, avatarValue=avatar, primary = false)
         val next=profiles.toList()+p
         session?.let {
             cloud.upsertProfiles(it, next)
             cloud.upsertProfile(it, p.id, emptySet(), emptyMap())
         }
+        if(session?.userId!=createOwner) return
+        val addonScope=profileAddonScope(p.id)
+        playbackPrefs.edit().putBoolean("addon_inherit:$addonScope",inheritMainAddons)
+            .putString("profile_addons:$addonScope","[]").apply()
         profiles.add(p)
         if(session==null) local.saveOfflineProfiles(profiles.toList())
+        selectProfile(p)
     }
     private val avatarRepo=AvatarRepository(BuildConfig.SUPABASE_URL,BuildConfig.SUPABASE_KEY)
     var avatarUploadProfile by mutableStateOf<Profile?>(null)
@@ -1661,12 +1791,14 @@ class AppState(context: Context) {
         require(clean.startsWith("https://") || clean.startsWith("http://")) { tr("Usa una URL HTTP válida","Use a valid HTTP URL") }
         val normalized=if(clean.endsWith("/manifest.json")) clean else clean.trimEnd('/')+"/manifest.json"
         val next=(streamRepo.manifests()+normalized).distinct()
+        if(!activeProfile.primary) {saveOwnProfileAddons(next);return}
         cloud.upsertPrivateSetup(owner,PrivateSetup(tmdb.token,next.firstOrNull().orEmpty(),next))
         if(session?.userId==owner.userId) setAccountManifests(next)
     }
     suspend fun removeAddonManifest(manifest: String) {
         val owner=session ?: return
         val next=streamRepo.manifests().filterNot { it==manifest }
+        if(!activeProfile.primary) {saveOwnProfileAddons(next);return}
         cloud.upsertPrivateSetup(owner,PrivateSetup(tmdb.token,next.firstOrNull().orEmpty(),next))
         if(session?.userId==owner.userId) setAccountManifests(next)
     }
@@ -2508,6 +2640,7 @@ class AppState(context: Context) {
     fun updateProgress(req: PlayerRequest, position: Long, duration: Long, ended: Boolean = false) {
         if(isMomentOnly(req)) return
         if (req.live || duration <= 0) return
+        if(!kidsMode && playerRequest?.playbackId==req.playbackId) tasteProfile.observe(ratingsKey(),req.item,position,duration,ended)
         val key = if (req.item.type == "series") "${req.item.cloudId}:s${req.season}e${req.episode}" else req.item.cloudId
         val row = PlaybackProgress(
             percent = if (ended) 100.0 else position.toDouble() / duration * 100.0,
@@ -2867,7 +3000,7 @@ class AppState(context: Context) {
         val payload = runCatching { pairingRepo.poll(req) }.getOrNull() ?: return false
         if (payload.accessToken.isNotBlank() && payload.userId.isNotBlank()) {
             val cloudSession = CloudSession(payload.accessToken, payload.refreshToken, payload.userId, payload.email)
-            setAccountManifests(emptyList()); sourceSelection=null; playerRequest=null
+            clearAccountManifests(); sourceSelection=null; playerRequest=null
             detachParty()
             session = cloudSession
             local.saveSession(cloudSession)
@@ -2924,7 +3057,7 @@ class AppState(context: Context) {
         playbackLinkCache.clear()
         closeAvatarUpload()
         detachParty()
-        setAccountManifests(emptyList()); sourceSelection=null; playerRequest=null
+        clearAccountManifests(); sourceSelection=null; playerRequest=null
         watchParty=null; partyRole=null; nickname=""
         partyMessages.clear(); floatingEvents.clear(); partyMembers.clear()
         partyInvitations.clear();calendarEvents.clear();friendRows.clear(); friendPeople.clear(); friendActivity.clear(); accessRequests.clear(); pendingPartyCode=null; lastEventId=-1

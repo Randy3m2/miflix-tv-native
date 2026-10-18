@@ -25,6 +25,7 @@ internal fun HomeRowVisibilityRC99(state:AppState,close:()->Unit) {
         "discovery-picks" to tr("Tu ánimo · Tu selección","Your Mood · Your Picks"),
         "continue" to tr("Seguir viendo","Continue Watching"),
         "streaming" to tr("Plataformas","Streaming"),
+        "novelas" to tr("Novelas que atrapan","Telenovelas to fall for"),
         "genres_home" to tr("Explorar por género","Browse by genre"),
         "for_you" to tr("Para ti","For you"),
         "because_you_watched" to tr("Porque viste","Because you watched"),

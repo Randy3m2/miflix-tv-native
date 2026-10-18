@@ -352,11 +352,56 @@ class TmdbRepository(var token: String) {
         christmasPages.put(key,slice)
         return slice
     }
+    private val novelaPages=linkedMapOf<String,Pair<Long,GenreSlice>>()
+    /** Spanish-language novelas: exact requested anchors plus related titles and paged soaps. */
+    suspend fun novelaPage(page:Int):GenreSlice=coroutineScope {
+        require(page in 1..500)
+        val locale=language;val key="$locale:$page"
+        novelaPages[key]?.takeIf {System.currentTimeMillis()-it.first<6*60*60_000L}?.let {return@coroutineScope it.second}
+        val discover=async {get("/discover/tv",mapOf("language" to locale,"with_genres" to "10766","with_original_language" to "es",
+            "include_adult" to "false","sort_by" to "popularity.desc","vote_count.gte" to "5","page" to page.toString()))}
+        val anchors=if(page==1) listOf(
+            Triple("Pasión de gavilanes",2003,11250),Triple("Café con aroma de mujer",2021,0),
+            Triple("Sin senos no hay paraíso",2008,0),Triple("Yo soy Betty, la fea",1999,16286),
+            Triple("Tierra de reyes",2014,0),Triple("Café con aroma de mujer",1994,16961)
+        ).map {entry ->async {
+            try {
+                if(entry.third>0) mapItem(get("/tv/${entry.third}",mapOf("language" to locale)),"series")
+                else {
+                    val found=get("/search/tv",mapOf("language" to locale,"query" to entry.first,"first_air_date_year" to entry.second.toString(),"include_adult" to "false")).optJSONArray("results") ?: org.json.JSONArray()
+                    val exact=(0 until found.length()).map {found.getJSONObject(it)}.firstOrNull {
+                        !it.optBoolean("adult") && it.optString("first_air_date").take(4)==entry.second.toString() &&
+                        FlexibleSearch.normalize(it.optString("original_name",it.optString("name")))==FlexibleSearch.normalize(entry.first)
+                    }
+                    exact?.let {mapItem(it,"series")}
+                }
+            } catch(e:CancellationException) {throw e} catch(_:Exception) {null}
+        }}.awaitAll().filterNotNull() else emptyList()
+        val related=if(page==1) listOf(11250,16286).map {id ->async {
+            try {val a=get("/tv/$id/recommendations",mapOf("language" to locale,"page" to "1")).optJSONArray("results") ?: org.json.JSONArray()
+                (0 until a.length()).map {a.getJSONObject(it)}.filter {it.optString("original_language")=="es" && !it.optBoolean("adult")}.map {mapItem(it,"series")}
+            } catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList<MediaSummary>()}
+        }}.awaitAll().flatten() else emptyList()
+        val response=try {discover.await()} catch(e:CancellationException) {throw e} catch(e:Exception) {if(anchors.isEmpty() && related.isEmpty()) throw e else JSONObject().put("results",org.json.JSONArray()).put("total_pages",page+1)}
+        val slice=GenreSlice((anchors+related+parseList(response,"series",20)).distinctBy {it.cloudId},page<response.optInt("total_pages",page).coerceAtMost(500))
+        if(novelaPages.size>=16) novelaPages.remove(novelaPages.keys.first())
+        novelaPages[key]=System.currentTimeMillis() to slice
+        slice
+    }
+    suspend fun tasteActors(query:String=""):List<DirectorPerson> {
+        val locale=language
+        val response=if(query.isBlank()) get("/person/popular",mapOf("language" to locale,"page" to "1"))
+            else get("/search/person",mapOf("language" to locale,"query" to query.trim().take(80),"include_adult" to "false","page" to "1"))
+        val a=response.optJSONArray("results") ?: org.json.JSONArray()
+        return (0 until a.length()).map {a.getJSONObject(it)}.filter {!it.optBoolean("adult") && it.optString("known_for_department")=="Acting"}
+            .map {DirectorPerson(it.getInt("id"),it.getString("name"),image(it.optString("profile_path"),"w185"))}.take(20)
+    }
     private val homeShelfPages=PlaybackLinkCache<String,GenreSlice>(48) {System.currentTimeMillis()}
-    fun pageableHomeShelf(key: String): Boolean=key in setOf("movies","series","ranked_movies","top","best_series","now_playing",
+    fun pageableHomeShelf(key: String): Boolean=key in setOf("novelas","movies","series","ranked_movies","top","best_series","now_playing",
         "rewatch_favorites","romance_picks","korean_picks","classic_picks","action","scifi","comedy","thrillers","horror_movies","christmas_movies","seasonal","because_you_watched","coming_soon_home")
     suspend fun homeShelfPage(key: String,page: Int,seed: String,theme: String): GenreSlice = coroutineScope {
         require(page in 1..500)
+        if(key=="novelas") return@coroutineScope novelaPage(page)
         if(key=="christmas_movies" || (key=="seasonal" && theme=="christmas")) return@coroutineScope christmasPage(page)
         val locale=language
         val cacheKey="$locale:$key:$page:$seed:$theme"

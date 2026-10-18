@@ -1,5 +1,11 @@
 package com.miflix.native2.ui
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
@@ -44,24 +50,38 @@ internal fun moodTitle(mood:String):String=when(mood) {
     "halloween" -> "Halloween"
     else -> tr("Algo con sentido","Something meaningful")
 }
-private fun moodGlyph(mood:String)=when(mood) {"christmas"->"❄";"happy"->"☀";"sad"->"☂";"documentary"->"◉";"marathon"->"∞";"twist"->"↝";"romantic"->"♡";"adrenaline"->"ϟ";"mindbending"->"✧";else->"◈"}
+private fun moodGlyph(mood:String)=when(mood) {
+    "christmas"->"❄";"happy"->"☀";"sad"->"☂";"documentary"->"◎";"marathon"->"∞";"background"->"♫"
+    "twist"->"↯";"cozy"->"☕";"romantic"->"♡";"adrenaline"->"ϟ";"mindbending"->"✧";"family"->"⌂"
+    "nostalgia"->"◷";"quick"->"◴";"meaningful"->"✦";"halloween"->"☾";else->"✧"
+}
 
 @Composable
-private fun MoodTile(mood:String,selected:Boolean,modifier:Modifier=Modifier,onClick:()->Unit) {
+private fun MoodTile(mood:String,selected:Boolean,modifier:Modifier=Modifier,image:String?=null,onClick:()->Unit) {
     var focused by remember {mutableStateOf(false)}
+    val scale by animateFloatAsState(if(focused) 1.025f else 1f,tween(150),label="mood-photo-focus")
     val hue=when(mood) {
-        "christmas" ->Color(0xff51baa0);"happy","cozy" ->Color(0xffd8ac68);"sad" ->Color(0xff7c9cdb)
-        "romantic" ->Color(0xffd482a0);"adrenaline","halloween" ->Color(0xffd68b65)
-        else ->Color(0xffac92d9)
+        "christmas" ->Color(0xff62dbc0);"happy","cozy" ->Color(0xffffd28a);"sad" ->Color(0xff9ebdff)
+        "romantic" ->Color(0xffffb3d1);"adrenaline","halloween" ->Color(0xffffb484)
+        else ->Color(0xffcab2ff)
     }
-    Row(modifier.height(62.dp).width(220.dp).onFocusChanged {focused=it.isFocused}.focusable().tvClick(onClick).clickable(onClick=onClick)
-        .background(Brush.horizontalGradient(listOf(hue.copy(alpha=if(selected || focused) .34f else .16f),Color(0xff17151f))),RoundedCornerShape(18.dp))
-        .border(if(focused) 2.dp else 1.dp,if(focused) Accent else if(selected) hue else hue.copy(alpha=.25f),RoundedCornerShape(18.dp))
-        .padding(horizontal=13.dp),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-        Text(moodGlyph(mood),color=hue,fontSize=26.sp)
-        Column(Modifier.weight(1f)) {
-            Text(moodTitle(mood),color=Color.White,fontSize=14.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-            Text(if(selected) tr("SELECCIONADO","SELECTED") else tr("EXPLORAR","EXPLORE"),color=if(selected) hue else Muted,fontSize=9.sp)
+    val shape=RoundedCornerShape(19.dp)
+    Box(modifier.height(100.dp).width(224.dp).graphicsLayer {scaleX=scale;scaleY=scale}
+        .onFocusChanged {focused=it.isFocused}.clip(shape)
+        .background(Brush.linearGradient(listOf(hue.copy(alpha=.3f),Color(0xff121521))))
+        .border(if(focused || selected) 2.dp else 1.dp,if(focused) Color.White else if(selected) hue else Color.White.copy(alpha=.14f),shape)
+        .clickable(onClick=onClick)) {
+        if(image!=null) AsyncImage(image,contentDescription=moodTitle(mood),contentScale=ContentScale.Crop,modifier=Modifier.fillMaxSize())
+        Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color.Black.copy(alpha=.88f),Color.Black.copy(alpha=.30f)))))
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color.Black.copy(alpha=.45f)))))
+        Row(Modifier.fillMaxSize().padding(14.dp),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+            Box(Modifier.size(40.dp).background(hue.copy(alpha=.16f),RoundedCornerShape(13.dp)).border(1.dp,hue.copy(alpha=.5f),RoundedCornerShape(13.dp)),contentAlignment=androidx.compose.ui.Alignment.Center) {
+                Text(if(selected) "✓" else moodGlyph(mood),color=hue,fontSize=25.sp)
+            }
+            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                Text(moodTitle(mood),color=Color.White,fontSize=15.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Text(if(selected) tr("TU VIBE","YOUR VIBE") else tr("EXPLORAR","EXPLORE"),color=if(selected) hue else Color(0xffd2d5df),fontSize=9.sp)
+            }
         }
     }
 }
@@ -82,7 +102,7 @@ internal fun TrailerActionBar(previous:(()->Unit)?,next:(()->Unit)?,details:(()-
 }
 
 @Composable
-internal fun DiscoveryControls(mood:String,loading:Boolean,onMood:(String)->Unit,onTrailers:()->Unit,onSurprise:()->Unit,onTools:()->Unit) {
+internal fun DiscoveryControls(mood:String,loading:Boolean,onMood:(String)->Unit,onTrailers:()->Unit,onSurprise:()->Unit,onTools:()->Unit,art:Map<String,String> = emptyMap()) {
     CompositionLocalProvider(LocalSimpleHome provides false) {
         Column(Modifier.fillMaxWidth().padding(horizontal=40.dp,vertical=4.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
@@ -92,7 +112,7 @@ internal fun DiscoveryControls(mood:String,loading:Boolean,onMood:(String)->Unit
             HomeHorizontalRail {
                 LazyRow(Modifier.fillMaxWidth().smoothHorizontalDpad(),horizontalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(vertical=4.dp)) {
                     items(DiscoveryMoods,key={it.ifEmpty {"for-me"}}) {value ->
-                        MoodTile(value,mood==value,homeReturnFocus("mood:"+value.ifEmpty {"default"})) {onMood(value)}
+                        MoodTile(value,mood==value,homeReturnFocus("mood:"+value.ifEmpty {"default"}),image=art[value]) {onMood(value)}
                     }
                 }
             }

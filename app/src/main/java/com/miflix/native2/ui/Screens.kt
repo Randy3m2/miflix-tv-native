@@ -135,6 +135,11 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     LaunchedEffect(state.activeProfile.id,state.session?.userId,state.interfaceLanguage,state.discoveryHistoryKey) {
         state.loadBecauseWatched()
     }
+    val tasteOwner=state.localExtrasScope()
+    var showTasteSetup by remember(tasteOwner) {mutableStateOf(state.shouldOfferTasteSetup())}
+    if(showTasteSetup && !state.kidsMode) TasteOnboardingRC102(state) {showTasteSetup=false}
+    LaunchedEffect(tasteOwner,state.tasteProfile.version(tasteOwner)) {state.refreshForYou()}
+    LaunchedEffect(state.interfaceLanguage) {if("novelas" !in state.hiddenHomeRows) state.loadNovelasHome()}
     val discoveryOwner="${state.session?.userId}:${state.activeProfile.id}:${state.interfaceLanguage}"
     var discoveryMood by androidx.compose.runtime.saveable.rememberSaveable(discoveryOwner) {mutableStateOf("")}
     var discoveryRows by remember(discoveryOwner) {mutableStateOf<List<MediaSummary>>(emptyList())}
@@ -214,7 +219,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 }
                 shelf(key="discovery-controls") {
                     DiscoveryControls(discoveryMood,discoveryLoading || state.randomChoosing,
-                        onMood={discoveryMood=it;discoveryRetry++},onTrailers={showTrailers=true},onTools={showCinemaHub=true},
+                        onMood={discoveryMood=it;discoveryRetry++},onTrailers={showTrailers=true},onTools={showCinemaHub=true},art=state.moodArtworkRC102(),
                         onSurprise={if(!discoveryLoading && !state.randomChoosing) {if(state.localRecommendations(discoveryRows).isEmpty()) state.error=tr("La selección aún no está disponible. Elige otro ánimo o reintenta.","Picks are not available yet. Choose another mood or retry.") else state.launch {state.surpriseDiscovery(state.localRecommendations(discoveryRows))}}})
                 }
                 if(state.localRecommendations(discoveryRows).isNotEmpty()) shelf(key="discovery-picks") {
@@ -252,6 +257,16 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                     }
                     Spacer(Modifier.height(8.dp))
                 } }
+                shelf(key="novelas") {
+                    if(state.novelasMatch && state.localRecommendations(state.novelasPicks).isNotEmpty()) {
+                        SpotlightRail(tr("Novelas que atrapan","Telenovelas to fall for"),state.localRecommendations(state.novelasPicks).take(25),
+                            eyebrow=tr("GRANDES AMORES · SECRETOS · HISTORIAS INOLVIDABLES","BIG LOVE · SECRETS · UNFORGETTABLE STORIES"),onClick=openItem)
+                    } else Column(Modifier.padding(horizontal=40.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                        Text(tr("Novelas que atrapan","Telenovelas to fall for"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
+                        Text(if(state.novelasLoading) tr("Preparando historias para ti…","Preparing stories for you…") else state.novelasMessage.ifBlank {tr("Descubre tus próximas novelas favoritas.","Find your next favorite telenovelas.")},color=Muted)
+                        if(!state.novelasLoading) FocusButton(tr("Ver novelas","Explore telenovelas")) {state.launch {state.loadNovelasHome()}}
+                    }
+                }
                 if(state.localRecommendations(state.forYou).isNotEmpty()) shelf(key="for_you") { SpotlightRail(title=tr("Para ti · según lo que ves","For you · Based on what you watch"),rows=state.localRecommendations(state.forYou),onClick=openItem) }
                 if(state.becauseWatchedMatches && state.localRecommendations(state.becauseWatchedPicks).isNotEmpty()) shelf(key="because_you_watched") {
                     SpotlightRail(tr("Porque viste ","Because you watched ")+state.becauseWatchedTitle,state.localRecommendations(state.becauseWatchedPicks),
@@ -858,6 +873,8 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var addonUrl by remember { mutableStateOf("") }
+    var showTasteEditor by remember {mutableStateOf(false)}
+    if(showTasteEditor && !state.kidsMode) TasteOnboardingRC102(state) {showTasteEditor=false}
     var showLocalExtras by remember {mutableStateOf(false)}
     if(showLocalExtras) LocalExtrasSettingsRC100(state) {showLocalExtras=false}
     var showHomeOrder by remember {mutableStateOf(false)}
@@ -1019,6 +1036,14 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
 
                         }
                     }
+                    if(category in listOf("account","appearance") && !state.kidsMode) item(key="taste-personalization") {SettingsSectionCard {
+                        Text(tr("Tu universo, tus gustos","Your world. Your taste."),color=Color.White,fontSize=23.sp,fontWeight=FontWeight.Bold)
+                        Text(tr("Elige películas, series, novelas y actores. Tu selección es independiente para este perfil.","Choose movies, series, telenovelas and actors. Your selection belongs to this profile."),color=Muted)
+                        FocusButton(tr("Elegir o editar mis gustos","Choose or edit my tastes")) {showTasteEditor=true}
+                        FocusButton(tr("Personalización y aprendizaje local","Personalization and local learning")+" · "+if(state.tasteProfile.enabled(state.localExtrasScope())) "ON" else "OFF") {val owner=state.localExtrasScope();state.tasteProfile.enable(owner,!state.tasteProfile.enabled(owner))}
+                        FocusButton(tr("Ofrecer selección inicial en nuevos perfiles","Offer taste setup for new profiles")+" · "+if(state.tasteSetupPromptEnabled) "ON" else "OFF") {state.saveTasteSetupPrompt(!state.tasteSetupPromptEnabled)}
+                        FocusButton(tr("Reiniciar aprendizaje local","Reset local learning")) {state.tasteProfile.clearLearning(state.localExtrasScope())}
+                    }}
                     if(category in listOf("playback","appearance","system")) item(key="local-extras-rc100") {SettingsSectionCard {
                         FocusButton(tr("Funciones locales · Listas y preferencias","Local features · Lists and preferences")) {showLocalExtras=true}
                     }}
@@ -1145,7 +1170,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         }
                     }
                     if(category=="sources") item(key="setting-8") {
-                        SettingsSectionCard(onFocused={ helpTitle="Stream Add-ons";helpDescription="Manage the stream manifests shared by every profile on your account.";helpIndex=8 }) {
+                        SettingsSectionCard(onFocused={ helpTitle="Stream Add-ons";helpDescription="Use the main profile add-ons or configure sources for this profile on this TV.";helpIndex=8 }) {
                 Text(tr("Complementos de reproducción","Stream Add-ons"), color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
                 Text(tr("Los manifiestos de Torrentio y Comet se comparten entre los perfiles de esta cuenta.","Torrentio and Comet manifests are account-level, so every profile on this account shares them."), color = Muted, fontSize = 14.sp, lineHeight=17.sp, modifier = Modifier.fillMaxWidth())
@@ -1157,6 +1182,11 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     }
                 }
                 Spacer(Modifier.height(12.dp))
+                if(!state.activeProfile.primary) {
+                    Text(tr("Add-ons de este perfil","This profile's add-ons"),color=Color.White,fontSize=20.sp)
+                    FocusButton(if(state.profileAddonsInherited) tr("Usando los del principal","Using main profile add-ons") else tr("Configuración propia","Own configuration")) {state.saveProfileAddonInheritance(!state.profileAddonsInherited)}
+                    Text(tr("Las fuentes propias se guardan en esta TV. Editar la lista crea una configuración propia y no cambia el principal.","Own sources are saved on this TV. Editing the list creates an independent configuration and leaves the main profile unchanged."),color=Muted,fontSize=13.sp)
+                }
                 NativeTextField(addonUrl, { addonUrl = it }, tr("URL del manifiesto Torrentio / Comet","Torrentio / Comet manifest URL"), modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(10.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(18.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
@@ -1256,6 +1286,7 @@ fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
     val firstProfile=remember { FocusRequester() }
     LaunchedEffect(Unit) { delay(150); runCatching { firstProfile.requestFocus() } }
     var newName by remember { mutableStateOf("") }
+    var inheritMainAddons by remember {mutableStateOf(true)}
     var newAvatar by remember { mutableStateOf("ai:astronaut") }
     var editingAvatar by remember { mutableStateOf<Profile?>(null) }
     var deletingProfile by remember { mutableStateOf<Profile?>(null) }
@@ -1304,10 +1335,20 @@ fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
                 ProfileAvatar(Profile("new",newName,avatarValue=newAvatar),Modifier.size(72.dp))
                 NativeTextField(newName,{newName=it},tr("Nombre del perfil","Profile name"),modifier=Modifier.width(340.dp))
             }
+            Spacer(Modifier.height(18.dp))
+            Column(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xff1e2438),Color(0xff111923))),RoundedCornerShape(20.dp)).padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                Text(tr("Sus fuentes, a su manera","Their profile. Their sources."),color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
+                Text(tr("Elige cómo empezará este perfil. Puedes cambiarlo después en Settings.","Choose how this profile starts. You can change it later in Settings."),color=Muted,fontSize=14.sp)
+                FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    FocusButton(tr("✓ Usar add-ons del principal","✓ Use main profile add-ons"),primary=inheritMainAddons) {inheritMainAddons=true}
+                    FocusButton(tr("Configuración propia","Own configuration"),primary=!inheritMainAddons) {inheritMainAddons=false}
+                }
+                Text(if(inheritMainAddons) tr("Comparte la lista de add-ons del principal.","Uses the main profile's add-on list.") else tr("Empieza sin add-ons. Los que añadas serán solo para este perfil en esta TV.","Starts with no add-ons. Any you add belong to this profile on this TV."),color=if(inheritMainAddons) Accent else Muted,fontSize=13.sp)
+            }
             Spacer(Modifier.height(22.dp))
             FlowRow(horizontalArrangement=Arrangement.spacedBy(20.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
                 FocusButton(tr("Elegir avatar","Choose avatar")) { choosingNewAvatar=true }
-                FocusButton(tr("Añadir perfil","Add Profile"),primary=true) { state.launch { state.socialAction { state.createProfile(newName,newAvatar); newName="" } } }
+                FocusButton(tr("Añadir perfil","Add Profile"),primary=true) { state.launch { state.socialAction { state.createProfile(newName,newAvatar,inheritMainAddons); newName="";inheritMainAddons=true } } }
             }
             Spacer(Modifier.height(26.dp))
             FocusButton(tr("Volver","Back")) { onBack() }

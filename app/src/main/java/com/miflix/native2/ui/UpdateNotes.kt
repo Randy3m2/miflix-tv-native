@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP4: cuatro add-ons incluidos por defecto, eliminables individualmente desde Settings." to "RP4: four default add-ons, individually removable from Settings.",
         "RP3: add-on MG incluido por defecto y eliminable desde Settings; recuerda la eliminación en esta TV." to "RP3: MG add-on included by default and removable from Settings; removal is remembered on this TV.",
         "RP2: prioridad de add-ons por idioma, orden personalizable por perfil y audio; información de reproducción y detalles de enlace a pantalla completa sobre el vídeo." to "RP2: language-based add-on priority, editable order per profile and audio language; full-screen playback information and source details over the video.",
         "RP1: selector All o add-on en enlaces; agota las fuentes identificadas en español antes de inglés. Usuario, amigos y Watch Party independientes por perfil; requiere SQL RP1." to "RP1: All or individual add-on link filter; exhausts identified Spanish sources before English. Independent per-profile usernames, friends and Watch Party; requires RP1 SQL.",

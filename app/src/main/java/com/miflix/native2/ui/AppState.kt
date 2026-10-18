@@ -1108,19 +1108,29 @@ class AppState(context: Context) {
         val a=runCatching {org.json.JSONArray(playbackPrefs.getString("profile_addons:${profileAddonScope(profileId)}","[]"))}.getOrDefault(org.json.JSONArray())
         return (0 until a.length()).map {a.optString(it)}.filter {it.startsWith("https://") || it.startsWith("http://")}.distinct()
     }
-    private val bundledManifestRP3="https://mg.homelabx.qzz.io/manifest.json"
-    private fun bundledRemovedKeyRP3(ownProfile:Boolean = !profileAddonsInherited):String =
-        "bundled_mg_removed_rp3:"+if(ownProfile) profileAddonScope() else "${session?.userId ?: "local"}:account"
-    private fun effectiveBundledAddonsRP3(values:List<String>):List<String> =
-        if(playbackPrefs.getBoolean(bundledRemovedKeyRP3(),false)) values.filterNot {it==bundledManifestRP3}
-        else (values+bundledManifestRP3).distinct()
+    private val bundledManifestsRP4=listOf(
+        "https://addonlatam.duckdns.org/A0wrYOb7z4LiG5vrhQwcb-g4/manifest.json",
+        "https://mg.homelabx.qzz.io/manifest.json",
+        "https://progreso-latino.xyz/api/addon/manifest.json",
+        "https://plus.nuvehub.app/zWdrusnz49s0vtAquiLXDbPwzVCnwZPf-nIed12NG5gYuDhQ5GhmMeRBo861VDX3/manifest.json"
+    )
+    private fun bundledRemovedKeyRP4(manifest:String,ownProfile:Boolean = !profileAddonsInherited):String {
+        val scope=if(ownProfile) profileAddonScope() else "${session?.userId ?: "local"}:account"
+        // Preserve the RP3 removal preference for MG.
+        return if(manifest==bundledManifestsRP4[1]) "bundled_mg_removed_rp3:$scope"
+        else "bundled_removed_rp4:$scope:${AddonPriorityRP2.id(manifest)}"
+    }
+    private fun effectiveBundledAddonsRP4(values:List<String>):List<String> =
+        (values+bundledManifestsRP4).distinct().filterNot {
+            it in bundledManifestsRP4 && playbackPrefs.getBoolean(bundledRemovedKeyRP4(it),false)
+        }
     private fun applyEffectiveManifests(values:List<String>) {
         invalidatePlaybackWork()
         streamRepo.setManifests(values)
         addonManifests.clear();addonManifests.addAll(streamRepo.manifests())
     }
     private fun applyProfileAddons() {
-        applyEffectiveManifests(effectiveBundledAddonsRP3(if(profileAddonsInherited) primaryAddonManifests else profileOwnAddons(activeProfile.id)))
+        applyEffectiveManifests(effectiveBundledAddonsRP4(if(profileAddonsInherited) primaryAddonManifests else profileOwnAddons(activeProfile.id)))
         profileAddonRevision++
     }
     private fun clearAccountManifests() {primaryAddonManifests=emptyList();applyEffectiveManifests(emptyList())}
@@ -1849,12 +1859,12 @@ class AppState(context: Context) {
         val normalized=if(clean.endsWith("/manifest.json")) clean else clean.trimEnd('/')+"/manifest.json"
         val next=(streamRepo.manifests()+normalized).distinct()
         if(!activeProfile.primary) {
-            if(normalized==bundledManifestRP3) playbackPrefs.edit().remove(bundledRemovedKeyRP3(true)).apply()
+            if(normalized in bundledManifestsRP4) playbackPrefs.edit().remove(bundledRemovedKeyRP4(normalized,true)).apply()
             saveOwnProfileAddons(next);return
         }
         cloud.upsertPrivateSetup(owner,PrivateSetup(tmdb.token,next.firstOrNull().orEmpty(),next))
         if(session?.userId==owner.userId) {
-            if(normalized==bundledManifestRP3) playbackPrefs.edit().remove(bundledRemovedKeyRP3(false)).apply()
+            if(normalized in bundledManifestsRP4) playbackPrefs.edit().remove(bundledRemovedKeyRP4(normalized,false)).apply()
             setAccountManifests(next)
         }
     }
@@ -1862,12 +1872,12 @@ class AppState(context: Context) {
         val owner=session ?: return
         val next=streamRepo.manifests().filterNot { it==manifest }
         if(!activeProfile.primary) {
-            if(manifest==bundledManifestRP3) playbackPrefs.edit().putBoolean(bundledRemovedKeyRP3(true),true).apply()
+            if(manifest in bundledManifestsRP4) playbackPrefs.edit().putBoolean(bundledRemovedKeyRP4(manifest,true),true).apply()
             saveOwnProfileAddons(next);return
         }
         cloud.upsertPrivateSetup(owner,PrivateSetup(tmdb.token,next.firstOrNull().orEmpty(),next))
         if(session?.userId==owner.userId) {
-            if(manifest==bundledManifestRP3) playbackPrefs.edit().putBoolean(bundledRemovedKeyRP3(false),true).apply()
+            if(manifest in bundledManifestsRP4) playbackPrefs.edit().putBoolean(bundledRemovedKeyRP4(manifest,false),true).apply()
             setAccountManifests(next)
         }
     }

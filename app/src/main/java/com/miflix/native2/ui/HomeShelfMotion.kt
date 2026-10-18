@@ -1,42 +1,59 @@
 package com.miflix.native2.ui
 
-import androidx.compose.animation.core.AnimationState
-import androidx.compose.animation.core.animateTo
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.staticCompositionLocalOf
-import com.miflix.native2.data.HoldMotionPolicy
+import androidx.compose.runtime.withFrameNanos
+import com.miflix.native2.data.SoftScrollIntegrator
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 internal val LocalHomeShelfMotion=staticCompositionLocalOf<HomeShelfMotion?> {null}
 
-/** One shared camera for Home: a new row can inherit the current velocity. */
-internal class HomeShelfMotion {
-    private var carried=0f
-    private var lastFrameAt=0L
-    fun reset() {carried=0f;lastFrameAt=0L}
-    suspend fun align(scroll:LazyListState,index:Int) {
-        if(scroll.layoutInfo.visibleItemsInfo.none {it.index==index}) {
-            reset()
-            scroll.animateScrollToItem(index)
-            return
-        }
-        scroll.scroll {
-            val row=scroll.layoutInfo.visibleItemsInfo.firstOrNull {it.index==index} ?: return@scroll
-            val distance=row.offset.toFloat()
-            if(abs(distance)<.5f) {reset();return@scroll}
-            val recent=android.os.SystemClock.uptimeMillis()-lastFrameAt in 0L..120L
-            val motion=AnimationState(initialValue=0f,initialVelocity=HoldMotionPolicy.carriedVelocity(distance,if(recent) carried else 0f))
-            var previous=0f
-            motion.animateTo(distance,spring(dampingRatio=1f,stiffness=300f),sequentialAnimation=true) {
-                val delta=value-previous
-                val consumed=scrollBy(delta)
-                previous=value
-                carried=velocity
-                lastFrameAt=android.os.SystemClock.uptimeMillis()
-                if(abs(delta-consumed)>.5f) {reset();cancelAnimation()}
+/** One running scroll loop; focus changes only retarget it, without restarting its frame clock. */
+internal class HomeShelfMotion(private val scope:CoroutineScope) {
+    private var target:Int?=null
+    private var running:Job?=null
+    private var generation=0L
+    private val motion=SoftScrollIntegrator()
+    fun reset() {
+        generation++;target=null;running?.cancel();running=null;motion.reset()
+    }
+    fun align(scroll:LazyListState,index:Int) {
+        target=index
+        if(running?.isActive==true) return
+        val epoch=generation
+        running=scope.launch {
+            try {
+                scroll.scroll {
+                    var previous=0L
+                    while(target!=null && generation==epoch) {
+                        val now=withFrameNanos {it}
+                        val dt=if(previous==0L) 1f/60f else (now-previous)/1_000_000_000f
+                        previous=now
+                        val indexNow=target ?: break
+                        val layout=scroll.layoutInfo
+                        if(indexNow !in 0 until layout.totalItemsCount) break
+                        val visible=layout.visibleItemsInfo
+                        val row=visible.firstOrNull {it.index==indexNow}
+                        // Home items all occupy one viewport: estimate only until the target is measured.
+                        val reference=visible.firstOrNull() ?: continue
+                        val distance=row?.offset?.toFloat() ?: (reference.offset+(indexNow-reference.index)*reference.size).toFloat()
+                        if(abs(distance)<.6f && abs(motion.velocity())<8f) {
+                            scrollBy(distance)
+                            break
+                        }
+                        val viewport=(layout.viewportEndOffset-layout.viewportStartOffset).toFloat()
+                        val delta=motion.step(distance,dt,viewport)
+                        val consumed=scrollBy(delta)
+                        val atBound=(delta>0 && !scroll.canScrollForward) || (delta<0 && !scroll.canScrollBackward)
+                        if(atBound && abs(delta-consumed)>.6f) break
+                    }
+                }
+            } finally {
+                if(generation==epoch) {running=null;motion.reset()}
             }
-            carried=0f
         }
     }
 }

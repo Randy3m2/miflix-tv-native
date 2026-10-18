@@ -8,7 +8,7 @@ assert(cards.includes('delay(230);cardBring.bringIntoView()'));assert(cards.incl
 const home=ui.slice(ui.indexOf('fun HomeScreen('),ui.indexOf('private fun MediaRail'));
 assert(home.includes('rows=state.continueWatching,showTitle=true'));assert(!home.includes('rows=state.continueWatching,landscape=true'));
 assert(home.includes('Modifier.fillParentMaxHeight().fillMaxWidth()'));assert(home.includes('var shelfIndex=0'));assert(home.includes('calculateScrollDistance(offset: Float,size: Float,containerSize: Float): Float = 0f'));
-assert(frame.includes('LaunchedEffect(active,index,returning?.pending)'));assert(frame.includes('motion.align(scroll,index)'));assert(read('ui/HomeShelfMotion.kt').includes('scroll.animateScrollToItem(index)'));assert(frame.includes('onFocusChanged {active=it.hasFocus}'));
+assert(frame.includes('LaunchedEffect(active,index,returning?.pending)'));assert(frame.includes('motion.align(scroll,index)'));assert(read('ui/HomeShelfMotion.kt').includes('if(running?.isActive==true) return'));assert(frame.includes('onFocusChanged {active=it.hasFocus}'));
 assert(!components.includes('Text(tile.title, color = Color.White, fontSize = 14.sp'));assert(components.includes('Text(tile.title,color=Color.White,fontSize=25.sp'));
 assert(hero.includes('val compact=heroFocus!=null'));assert(hero.includes('if(compact) 2 else'));
 // Layout invariants throughout expansion/contraction: artwork stays within its measured slot.
@@ -27,5 +27,5 @@ for(const height of [432,480,540,600,720,1080]){
  assert(208<=innerHeight||height<480,'streaming shelf fits standard TV viewport');
 }
 for(const name of ['ui/HomeShelfFrame.kt','ui/CinematicBrowsing.kt','ui/BrowseHero.kt','ui/Components.kt','ui/Screens.kt','ui/UpdateNotes.kt'])assert.equal(read(name),fs.readFileSync('main/java/com/miflix/native2/'+name,'utf8'));
-assert(fs.readFileSync('app/build.gradle','utf8').includes("versionName '2.0.0-rc90'"));
+assert(fs.readFileSync('app/build.gradle','utf8').includes("versionName '2.0.0-rc91'"));
 console.log('PASS: push-layout geometry, equal Continue Watching cards, in-card titles, full-group focus scrolling in both directions, compact hero, no redundant streaming captions and mirrors.');

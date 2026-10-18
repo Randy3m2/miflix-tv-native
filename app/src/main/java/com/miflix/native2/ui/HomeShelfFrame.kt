@@ -25,10 +25,10 @@ internal val LocalHomeCardRowHeight=staticCompositionLocalOf {188.dp}
 internal fun HomeShelfFrame(index:Int,scroll:LazyListState,modifier:Modifier=Modifier,content:@Composable ()->Unit) {
     var active by remember {mutableStateOf(false)}
     val returning=LocalHomeReturnFocus.current
-    val motion=LocalHomeShelfMotion.current ?: remember(scroll) {HomeShelfMotion()}
+    val frameScope=rememberCoroutineScope()
+    val motion=LocalHomeShelfMotion.current ?: remember(scroll) {HomeShelfMotion(frameScope)}
     LaunchedEffect(active,index,returning?.pending) {
         if(active && returning?.pending==null) {
-            withFrameNanos { }
             motion.align(scroll,index)
         }
     }
@@ -46,11 +46,12 @@ internal fun HomeHorizontalRail(content:@Composable ()->Unit) {
         content()
         return
     }
+    val horizontalAnchor=remember {com.miflix.native2.data.HorizontalFocusAnchor()}
     val horizontalSpec=remember {object: BringIntoViewSpec {
         override fun calculateScrollDistance(offset:Float,size:Float,containerSize:Float):Float =
-            com.miflix.native2.data.BrowseFocusMotion.horizontalDistance(offset,size,containerSize)
+            horizontalAnchor.distance(offset,size,containerSize,android.os.SystemClock.uptimeMillis())
     }}
-    CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalSpec) {content()}
+    CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalSpec,LocalHorizontalFocusAnchor provides horizontalAnchor) {content()}
 }
 
 /** Save IDs, not FocusRequester instances, across the details destination. */

@@ -94,9 +94,10 @@ internal fun SpotlightRail(
     LaunchedEffect(selectedId,active) { settledId=null;if(active && !simple) { delay(3000);settledId=selectedId } }
     LaunchedEffect(active) { if(active && !homeShelf) { delay(50); bring.bringIntoView() } }
     val infoVisibility by animateFloatAsState(if(active && settledId==selectedId) 1f else 0f,tween(150),label="railInfo")
+    val horizontalAnchor=remember {com.miflix.native2.data.HorizontalFocusAnchor()}
     val horizontalSpec=remember {object: BringIntoViewSpec {
         override fun calculateScrollDistance(offset: Float,size: Float,containerSize: Float): Float =
-            com.miflix.native2.data.BrowseFocusMotion.horizontalDistance(offset,size,containerSize)
+            horizontalAnchor.distance(offset,size,containerSize,android.os.SystemClock.uptimeMillis())
     } }
     val selected=rows.firstOrNull { it.cloudId==selectedId } ?: rows.first()
     Column(Modifier.fillMaxWidth().height(if(homeShelf) cardRowHeight+(if(eyebrow==null) 40.dp else 60.dp) else if(pinned) {if(eyebrow==null) 232.dp else 252.dp} else if(eyebrow==null) 302.dp else 323.dp)
@@ -106,7 +107,7 @@ internal fun SpotlightRail(
         Text(title,color=Color.White,fontSize=if(simple) 27.sp else 22.sp,lineHeight=if(simple) 32.sp else 27.sp,fontWeight=FontWeight.Bold,
             maxLines=1,overflow=TextOverflow.Ellipsis,
             modifier=Modifier.padding(start=40.dp,end=40.dp,bottom=8.dp))
-        CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalSpec) {
+        CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalSpec,LocalHorizontalFocusAnchor provides horizontalAnchor) {
         LazyRow(Modifier.fillMaxWidth().height(cardRowHeight).smoothHorizontalDpad { !railScroll.isScrollInProgress }.firstCardOnDown(railScroll,firstCard),state=railScroll,contentPadding=PaddingValues(horizontal=34.dp,vertical=6.dp)) {
             items(rows,key={it.cloudId},contentType={"spotlight"}) { item ->
                 SpotlightCard(item,expanded=active && selectedId==item.cloudId && settledId==item.cloudId,landscape=landscape,showTitle=showTitle,

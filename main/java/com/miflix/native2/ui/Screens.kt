@@ -138,11 +138,11 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     val genreScroll=rememberLazyListState()
     val firstGenre=remember {FocusRequester()}
     val scroll=rememberLazyListState()
-    val shelfMotion=remember(scroll) {HomeShelfMotion()}
     LaunchedEffect(state.activeProfile.id,state.interfaceLanguage) {if(state.trending.isEmpty()) state.loadHome()}
     val heroFocus=remember { FocusRequester() }
     val contentFocus=remember { FocusRequester() }
     val scope=rememberCoroutineScope()
+    val shelfMotion=remember(scroll) {HomeShelfMotion(scope)}
     val headerShade by remember { derivedStateOf { if(scroll.firstVisibleItemIndex>0) .88f else (scroll.firstVisibleItemScrollOffset/320f).coerceIn(0f,.88f) } }
     LaunchedEffect(state.interfaceLanguage) { delay(550); state.loadHomeExtras(); runCatching { state.loadComingSoon() } }
     LaunchedEffect(Unit) { state.loadDiscoveryArt() }

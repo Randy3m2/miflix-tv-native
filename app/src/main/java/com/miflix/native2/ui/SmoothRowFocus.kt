@@ -14,11 +14,16 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.focus.onFocusChanged
 import com.miflix.native2.data.HorizontalRepeatGate
 
+internal val LocalHorizontalFocusAnchor=androidx.compose.runtime.staticCompositionLocalOf<com.miflix.native2.data.HorizontalFocusAnchor?> {null}
+
 internal fun Modifier.smoothHorizontalDpad(canRepeat: () -> Boolean = {true}): Modifier = composed {
     val gate=remember {HorizontalRepeatGate()}
-    this.onFocusChanged {if(!it.hasFocus) gate.reset()}.onPreviewKeyEvent {event ->
-        gate.consume(event.nativeKeyEvent.keyCode,event.type==KeyEventType.KeyDown,event.type==KeyEventType.KeyUp,
+    val anchor=LocalHorizontalFocusAnchor.current
+    this.onFocusChanged {if(!it.hasFocus) {gate.reset();anchor?.reset()}}.onPreviewKeyEvent {event ->
+        val consumed=gate.consume(event.nativeKeyEvent.keyCode,event.type==KeyEventType.KeyDown,event.type==KeyEventType.KeyUp,
             event.nativeKeyEvent.repeatCount,event.nativeKeyEvent.eventTime,!canRepeat())
+        if(!consumed && event.type==KeyEventType.KeyDown) anchor?.pressed(event.nativeKeyEvent.keyCode,event.nativeKeyEvent.eventTime)
+        consumed
     }.focusGroup()
 }
 

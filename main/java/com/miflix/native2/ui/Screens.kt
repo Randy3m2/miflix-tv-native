@@ -999,7 +999,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     }}
                     if(category=="playback") item(key="adaptive-source") {SettingsSectionCard {
                         Text(tr("Seleccionar la mejor fuente","Select the best source"),color=Color.White,fontSize=22.sp)
-                        Text(tr("Idioma y audio compatible primero. Activa el ajuste de calidad y tamaño a la velocidad estimada; sin test de velocidad adicional.","Language and supported audio come first. Enable throughput-aware quality and size selection; no extra speed test."),color=Muted)
+                        Text(tr("Idioma primero. Activa el ajuste de calidad y tamaño a la velocidad estimada; sin test de velocidad adicional.","Language comes first. Enable throughput-aware quality and size selection; no extra speed test."),color=Muted)
                         FocusButton(if(state.adaptiveSource) "ON" else "OFF") {state.saveAdaptiveSource(!state.adaptiveSource)}
                     }}
                     if(category=="system") item(key="cinema-stats") {SettingsSectionCard {
@@ -1532,7 +1532,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 playbackError==null && !advancingSource && state.sourceSelection==null
             // Also inspect errors emitted before the listener was attached.
             val failure=player.playerError
-            if(eligible && failure!=null && (com.miflix.native2.player.SourceFallbackBudget.sourceFailure(failure.errorCode) || failure.errorCode in setOf(5001,5002))) {
+            if(eligible && failure!=null && com.miflix.native2.player.SourceFallbackBudget.sourceFailure(failure.errorCode)) {
                 advanceSourceOrShow(playerFailureDetails(failure))
             } else if(watchdog.shouldAdvance(android.os.SystemClock.elapsedRealtime(),firstFrame,
                     player.playbackState==Player.STATE_BUFFERING,eligible)) {
@@ -1559,26 +1559,12 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                     player.prepare()
                     return
                 }
-                if(!request.live && (com.miflix.native2.player.SourceFallbackBudget.sourceFailure(error.errorCode) || error.errorCode in setOf(5001,5002))) {
+                if(!request.live && com.miflix.native2.player.SourceFallbackBudget.sourceFailure(error.errorCode)) {
                     advanceSourceOrShow(playerFailureDetails(error))
                 } else playbackError=playerFailureDetails(error)
             }
             override fun onTracksChanged(value: androidx.media3.common.Tracks) {
                 tracks = value
-                if(!request.live && state.watchParty==null) {
-                    val audio=value.groups.filter {it.type==C.TRACK_TYPE_AUDIO}
-                    if(audio.isNotEmpty() && audio.none {g ->(0 until g.length).any {g.isTrackSupported(it)}}) {
-                        advanceSourceOrShow(tr("Audio no compatible. Probando otra fuente…","Unsupported audio. Trying another source…"))
-                        return
-                    }
-                    if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(state.audioLanguage) && com.miflix.native2.data.StreamOrdering.languageRank(request.stream)==0) {
-                        val supported=audio.flatMap {g ->(0 until g.length).filter {g.isTrackSupported(it)}.map {g.getTrackFormat(it).language.orEmpty().lowercase(java.util.Locale.ROOT)}}
-                        if(supported.isNotEmpty() && supported.all {it.isNotBlank() && it !in setOf("und","mul","zxx")} && supported.none {com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(it)}) {
-                            advanceSourceOrShow(tr("Esta fuente no tiene audio español compatible. Probando otra…","No supported Spanish audio in this source. Trying another…"))
-                            return
-                        }
-                    }
-                }
                 // Reject a falsely labelled English release only when every supported
                 // audio track has an explicit language and none is English.
                 if(!request.live && state.watchParty==null &&

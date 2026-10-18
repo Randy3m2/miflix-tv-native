@@ -57,16 +57,6 @@ class AppState(context: Context) {
 
     private val socialPrefs = context.getSharedPreferences("miflix_social", Context.MODE_PRIVATE)
     private val playbackPrefs = context.getSharedPreferences("miflix_playback", Context.MODE_PRIVATE)
-    private val audioDecoderMimes by lazy {
-        runCatching {android.media.MediaCodecList(android.media.MediaCodecList.REGULAR_CODECS).codecInfos
-            .filter {!it.isEncoder}.flatMap {codec ->codec.supportedTypes.filter {it.startsWith("audio/")}}.distinct().toTypedArray()}.getOrDefault(emptyArray<String>())
-    }
-    private fun audioSourceRank(stream:StreamChoice):Int {
-        if(audioDecoderMimes.isEmpty()) return 1
-        val info=StreamPresentation.parse(stream.addonName,stream.name,stream.title,stream.filename,stream.videoSize)
-        return AudioSourcePolicy.rank(info.audio,audioDecoderMimes)
-    }
-
     var adaptiveSource by mutableStateOf(playbackPrefs.getBoolean("adaptive_source",false))
         private set
     fun saveAdaptiveSource(enabled:Boolean) {adaptiveSource=enabled;playbackPrefs.edit().putBoolean("adaptive_source",enabled).apply()}
@@ -2292,11 +2282,11 @@ class AppState(context: Context) {
             if(!valid()) return@coroutineScope
             val bandwidth=if(adaptiveSource) androidx.media3.exoplayer.upstream.DefaultBandwidthMeter.getSingletonInstance(appContext).bitrateEstimate else 0L
             val seconds=(details?.takeIf {it.summary.cloudId==item.cloudId}?.runtimeMinutes ?: 0)*60
-            val chosen = selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds,::audioSourceRank)
+            val chosen = selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds)
                 ?: throw IllegalStateException(tr("No se encontraron enlaces reproducibles","No playable sources found"))
             val automaticFallback=watchParty==null
             val retryRows=if(automaticFallback) {
-                val candidates=StreamOrdering.fallbackCandidates(streams,audioLanguage,bandwidth,seconds,::audioSourceRank).filter {it.url!=chosen.url}
+                val candidates=StreamOrdering.fallbackCandidates(streams,audioLanguage,bandwidth,seconds).filter {it.url!=chosen.url}
                 val alternatives=if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(audioLanguage) && StreamOrdering.languageRank(chosen)==0)
                     candidates.filter {StreamOrdering.languageRank(it)==0}.take(2)+candidates.filter {StreamOrdering.languageRank(it)!=0}
                     else candidates

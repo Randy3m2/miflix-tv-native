@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RC97: revertida la selección por compatibilidad de códec de audio; conserva prioridad de idioma, calidad y reintentos anteriores." to "RC97: reverted audio-codec compatibility source selection; preserves earlier language priority, quality ordering and retries.",
         "RC96: Dazzle Me sigue Pick your vibe; sin selección mezcla el catálogo. Ventana de tráileres persistente durante los cambios, con controles nativos compactos." to "RC96: Dazzle Me follows Pick your vibe; without a selection it mixes the catalog. Persistent trailer window between titles with compact native controls.",
         "Friends & Party del player: panel compacto, actualización automática al abrir, sin Refresh ni Calendar." to "Player Friends & Party: compact panel, automatic refresh on opening, no Refresh or Calendar buttons.",
         "Carga de reproducción con imagen del episodio/póster hasta el primer fotograma, sin mensajes intermedios." to "Episode artwork/poster stays visible until the first video frame, with no intermediate loading messages.",

@@ -14,7 +14,7 @@ const repo=read('data/SupabaseRepository.kt');const progress=repo.slice(repo.ind
 assert.deepEqual([...new Set([...progress.matchAll(/\bp\.(\w+)/g)].map(m=>m[1]))].sort(),['percent','position','duration','updatedAt','season','episode'].sort());
 const party=repo.slice(repo.indexOf('private fun partyStateJson'));
 for(const f of ['title','overview','poster','logo','sourceName','sourceKey','shareStream','hostOnlyControls'])assert(party.includes('p.'+f));
-assert(read('ui/SmoothRowFocus.kt').includes('VerticalRepeatGate()'));assert(read('data/HorizontalRepeatGate.java').includes('scrolling ? 180L : 140L'));
+assert(read('ui/SmoothRowFocus.kt').includes('VerticalRepeatGate()'));assert(read('data/HorizontalRepeatGate.java').includes('HoldMotionPolicy.interval(false,scrolling'));
 assert(read('ui/Components.kt').includes('Brush.verticalGradient(listOf(Color.Black.copy(alpha=.8f)'));
-assert(fs.readFileSync('app/build.gradle','utf8').includes("versionName '2.0.0-rc89'"));
+assert(fs.readFileSync('app/build.gradle','utf8').includes("versionName '2.0.0-rc90'"));
 console.log('PASS: manual party return, snapshot extrapolation, bounded drift correction, pause alignment, notice/state matching, bounded live fallback, progress/party serializer separation, navigation and version');

@@ -1,10 +1,8 @@
 package com.miflix.native2.ui
 
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
-import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
@@ -27,12 +25,11 @@ internal val LocalHomeCardRowHeight=staticCompositionLocalOf {188.dp}
 internal fun HomeShelfFrame(index:Int,scroll:LazyListState,modifier:Modifier=Modifier,content:@Composable ()->Unit) {
     var active by remember {mutableStateOf(false)}
     val returning=LocalHomeReturnFocus.current
+    val motion=LocalHomeShelfMotion.current ?: remember(scroll) {HomeShelfMotion()}
     LaunchedEffect(active,index,returning?.pending) {
         if(active && returning?.pending==null) {
             withFrameNanos { }
-            val row=scroll.layoutInfo.visibleItemsInfo.firstOrNull {it.index==index}
-            if(row!=null) scroll.animateScrollBy(row.offset.toFloat(),tween(220))
-            else scroll.animateScrollToItem(index)
+            motion.align(scroll,index)
         }
     }
     BoxWithConstraints(modifier.padding(vertical=8.dp).onFocusChanged {active=it.hasFocus}.focusGroup()) {

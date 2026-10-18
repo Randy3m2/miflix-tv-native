@@ -138,6 +138,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     val genreScroll=rememberLazyListState()
     val firstGenre=remember {FocusRequester()}
     val scroll=rememberLazyListState()
+    val shelfMotion=remember(scroll) {HomeShelfMotion()}
     LaunchedEffect(state.activeProfile.id,state.interfaceLanguage) {if(state.trending.isEmpty()) state.loadHome()}
     val heroFocus=remember { FocusRequester() }
     val contentFocus=remember { FocusRequester() }
@@ -151,8 +152,8 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     }
     val openItem: (MediaSummary) -> Unit={ item -> state.launch { state.open(item) } }
     val openCollection: (CollectionTile) -> Unit={ tile -> state.launch { state.openCollection(tile.id,tile.title) } }
-    val returnToTop: () -> Unit={ if(homeReturn.pending==null) scope.launch { scroll.animateScrollToItem(0) }; Unit }
-    CompositionLocalProvider(LocalSimpleHome provides simple,LocalHomeReturnFocus provides homeReturn,
+    val returnToTop: () -> Unit={ if(homeReturn.pending==null) scope.launch { shelfMotion.reset();scroll.animateScrollToItem(0) }; Unit }
+    CompositionLocalProvider(LocalSimpleHome provides simple,LocalHomeReturnFocus provides homeReturn,LocalHomeShelfMotion provides shelfMotion,
         LocalHomeShelfMore provides {key,title,rows ->
             when(key) {
                 "streaming","franchises_home" -> onNavigate(Screen.COLLECTIONS)
@@ -278,7 +279,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
         Sidebar(Screen.HOME,state.activeProfile.name,onNavigate,state.unreadNoticeCount,state.activeProfile,
             backgroundAlpha=headerShade,onHeaderFocused=returnToTop,onEditPicture={ state.profilePhotoEditor=state.activeProfile },kids=state.kidsMode,
             onMoveDown=({ scope.launch {
-                scroll.scrollToItem(0)
+                shelfMotion.reset();scroll.scrollToItem(0)
                 androidx.compose.runtime.withFrameNanos { }
                 if(state.trending.isNotEmpty()) heroFocus.requestFocus() else contentFocus.requestFocus()
             }; Unit }))

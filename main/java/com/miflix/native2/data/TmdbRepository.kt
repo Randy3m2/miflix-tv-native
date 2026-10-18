@@ -223,6 +223,56 @@ class TmdbRepository(var token: String) {
     suspend fun topRatedMovies(): List<MediaSummary> = parseList(get("/movie/top_rated"), "movie", 20)
     suspend fun nowPlayingMovies(): List<MediaSummary> = parseList(get("/movie/now_playing"),"movie",20)
     suspend fun topRatedSeries(): List<MediaSummary> = parseList(get("/tv/top_rated"),"series",20)
+    private val moodCache=linkedMapOf<String,Pair<Long,List<MediaSummary>>>()
+    suspend fun moodPicks(mood: String): List<MediaSummary> {
+        require(mood in setOf("quick","marathon","meaningful","background","comfort","family","twist"))
+        val locale=language
+        val key="$locale:$mood"
+        moodCache[key]?.takeIf {System.currentTimeMillis()-it.first<30*60*1000L}?.let {return it.second}
+        val tv=mood in setOf("quick","marathon","background")
+        val params=linkedMapOf("include_adult" to "false","sort_by" to "popularity.desc","vote_count.gte" to "100")
+        params[if(tv) "first_air_date.lte" else "primary_release_date.lte"]=java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US).format(java.util.Date())
+        when(mood) {
+            "quick" -> {params["with_runtime.gte"]="1";params["with_runtime.lte"]="30"}
+            "background" -> params["with_genres"]="35"
+            "meaningful" -> {params["with_genres"]="18|99";params["vote_average.gte"]="7.5"}
+            "comfort" -> {params["with_genres"]="35|10749";params["without_genres"]="27,53"}
+            "family" -> {params["with_genres"]="10751";params["certification_country"]="US";params["certification.lte"]="PG"}
+            "twist" -> params["with_genres"]="9648,53"
+        }
+        val rows=mutableListOf<MediaSummary>()
+        for(page in 1..2) {
+            val response=get("/discover/${if(tv) "tv" else "movie"}",params+mapOf("page" to page.toString(),"language" to locale))
+            rows.addAll(parseList(response,if(tv) "series" else "movie",20))
+            if(page>=response.optInt("total_pages",1)) break
+        }
+        val result=rows.distinctBy {it.cloudId}
+        if(moodCache.size>=16) moodCache.remove(moodCache.keys.first())
+        moodCache[key]=System.currentTimeMillis() to result
+        return result
+    }
+
+    private val previewCache=linkedMapOf<String,List<TrailerSummary>>()
+    suspend fun previewTrailers(item: MediaSummary): List<TrailerSummary> {
+        val locale=language
+        val key="$locale:${item.cloudId}"
+        previewCache[key]?.let {return it}
+        val path="/${if(item.type=="series") "tv" else "movie"}/${item.id}/videos"
+        fun parse(j: JSONObject): List<TrailerSummary> {
+            val a=j.optJSONArray("results") ?: return emptyList()
+            return (0 until a.length()).mapNotNull {i ->
+                val v=a.getJSONObject(i);val id=v.optString("key")
+                if(v.optString("site")!="YouTube" || !id.matches(Regex("[a-zA-Z0-9_-]{11}")) || v.optString("type") !in setOf("Trailer","Teaser")) null
+                else TrailerSummary(v.optString("name"),id,"YouTube",v.optString("type"),v.optBoolean("official"))
+            }.sortedWith(compareByDescending<TrailerSummary> {it.official}.thenByDescending {it.type=="Trailer"})
+        }
+        var rows=parse(get(path,mapOf("language" to locale)))
+        if(rows.isEmpty() && !locale.startsWith("en")) rows=parse(get(path,mapOf("language" to "en-US")))
+        if(previewCache.size>=48) previewCache.remove(previewCache.keys.first())
+        if(rows.isNotEmpty()) previewCache[key]=rows
+        return rows
+    }
+
     suspend fun search(query: String): List<MediaSummary> = parseList(get("/search/multi", mapOf("query" to query)), limit = 40)
 
     suspend fun discoverGenre(genreId: Int): List<MediaSummary> = discoverMovieGenre(genreId, "popularity.desc", 1, 20)

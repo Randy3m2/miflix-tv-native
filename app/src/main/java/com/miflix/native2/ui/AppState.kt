@@ -2017,6 +2017,45 @@ class AppState(context: Context) {
     }
 
     private val searchResultCache=linkedMapOf<String,Pair<Long,List<MediaSummary>>>()
+    var discoveryPreviewActive by mutableStateOf(false)
+        internal set
+
+    suspend fun discoveryPicks(mood: String): List<MediaSummary> {
+        val rows=tmdb.moodPicks(mood)
+        val allowed=if(kidsMode || mood=="family") tmdb.kidsFilter(rows) else rows
+        // Only reorder within the selected mood; quick-watch duration remains a hard filter.
+        val personal=forYou.map {it.cloudId}.toSet()
+        return allowed.sortedWith(compareBy<MediaSummary> {ratings[it.cloudId]?.let {score ->score<=4} ?: false}
+            .thenBy {progress[it.cloudId]?.percent?.let {percent ->percent>=80} ?: false}
+            .thenByDescending {it.cloudId in personal}.thenByDescending {it.rating})
+    }
+
+    suspend fun surpriseDiscovery(rows: List<MediaSummary>) {
+        if(randomChoosing || rows.isEmpty()) return
+        if(partyRole==PartyRole.GUEST) {error=tr("El host elige el contenido.","The host chooses the content.");return}
+        randomChoosing=true
+        val owner=activeProfile.id;val account=session?.userId;val locale=tmdb.language
+        val ticket=playbackWork.begin()
+        fun valid()=owner==activeProfile.id && account==session?.userId && locale==tmdb.language && playbackWork.current(ticket)
+        try {
+            val fresh=rows.filter { (progress[it.cloudId]?.percent ?: 0.0)<80 && (ratings[it.cloudId] ?: 10)>4 }
+            val item=(fresh.ifEmpty {rows}).shuffled().first()
+            if(kidsMode && !tmdb.kidsAllowed(item)) return
+            if(!valid()) return
+            val season=if(item.type=="series") 1 else 0
+            beginPlaybackLoading(item,season,season)
+            busyMessage=tr("Eligiendo una historia para ti…","Choosing a story for you…")
+            val loaded=detailsCache["$locale:${item.cloudId}"]?.takeIf {System.currentTimeMillis()-it.first<15*60*1000L}?.second ?: tmdb.details(item)
+            if(!valid()) return
+            val imdb=loaded.imdbId ?: throw IllegalStateException(tr("IMDb ID no disponible","IMDb ID unavailable"))
+            selected=item;details=loaded;selectedUpcoming=false
+            busyMessage=null
+            // Go straight to playback preparation; do not flash the details destination.
+            playResolved(item,imdb,season,season,resumeOverride=0)
+        } catch(e: CancellationException) {throw e} catch(e: Exception) {if(valid()) error=e.message}
+        finally {randomChoosing=false;if(valid()) {busyMessage=null;playbackLoading=null}}
+    }
+
     fun localSearch(query: String): List<MediaSummary> {
         val normalized=FlexibleSearch.normalize(query)
         if(normalized.length<2) return emptyList()
@@ -2024,6 +2063,8 @@ class AppState(context: Context) {
         return FlexibleSearch.rank(rows.distinctBy {it.cloudId}.filter {FlexibleSearch.score(it.title,normalized)>=650},normalized).take(30)
     }
     suspend fun searchFlexible(query: String): List<MediaSummary> = supervisorScope {
+        val intent=DiscoveryMood.intent(query)
+        if(intent.isNotBlank()) return@supervisorScope discoveryPicks(intent)
         val normalized=FlexibleSearch.normalize(query)
         if(normalized.length<2) return@supervisorScope emptyList()
         val cacheKey="${tmdb.language}:$kidsMode:$normalized"

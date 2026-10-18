@@ -59,7 +59,7 @@ internal fun PlaybackArtwork(state: AppState,request: PlayerRequest) {
 @Composable
 internal fun MenuScreensaver(state: AppState) {
     var visible by remember {mutableStateOf(false)}
-    val eligible=state.appForeground && state.screen !in setOf(Screen.PLAYER,Screen.MULTIVIEW,Screen.SPLASH,Screen.PAIR_DEVICE) && !state.miniPlayer && state.busyMessage==null && state.sourceSelection==null && !state.localCastPairing
+    val eligible=state.appForeground && !state.discoveryPreviewActive && state.screen !in setOf(Screen.PLAYER,Screen.MULTIVIEW,Screen.SPLASH,Screen.PAIR_DEVICE) && !state.miniPlayer && state.busyMessage==null && state.sourceSelection==null && !state.localCastPairing
     val rows=(if(state.kidsMode) state.kidsMovies else (state.trending+state.movies).filter {it.type=="movie"}.distinctBy {it.cloudId}).filter {it.backdrop!=null}.take(10)
     LaunchedEffect(eligible,state.screen,MenuActivity.lastInput,rows.map {it.cloudId}) {
         visible=false

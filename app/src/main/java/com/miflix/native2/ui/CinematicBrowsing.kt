@@ -226,7 +226,7 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
         catch(_: Exception) {state.error=tr("No se pudo iniciar el micrófono.","Could not start voice input.")}
     }
     LaunchedEffect(Unit) {withFrameNanos { };runCatching {keyboardFocus.requestFocus()}}
-    LaunchedEffect(query,state.interfaceLanguage) {
+    LaunchedEffect(query,state.interfaceLanguage,owner) {
         searchError=false
         if(query.trim().length<2) {results=emptyList();searching=false;return@LaunchedEffect}
         results=state.localSearch(query);searching=true
@@ -317,6 +317,7 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
                 Column(Modifier.weight(1f).fillMaxHeight()) {
                     Text(if(query.trim().length<2) tr("Tus recomendaciones de búsqueda","Your Search Recommendations") else tr("Resultados para","Results for")+" “${query.trim()}”",
                         color=Color.White,fontSize=20.sp,lineHeight=24.sp,fontWeight=FontWeight.Bold,maxLines=2,modifier=Modifier.padding(bottom=6.dp))
+                    if(com.miflix.native2.data.DiscoveryMood.intent(query).isNotBlank()) Text(tr("Selección por ánimo · basada en géneros y tus preferencias","Mood picks · based on genres and your preferences"),color=Muted,fontSize=12.sp)
                     if(searching || searchError) Text(if(searching) tr("Buscando más…","Finding more…") else tr("No pudimos completar la búsqueda.","Could not complete the search."),color=Muted,fontSize=12.sp)
                     if(!searching && !searchError && query.trim().length>=2 && display.isEmpty()) Text(tr("Prueba otro título.","Try another title."),color=Muted,fontSize=14.sp)
                     LazyVerticalGrid(GridCells.Adaptive(142.dp),modifier=Modifier.weight(1f).fillMaxWidth().focusRequester(resultsFocus).focusGroup(),

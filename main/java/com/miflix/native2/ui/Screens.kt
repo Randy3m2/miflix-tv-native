@@ -135,6 +135,24 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     LaunchedEffect(state.activeProfile.id,state.session?.userId,state.interfaceLanguage,state.discoveryHistoryKey) {
         state.loadBecauseWatched()
     }
+    val discoveryOwner="${state.session?.userId}:${state.activeProfile.id}:${state.interfaceLanguage}"
+    var discoveryMood by androidx.compose.runtime.saveable.rememberSaveable(discoveryOwner) {mutableStateOf("")}
+    var discoveryRows by remember(discoveryOwner) {mutableStateOf<List<MediaSummary>>(emptyList())}
+    var discoveryLoading by remember(discoveryOwner) {mutableStateOf(false)}
+    var discoveryError by remember(discoveryOwner) {mutableStateOf(false)}
+    var discoveryRetry by remember {mutableIntStateOf(0)}
+    var showTrailers by remember(discoveryOwner) {mutableStateOf(false)}
+    val clock=remember(state.appForeground) {java.util.Calendar.getInstance()}
+    val contextualMood=remember(clock) {com.miflix.native2.data.DiscoveryMood.context(clock.get(java.util.Calendar.HOUR_OF_DAY),clock.get(java.util.Calendar.MONTH)+1,clock.get(java.util.Calendar.DAY_OF_MONTH),clock.get(java.util.Calendar.DAY_OF_WEEK) in setOf(java.util.Calendar.SATURDAY,java.util.Calendar.SUNDAY))}
+    val effectiveMood=discoveryMood.ifEmpty {contextualMood}
+    val holiday=if(effectiveMood=="christmas") state.christmasPicks.toList() else if(effectiveMood=="halloween") state.horrorPicks.toList() else emptyList()
+    LaunchedEffect(discoveryOwner,effectiveMood,holiday,discoveryRetry,state.appForeground) {
+        if(!state.appForeground) return@LaunchedEffect
+        discoveryRows=emptyList();discoveryLoading=true;discoveryError=false
+        try {discoveryRows=if(effectiveMood in setOf("christmas","halloween")) holiday else state.discoveryPicks(effectiveMood)}
+        catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {discoveryError=true} finally {discoveryLoading=false}
+    }
+    if(showTrailers) DiscoveryTrailers(state,(discoveryRows+state.forYou+state.trending+state.movies+state.series).distinctBy {it.cloudId}) {showTrailers=false}
     val genreScroll=rememberLazyListState()
     val firstGenre=remember {FocusRequester()}
     val scroll=rememberLazyListState()
@@ -175,6 +193,17 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 fun shelf(key:String,content:@Composable ()->Unit) {
                     val index=shelfIndex++
                     item(key=key) {CompositionLocalProvider(LocalHomeShelfKey provides key) {HomeShelfFrame(index,scroll,Modifier.fillParentMaxHeight().fillMaxWidth(),content)}}
+                }
+                shelf(key="discovery-controls") {
+                    DiscoveryControls(discoveryMood,discoveryLoading || state.randomChoosing,
+                        onMood={discoveryMood=it},onTrailers={showTrailers=true},
+                        onSurprise={if(!discoveryLoading && !state.randomChoosing) {if(discoveryRows.isEmpty()) state.error=tr("La selección aún no está disponible. Elige otro ánimo o reintenta.","Picks are not available yet. Choose another mood or retry.") else state.launch {state.surpriseDiscovery(discoveryRows)}}})
+                }
+                if(discoveryRows.isNotEmpty()) shelf(key="discovery-picks") {
+                    SpotlightRail(moodTitle(effectiveMood),discoveryRows,eyebrow=if(discoveryMood.isEmpty()) tr("PARA ESTE MOMENTO","FOR THIS MOMENT") else tr("TU ÁNIMO · TU SELECCIÓN","YOUR MOOD · YOUR PICKS"),onClick=openItem)
+                }
+                if(discoveryError) shelf(key="discovery-retry") {
+                    FeatureActionCard(tr("No se pudo cargar la selección","Could not load picks"),tr("Pulsa para reintentar","Press to retry"),modifier=Modifier.padding(40.dp)) {discoveryRetry++}
                 }
                 if(simple) shelf(key="simple-actions") {
                     Column(Modifier.padding(horizontal=40.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {

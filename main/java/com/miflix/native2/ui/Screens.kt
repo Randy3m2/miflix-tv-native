@@ -1066,7 +1066,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         SettingsTileRC103(tr("Mi universo de cine","My cinema hub"),tr("Explora tus estadísticas de reproducción en esta TV.","Explore your viewing statistics on this TV."),"stats") {showCinemaHub=true}
                     }
                     if(category=="playback") item(key="setting-4") {
-                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Playback link size limit";helpDescription="Choose a maximum file size. A cap also hides links with unknown size.";helpIndex=4 }) {
+                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Playback link size limit";helpDescription="Choose a maximum file size. Unknown sizes are hidden except Addon Latam and Nuve+.";helpIndex=4 }) {
                 var customLimit by remember(state.streamSizeLimitGb) { mutableStateOf(if(state.streamSizeLimitGb>0) state.streamSizeLimitGb.toString() else "") }
                 Text(tr("Límite de tamaño de enlaces","Playback link size limit"),color=Color.White,fontSize=22.sp,lineHeight=26.sp)
                 Text(if(state.streamSizeLimitGb==0.0) tr("Sin límite","Unlimited") else "${tr("Máximo","Maximum")}: ${state.streamSizeLimitGb} GB",color=Muted)
@@ -1086,7 +1086,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     }
                 }
                 Spacer(Modifier.height(10.dp))
-                Text(tr("Con un límite activo se ocultan los enlaces sin tamaño conocido. Se aplica también a la reproducción rápida.","An active cap hides links with unknown size. It also applies to quick playback."),color=Muted,fontSize=14.sp,lineHeight=18.sp)
+                Text(tr("Con un límite activo se ocultan enlaces sin tamaño conocido, excepto Addon Latam y Nuve+. Si informan tamaño, se respeta el límite.","An active cap hides unknown-size links except Addon Latam and Nuve+. Known sizes always respect the cap."),color=Muted,fontSize=14.sp,lineHeight=18.sp)
 
                         }
                     }
@@ -1172,9 +1172,22 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 Spacer(Modifier.height(8.dp))
                 Text(tr("Añade las URLs de manifiesto de tus complementos compatibles. Cada perfil puede heredar las fuentes del principal o usar las suyas en esta TV.","Add manifest URLs for your compatible add-ons. Each profile can inherit the main profile sources or use its own on this TV."), color = Muted, fontSize = 14.sp, lineHeight=17.sp, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(12.dp))
+                if(state.streamSizeLimitGb>0) {
+                    Text(tr("El límite de GB oculta enlaces sin tamaño, excepto los de Addon Latam y Nuve+.","The GB cap hides unknown-size links except Addon Latam and Nuve+."),color=Muted,fontSize=14.sp)
+                    FocusButton(tr("Quitar límite de GB","Remove GB cap")) {state.saveStreamSizeLimit(0.0)}
+                }
                 state.addonManifests.toList().forEach { manifest ->
                     Row(Modifier.fillMaxWidth().padding(vertical=6.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
-                        Text("• ${runCatching { Uri.parse(manifest).host }.getOrNull() ?: tr("Complemento configurado","Configured add-on")}",color=Color.White,fontSize=14.sp,modifier=Modifier.weight(1f))
+                        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                            Text(state.streamRepo.addonLabel(manifest),color=Color.White,fontSize=14.sp)
+                            val status=state.streamRepo.status(manifest)
+                            if(status.isNotBlank()) Text(if(state.interfaceLanguage=="es") status
+                                .replace("Configuration required","Requiere configuración")
+                                .replace("Request failed","Falló la consulta")
+                                .replace("Returned:","Recibidos:").replace("Available:","Disponibles:")
+                                .replace("Hidden (unknown size):","Ocultos (sin tamaño):") else status,color=Muted,fontSize=12.sp)
+                        }
+                        AddonLimitControlRP7(state,manifest)
                         FocusButton(tr("Eliminar","Remove"),destructive=true) { state.launch { state.socialAction { state.removeAddonManifest(manifest) } } }
                     }
                 }

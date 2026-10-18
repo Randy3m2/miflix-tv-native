@@ -83,7 +83,9 @@ data class StreamChoice(
     val nativeSource: com.miflix.native2.data.NativeSource? = null,
     val audioLanguages: List<String> = emptyList(),
     // Local identity of the list entry when materialization replaces its playback URL.
-    val sourceUrl: String = ""
+    val sourceUrl: String = "",
+    // Manifest host only; never stores configuration tokens or private URL paths.
+    val sourceAddonHost: String = ""
 )
 
 data class SubtitleChoice(

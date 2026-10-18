@@ -10,6 +10,9 @@ import java.net.URI
 
 class StreamRepository(initialManifestUrl: String) {
     private data class ManifestInfo(val name:String,val streams:Boolean,val at:Long)
+    private val statuses=java.util.concurrent.ConcurrentHashMap<String,String>()
+    fun status(manifest:String):String = statuses[manifest].orEmpty()
+    fun addonLabel(manifest:String):String = label(manifest,manifests().indexOf(manifest).coerceAtLeast(0))
     private val metadata=java.util.concurrent.ConcurrentHashMap<String,ManifestInfo>()
     private fun label(manifest:String,position:Int):String {
         val host=runCatching {URI(manifest).host}.getOrNull().orEmpty().ifBlank {"Add-on"}
@@ -29,6 +32,8 @@ class StreamRepository(initialManifestUrl: String) {
         return try {
             val json=JSONObject(Http.text(manifest,timeoutMs=8000))
             val resources=json.optJSONArray("resources")
+            if(json.optJSONObject("behaviorHints")?.optBoolean("configurationRequired")==true)
+                statuses[manifest]="Configuration required"
             val streams=resources==null || (0 until resources.length()).any {i ->val r=resources.opt(i);r=="stream" || (r as? JSONObject)?.optString("name")=="stream"}
             ManifestInfo(json.optString("name").replace(Regex("[\\r\\n]")," ").take(64),streams,now).also {metadata[manifest]=it}
         } catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {ManifestInfo("",true,now).also {metadata[manifest]=it}}
@@ -73,7 +78,21 @@ class StreamRepository(initialManifestUrl: String) {
         val manifests = manifestUrls.toList()
         if (manifests.isEmpty()) throw IllegalStateException("No stream add-on is configured")
         val rows = manifests.mapIndexed { index,manifest ->
-            async { runCatching { resolveOne(manifest, index, imdbId, type, season, episode) }.onFailure { if(it is kotlinx.coroutines.CancellationException) throw it }.getOrDefault(emptyList()) }
+            async {
+                try {
+                    val raw=resolveOne(manifest,index,imdbId,type,season,episode)
+                    val accepted=raw.filter {StreamFilters.allowed(it,type,movieYear,maxBytes,movieTitle)}
+                    val unknownSize=if(maxBytes>0) raw.count {StreamOrdering.bytes(it)<=0 && !StreamFilters.allowsUnknownSize(it)} else 0
+                    statuses[manifest]="Returned: ${raw.size} · Available: ${accepted.size}"+
+                        if(unknownSize>0) " · Hidden (unknown size): $unknownSize" else ""
+                    accepted
+                } catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(e:Exception) {
+                    val configured=statuses[manifest]=="Configuration required"
+                    statuses[manifest]=if(configured) "Configuration required" else
+                        if(e is HttpFailure) "HTTP ${e.status}" else "Request failed"
+                    emptyList()
+                }
+            }
         }.awaitAll().flatten()
 
         StreamOrdering.sorted(rows.filter { StreamFilters.allowed(it,type,movieYear,maxBytes,movieTitle) },preferredAudio)
@@ -109,6 +128,8 @@ class StreamRepository(initialManifestUrl: String) {
                     SubtitleChoice(su, normalizeLang(sub.optString("lang")), sub.optString("label"), source = addonName)
                 }
             } ?: emptyList()
+            val proxy=hints?.optJSONObject("proxyHeaders")?.optJSONObject("request")
+            val headers=proxy?.keys()?.asSequence()?.associateWith {proxy.optString(it)} ?: emptyMap()
             StreamChoice(
                 name = s.optString("name", addonName),
                 title = listOf(s.optString("title").ifBlank {s.optString("name","Stream")},s.optString("description"))
@@ -119,6 +140,8 @@ class StreamRepository(initialManifestUrl: String) {
                 videoHash = videoHash,
                 videoSize = videoSize,
                 addonName = addonName,
+                requestHeaders = headers,
+                sourceAddonHost = runCatching {URI(manifest).host.orEmpty().lowercase(java.util.Locale.ROOT)}.getOrDefault(""),
                 audioLanguages = audioLanguages
             )
         }

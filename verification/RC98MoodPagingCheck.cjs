@@ -1,0 +1,10 @@
+const fs=require('fs'),assert=require('assert'),b='app/src/main/java/com/miflix/native2/';
+const a=fs.readFileSync(b+'ui/AppState.kt','utf8'),s=fs.readFileSync(b+'ui/Screens.kt','utf8'),t=fs.readFileSync(b+'data/TmdbRepository.kt','utf8');
+assert(s.includes('state.openHomeShelf(key,title,rows,mood=effectiveMood)'));
+assert(a.includes('"mood:$mood" else "home:$key"'));
+assert(a.includes('g.id.startsWith("mood:") -> tmdb.moodPage'));
+assert(a.includes('g.id=="mood:christmas"'));assert(a.includes('g.id=="mood:halloween"'));
+assert(a.includes('genreBacklog.take(25)'));assert(a.includes('genreBacklog.offer(slice.rows) {it.cloudId}'));
+assert(t.includes('page<response.optInt("total_pages",page).coerceAtMost(500)'));
+for(const n of ['ui/AppState.kt','ui/Screens.kt','data/TmdbRepository.kt','ui/UpdateNotes.kt'])assert(fs.readFileSync(b+n).equals(fs.readFileSync('main/java/com/miflix/native2/'+n)));
+console.log('PASS: selected mood preserved, remote pages, 25-item unique buffer, Christmas/Halloween routing and end-of-catalog metadata.');

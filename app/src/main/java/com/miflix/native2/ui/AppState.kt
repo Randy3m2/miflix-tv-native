@@ -1688,15 +1688,15 @@ class AppState(context: Context) {
         private set
     private var homeShelfSeed=""
     private var homeShelfTheme=""
-    suspend fun openHomeShelf(key: String,title: String,rows: List<MediaSummary>) {
+    suspend fun openHomeShelf(key: String,title: String,rows: List<MediaSummary>,mood:String="") {
         if(kidsMode) return
-        genreGeneration++;currentGenre=GenreDefinition("home:$key",title,0,0);genreTitle=if(key=="ranked_movies") tr("Más películas populares","More popular movies") else title
+        genreGeneration++;currentGenre=GenreDefinition(if(mood.isNotBlank()) "mood:$mood" else "home:$key",title,0,0);genreTitle=if(key=="ranked_movies") tr("Más películas populares","More popular movies") else title
         genreReturnScreen=Screen.HOME
         homeShelfSeed=discoveryHistoryKey.split("|").firstOrNull {it.isNotBlank()}.orEmpty()
         homeShelfTheme=seasonalTheme
         genreItems.clear();genreBacklog.clear();genrePageNumber=0
         genreBacklog.offer(rows) {it.cloudId}
-        genreRemoteMore=tmdb.pageableHomeShelf(key);genreHasMore=true;genreMessage=""
+        genreRemoteMore=mood.isNotBlank() || tmdb.pageableHomeShelf(key);genreHasMore=true;genreMessage=""
         screen=Screen.GENRE_DETAIL
         loadMoreGenre()
     }
@@ -1756,7 +1756,9 @@ class AppState(context: Context) {
             while(genreBacklog.pendingCount()<25 && genreRemoteMore && batches<6) {
                 val page=genrePageNumber+1
                 val slice=when {
-                    g.id=="christmas" -> tmdb.christmasPage(page)
+                    g.id=="mood:christmas" || g.id=="christmas" -> tmdb.christmasPage(page)
+                    g.id=="mood:halloween" -> tmdb.homeShelfPage("horror_movies",page,"","")
+                    g.id.startsWith("mood:") -> tmdb.moodPage(g.id.substringAfter(":"),page)
                     g.id.startsWith("home:") -> tmdb.homeShelfPage(g.id.substringAfter(":"),page,homeShelfSeed,homeShelfTheme)
                     else -> tmdb.genrePage(g.movieGenreId,g.tvGenreId,page)
                 }

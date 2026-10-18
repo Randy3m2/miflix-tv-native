@@ -187,6 +187,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
             when(key) {
                 "streaming","franchises_home" -> onNavigate(Screen.COLLECTIONS)
                 "oscar_picks" -> onNavigate(Screen.OSCARS)
+                "discovery-picks" -> state.launch {state.openHomeShelf(key,title,rows,mood=effectiveMood)}
                 else -> state.launch {state.openHomeShelf(key,title,rows)}
             }
             Unit

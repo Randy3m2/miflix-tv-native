@@ -251,11 +251,10 @@ class TmdbRepository(var token: String) {
     }
 
     private val moodCache=linkedMapOf<String,Pair<Long,List<MediaSummary>>>()
-    suspend fun moodPicks(mood: String,pageStart: Int=1): List<MediaSummary> {
+    suspend fun moodPage(mood:String,page:Int):GenreSlice {
+        require(page in 1..500)
         require(mood in setOf("quick","marathon","meaningful","background","comfort","family","twist","happy","sad","documentary","cozy","romantic","adrenaline","mindbending","nostalgia"))
         val locale=language
-        val key="$locale:$mood:$pageStart"
-        moodCache[key]?.takeIf {System.currentTimeMillis()-it.first<30*60*1000L}?.let {return it.second}
         val tv=mood in setOf("quick","marathon","background")
         val params=linkedMapOf("include_adult" to "false","sort_by" to "popularity.desc","vote_count.gte" to "100")
         params[if(tv) "first_air_date.lte" else "primary_release_date.lte"]=java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US).format(java.util.Date())
@@ -274,13 +273,14 @@ class TmdbRepository(var token: String) {
             "family" -> {params["with_genres"]="10751";params["certification_country"]="US";params["certification.lte"]="PG"}
             "twist" -> params["with_genres"]="9648,53"
         }
-        val rows=mutableListOf<MediaSummary>()
-        for(page in pageStart..pageStart+1) {
-            val response=get("/discover/${if(tv) "tv" else "movie"}",params+mapOf("page" to page.toString(),"language" to locale))
-            rows.addAll(parseList(response,if(tv) "series" else "movie",20))
-            if(page>=response.optInt("total_pages",1)) break
-        }
-        val result=rows.distinctBy {it.cloudId}
+        val response=get("/discover/${if(tv) "tv" else "movie"}",params+mapOf("page" to page.toString(),"language" to locale))
+        return GenreSlice(parseList(response,if(tv) "series" else "movie",20),page<response.optInt("total_pages",page).coerceAtMost(500))
+    }
+    suspend fun moodPicks(mood:String,pageStart:Int=1):List<MediaSummary> {
+        val key="$language:$mood:$pageStart"
+        moodCache[key]?.takeIf {System.currentTimeMillis()-it.first<30*60*1000L}?.let {return it.second}
+        val first=moodPage(mood,pageStart)
+        val result=(first.rows+if(first.hasMore) moodPage(mood,pageStart+1).rows else emptyList()).distinctBy {it.cloudId}
         if(moodCache.size>=16) moodCache.remove(moodCache.keys.first())
         moodCache[key]=System.currentTimeMillis() to result
         return result

@@ -152,7 +152,15 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     val openItem: (MediaSummary) -> Unit={ item -> state.launch { state.open(item) } }
     val openCollection: (CollectionTile) -> Unit={ tile -> state.launch { state.openCollection(tile.id,tile.title) } }
     val returnToTop: () -> Unit={ if(homeReturn.pending==null) scope.launch { scroll.animateScrollToItem(0) }; Unit }
-    CompositionLocalProvider(LocalSimpleHome provides simple,LocalHomeReturnFocus provides homeReturn) {
+    CompositionLocalProvider(LocalSimpleHome provides simple,LocalHomeReturnFocus provides homeReturn,
+        LocalHomeShelfMore provides {key,title,rows ->
+            when(key) {
+                "streaming","franchises_home" -> onNavigate(Screen.COLLECTIONS)
+                "oscar_picks" -> onNavigate(Screen.OSCARS)
+                else -> state.launch {state.openHomeShelf(key,title,rows)}
+            }
+            Unit
+        }) {
     BoxWithConstraints(Modifier.fillMaxSize().background(Bg)) {
         val homeHeroHeight=(maxHeight*.5f).coerceIn(228.dp,284.dp)
         BrowsingViewport(state,(state.trending+state.movies).firstOrNull {it.type=="movie"},heroHeight=homeHeroHeight,headerInset=84.dp,heroFocus=heroFocus,ranked=(state.trending+state.movies).filter {it.type=="movie"}.distinctBy {it.cloudId}.take(10),
@@ -165,7 +173,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 var shelfIndex=0
                 fun shelf(key:String,content:@Composable ()->Unit) {
                     val index=shelfIndex++
-                    item(key=key) {HomeShelfFrame(index,scroll,Modifier.fillParentMaxHeight().fillMaxWidth(),content)}
+                    item(key=key) {CompositionLocalProvider(LocalHomeShelfKey provides key) {HomeShelfFrame(index,scroll,Modifier.fillParentMaxHeight().fillMaxWidth(),content)}}
                 }
                 if(simple) shelf(key="simple-actions") {
                     Column(Modifier.padding(horizontal=40.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -191,6 +199,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                     HomeHorizontalRail {
                     LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=32.dp).clipToBounds().smoothHorizontalDpad().firstCardOnDown(genreScroll,firstGenre),state=genreScroll,contentPadding=PaddingValues(horizontal=8.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
                         items(state.genres,key={it.id}) { genre -> GenreCard(genre.copy(coverUrl=state.genreCovers[genre.id] ?: genre.coverUrl),modifier=(if(genre.id==state.genres.firstOrNull()?.id) Modifier.focusRequester(firstGenre) else Modifier).then(homeReturnFocus("genre:${genre.id}"))) { state.launch { state.openGenre(genre) } } }
+                        item(key="genres_more") {FocusButton(tr("Ver todos","View all"),modifier=Modifier.width(180.dp).height(136.dp).then(homeReturnFocus("genres:more"))) {onNavigate(Screen.COLLECTIONS)}}
                     }
                     }
                     Spacer(Modifier.height(8.dp))
@@ -365,6 +374,8 @@ private fun MediaRail(
 
 @Composable
 private fun CollectionRail(title: String, rows: List<CollectionTile>, onClick: (CollectionTile) -> Unit) {
+    val more=LocalHomeShelfMore.current
+    val shelfKey=LocalHomeShelfKey.current
     val railScroll=rememberLazyListState()
     val firstCard=remember {FocusRequester()}
     Column(Modifier.fillMaxWidth().height(208.dp)) {
@@ -380,6 +391,9 @@ private fun CollectionRail(title: String, rows: List<CollectionTile>, onClick: (
                 Box((if(tile.id==rows.firstOrNull()?.id) Modifier.focusRequester(firstCard) else Modifier).then(homeReturnFocus("collection:$title:${tile.id}"))) {
                     CollectionCard(tile) { onClick(tile) }
                 }
+            }
+            if(more!=null) item(key="collection_more") {
+                FocusButton(tr("Ver todos","View all"),modifier=Modifier.width(180.dp).height(136.dp).then(homeReturnFocus("more:$shelfKey"))) {more(shelfKey,title,emptyList())}
             }
         }
         }
@@ -416,7 +430,7 @@ fun CatalogScreen(state: AppState, title: String, catalog: List<MediaSummary>, o
             LazyVerticalGrid(columns=GridCells.Adaptive(220.dp),state=catalogScroll,modifier=Modifier.weight(1f).fillMaxWidth().smoothVerticalDpad(),
                 horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(bottom=48.dp,top=8.dp)) {
                 gridItems(catalog,key={it.cloudId}) { item -> MediaCard(item,landscape=true,compact=true,modifier=Modifier.fillMaxWidth().then(homeReturnFocus("catalog:$title:${item.cloudId}"))
-                    .then(if(item.cloudId==catalog.getOrNull(newBatchStart)?.cloudId) Modifier.focusRequester(newBatchFocus) else Modifier),progressPercent=state.progress[item.cloudId]?.percent,onLongClick={state.titleActions(item)}) { state.launch { state.open(item) } } }
+                    .then(if(item.cloudId==catalog.getOrNull(newBatchStart)?.cloudId) Modifier.focusRequester(newBatchFocus) else Modifier),progressPercent=state.progress[item.cloudId]?.percent,onLongClick={state.titleActions(item)}) { state.launch { state.open(item,upcoming=state.screen==Screen.GENRE_DETAIL && state.genreUpcoming) } } }
                 if(footer!=null) item(span={ androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { footer() }
             }
         }
@@ -430,6 +444,7 @@ fun SearchScreen(state: AppState, onBack: () -> Unit) = CinematicSearchScreen(st
 
 @Composable
 fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
+    LaunchedEffect(state.activeProfile.id,state.interfaceLanguage) {state.loadChristmasCollection()}
     val genreScroll=rememberLazyListState()
     val firstGenre=remember {FocusRequester()}
     BackHandler(onBack = onBack)
@@ -449,6 +464,22 @@ fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
                     Spacer(Modifier.height(12.dp))
                     FocusButton("🏆 Oscars · "+tr("Por año","By year"),modifier=homeReturnFocus("collections:oscars")) {state.screen=Screen.OSCARS}
                     Spacer(Modifier.height(24.dp))
+                }
+            }
+            item(key="christmas_collection") {
+                Column {
+                    if(state.christmasCollectionPicks.isNotEmpty()) {
+                        SpotlightRail(tr("Películas navideñas · Mejor valoradas","Christmas Movies · Best rated"),state.christmasCollectionPicks,
+                            onClick={state.launch {state.open(it)}})
+                        FocusButton(tr("Ver todas · Cargar más de 25","View all · Load more 25"),
+                            modifier=Modifier.padding(start=34.dp,bottom=20.dp).then(homeReturnFocus("collections:christmas"))) {
+                            state.launch {state.openChristmasCollection()}
+                        }
+                    } else Column(Modifier.padding(horizontal=34.dp,vertical=18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                        Text(tr("Películas navideñas","Christmas Movies"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
+                        Text(if(state.christmasCollectionLoading) tr("Cargando…","Loading…") else state.christmasCollectionMessage,color=Muted)
+                        if(!state.christmasCollectionLoading) FocusButton(tr("Reintentar","Retry")) {state.launch {state.loadChristmasCollection()}}
+                    }
                 }
             }
             item {
@@ -1412,7 +1443,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     }
 
     fun advanceSourceOrShow(message: String) {
-        if(advancingSource || state.playerRequest?.playbackId!=request.playbackId) return
+        if(advancingSource || state.playerRequest?.playbackId!=request.playbackId || state.sourceSelection!=null) return
         advancingSource=true
         val position=if(firstFrame) player.currentPosition.coerceAtLeast(0) else player.currentPosition.coerceAtLeast(request.resumeMs)
         val playing=player.playWhenReady
@@ -1423,11 +1454,21 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             } finally {advancingSource=false}
         }
     }
-    LaunchedEffect(player,request.playbackId,firstFrame) {
-        if(!request.live && state.watchParty==null && !firstFrame) {
-            delay(20_000)
-            if(!firstFrame && playbackError==null && player.playWhenReady && state.appForeground && !state.isPlaybackParked(request))
-                advanceSourceOrShow(tr("La fuente no comenzó a reproducir. Prueba otro enlace.","The source did not start playing. Try another link."))
+    LaunchedEffect(player,request.playbackId) {
+        val watchdog=com.miflix.native2.player.SourceStallWatchdog()
+        while(!request.live) {
+            delay(500)
+            val eligible=state.playerRequest?.playbackId==request.playbackId && state.watchParty==null &&
+                state.appForeground && !mini && !state.isPlaybackParked(request) && player.playWhenReady &&
+                playbackError==null && !advancingSource && state.sourceSelection==null
+            // Also inspect errors emitted before the listener was attached.
+            val failure=player.playerError
+            if(eligible && failure!=null && com.miflix.native2.player.SourceFallbackBudget.sourceFailure(failure.errorCode)) {
+                advanceSourceOrShow(playerFailureDetails(failure))
+            } else if(watchdog.shouldAdvance(android.os.SystemClock.elapsedRealtime(),firstFrame,
+                    player.playbackState==Player.STATE_BUFFERING,eligible)) {
+                advanceSourceOrShow(tr("La fuente se quedó cargando. Probando otro enlace.","The source stalled. Trying another link."))
+            }
         }
     }
     DisposableEffect(player, playbackView) {

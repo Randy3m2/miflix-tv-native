@@ -79,6 +79,8 @@ internal fun SpotlightRail(
     val publishPreview=LocalBrowsePreview.current
     val pinned=publishPreview!=null
     val homeShelf=LocalHomeShelfPaging.current
+    val more=LocalHomeShelfMore.current
+    val shelfKey=LocalHomeShelfKey.current
     val cardRowHeight=if(homeShelf) LocalHomeCardRowHeight.current else 188.dp
     if(rows.isEmpty()) return
     var selectedId by rememberSaveable(title) { mutableStateOf(rows.first().cloudId) }
@@ -112,6 +114,10 @@ internal fun SpotlightRail(
                     progress=progressFor(item),rank=if(ranked) rows.indexOf(item)+1 else null,
                     awardLabel=if(awardLabels) com.miflix.native2.data.AwardSelections.label(item.id,item.type,tr("es","en")=="es",awardYear) else null,modifier=(if(item.cloudId==rows.first().cloudId) Modifier.focusRequester(firstCard) else Modifier).then(homeReturnFocus("media:$title:${item.cloudId}")),
                     onFocused={selectedId=item.cloudId;publishPreview?.invoke(item)},onLongClick=hold?.let {action -> {action(item)}},onClick={onClick(item)})
+            }
+            if(homeShelf && more!=null) item(key="shelf_more") {
+                FocusButton(tr("Cargar más","Load more"),modifier=Modifier.width(150.dp).height(cardRowHeight-12.dp)
+                    .then(homeReturnFocus("more:$shelfKey"))) {more(shelfKey,title,rows)}
             }
         }
         }

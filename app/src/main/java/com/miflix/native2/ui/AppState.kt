@@ -1667,15 +1667,63 @@ class AppState(context: Context) {
         private set
     var genreMessage by mutableStateOf("")
         private set
+    var genreReturnScreen by mutableStateOf(Screen.COLLECTIONS)
+        private set
+    private var homeShelfSeed=""
+    private var homeShelfTheme=""
+    suspend fun openHomeShelf(key: String,title: String,rows: List<MediaSummary>) {
+        if(kidsMode) return
+        genreGeneration++;currentGenre=GenreDefinition("home:$key",title,0,0);genreTitle=if(key=="ranked_movies") tr("Más películas populares","More popular movies") else title
+        genreReturnScreen=Screen.HOME
+        homeShelfSeed=discoveryHistoryKey.split("|").firstOrNull {it.isNotBlank()}.orEmpty()
+        homeShelfTheme=seasonalTheme
+        genreItems.clear();genreBacklog.clear();genrePageNumber=0
+        genreBacklog.offer(rows) {it.cloudId}
+        genreRemoteMore=tmdb.pageableHomeShelf(key);genreHasMore=true;genreMessage=""
+        screen=Screen.GENRE_DETAIL
+        loadMoreGenre()
+    }
+    val genreUpcoming:Boolean get()=currentGenre?.id=="home:coming_soon_home"
     private var currentGenre: GenreDefinition?=null
     private var genrePageNumber=0
     private var genreRemoteMore=true
     private var genreGeneration=0L
     private val genreBacklog=UniquePageBuffer<MediaSummary>()
     private val genreMutex=Mutex()
+    val christmasCollectionPicks=mutableStateListOf<MediaSummary>()
+    var christmasCollectionLoading by mutableStateOf(false)
+        private set
+    var christmasCollectionMessage by mutableStateOf("")
+        private set
+    private var christmasCollectionOwner=""
+    private val christmasCollectionMutex=Mutex()
+    suspend fun loadChristmasCollection()=christmasCollectionMutex.withLock {
+        val owner="${session?.userId}:${activeProfile.id}:${tmdb.language}"
+        if(kidsMode || (christmasCollectionOwner==owner && christmasCollectionPicks.isNotEmpty())) return@withLock
+        christmasCollectionLoading=true
+        christmasCollectionMessage=""
+        if(christmasCollectionOwner!=owner) christmasCollectionPicks.clear()
+        try {
+            val rows=tmdb.christmasPage(1).rows
+            if(owner=="${session?.userId}:${activeProfile.id}:${tmdb.language}" && !kidsMode) {
+                christmasCollectionPicks.replaceWith(rows)
+                christmasCollectionOwner=owner
+                if(rows.isEmpty()) christmasCollectionMessage=tr("No se encontraron títulos.","No titles found.")
+            }
+        } catch(e: CancellationException) {
+            throw e
+        } catch(e: Exception) {
+            christmasCollectionMessage=tr("No se pudo cargar Navidad. Reintenta.","Could not load Christmas Movies. Try again.")
+        } finally {
+            christmasCollectionLoading=false
+        }
+    }
+    suspend fun openChristmasCollection() {
+        openGenre(GenreDefinition("christmas",tr("Películas navideñas · Mejor valoradas","Christmas Movies · Best rated"),0,0))
+    }
     suspend fun openGenre(g: GenreDefinition) {
         if(kidsMode) return
-        genreGeneration++;currentGenre=g;genreTitle=g.title
+        genreGeneration++;currentGenre=g;genreTitle=g.title;genreReturnScreen=Screen.COLLECTIONS
         genreItems.clear();genreBacklog.clear();genrePageNumber=0;genreRemoteMore=true;genreHasMore=true
         genreMessage="";screen=Screen.GENRE_DETAIL
         loadMoreGenre()
@@ -1683,14 +1731,18 @@ class AppState(context: Context) {
     suspend fun loadMoreGenre()=genreMutex.withLock {
         val g=currentGenre ?: return@withLock
         if(kidsMode || !genreHasMore) return@withLock
-        val generation=genreGeneration;val language=tmdb.language
+        val generation=genreGeneration;val language=tmdb.language;val owner="${session?.userId}:${activeProfile.id}"
         genreLoading=true;genreMessage=""
-        fun current()=generation==genreGeneration && language==tmdb.language && !kidsMode
+        fun current()=generation==genreGeneration && language==tmdb.language && owner=="${session?.userId}:${activeProfile.id}" && !kidsMode
         try {
             var batches=0
-            while(genreBacklog.pendingCount()<25 && genreRemoteMore && batches<2) {
+            while(genreBacklog.pendingCount()<25 && genreRemoteMore && batches<6) {
                 val page=genrePageNumber+1
-                val slice=tmdb.genrePage(g.movieGenreId,g.tvGenreId,page)
+                val slice=when {
+                    g.id=="christmas" -> tmdb.christmasPage(page)
+                    g.id.startsWith("home:") -> tmdb.homeShelfPage(g.id.substringAfter(":"),page,homeShelfSeed,homeShelfTheme)
+                    else -> tmdb.genrePage(g.movieGenreId,g.tvGenreId,page)
+                }
                 if(!current()) return@withLock
                 genreBacklog.offer(slice.rows) {it.cloudId}
                 genrePageNumber=page;genreRemoteMore=slice.hasMore;batches++
@@ -1700,7 +1752,12 @@ class AppState(context: Context) {
             genreItems.addAll(next)
             genreHasMore=genreBacklog.pendingCount()>0 || genreRemoteMore
         } catch(e: CancellationException) {throw e}
-        catch(e: Exception) {if(current()) genreMessage=e.message ?: tr("No se pudo cargar.","Could not load.")}
+        catch(e: Exception) {if(current()) {
+            genreMessage=e.message ?: tr("No se pudo cargar.","Could not load.")
+            // Keep already loaded titles usable when the next remote page fails.
+            genreItems.addAll(genreBacklog.take(25))
+            genreHasMore=genreBacklog.pendingCount()>0 || genreRemoteMore
+        }}
         finally {if(generation==genreGeneration) genreLoading=false}
     }
 
@@ -1995,7 +2052,8 @@ class AppState(context: Context) {
             try {
                 return if(candidate.nativeSource==null) candidate else {
                     check(nativeStore.enabled(owner)) {tr("El motor nativo está apagado","Native engine is disabled")}
-                    nativeSources.materialize(candidate,nativeStore.token(owner),valid)
+                    withTimeoutOrNull(15_000) {nativeSources.materialize(candidate,nativeStore.token(owner),valid)}
+                        ?: throw java.io.IOException("Source preparation timed out")
                 }
             } catch(e: CancellationException) {throw e} catch(e: Exception) {
                 val next=budget.nextIndex()
@@ -2006,7 +2064,7 @@ class AppState(context: Context) {
         }
     }
     private fun sourceRetryMessage(index: Int,count: Int): String =
-        tr("El enlace falló. Probando el siguiente…","Source failed. Trying the next link…")+" (${index+1}/${count.coerceAtMost(5)})"
+        tr("El enlace falló. Probando el siguiente…","Source failed. Trying the next link…")+" (${index+1}/${count.coerceAtMost(com.miflix.native2.player.SourceFallbackBudget.MAX_ATTEMPTS)})"
     /** Reuses the already loaded list; no add-on search or Supabase read is made here. */
     suspend fun tryNextPlaybackSource(req: PlayerRequest,position: Long,playing: Boolean): Boolean {
         val plan=sourceFallback ?: return false
@@ -2015,7 +2073,7 @@ class AppState(context: Context) {
             screen==Screen.PLAYER && appForeground && watchParty==null && !req.live
         if(!valid() || plan.busy) return false
         val manager=appContext.getSystemService(android.net.ConnectivityManager::class.java)
-        val online=manager.getNetworkCapabilities(manager.activeNetwork)?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)==true
+        val online=runCatching {manager.getNetworkCapabilities(manager.activeNetwork)?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)!=false}.getOrDefault(true)
         if(!online) return false
         plan.busy=true
         try {
@@ -2026,7 +2084,9 @@ class AppState(context: Context) {
                 beginPlaybackLoading(req.item,req.season,req.episode)
                 playbackLoading=playbackLoading?.copy(message=sourceRetryMessage(index,plan.rows.size))
                 val resolved=try {
-                    if(candidate.nativeSource==null) candidate else nativeSources.materialize(candidate,nativeStore.token(plan.owner),::valid)
+                    if(candidate.nativeSource==null) candidate else withTimeoutOrNull(15_000) {
+                        nativeSources.materialize(candidate,nativeStore.token(plan.owner),::valid)
+                    } ?: throw java.io.IOException("Source preparation timed out")
                 } catch(e: CancellationException) {throw e} catch(_: Exception) {continue}
                 if(!valid()) return false
                 val subs=withTimeoutOrNull(50) {playbackSubtitleJobs[subtitleKey(req.item,req.season,req.episode)]?.await()}.orEmpty()
@@ -2084,8 +2144,11 @@ class AppState(context: Context) {
                 ?: throw IllegalStateException(tr("No se encontraron enlaces reproducibles","No playable sources found"))
             val automaticFallback=watchParty==null
             val retryRows=if(automaticFallback) {
-                val candidates=StreamOrdering.fallbackCandidates(streams,audioLanguage)
-                (listOf(chosen)+candidates.filter {it.url!=chosen.url}).distinctBy {it.url}.take(5)
+                val candidates=StreamOrdering.fallbackCandidates(streams,audioLanguage).filter {it.url!=chosen.url}
+                val alternatives=if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(audioLanguage) && StreamOrdering.languageRank(chosen)==0)
+                    candidates.filter {StreamOrdering.languageRank(it)==0}.take(2)+candidates.filter {StreamOrdering.languageRank(it)!=0}
+                    else candidates
+                (listOf(chosen)+alternatives).distinctBy {it.url}.take(com.miflix.native2.player.SourceFallbackBudget.MAX_ATTEMPTS)
             } else listOf(chosen)
             val budget=com.miflix.native2.player.SourceFallbackBudget(retryRows.size)
             val best=materializeAutomaticSource(retryRows,budget,playbackOwner,::valid)

@@ -62,21 +62,30 @@ class StreamOrderingTest {
         assertEquals(listOf(spanish),StreamOrdering.sorted(listOf(english,spanish),"es"))
     }
 
-    @Test fun englishPlaybackHasFiveDistinctFallbackCandidates() {
-        val rows=(1..7).map {stream("en$it","1080p English",it.toLong())}
+    @Test fun englishPlaybackHasTenDistinctFallbackCandidates() {
+        val rows=(1..12).map {stream("en$it","1080p English",it.toLong())}
         val result=StreamOrdering.fallbackCandidates(rows+rows,"en")
-        assertEquals(rows.reversed().take(5),result)
-        assertEquals(5,result.map {it.url}.distinct().size)
+        assertEquals(rows.reversed().take(10),result)
+        assertEquals(10,result.map {it.url}.distinct().size)
     }
     @Test fun spanishFallbackUsesRemainingSlotsForEnglish() {
         val spanish=stream("es","720p Latino")
-        val english=(1..6).map {stream("en$it","1080p English",it.toLong())}
-        assertEquals(listOf(spanish)+english.reversed().take(4),StreamOrdering.fallbackCandidates(english+spanish,"es"))
+        val english=(1..12).map {stream("en$it","1080p English",it.toLong())}
+        assertEquals(listOf(spanish)+english.reversed().take(9),StreamOrdering.fallbackCandidates(english+spanish,"es"))
     }
     @Test fun spanishFallbackKeepsThreeSpanishBeforeEnglish() {
         val spanish=(1..5).map {stream("es$it","720p Castellano",it.toLong())}
-        val english=(1..5).map {stream("en$it","1080p English",it.toLong())}
-        assertEquals(spanish.reversed().take(3)+english.reversed().take(2),StreamOrdering.fallbackCandidates(english+spanish,"es"))
+        val english=(1..10).map {stream("en$it","1080p English",it.toLong())}
+        assertEquals(spanish.reversed().take(3)+english.reversed().take(7),StreamOrdering.fallbackCandidates(english+spanish,"es"))
+    }
+
+    @Test fun untaggedSourcesRemainLastResortForSpanishSettings() {
+        val spanish=stream("es","720p Latino")
+        val english=stream("en","1080p English")
+        val unknown=stream("unknown","2160p Comet")
+        val french=stream("fr","4K French")
+        assertEquals(listOf(spanish,english,unknown),StreamOrdering.fallbackCandidates(listOf(french,unknown,english,spanish),"es"))
+        assertEquals(listOf(unknown),StreamOrdering.fallbackCandidates(listOf(unknown),"es"))
     }
 
 }

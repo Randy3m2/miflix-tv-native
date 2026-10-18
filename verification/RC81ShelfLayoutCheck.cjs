@@ -27,5 +27,5 @@ for(const height of [432,480,540,600,720,1080]){
  assert(208<=innerHeight||height<480,'streaming shelf fits standard TV viewport');
 }
 for(const name of ['ui/HomeShelfFrame.kt','ui/CinematicBrowsing.kt','ui/BrowseHero.kt','ui/Components.kt','ui/Screens.kt','ui/UpdateNotes.kt'])assert.equal(read(name),fs.readFileSync('main/java/com/miflix/native2/'+name,'utf8'));
-assert(fs.readFileSync('app/build.gradle','utf8').includes("versionName '2.0.0-rc86'"));
+assert(fs.readFileSync('app/build.gradle','utf8').includes("versionName '2.0.0-rc87'"));
 console.log('PASS: push-layout geometry, equal Continue Watching cards, in-card titles, full-group focus scrolling in both directions, compact hero, no redundant streaming captions and mirrors.');

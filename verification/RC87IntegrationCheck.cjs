@@ -1,0 +1,22 @@
+'use strict';
+const fs=require('fs'),assert=require('assert');
+const root='app/src/main/java/com/miflix/native2/';
+const read=p=>fs.readFileSync(root+p,'utf8');
+const screen=read('ui/Screens.kt'),state=read('ui/AppState.kt'),tmdb=read('data/TmdbRepository.kt'),cards=read('ui/CinematicBrowsing.kt');
+const collections=screen.slice(screen.indexOf('fun CollectionsScreen('),screen.indexOf('fun GenresScreen('));
+assert(collections.indexOf('item(key="christmas_collection")')<collections.indexOf('Text(tr("Franquicias"'));
+assert(collections.includes('state.openChristmasCollection()'));
+assert(tmdb.includes('"sort_by" to "vote_average.desc","vote_count.gte" to "100"'));
+assert(tmdb.includes('christmasPages.get(key)'));
+assert(state.includes('g.id=="christmas" -> tmdb.christmasPage(page)'));
+assert(state.includes('genreBacklog.take(25)'));
+assert(state.includes('g.id.startsWith("home:") -> tmdb.homeShelfPage'));
+assert(state.includes('genreReturnScreen=Screen.HOME'));
+assert(cards.includes('if(homeShelf && more!=null) item(key="shelf_more")'));
+assert(screen.includes('item(key="collection_more")'));assert(screen.includes('item(key="genres_more")'));
+assert(screen.includes('SourceStallWatchdog()'));assert(screen.includes('val failure=player.playerError'));
+assert(state.includes('withTimeoutOrNull(15_000)'));
+assert(read('ui/MiFlixNativeApp.kt').includes('onBack={state.screen=state.genreReturnScreen}'));
+for(const rel of ['ui/AppState.kt','ui/Screens.kt','ui/HomeShelfFrame.kt','ui/CinematicBrowsing.kt','ui/UpdateNotes.kt','ui/MiFlixNativeApp.kt','data/TmdbRepository.kt','player/SourceStallWatchdog.java','player/SourceFallbackBudget.java'])
+ assert.equal(read(rel),fs.readFileSync('main/java/com/miflix/native2/'+rel,'utf8'),rel);
+console.log('PASS: themed Christmas placement/filter/paging, Home end cards and back destination, source recovery wiring and mirrors.');

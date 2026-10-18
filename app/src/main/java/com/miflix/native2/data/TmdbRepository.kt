@@ -246,6 +246,88 @@ class TmdbRepository(var token: String) {
         )
 
     data class GenreSlice(val rows: List<MediaSummary>,val hasMore: Boolean)
+    private val christmasPages=PlaybackLinkCache<String,GenreSlice>(24) {System.currentTimeMillis()}
+    private val christmasKeywordCache=PlaybackLinkCache<String,String>(2) {System.currentTimeMillis()}
+    suspend fun christmasPage(page: Int): GenreSlice {
+        require(page in 1..500)
+        val locale=language
+        val key="$locale:$page"
+        christmasPages.get(key)?.let {return it}
+        val keywords=christmasKeywordCache.get("christmas") ?: run {
+            val found=get("/search/keyword",mapOf("query" to "christmas")).optJSONArray("results")
+            val ids=(0 until (found?.length() ?: 0)).mapNotNull {found?.optJSONObject(it)}
+                .filter {it.optString("name").equals("christmas",true)}.map {it.optInt("id")}.filter {it>0}
+            check(ids.isNotEmpty()) {"Christmas keyword unavailable"}
+            ids.joinToString("|").also {christmasKeywordCache.put("christmas",it)}
+        }
+        val today=java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US).format(java.util.Date())
+        val result=get("/discover/movie",mapOf("language" to locale,"with_keywords" to keywords,
+            "include_adult" to "false","sort_by" to "vote_average.desc","vote_count.gte" to "100",
+            "primary_release_date.lte" to today,"page" to page.toString()))
+        val slice=GenreSlice(parseList(result,"movie",20),page<result.optInt("total_pages",page).coerceAtMost(500))
+        christmasPages.put(key,slice)
+        return slice
+    }
+    private val homeShelfPages=PlaybackLinkCache<String,GenreSlice>(48) {System.currentTimeMillis()}
+    fun pageableHomeShelf(key: String): Boolean=key in setOf("movies","series","ranked_movies","top","best_series","now_playing",
+        "rewatch_favorites","romance_picks","korean_picks","classic_picks","action","scifi","comedy","thrillers","horror_movies","christmas_movies","seasonal","because_you_watched","coming_soon_home")
+    suspend fun homeShelfPage(key: String,page: Int,seed: String,theme: String): GenreSlice = coroutineScope {
+        require(page in 1..500)
+        if(key=="christmas_movies" || (key=="seasonal" && theme=="christmas")) return@coroutineScope christmasPage(page)
+        val locale=language
+        val cacheKey="$locale:$key:$page:$seed:$theme"
+        homeShelfPages.get(cacheKey)?.let {return@coroutineScope it}
+        suspend fun part(path: String,type: String,filters: Map<String,String> = emptyMap()): GenreSlice {
+            val params=linkedMapOf("language" to locale,"page" to page.toString(),"include_adult" to "false")
+            params.putAll(filters)
+            val result=get(path,params)
+            return GenreSlice(parseList(result,type,20),page<result.optInt("total_pages",page).coerceAtMost(500))
+        }
+        fun genre(id: Int)=mapOf("with_genres" to "$id","sort_by" to "popularity.desc")
+        val slice=when(key) {
+            "movies","ranked_movies" -> part("/movie/popular","movie")
+            "series" -> part("/tv/popular","series")
+            "top" -> part("/movie/top_rated","movie")
+            "best_series" -> part("/tv/top_rated","series")
+            "now_playing" -> part("/movie/now_playing","movie")
+            "action" -> part("/discover/movie","movie",genre(28))
+            "scifi" -> part("/discover/movie","movie",genre(878))
+            "comedy" -> part("/discover/movie","movie",genre(35))
+            "thrillers" -> part("/discover/movie","movie",genre(53))
+            "horror_movies" -> part("/discover/movie","movie",genre(27))
+            "romance_picks" -> part("/discover/movie","movie",genre(10749)+mapOf("vote_average.gte" to "6","vote_count.gte" to "80"))
+            "korean_picks" -> part("/discover/tv","series",genre(18)+mapOf("with_original_language" to "ko","vote_average.gte" to "6","vote_count.gte" to "80"))
+            "classic_picks" -> part("/discover/movie","movie",mapOf("primary_release_date.lte" to "1999-12-31","sort_by" to "vote_average.desc","vote_count.gte" to "500"))
+            "because_you_watched" -> {
+                val id=seed.substringAfterLast(':').toIntOrNull()
+                if(id==null) GenreSlice(emptyList(),false)
+                else part("/${if(seed.contains(":series:")) "tv" else "movie"}/$id/recommendations",if(seed.contains(":series:")) "series" else "movie")
+            }
+            "seasonal" -> {
+                if(theme=="halloween") {
+                    val matches=get("/search/keyword",mapOf("query" to "halloween")).optJSONArray("results")
+                    val ids=(0 until (matches?.length() ?: 0)).mapNotNull {matches?.optJSONObject(it)}
+                        .filter {it.optString("name").equals("halloween",true)}.map {it.optInt("id")}.filter {it>0}
+                    check(ids.isNotEmpty()) {"Halloween keyword unavailable"}
+                    part("/discover/movie","movie",mapOf("with_keywords" to ids.joinToString("|"),"sort_by" to "popularity.desc"))
+                } else part("/discover/movie","movie",genre(SeasonalProgramming.genre(theme)))
+            }
+            "rewatch_favorites","coming_soon_home" -> {
+                val format=java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US)
+                val start=format.format(java.util.Calendar.getInstance().apply {add(java.util.Calendar.DAY_OF_YEAR,1)}.time)
+                val end=format.format(java.util.Calendar.getInstance().apply {add(java.util.Calendar.MONTH,12)}.time)
+                val movies=async {if(key=="rewatch_favorites") part("/movie/top_rated","movie") else part("/discover/movie","movie",
+                    mapOf("primary_release_date.gte" to start,"primary_release_date.lte" to end,"sort_by" to "popularity.desc"))}
+                val shows=async {if(key=="rewatch_favorites") part("/tv/top_rated","series") else part("/discover/tv","series",
+                    mapOf("first_air_date.gte" to start,"first_air_date.lte" to end,"sort_by" to "popularity.desc"))}
+                val m=movies.await();val t=shows.await()
+                GenreSlice((m.rows+t.rows).filter {key!="rewatch_favorites" || it.rating>=8.0}.distinctBy {it.cloudId},m.hasMore || t.hasMore)
+            }
+            else -> GenreSlice(emptyList(),false)
+        }
+        homeShelfPages.put(cacheKey,slice)
+        slice
+    }
     suspend fun genrePage(movieGenreId: Int,tvGenreId: Int,page: Int): GenreSlice = coroutineScope {
         require(page in 1..500)
         suspend fun part(series: Boolean,genre: Int): Pair<List<MediaSummary>,Boolean> {

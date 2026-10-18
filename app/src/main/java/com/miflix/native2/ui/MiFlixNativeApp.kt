@@ -112,12 +112,12 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             Screen.COLLECTION_DETAIL -> CatalogScreen(state, state.collectionTitle, state.collectionItems, onBack = { state.screen = Screen.COLLECTIONS })
             Screen.PLATFORM_DETAIL -> PlatformScreen(state) { state.screen = Screen.COLLECTIONS }
             Screen.GENRES -> CollectionsScreen(state) { state.screen = Screen.HOME }
-            Screen.GENRE_DETAIL -> CatalogScreen(state,state.genreTitle,state.genreItems,onBack={state.screen=Screen.COLLECTIONS},footer={
+            Screen.GENRE_DETAIL -> CatalogScreen(state,state.genreTitle,state.genreItems,onBack={state.screen=state.genreReturnScreen},footer={
                 Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     if(state.genreMessage.isNotBlank()) Text(state.genreMessage,color=Muted)
                     if(state.genreLoading || state.genreHasMore) FocusButton(if(state.genreLoading) tr("Cargando…","Loading…") else tr("Cargar más · 25","Load more · 25")) {
                         if(!state.genreLoading) state.launch {state.loadMoreGenre()}
-                    } else Text(tr("Llegaste al final de este género.","You reached the end of this genre."),color=Muted)
+                    } else Text(tr("Llegaste al final de esta selección.","You reached the end of this selection."),color=Muted)
                 }
             })
             Screen.DIRECTOR_DETAIL -> CatalogScreen(state,state.directorTitle,state.directorItems, onBack = { state.screen=Screen.HOME })

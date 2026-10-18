@@ -5,6 +5,7 @@ import java.util.Locale
 
 /** Audio preference first when Spanish is selected; resolution and size break ties. */
 internal object StreamOrdering {
+    private val fallbackLimit=com.miflix.native2.player.SourceFallbackBudget.MAX_ATTEMPTS
     private val resolution=Regex("(?<!\\d)(4320|2160|1440|1080|720|576|480|360)(?:p)?(?!\\d)",RegexOption.IGNORE_CASE)
     private val size=Regex("(?<![\\d.])(\\d+(?:[.,]\\d+)?)\\s*(GiB|GB|MiB|MB|TiB|TB)\\b",RegexOption.IGNORE_CASE)
     fun quality(stream: StreamChoice): Int {
@@ -27,9 +28,12 @@ internal object StreamOrdering {
         sorted(streams,preferredAudio).firstOrNull()
     fun fallbackCandidates(streams: List<StreamChoice>,preferredAudio: String): List<StreamChoice> {
         val rows=sorted(streams,preferredAudio)
-        if(!StreamLanguagePriority.prefersSpanish(preferredAudio)) return rows.take(5)
+        if(!StreamLanguagePriority.prefersSpanish(preferredAudio)) return rows.take(fallbackLimit)
         val spanish=rows.filter {languageRank(it)==0}.take(3)
-        return spanish+rows.filter {languageRank(it)==1}.take(5-spanish.size)
+        val english=rows.filter {languageRank(it)==1}.take(fallbackLimit-spanish.size)
+        // Untagged Comet/Torrentio releases are not proven Spanish or English, but
+        // must remain available as a last resort instead of disabling recovery.
+        return spanish+english+rows.filter {languageRank(it)==2}.take(fallbackLimit-spanish.size-english.size)
     }
     fun sorted(streams: List<StreamChoice>, preferredAudio: String = ""): List<StreamChoice> {
         val spanish = StreamLanguagePriority.prefersSpanish(preferredAudio)

@@ -16,6 +16,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 
 internal val LocalHomeShelfPaging=staticCompositionLocalOf {false}
+internal val LocalHomeShelfKey=staticCompositionLocalOf {""}
+internal val LocalHomeShelfMore=staticCompositionLocalOf<((String,String,List<com.miflix.native2.model.MediaSummary>)->Unit)?> {null}
+
 internal val LocalHomeCardRowHeight=staticCompositionLocalOf {188.dp}
 
 /** One catalog group per remaining viewport. Header and artwork move as a unit in either direction. */

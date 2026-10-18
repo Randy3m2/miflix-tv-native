@@ -867,6 +867,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
     var helpTitle by remember(category) { mutableStateOf(SettingsCategories.first { it.id==category }.english) }
     var helpDescription by remember(category) { mutableStateOf("Select a setting to see its details. Changes are saved on this device.") }
     var helpIndex by remember(category) { mutableStateOf(-1) }
+    var visualHelp by remember(category) {mutableStateOf<SettingsHelpRC103?>(null)}
     val settingsScroll=rememberLazyListState()
     LaunchedEffect(category) { settingsScroll.scrollToItem(0) }
 
@@ -915,7 +916,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
     }
     BackHandler(onBack = onBack)
 
-    val helpValue = when(helpIndex) {
+    val helpValue = visualHelp?.value ?: when(helpIndex) {
         0 -> "BruniO ${BuildConfig.VERSION_NAME}"
         1 -> if(state.interfaceLanguage=="en") "English" else "Español"
         2 -> state.session?.email ?: tr("Sin sesión","Not signed in")
@@ -932,7 +933,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
     }
     AppShell(state, Screen.SETTINGS, { state.screen = it }) {
         SocialBackdrop()
-        CompositionLocalProvider(LocalBringIntoViewSpec provides object : BringIntoViewSpec {
+        CompositionLocalProvider(LocalSettingsHelpRC103 provides {visualHelp=it},LocalBringIntoViewSpec provides object : BringIntoViewSpec {
             override fun calculateScrollDistance(offset: Float,size: Float,containerSize: Float): Float = when {
                 size>containerSize-48 -> offset-24
                 offset<24 -> offset-24
@@ -954,7 +955,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 LazyColumn(Modifier.weight(.7f).fillMaxHeight(),state=settingsScroll,
                     contentPadding=PaddingValues(top=4.dp,bottom=42.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
                     if(category=="system") item(key="setting-0") {
-                        SettingsSectionCard(onFocused={ helpTitle="About BruniO";helpDescription="Usage on this device, installed version and updates.";helpIndex=0 }) {
+                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="About BruniO";helpDescription="Usage on this device, installed version and updates.";helpIndex=0 }) {
                 Text(tr("Acerca de BruniO","About BruniO"),color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
                 Text("BruniO ${BuildConfig.VERSION_NAME}", color = Muted, fontSize = 14.sp, lineHeight=17.sp)
@@ -971,7 +972,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         }
                     }
                     if(category=="language") item(key="setting-1") {
-                        SettingsSectionCard(onFocused={ helpTitle="App language";helpDescription="Choose English or Spanish for menus and catalog information.";helpIndex=1 }) {
+                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="App language";helpDescription="Choose English or Spanish for menus and catalog information.";helpIndex=1 }) {
                 Text(tr("Idioma de la app","App language"),color=Color.White,fontSize=22.sp, lineHeight=26.sp)
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
@@ -982,7 +983,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         }
                     }
                     if(category=="account") item(key="setting-2") {
-                        SettingsSectionCard(onFocused={ helpTitle="Account & Sync";helpDescription="Manage your account, device pairing and shared favorites.";helpIndex=2 }) {
+                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Account & Sync";helpDescription="Manage your account, device pairing and shared favorites.";helpIndex=2 }) {
                 if (state.session == null) {
                     Text(tr("Cuenta y sincronización","Account & Sync"), color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
@@ -1018,7 +1019,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         }
                     }
                     if(category=="language") item(key="setting-3") {
-                        SettingsSectionCard(onFocused={ helpTitle="Audio language";helpDescription="Preferred audio and playback links. Available tracks can also be changed in the player.";helpIndex=3 }) {
+                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Audio language";helpDescription="Preferred audio and playback links. Available tracks can also be changed in the player.";helpIndex=3 }) {
                 Text(tr("Preferencias de reproducción","Playback preferences"),color=Color.White,fontSize=22.sp, lineHeight=26.sp)
                 Text(tr("Auriculares: ajuste estéreo automático al conectarlos a la TV. La sincronización depende también de la TV y los auriculares.","Headphones: automatic stereo adjustment when connected to the TV. Sync also depends on your TV and headphones."),color=Muted,fontSize=14.sp)
                 Text("Audio: ${state.audioLanguage.ifBlank { tr("Automático","Automatic") }}",color=Muted)
@@ -1039,38 +1040,33 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     if(category in listOf("account","appearance") && !state.kidsMode) item(key="taste-personalization") {SettingsSectionCard {
                         Text(tr("Tu universo, tus gustos","Your world. Your taste."),color=Color.White,fontSize=23.sp,fontWeight=FontWeight.Bold)
                         Text(tr("Elige películas, series, novelas y actores. Tu selección es independiente para este perfil.","Choose movies, series, telenovelas and actors. Your selection belongs to this profile."),color=Muted)
-                        FocusButton(tr("Elegir o editar mis gustos","Choose or edit my tastes")) {showTasteEditor=true}
-                        FocusButton(tr("Personalización y aprendizaje local","Personalization and local learning")+" · "+if(state.tasteProfile.enabled(state.localExtrasScope())) "ON" else "OFF") {val owner=state.localExtrasScope();state.tasteProfile.enable(owner,!state.tasteProfile.enabled(owner))}
-                        FocusButton(tr("Ofrecer selección inicial en nuevos perfiles","Offer taste setup for new profiles")+" · "+if(state.tasteSetupPromptEnabled) "ON" else "OFF") {state.saveTasteSetupPrompt(!state.tasteSetupPromptEnabled)}
-                        FocusButton(tr("Reiniciar aprendizaje local","Reset local learning")) {state.tasteProfile.clearLearning(state.localExtrasScope())}
+                        SettingsTileRC103(tr("Elegir o editar mis gustos","Choose or edit my tastes"),tr("Elige carátulas, actores y géneros para orientar tus recomendaciones.","Choose posters, actors and genres to shape your recommendations."),"taste") {showTasteEditor=true}
+                        SettingsTileRC103(tr("Personalización y aprendizaje local","Personalization and local learning"),tr("Usa tus gustos y lo que ves para personalizar las recomendaciones de este perfil.","Use your tastes and viewing to personalize this profile's recommendations."),"taste",checked=state.tasteProfile.enabled(state.localExtrasScope())) {val owner=state.localExtrasScope();state.tasteProfile.enable(owner,!state.tasteProfile.enabled(owner))}
+                        SettingsTileRC103(tr("Selección inicial de gustos","Initial taste setup"),tr("Ofrece la selección opcional de gustos al entrar a un perfil sin configurar.","Offer optional taste selection when entering a profile without taste setup."),"taste",checked=state.tasteSetupPromptEnabled) {state.saveTasteSetupPrompt(!state.tasteSetupPromptEnabled)}
+                        SettingsTileRC103(tr("Reiniciar aprendizaje local","Reset local learning"),tr("Borra lo aprendido de tu reproducción y conserva los gustos que seleccionaste.","Clear learning from your viewing and keep the tastes you selected."),"taste") {state.tasteProfile.clearLearning(state.localExtrasScope())}
                     }}
-                    if(category in listOf("playback","appearance","system")) item(key="local-extras-rc100") {SettingsSectionCard {
-                        FocusButton(tr("Funciones locales · Listas y preferencias","Local features · Lists and preferences")) {showLocalExtras=true}
-                    }}
+                    if(category in listOf("playback","appearance","system")) item(key="local-extras-rc100") {
+                        SettingsTileRC103(tr("Haz BruniO tuyo","Make BruniO yours"),tr("Temporizador, listas, filtros, memoria de audio y respaldo local.","Sleep timer, lists, filters, track memory and local backup."),"taste") {showLocalExtras=true}
+                    }
                     if(category=="appearance") item(key="home-order") {SettingsSectionCard {
-                        FocusButton(tr("Orden de filas de Home","Home row order")) {showHomeOrder=true}
-                        FocusButton(tr("Mostrar u ocultar filas de Home","Show or hide Home rows")) {showHomeVisibility=true}
+                        SettingsHeadingRC103(tr("Diseña tu Home","Shape your Home"),tr("Tus filas favoritas, en el lugar que prefieras.","Your favorite rows, right where you want them."))
+                        SettingsTileRC103(tr("Orden de filas de Home","Home row order"),tr("Decide qué aparece primero.","Decide what comes first."),"lists") {showHomeOrder=true}
+                        SettingsTileRC103(tr("Mostrar u ocultar filas","Show or hide rows"),tr("Elige qué secciones ver en este perfil.","Choose which sections to see in this profile."),"home") {showHomeVisibility=true}
                     }}
-                    if(category=="playback") item(key="previous-live-channel") {SettingsSectionCard {
-                        Text(tr("TV en vivo · Canal anterior","Live TV · Previous channel"),color=Color.White,fontSize=22.sp)
-                        Text(tr("Alterna entre los dos últimos canales reproducidos. Historial por perfil durante esta sesión.","Switch between the last two played channels. Per-profile history for this session."),color=Muted)
-                        FocusButton(if(state.previousLiveChannelEnabled) "ON" else "OFF") {state.savePreviousLiveChannelEnabled(!state.previousLiveChannelEnabled)}
-                    }}
-                    if(category=="playback") item(key="autoplay-next-link") {SettingsSectionCard {
-                        Text(tr("Siguiente enlace automático","Autoplay next link"),color=Color.White,fontSize=22.sp)
-                        Text(tr("Si un enlace falla o se queda cargando, intenta el siguiente. Al apagarlo, muestra el error para que elijas otro enlace manualmente.","If a source fails or stalls, try the next link. When OFF, show the error so you can choose another link manually."),color=Muted)
-                        FocusButton(if(state.autoplayNextLink) "ON" else "OFF") {state.saveAutoplayNextLink(!state.autoplayNextLink)}
-                    }}
-                    if(category=="playback") item(key="adaptive-source") {SettingsSectionCard {
-                        Text(tr("Seleccionar la mejor fuente","Select the best source"),color=Color.White,fontSize=22.sp)
-                        Text(tr("Idioma primero. Activa el ajuste de calidad y tamaño a la velocidad estimada; sin test de velocidad adicional.","Language comes first. Enable throughput-aware quality and size selection; no extra speed test."),color=Muted)
-                        FocusButton(if(state.adaptiveSource) "ON" else "OFF") {state.saveAdaptiveSource(!state.adaptiveSource)}
-                    }}
-                    if(category=="system") item(key="cinema-stats") {SettingsSectionCard {
-                        FocusButton(tr("Mi universo de cine · Estadísticas","My cinema hub · Statistics")) {showCinemaHub=true}
-                    }}
+                    if(category=="playback") item(key="previous-live-channel") {
+                        SettingsTileRC103(tr("TV en vivo · Canal anterior","Live TV · Previous channel"),tr("Alterna entre los dos últimos canales reproducidos. Historial por perfil durante esta sesión.","Switch between the last two played channels. Per-profile history for this session."),"previous",checked=state.previousLiveChannelEnabled) {state.savePreviousLiveChannelEnabled(!state.previousLiveChannelEnabled)}
+                    }
+                    if(category=="playback") item(key="autoplay-next-link") {
+                        SettingsTileRC103(tr("Siguiente enlace automático","Autoplay next link"),tr("Si una fuente falla o se queda cargando, intenta la siguiente. Desactivado: eliges otro enlace manualmente.","If a source fails or stalls, try the next one. When off, choose another link manually."),"links",checked=state.autoplayNextLink) {state.saveAutoplayNextLink(!state.autoplayNextLink)}
+                    }
+                    if(category=="playback") item(key="adaptive-source") {
+                        SettingsTileRC103(tr("Seleccionar la mejor fuente","Select the best source"),tr("Idioma primero. Ajusta calidad y tamaño a la velocidad estimada, sin test adicional.","Language comes first. Adjust quality and size to estimated throughput, without an extra speed test."),"filters",checked=state.adaptiveSource) {state.saveAdaptiveSource(!state.adaptiveSource)}
+                    }
+                    if(category=="system") item(key="cinema-stats") {
+                        SettingsTileRC103(tr("Mi universo de cine","My cinema hub"),tr("Explora tus estadísticas de reproducción en esta TV.","Explore your viewing statistics on this TV."),"stats") {showCinemaHub=true}
+                    }
                     if(category=="playback") item(key="setting-4") {
-                        SettingsSectionCard(onFocused={ helpTitle="Playback link size limit";helpDescription="Choose a maximum file size. A cap also hides links with unknown size.";helpIndex=4 }) {
+                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Playback link size limit";helpDescription="Choose a maximum file size. A cap also hides links with unknown size.";helpIndex=4 }) {
                 var customLimit by remember(state.streamSizeLimitGb) { mutableStateOf(if(state.streamSizeLimitGb>0) state.streamSizeLimitGb.toString() else "") }
                 Text(tr("Límite de tamaño de enlaces","Playback link size limit"),color=Color.White,fontSize=22.sp,lineHeight=26.sp)
                 Text(if(state.streamSizeLimitGb==0.0) tr("Sin límite","Unlimited") else "${tr("Máximo","Maximum")}: ${state.streamSizeLimitGb} GB",color=Muted)
@@ -1095,7 +1091,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         }
                     }
                     if(category=="language") item(key="setting-5") {
-                        SettingsSectionCard(onFocused={ helpTitle="Subtitles";helpDescription="Choose the subtitle language used for playback.";helpIndex=5 }) {
+                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Subtitles";helpDescription="Choose the subtitle language used for playback.";helpIndex=5 }) {
                 Text("${tr("Subtítulos","Subtitles")}: ${state.subtitleLanguage}",color=Muted)
                 LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(vertical=8.dp)) { item { FlowRow(horizontalArrangement=Arrangement.spacedBy(18.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
                     listOf("off" to tr("Desactivado","Off"), "es" to "Español", "en" to "English", "pt" to "Português", "fr" to "Français").forEach { (code,label) ->
@@ -1137,7 +1133,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         }
                     }
                     if(category=="appearance") item(key="setting-6") {
-                        SettingsSectionCard(onFocused={ helpTitle="Subtitle style";helpDescription="Set subtitle color and size. Preview the result before you play.";helpIndex=6 }) {
+                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Subtitle style";helpDescription="Set subtitle color and size. Preview the result before you play.";helpIndex=6 }) {
                 Text(tr("Estilo de subtítulos","Subtitle style"),color=Color.White,fontSize=22.sp,lineHeight=26.sp,fontWeight=FontWeight.Bold)
                 Spacer(Modifier.height(10.dp))
                 Text(tr("Sin fondo negro. El contorno mantiene el texto legible.","No black background. An outline keeps text readable."),color=Muted)
@@ -1163,17 +1159,17 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         }
                     }
                     if(category=="playback") item(key="setting-7") {
-                        SettingsSectionCard(onFocused={ helpTitle="Autoplay next episode";helpDescription="Continue automatically when the current episode finishes.";helpIndex=7 }) {
+                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Autoplay next episode";helpDescription="Continue automatically when the current episode finishes.";helpIndex=7 }) {
                 FocusButton("${tr("Siguiente episodio automático","Autoplay next episode")}: ${if(state.autoplayNext) tr("Activado","ON") else tr("Desactivado","OFF")}") { state.savePlaybackPreferences(state.audioLanguage,state.subtitleLanguage,!state.autoplayNext) }
                 Spacer(Modifier.height(24.dp))
 
                         }
                     }
                     if(category=="sources") item(key="setting-8") {
-                        SettingsSectionCard(onFocused={ helpTitle="Stream Add-ons";helpDescription="Use the main profile add-ons or configure sources for this profile on this TV.";helpIndex=8 }) {
+                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Stream Add-ons";helpDescription="Use the main profile add-ons or configure sources for this profile on this TV.";helpIndex=8 }) {
                 Text(tr("Complementos de reproducción","Stream Add-ons"), color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
-                Text(tr("Los manifiestos de Torrentio y Comet se comparten entre los perfiles de esta cuenta.","Torrentio and Comet manifests are account-level, so every profile on this account shares them."), color = Muted, fontSize = 14.sp, lineHeight=17.sp, modifier = Modifier.fillMaxWidth())
+                Text(tr("Añade las URLs de manifiesto de tus complementos compatibles. Cada perfil puede heredar las fuentes del principal o usar las suyas en esta TV.","Add manifest URLs for your compatible add-ons. Each profile can inherit the main profile sources or use its own on this TV."), color = Muted, fontSize = 14.sp, lineHeight=17.sp, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(12.dp))
                 state.addonManifests.toList().forEach { manifest ->
                     Row(Modifier.fillMaxWidth().padding(vertical=6.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
@@ -1184,10 +1180,10 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 Spacer(Modifier.height(12.dp))
                 if(!state.activeProfile.primary) {
                     Text(tr("Add-ons de este perfil","This profile's add-ons"),color=Color.White,fontSize=20.sp)
-                    FocusButton(if(state.profileAddonsInherited) tr("Usando los del principal","Using main profile add-ons") else tr("Configuración propia","Own configuration")) {state.saveProfileAddonInheritance(!state.profileAddonsInherited)}
+                    SettingsTileRC103(tr("Usar add-ons del perfil principal","Use main profile add-ons"),tr("Activado: hereda las fuentes del principal. Desactivado: usa tu configuración propia en esta TV.","On: inherit the main profile sources. Off: use your own configuration on this TV."),"links",checked=state.profileAddonsInherited) {state.saveProfileAddonInheritance(!state.profileAddonsInherited)}
                     Text(tr("Las fuentes propias se guardan en esta TV. Editar la lista crea una configuración propia y no cambia el principal.","Own sources are saved on this TV. Editing the list creates an independent configuration and leaves the main profile unchanged."),color=Muted,fontSize=13.sp)
                 }
-                NativeTextField(addonUrl, { addonUrl = it }, tr("URL del manifiesto Torrentio / Comet","Torrentio / Comet manifest URL"), modifier = Modifier.fillMaxWidth())
+                NativeTextField(addonUrl, { addonUrl = it }, tr("URL del complemento · manifest.json","Add-on URL · manifest.json"), modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(10.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(18.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
                     FocusButton(tr("Añadir manifiesto","Add Manifest")) { state.launch { state.socialAction { state.addAddonManifest(addonUrl); addonUrl = "" } } }
@@ -1199,14 +1195,14 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         }
                     }
                     if(category=="sources") item(key="setting-9") {
-                        SettingsSectionCard(onFocused={ helpTitle="Native Sources";helpDescription="Configure the native sources available for your account.";helpIndex=9 }) {
+                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Native Sources";helpDescription="Configure the native sources available for your account.";helpIndex=9 }) {
                 NativeSourcesSettings(state)
                 FocusButton("LIDOM · "+tr("Configurar fuentes","Source settings")) {state.lidomConfigure=true;state.screen=Screen.LIDOM}
 
                         }
                     }
                     if(category=="system") item(key="setting-10") {
-                        SettingsSectionCard(onFocused={ helpTitle="Storage";helpDescription="Clear temporary artwork without changing your account or favorites.";helpIndex=10 }) {
+                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Storage";helpDescription="Clear temporary artwork without changing your account or favorites.";helpIndex=10 }) {
                 Text(tr("Almacenamiento","Storage"),color=Color.White,fontSize=22.sp,lineHeight=26.sp)
                 Spacer(Modifier.height(10.dp))
                 Text(tr("Limpia las imágenes temporales. Conserva tu cuenta, perfiles, favoritos y ajustes.",
@@ -1224,7 +1220,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         }
                     }
                     if(category=="system") item(key="setting-11") {
-                        SettingsSectionCard(onFocused={ helpTitle="Updates";helpDescription="Check for a newer BruniO version.";helpIndex=11 }) {
+                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Updates";helpDescription="Check for a newer BruniO version.";helpIndex=11 }) {
                 Text(tr("Actualizaciones","Updates"),color=Color.White,fontSize=22.sp)
                 Spacer(Modifier.height(12.dp))
                 Text("BruniO ${BuildConfig.VERSION_NAME}",color=Muted)
@@ -1236,8 +1232,8 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 }
                 Column(Modifier.weight(.3f).fillMaxHeight().background(Panel,RoundedCornerShape(16.dp)).border(1.dp,PanelBorder,RoundedCornerShape(16.dp)).padding(16.dp),
                     verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                    Text(helpTitle,color=Color.White,fontSize=20.sp,lineHeight=24.sp,fontWeight=FontWeight.Bold,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                    Text(helpDescription,color=Muted,fontSize=14.sp,lineHeight=20.sp,maxLines=4,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    Text(visualHelp?.title ?: helpTitle,color=Color.White,fontSize=20.sp,lineHeight=24.sp,fontWeight=FontWeight.Bold,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    Text(visualHelp?.description ?: helpDescription,color=Muted,fontSize=14.sp,lineHeight=20.sp,maxLines=8,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     Spacer(Modifier.weight(1f))
                     Text(tr("Valor actual","Current setting"),color=Muted,fontSize=12.sp)
                     Text(helpValue,color=Accent,fontSize=16.sp,lineHeight=20.sp,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)

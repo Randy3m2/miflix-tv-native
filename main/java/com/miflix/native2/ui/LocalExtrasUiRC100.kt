@@ -76,33 +76,33 @@ internal fun LocalExtrasSettingsRC100(state:AppState,close:()->Unit) {
         Text(tr("Reemplaza la configuración y los datos locales de este perfil. No cambia tu cuenta ni My List.","Replaces this profile's local settings and data. Your account and My List stay unchanged."),color=Muted)
         FocusButton(tr("Restaurar","Restore")) {pendingImport=null;working=true;scope.launch {try {require(state.localExtrasScope()==owner);state.importLocalBackupRC100(body);status=tr("Backup restaurado.","Backup restored.")} catch(e:Exception) {status=e.message.orEmpty()} finally {working=false}}}
     }}
-    LocalPanelRC100(tr("Funciones locales","Local features"),close) {
-        Text(tr("Guardadas en esta TV. Los interruptores son del dispositivo; listas, ocultos y preferencias se separan por perfil.","Stored on this TV. Switches apply to this device; lists, hidden titles and preferences are per profile."),color=Muted)
-        val names=listOf(
-            "sleep" to tr("Temporizador de reproducción","Sleep timer"),
-            "still" to tr("¿Sigues viendo?","Are you still watching?"),
-            "lists" to tr("Listas personales locales","Local personal lists"),
-            "hide" to tr("Hoy no quiero ver esto","Not today"),
-            "filters" to tr("Recordar filtros del catálogo","Remember catalog filters"),
-            "tracks" to tr("Recordar audio y subtítulos por serie","Remember audio and subtitles per series"),
-            "technical" to tr("Panel técnico del reproductor","Player technical panel"),
-            "backup" to tr("Backup local de configuración","Local settings backup")
-        )
-        names.forEach { (key,title) ->FocusButton(title+" · "+if(extras.enabled(key)) "ON" else "OFF") {extras.enable(key,!extras.enabled(key));if(key=="filters") state.restoreCustomFilterRC100()} }
+    SettingsDialogRC103(tr("Haz BruniO tuyo","Make BruniO yours"),tr("Ajusta tu reproducción, tu catálogo y tus preferencias en esta TV.","Shape playback, your catalog and your preferences on this TV."),close) {
+        Text(tr("Los interruptores aplican a esta TV. Tus listas, títulos ocultos y preferencias se guardan por perfil.","Switches apply to this TV. Lists, hidden titles and preferences are saved per profile."),color=Muted,fontSize=13.sp)
+        SettingsHeadingRC103(tr("A tu ritmo","At your pace"),tr("Más comodidad en cada sesión.","More comfort in every session."))
+        SettingsTileRC103(tr("Temporizador de reproducción","Sleep timer"),tr("Elige cuándo pausar: por minutos o al terminar episodios.","Choose when to pause: after minutes or completed episodes."),"sleep",checked=extras.enabled("sleep")) {extras.enable("sleep",!extras.enabled("sleep"))}
+        if(extras.enabled("sleep")) Text(tr("En el reproductor: Funciones locales → 30/60/90 minutos o 1/2/3 episodios. Pausa al vencer; no apaga físicamente la TV.","In the player: Local features → 30/60/90 minutes or 1/2/3 episodes. Pauses playback; does not power off the TV."),color=Muted,fontSize=13.sp)
+        SettingsTileRC103(tr("¿Sigues viendo?","Are you still watching?"),tr("Pregunta antes de seguir tras varios episodios sin usar el mando.","Ask before continuing after several episodes without remote interaction."),"still",checked=extras.enabled("still")) {extras.enable("still",!extras.enabled("still"))}
         if(extras.enabled("still")) {
-            Text(tr("Preguntar tras episodios consecutivos sin usar el mando:","Ask after consecutive episodes without remote interaction:"),color=Muted)
-            Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {listOf(2,3,5).forEach {n -> FocusButton("$n",primary=extras.stillLimit==n) {extras.saveStillLimit(n)}}}
+            Text(tr("Preguntar después de:","Ask after:"),color=Muted,fontSize=13.sp)
+            Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {listOf(2,3,5).forEach {n -> FocusButton("$n "+tr("episodios","episodes"),primary=extras.stillLimit==n,modifier=Modifier.settingsHelpRC103(tr("¿Sigues viendo?","Are you still watching?"),tr("Solicita confirmación tras este número de episodios consecutivos sin interacción con el mando.","Request confirmation after this many consecutive episodes without remote interaction."),"still","$n "+tr("episodios","episodes"))) {extras.saveStillLimit(n)}}}
         }
-        if(extras.enabled("sleep")) Text(tr("En el reproductor: Funciones locales → 30/60/90 minutos o 1/2/3 episodios. Pausa al vencer; no apaga físicamente la TV.","In the player: Local features → 30/60/90 minutes or 1/2/3 episodes. Pauses playback; does not power off the TV."),color=Muted)
-        if(extras.enabled("lists")) FocusButton(tr("Administrar mis listas","Manage my lists")) {showLists=true}
-        if(extras.enabled("hide")) FocusButton(tr("Restaurar títulos ocultos","Restore hidden titles")) {extras.restoreHidden(owner);status=tr("Títulos restaurados.","Titles restored.")}
-        if(extras.enabled("tracks")) FocusButton(tr("Borrar preferencias de series","Clear series preferences")) {extras.clearTracks(owner);status=tr("Preferencias borradas.","Preferences cleared.")}
+        SettingsTileRC103(tr("Recordar audio y subtítulos","Remember audio and subtitles"),tr("Recupera las pistas que elegiste para cada serie de este perfil.","Recall the tracks you chose for each series in this profile."),"tracks",checked=extras.enabled("tracks")) {extras.enable("tracks",!extras.enabled("tracks"))}
+        if(extras.enabled("tracks")) SettingsTileRC103(tr("Borrar preferencias de series","Clear series preferences"),tr("Vuelve a usar tus idiomas predeterminados.","Return to your default language choices."),"tracks") {extras.clearTracks(owner);status=tr("Preferencias borradas.","Preferences cleared.")}
+        SettingsHeadingRC103(tr("Un catálogo a tu manera","A catalog your way"),tr("Organiza lo que quieres encontrar.","Organize what you want to find."))
+        SettingsTileRC103(tr("Listas personales locales","Local personal lists"),tr("Agrupa títulos en tus propias listas para este perfil.","Group titles in your own lists for this profile."),"lists",checked=extras.enabled("lists")) {extras.enable("lists",!extras.enabled("lists"))}
+        if(extras.enabled("lists")) SettingsTileRC103(tr("Administrar mis listas","Manage my lists"),tr("Crea, renombra y organiza tus colecciones.","Create, rename and organize your collections."),"lists") {showLists=true}
+        SettingsTileRC103(tr("Hoy no quiero ver esto","Not today"),tr("Oculta temporalmente títulos de las recomendaciones de Home.","Temporarily hide titles from Home recommendations."),"hide",checked=extras.enabled("hide")) {extras.enable("hide",!extras.enabled("hide"))}
+        if(extras.enabled("hide")) SettingsTileRC103(tr("Restaurar títulos ocultos","Restore hidden titles"),tr("Vuelve a incluirlos en las recomendaciones de este perfil.","Include them again in this profile's recommendations."),"hide") {extras.restoreHidden(owner);status=tr("Títulos restaurados.","Titles restored.")}
+        SettingsTileRC103(tr("Recordar filtros del catálogo","Remember catalog filters"),tr("Conserva tus filtros para la próxima visita.","Keep your filters for your next visit."),"filters",checked=extras.enabled("filters")) {extras.enable("filters",!extras.enabled("filters"));state.restoreCustomFilterRC100()}
+        SettingsHeadingRC103(tr("Herramientas y respaldo","Tools and backup"),tr("Información útil y tus preferencias a mano.","Useful information and your preferences at hand."))
+        SettingsTileRC103(tr("Panel técnico del reproductor","Player technical panel"),tr("Consulta calidad, audio y búfer durante la reproducción.","See quality, audio and buffer information during playback."),"technical",checked=extras.enabled("technical")) {extras.enable("technical",!extras.enabled("technical"))}
+        SettingsTileRC103(tr("Backup local de configuración","Local settings backup"),tr("Exporta o restaura los datos locales de este perfil.","Export or restore this profile's local data."),"backup",checked=extras.enabled("backup")) {extras.enable("backup",!extras.enabled("backup"))}
         if(extras.enabled("backup")) {
-            Text(tr("Solo datos locales y preferencias; sin contraseñas, sesiones ni enlaces de reproducción. Restaurar requiere el mismo perfil. Usa el selector de archivos de Android.","Local data and preferences only; no passwords, sessions or playback links. Restore requires the same profile. Uses Android's file picker."),color=Muted)
-            if(!working) Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                FocusButton(tr("Exportar JSON","Export JSON")) {runCatching {export.launch("BruniO-local-backup.json")}.onFailure {status=tr("Esta TV no tiene selector de archivos compatible.","This TV has no compatible file picker.")}}
-                FocusButton(tr("Importar JSON","Import JSON")) {runCatching {restore.launch(arrayOf("application/json","text/plain","application/octet-stream"))}.onFailure {status=tr("Esta TV no tiene selector de archivos compatible.","This TV has no compatible file picker.")}}
-            }
+            Text(tr("Solo datos locales y preferencias; sin contraseñas, sesiones ni enlaces de reproducción. Restaurar requiere el mismo perfil. Usa el selector de archivos de Android.","Local data and preferences only; no passwords, sessions or playback links. Restore requires the same profile. Uses Android's file picker."),color=Muted,fontSize=13.sp)
+            if(!working) {
+                SettingsTileRC103(tr("Exportar JSON","Export JSON"),tr("Guarda una copia de tus preferencias.","Save a copy of your preferences."),"backup") {runCatching {export.launch("BruniO-local-backup.json")}.onFailure {status=tr("Esta TV no tiene selector de archivos compatible.","This TV has no compatible file picker.")}}
+                SettingsTileRC103(tr("Importar JSON","Import JSON"),tr("Elige un respaldo para revisar y restaurar.","Choose a backup to review and restore."),"backup") {runCatching {restore.launch(arrayOf("application/json","text/plain","application/octet-stream"))}.onFailure {status=tr("Esta TV no tiene selector de archivos compatible.","This TV has no compatible file picker.")}}
+            } else Text(tr("Procesando respaldo…","Processing backup…"),color=Color.White,fontSize=14.sp)
         }
         if(status.isNotBlank()) Text(status,color=Color.White)
     }

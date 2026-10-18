@@ -2,19 +2,8 @@ package com.miflix.native2.ui
 
 import androidx.compose.runtime.*
 import androidx.tv.material3.Text
-import androidx.compose.foundation.background
-import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 
 /** Visibility is stored per profile, independently of the existing row order. */
 @Composable
@@ -54,22 +43,14 @@ internal fun HomeRowVisibilityRC99(state:AppState,close:()->Unit) {
     val hidden=state.hiddenHomeRows
     val order=state.homeRowOrder
     val sorted=rows.sortedBy {order.indexOf(it.first).let {i -> if(i<0) Int.MAX_VALUE else i}}
-    Dialog(onDismissRequest=close) {
-        val first=remember {FocusRequester()}
-        LaunchedEffect(Unit) {withFrameNanos {};runCatching {first.requestFocus()}}
-        Column(Modifier.width(550.dp).heightIn(max=520.dp).background(Panel,RoundedCornerShape(24.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-            Text(tr("Filas de Home","Home rows"),color=Color.White,fontSize=24.sp)
-            Text(tr("Oculta filas y vuelve a mostrarlas cuando quieras. Se guarda por perfil; conserva el orden.","Hide rows and show them again anytime. Saved per profile; keeps your row order."),color=Muted,fontSize=14.sp)
-            Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                FocusButton(tr("Cerrar","Close"),modifier=Modifier.focusRequester(first)) {close()}
-                FocusButton(tr("Mostrar todas","Show all")) {state.restoreHomeRows()}
-            }
-            LazyColumn(Modifier.weight(1f,fill=false).fillMaxWidth().focusGroup(),verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(vertical=8.dp)) {
-                items(sorted,key={it.first}) { (key,title) ->
-                    val visible=key !in hidden
-                    FocusButton(title+" · "+if(visible) tr("Visible","Visible") else tr("Oculta","Hidden"),primary=visible) {
-                        state.setHomeRowVisible(key,!visible)
-                    }
+    SettingsDialogRC103(tr("Tu Home, a tu gusto","Your Home, your way"),tr("Elige las filas que quieres ver. Se guarda por perfil y conserva el orden.","Choose the rows you want to see. Saved per profile, keeping their order."),close) {
+        Text("${rows.size-hidden.count {key -> rows.any {it.first==key}}} / ${rows.size} "+tr("filas visibles","rows visible"),color=Color.White,fontSize=15.sp)
+        SettingsTileRC103(tr("Mostrar todas","Show all"),tr("Recupera todas las filas de este perfil.","Bring back every row for this profile."),"home") {state.restoreHomeRows()}
+        sorted.forEach { (key,title) ->
+            androidx.compose.runtime.key(key) {
+                val visible=key !in hidden
+                SettingsTileRC103(title,if(visible) tr("Visible en tu Home","Visible on your Home") else tr("Oculta de tu Home","Hidden from your Home"),"home",checked=visible) {
+                    state.setHomeRowVisible(key,!visible)
                 }
             }
         }

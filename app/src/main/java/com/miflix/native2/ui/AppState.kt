@@ -57,6 +57,16 @@ class AppState(context: Context) {
 
     private val socialPrefs = context.getSharedPreferences("miflix_social", Context.MODE_PRIVATE)
     private val playbackPrefs = context.getSharedPreferences("miflix_playback", Context.MODE_PRIVATE)
+    private val audioDecoderMimes by lazy {
+        runCatching {android.media.MediaCodecList(android.media.MediaCodecList.REGULAR_CODECS).codecInfos
+            .filter {!it.isEncoder}.flatMap {codec ->codec.supportedTypes.filter {it.startsWith("audio/")}}.distinct().toTypedArray()}.getOrDefault(emptyArray<String>())
+    }
+    private fun audioSourceRank(stream:StreamChoice):Int {
+        if(audioDecoderMimes.isEmpty()) return 1
+        val info=StreamPresentation.parse(stream.addonName,stream.name,stream.title,stream.filename,stream.videoSize)
+        return AudioSourcePolicy.rank(info.audio,audioDecoderMimes)
+    }
+
     var adaptiveSource by mutableStateOf(playbackPrefs.getBoolean("adaptive_source",false))
         private set
     fun saveAdaptiveSource(enabled:Boolean) {adaptiveSource=enabled;playbackPrefs.edit().putBoolean("adaptive_source",enabled).apply()}
@@ -2072,6 +2082,39 @@ class AppState(context: Context) {
     var discoveryPreviewActive by mutableStateOf(false)
         internal set
 
+    private fun discoverySeen(key:String):List<String> {
+        val a=runCatching {org.json.JSONArray(playbackPrefs.getString("discovery_seen:${ratingsKey()}:$key","[]"))}.getOrDefault(org.json.JSONArray())
+        return (0 until a.length()).map {a.getString(it)}
+    }
+    fun discoveryOrder(key:String,rows:List<MediaSummary>):List<MediaSummary> {
+        val history=discoverySeen(key);val seen=history.toSet();val unique=rows.distinctBy {it.cloudId}
+        return unique.filter {it.cloudId !in seen}.shuffled()+unique.filter {it.cloudId in seen}.sortedByDescending {history.indexOf(it.cloudId)}
+    }
+    fun recordDiscovery(key:String,item:MediaSummary) {
+        val ids=(listOf(item.cloudId)+discoverySeen(key)).distinct().take(500)
+        playbackPrefs.edit().putString("discovery_seen:${ratingsKey()}:$key",org.json.JSONArray(ids).toString()).apply()
+    }
+    fun freshDiscoveryRows(key:String,rows:List<MediaSummary>):List<MediaSummary> {
+        val ordered=discoveryOrder(key,rows)
+        val unseen=ordered.filter {it.cloudId !in discoverySeen(key).toSet()}
+        val selected=(if(unseen.isNotEmpty()) unseen else ordered).take(25)
+        val ids=(selected.map {it.cloudId}+discoverySeen(key)).distinct().take(500)
+        playbackPrefs.edit().putString("discovery_seen:${ratingsKey()}:$key",org.json.JSONArray(ids).toString()).apply()
+        return selected
+    }
+    suspend fun discoveryRun(mood:String):List<MediaSummary> {
+        val key="mood_page:${ratingsKey()}:$mood"
+        val page=playbackPrefs.getInt(key,1)
+        playbackPrefs.edit().putInt(key,if(page>=19) 1 else page+2).apply()
+        suspend fun fetch(p:Int):List<MediaSummary> = when(mood) {
+            "christmas" ->tmdb.christmasPage(p).rows+tmdb.christmasPage(p+1).rows
+            "halloween" ->tmdb.homeShelfPage("horror_movies",p,"","").rows+tmdb.homeShelfPage("horror_movies",p+1,"","").rows
+            else ->tmdb.moodPicks(mood,p)
+        }
+        val rows=fetch(page).ifEmpty {fetch(1)}
+        return if(kidsMode) tmdb.kidsFilter(rows) else rows
+    }
+
     suspend fun discoveryPicks(mood: String): List<MediaSummary> {
         val rows=tmdb.moodPicks(mood)
         val allowed=if(kidsMode || mood=="family") tmdb.kidsFilter(rows) else rows
@@ -2249,11 +2292,11 @@ class AppState(context: Context) {
             if(!valid()) return@coroutineScope
             val bandwidth=if(adaptiveSource) androidx.media3.exoplayer.upstream.DefaultBandwidthMeter.getSingletonInstance(appContext).bitrateEstimate else 0L
             val seconds=(details?.takeIf {it.summary.cloudId==item.cloudId}?.runtimeMinutes ?: 0)*60
-            val chosen = selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds)
+            val chosen = selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds,::audioSourceRank)
                 ?: throw IllegalStateException(tr("No se encontraron enlaces reproducibles","No playable sources found"))
             val automaticFallback=watchParty==null
             val retryRows=if(automaticFallback) {
-                val candidates=StreamOrdering.fallbackCandidates(streams,audioLanguage,bandwidth,seconds).filter {it.url!=chosen.url}
+                val candidates=StreamOrdering.fallbackCandidates(streams,audioLanguage,bandwidth,seconds,::audioSourceRank).filter {it.url!=chosen.url}
                 val alternatives=if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(audioLanguage) && StreamOrdering.languageRank(chosen)==0)
                     candidates.filter {StreamOrdering.languageRank(it)==0}.take(2)+candidates.filter {StreamOrdering.languageRank(it)!=0}
                     else candidates

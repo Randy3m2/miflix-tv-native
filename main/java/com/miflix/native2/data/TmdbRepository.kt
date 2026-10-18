@@ -251,10 +251,10 @@ class TmdbRepository(var token: String) {
     }
 
     private val moodCache=linkedMapOf<String,Pair<Long,List<MediaSummary>>>()
-    suspend fun moodPicks(mood: String): List<MediaSummary> {
+    suspend fun moodPicks(mood: String,pageStart: Int=1): List<MediaSummary> {
         require(mood in setOf("quick","marathon","meaningful","background","comfort","family","twist","happy","sad","documentary","cozy","romantic","adrenaline","mindbending","nostalgia"))
         val locale=language
-        val key="$locale:$mood"
+        val key="$locale:$mood:$pageStart"
         moodCache[key]?.takeIf {System.currentTimeMillis()-it.first<30*60*1000L}?.let {return it.second}
         val tv=mood in setOf("quick","marathon","background")
         val params=linkedMapOf("include_adult" to "false","sort_by" to "popularity.desc","vote_count.gte" to "100")
@@ -275,7 +275,7 @@ class TmdbRepository(var token: String) {
             "twist" -> params["with_genres"]="9648,53"
         }
         val rows=mutableListOf<MediaSummary>()
-        for(page in 1..2) {
+        for(page in pageStart..pageStart+1) {
             val response=get("/discover/${if(tv) "tv" else "movie"}",params+mapOf("page" to page.toString(),"language" to locale))
             rows.addAll(parseList(response,if(tv) "series" else "movie",20))
             if(page>=response.optInt("total_pages",1)) break

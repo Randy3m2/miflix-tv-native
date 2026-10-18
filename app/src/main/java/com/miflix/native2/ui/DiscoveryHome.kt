@@ -68,12 +68,14 @@ private fun MoodTile(mood:String,selected:Boolean,modifier:Modifier=Modifier,onC
 
 @Composable
 internal fun TrailerActionBar(previous:(()->Unit)?,next:(()->Unit)?,details:(()->Unit)?,watch:(()->Unit)?,swipe:Modifier) {
-    Row(Modifier.fillMaxWidth().then(swipe).background(Color(0xff111017)).padding(horizontal=20.dp,vertical=14.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+    Row(Modifier.fillMaxWidth().then(swipe).padding(horizontal=24.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
         listOf(Triple("←","Previous",previous),Triple("→","Next",next),Triple("↑","Details",details),Triple("↓","Watch Title",watch)).forEach { (hint,label,action) ->
-            androidx.compose.foundation.layout.Box(Modifier.weight(1f).height(48.dp)
-                .background(if(label=="Watch Title") Accent.copy(alpha=.2f) else Color(0xff24212c),androidx.compose.foundation.shape.RoundedCornerShape(24.dp))
-                .then(if(action!=null) Modifier.clickable(onClick=action) else Modifier).padding(horizontal=14.dp),contentAlignment=androidx.compose.ui.Alignment.Center) {
-                Text("$hint  $label",color=if(action!=null) Color.White else Muted,fontSize=15.sp)
+            Row(Modifier.height(38.dp).background(Color.White.copy(alpha=if(label=="Watch Title") .14f else .07f),RoundedCornerShape(19.dp))
+                .border(1.dp,Color.White.copy(alpha=.14f),RoundedCornerShape(19.dp))
+                .then(if(action!=null) Modifier.clickable(onClick=action) else Modifier).padding(horizontal=14.dp),
+                verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                Text(hint,color=if(action!=null) Accent else Muted,fontSize=24.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold)
+                Text(label,color=if(action!=null) Color.White else Muted,fontSize=12.sp)
             }
         }
     }
@@ -110,9 +112,9 @@ internal fun DiscoveryTrailers(state:AppState,candidates:List<MediaSummary>,clos
         state.discoveryPreviewActive=true
         onDispose {state.discoveryPreviewActive=false;MenuActivity.touch()}
     }
-    val rows=remember(candidates) {
+    val rows=remember {
         val today=java.text.SimpleDateFormat("yyyy-MM-dd",java.util.Locale.US).format(java.util.Date())
-        candidates.distinctBy {it.cloudId}.filter {it.releaseDate.isBlank() || it.releaseDate<=today}.take(40)
+        state.discoveryOrder("trailers",candidates.distinctBy {it.cloudId}.filter {it.releaseDate.isBlank() || it.releaseDate<=today}).take(40)
     }
     var index by remember {mutableIntStateOf(0)}
     var trailer by remember {mutableStateOf<TrailerSummary?>(null)}
@@ -145,7 +147,7 @@ internal fun DiscoveryTrailers(state:AppState,candidates:List<MediaSummary>,clos
     }
     val playing=trailer.takeIf {loadedCloud==item?.cloudId}
     if(item!=null && playing!=null) key(item.cloudId,playing.key) {
-        LidomYoutubePlayer(playing.key,onWorking={},close=close,preview=true,
+        LidomYoutubePlayer(playing.key,onWorking={state.recordDiscovery("trailers",item)},close=close,preview=true,
             caption="${index+1}/${rows.size} · ${item.title}",
             previous=if(index>0) ({index--; Unit}) else null,next={next()},onEnded={next()},
             details={close();state.launch {state.open(item)}},

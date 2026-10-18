@@ -19,7 +19,7 @@ assert(!stats.includes('Http.'));assert(!stats.includes('Supabase'));assert(!hub
 assert(hub.includes('MovieNightPolicy.allowed'));assert(hub.includes('MovieNightPolicy.tieIndices'));
 assert(hub.includes('Earlier votes stay hidden'));assert(hub.includes('withTimeoutOrNull(25_000)'));
 assert(hub.includes('No automatic friend-data reads or publishing'));
-assert(read('ui/AppState.kt').includes('StreamOrdering.best(streams,audioLanguage,bandwidth,seconds)'));
+assert(read('ui/AppState.kt').includes('StreamOrdering.best(streams,audioLanguage,bandwidth,seconds,::audioSourceRank)'));
 const order=read('data/StreamOrdering.kt');assert(order.indexOf('if(spanish) languageRank')<order.indexOf('AdaptiveSourcePolicy.fits'));
 assert(read('ui/CinemaJourneys.kt').includes('state.episodeWatched'));assert(read('ui/CinemaJourneys.kt').includes('state.saveCinemaJourney(name)'));
 assert(read('ui/TasteTuning.kt').includes('not analysis of those qualities in the video'));

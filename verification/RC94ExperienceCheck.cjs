@@ -1,0 +1,13 @@
+'use strict';
+const fs=require('fs'),assert=require('assert'),r='app/src/main/java/com/miflix/native2/',read=p=>fs.readFileSync(r+p,'utf8');
+const sheet=read('ui/PartyPresentation.kt'),state=read('ui/AppState.kt'),ui=read('ui/Screens.kt');
+assert(sheet.includes('LocalBringIntoViewSpec provides bring'));assert(sheet.includes('LaunchedEffect(resetKey) {sheetScroll.scrollToItem(0)'));assert(sheet.includes('onFocusChanged {if(it.isFocused) sheetScope.launch {sheetScroll.scrollToItem(0)}}'));
+assert(read('ui/CinemaHub.kt').includes('resetKey="$phase:$person"'));
+assert(read('ui/Components.kt').includes('delay(750)'));assert(!read('ui/Components.kt').includes('delay(1000)'));
+assert(state.includes('AudioSourcePolicy.rank(info.audio,audioDecoderMimes)'));assert(state.includes('StreamOrdering.best(streams,audioLanguage,bandwidth,seconds,::audioSourceRank)'));
+assert(ui.includes('No supported Spanish audio in this source'));assert(ui.includes('audio.none {g ->(0 until g.length).any {g.isTrackSupported(it)}}'));
+assert(read('ui/DiscoveryHome.kt').includes('val rows=remember {'));assert(read('ui/DiscoveryHome.kt').includes('onWorking={state.recordDiscovery("trailers",item)}'));
+assert(state.includes('history.indexOf(it.cloudId)'));assert(state.includes('val selected=(if(unseen.isNotEmpty()) unseen else ordered).take(25)'));
+const html=fs.readFileSync('app/src/main/assets/discovery_youtube.html','utf8');assert(html.includes('controls:0,disablekb:1'));
+for(const n of ['ui/PartyPresentation.kt','ui/CinemaHub.kt','ui/Components.kt','ui/DiscoveryHome.kt','ui/LidomYoutubePlayer.kt','ui/AppState.kt','ui/Screens.kt','data/AudioSourcePolicy.java','data/StreamOrdering.kt','data/TmdbRepository.kt','ui/UpdateNotes.kt'])assert.equal(read(n),fs.readFileSync('main/java/com/miflix/native2/'+n,'utf8'));
+console.log('PASS: panel restoration/turn reset, 750ms hold, audio and Spanish checks, history rotation and compact controls');

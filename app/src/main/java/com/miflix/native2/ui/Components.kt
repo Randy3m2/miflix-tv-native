@@ -115,7 +115,7 @@ fun Modifier.tvPlaybackClick(onClick: () -> Unit, onLongClick: () -> Unit): Modi
                 held = true
                 longFired = false
                 pending = scope.launch {
-                    delay(1000)
+                    delay(750)
                     if (held) { longFired = true; longAction() }
                 }
             } else if (event.type == KeyEventType.KeyUp) {

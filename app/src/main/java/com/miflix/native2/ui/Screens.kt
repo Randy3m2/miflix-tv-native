@@ -148,10 +148,10 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     val contextualMood=remember(clock) {com.miflix.native2.data.DiscoveryMood.context(clock.get(java.util.Calendar.HOUR_OF_DAY),clock.get(java.util.Calendar.MONTH)+1,clock.get(java.util.Calendar.DAY_OF_MONTH),clock.get(java.util.Calendar.DAY_OF_WEEK) in setOf(java.util.Calendar.SATURDAY,java.util.Calendar.SUNDAY))}
     val effectiveMood=discoveryMood.ifEmpty {contextualMood}
     val holiday=if(effectiveMood=="christmas") state.christmasPicks.toList() else if(effectiveMood=="halloween") state.horrorPicks.toList() else emptyList()
-    LaunchedEffect(discoveryOwner,effectiveMood,holiday,discoveryRetry,state.appForeground,state.forYou.toList()) {
+    LaunchedEffect(discoveryOwner,effectiveMood,discoveryRetry,state.appForeground) {
         if(!state.appForeground) return@LaunchedEffect
         discoveryRows=emptyList();discoveryLoading=true;discoveryError=false
-        try {val contextual=if(effectiveMood in setOf("christmas","halloween")) holiday else state.discoveryPicks(effectiveMood);discoveryRows=(if(discoveryMood.isEmpty()) state.forYou+contextual else contextual).distinctBy {it.cloudId}.take(40)}
+        try {val contextual=state.discoveryRun(effectiveMood);discoveryRows=state.freshDiscoveryRows("mood:$effectiveMood",(if(discoveryMood.isEmpty()) state.forYou+contextual else contextual).distinctBy {it.cloudId})}
         catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {discoveryError=true} finally {discoveryLoading=false}
     }
     if(showTrailers) DiscoveryTrailers(state,(discoveryRows+state.forYou+state.trending+state.movies+state.series).distinctBy {it.cloudId}) {showTrailers=false}
@@ -196,7 +196,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 fun shelf(key:String,content:@Composable ()->Unit) {homeSections.add(HomeSection(key,content))}
                 shelf(key="discovery-controls") {
                     DiscoveryControls(discoveryMood,discoveryLoading || state.randomChoosing,
-                        onMood={discoveryMood=it},onTrailers={showTrailers=true},onTools={showCinemaHub=true},
+                        onMood={discoveryMood=it;discoveryRetry++},onTrailers={showTrailers=true},onTools={showCinemaHub=true},
                         onSurprise={if(!discoveryLoading && !state.randomChoosing) {if(discoveryRows.isEmpty()) state.error=tr("La selección aún no está disponible. Elige otro ánimo o reintenta.","Picks are not available yet. Choose another mood or retry.") else state.launch {state.surpriseDiscovery(discoveryRows)}}})
                 }
                 if(discoveryRows.isNotEmpty()) shelf(key="discovery-picks") {
@@ -983,7 +983,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     }}
                     if(category=="playback") item(key="adaptive-source") {SettingsSectionCard {
                         Text(tr("Seleccionar la mejor fuente","Select the best source"),color=Color.White,fontSize=22.sp)
-                        Text(tr("Conserva el idioma y los filtros; adapta calidad y tamaño a la velocidad estimada. No hace un test de velocidad adicional.","Keeps language and filters; adapts quality and size to estimated throughput. No extra speed test."),color=Muted)
+                        Text(tr("Idioma y audio compatible primero. Activa el ajuste de calidad y tamaño a la velocidad estimada; sin test de velocidad adicional.","Language and supported audio come first. Enable throughput-aware quality and size selection; no extra speed test."),color=Muted)
                         FocusButton(if(state.adaptiveSource) "ON" else "OFF") {state.saveAdaptiveSource(!state.adaptiveSource)}
                     }}
                     if(category=="system") item(key="cinema-stats") {SettingsSectionCard {
@@ -1516,7 +1516,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 playbackError==null && !advancingSource && state.sourceSelection==null
             // Also inspect errors emitted before the listener was attached.
             val failure=player.playerError
-            if(eligible && failure!=null && com.miflix.native2.player.SourceFallbackBudget.sourceFailure(failure.errorCode)) {
+            if(eligible && failure!=null && (com.miflix.native2.player.SourceFallbackBudget.sourceFailure(failure.errorCode) || failure.errorCode in setOf(5001,5002))) {
                 advanceSourceOrShow(playerFailureDetails(failure))
             } else if(watchdog.shouldAdvance(android.os.SystemClock.elapsedRealtime(),firstFrame,
                     player.playbackState==Player.STATE_BUFFERING,eligible)) {
@@ -1543,12 +1543,26 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                     player.prepare()
                     return
                 }
-                if(!request.live && com.miflix.native2.player.SourceFallbackBudget.sourceFailure(error.errorCode)) {
+                if(!request.live && (com.miflix.native2.player.SourceFallbackBudget.sourceFailure(error.errorCode) || error.errorCode in setOf(5001,5002))) {
                     advanceSourceOrShow(playerFailureDetails(error))
                 } else playbackError=playerFailureDetails(error)
             }
             override fun onTracksChanged(value: androidx.media3.common.Tracks) {
                 tracks = value
+                if(!request.live && state.watchParty==null) {
+                    val audio=value.groups.filter {it.type==C.TRACK_TYPE_AUDIO}
+                    if(audio.isNotEmpty() && audio.none {g ->(0 until g.length).any {g.isTrackSupported(it)}}) {
+                        advanceSourceOrShow(tr("Audio no compatible. Probando otra fuente…","Unsupported audio. Trying another source…"))
+                        return
+                    }
+                    if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(state.audioLanguage) && com.miflix.native2.data.StreamOrdering.languageRank(request.stream)==0) {
+                        val supported=audio.flatMap {g ->(0 until g.length).filter {g.isTrackSupported(it)}.map {g.getTrackFormat(it).language.orEmpty().lowercase(java.util.Locale.ROOT)}}
+                        if(supported.isNotEmpty() && supported.all {it.isNotBlank() && it !in setOf("und","mul","zxx")} && supported.none {com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(it)}) {
+                            advanceSourceOrShow(tr("Esta fuente no tiene audio español compatible. Probando otra…","No supported Spanish audio in this source. Trying another…"))
+                            return
+                        }
+                    }
+                }
                 // Reject a falsely labelled English release only when every supported
                 // audio track has an explicit language and none is English.
                 if(!request.live && state.watchParty==null &&

@@ -6,6 +6,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -35,30 +38,44 @@ import com.miflix.native2.model.Profile
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 
 internal fun partyJoinUrl(code: String) = "https://randy3m2.github.io/miflix-tv-native/party/?room=$code"
 
 /** The window itself never dims the video; only the right panel draws a scrim. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-internal fun PlayerSideSheet(title: String,close: () -> Unit,content: LazyListScope.() -> Unit) {
+internal fun PlayerSideSheet(title: String,close: () -> Unit,resetKey:Any?=null,content: LazyListScope.() -> Unit) {
     val first=remember {FocusRequester()}
+    val sheetScroll=rememberLazyListState()
+    val sheetScope=rememberCoroutineScope()
+    val bring=remember {object:BringIntoViewSpec {
+        override fun calculateScrollDistance(offset:Float,size:Float,containerSize:Float):Float = when {
+            size>=containerSize ->offset
+            offset<8f ->offset-8f
+            offset+size>containerSize-8f ->offset+size-containerSize+8f
+            else ->0f
+        }
+    }}
     Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         val view=LocalView.current
         DisposableEffect(view) {
             (view.parent as? DialogWindowProvider)?.window?.setDimAmount(0f)
             onDispose { }
         }
-        LaunchedEffect(Unit) {withFrameNanos { };runCatching {first.requestFocus()} }
+        LaunchedEffect(resetKey) {sheetScroll.scrollToItem(0);withFrameNanos { };runCatching {first.requestFocus()} }
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val panelWidth=(maxWidth*.52f).coerceIn(360.dp,560.dp).coerceAtMost(maxWidth)
             Column(Modifier.align(Alignment.CenterEnd).padding(14.dp).width(panelWidth).fillMaxHeight()
                 .background(Color(0xF01A1A23),RoundedCornerShape(24.dp)).padding(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     Text(title,color=Color.White,fontSize=26.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
-                    FocusButton(tr("Cerrar","Close"),modifier=Modifier.focusRequester(first),onClick=close)
+                    FocusButton(tr("Cerrar","Close"),modifier=Modifier.focusRequester(first).onFocusChanged {if(it.isFocused) sheetScope.launch {sheetScroll.scrollToItem(0)}},onClick=close)
                 }
-                LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(bottom=20.dp),verticalArrangement=Arrangement.spacedBy(12.dp),content=content)
+                CompositionLocalProvider(LocalBringIntoViewSpec provides bring) {
+                    LazyColumn(Modifier.weight(1f).fillMaxWidth(),state=sheetScroll,contentPadding=PaddingValues(top=8.dp,bottom=20.dp),verticalArrangement=Arrangement.spacedBy(12.dp),content=content)
+                }
             }
         }
     }

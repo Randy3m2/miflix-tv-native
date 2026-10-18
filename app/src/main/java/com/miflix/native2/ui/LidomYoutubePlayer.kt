@@ -105,7 +105,6 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
         Column(Modifier.fillMaxSize().background(Color.Black).then(if(preview) remoteController else Modifier)) {
             if(preview) {
                 Text(caption,color=Color.White,fontSize=20.sp,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.fillMaxWidth().padding(start=24.dp,end=24.dp,top=10.dp,bottom=4.dp))
-                Text(tr("OK · Pausa / Reproducir     Atrás · Cerrar","OK · Pause / Play     Back · Close"),color=Muted,fontSize=11.sp,modifier=Modifier.padding(start=24.dp,bottom=8.dp))
             } else Row(Modifier.fillMaxWidth().padding(10.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                 FocusButton(tr("Volver a fuentes","Back to sources"),onClick=close)
                 FocusButton(tr("Pausa / Reproducir","Pause / Play")) {view?.evaluateJavascript("brunioPlayPause()",null)}
@@ -115,7 +114,7 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
             }
             if(status.startsWith("error:") || status=="blocked") Row(Modifier.padding(10.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                 Text(tr("YouTube no permite reproducir aquí o requiere interacción. ","YouTube playback is blocked here or needs interaction. ")+status,color=Color.White,modifier=Modifier.weight(1f))
-                FocusButton(if(preview) tr("Siguiente tráiler","Next trailer") else tr("Probar otra fuente","Try another source"),onClick=next ?: close)
+                if(!preview) FocusButton(tr("Probar otra fuente","Try another source"),onClick=close)
             }
             AndroidView(modifier=Modifier.weight(1f).fillMaxWidth().then(if(preview) Modifier.focusRequester(previewFocus).focusable() else Modifier),factory={c ->
                 val frame=android.widget.FrameLayout(c)
@@ -144,8 +143,8 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
                 frame.addView(web)
                 frame
             })
-            if(preview) TrailerActionBar(previous,next,details,watch,swipe)
+        if(preview) TrailerActionBar(previous,next,details,watch,swipe)
 
-        }
     }
+}
 }

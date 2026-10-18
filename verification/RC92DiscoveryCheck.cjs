@@ -24,5 +24,5 @@ assert(read(root+'ui/MenuExperience.kt').includes('!state.discoveryPreviewActive
 const app=read(root+'ui/AppState.kt');const surprise=app.slice(app.indexOf('suspend fun surpriseDiscovery'),app.indexOf('fun localSearch'));
 assert(surprise.includes('playResolved(item,imdb,season,season,resumeOverride=0)'));assert(!surprise.includes('open(item)'));assert(surprise.includes('playbackWork.current(ticket)'));
 assert(repo.includes('params["with_runtime.gte"]="1"'));assert(repo.includes('params["with_runtime.lte"]="30"'));assert(repo.includes('suspend fun previewTrailers'));
-assert(youtube.includes('controls:1'));assert(youtube.includes('strict-origin-when-cross-origin'));assert(!ui.includes('supabase'));assert(!ui.includes('setInterval'));
+assert(youtube.includes('controls:0'));assert(youtube.includes('strict-origin-when-cross-origin'));assert(!ui.includes('supabase'));assert(!ui.includes('setInterval'));
 console.log('PASS: preview clock, paused-time exclusion, one end event, horizontal feed, official embed lifecycle, runtime filters and mirrors');

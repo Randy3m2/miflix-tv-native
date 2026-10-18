@@ -186,7 +186,7 @@ private fun MovieNightPanel(state:AppState,exit:()->Unit,back:()->Unit) {
             winner=chosen;phase="result"
         }
     }
-    PlayerSideSheet(tr("Ruleta · Noche de cine","Movie night roulette"),back) {
+    PlayerSideSheet(tr("Ruleta · Noche de cine","Movie night roulette")+if(phase in setOf("preferences","vote")) " · ${person+1}/$count" else "",back,resetKey="$phase:$person") {
         if(message.isNotBlank()) item {Text(message,color=Accent)}
         when(phase) {
             "setup" -> {

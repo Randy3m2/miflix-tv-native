@@ -61,18 +61,18 @@ internal fun LocalListCardRC104(preview:LocalListPreviewRC104,modifier:Modifier=
     val scale by animateFloatAsState(if(active) 1.025f else 1f,label="list-preview-focus")
     val shape=RoundedCornerShape(22.dp)
     Box(modifier.height(208.dp).graphicsLayer {scaleX=scale;scaleY=scale}.onFocusChanged {focused=it.isFocused}
-        .clip(shape).background(Brush.linearGradient(listOf(Color(0xFF2C4165),Color(0xFF172034))))
+        .clip(shape).background(Panel)
         .then(if(onClick!=null) Modifier.hoverable(source).clickable(role=Role.Button,onClick=onClick) else Modifier)) {
         if(preview.covers.isNotEmpty()) Row(Modifier.fillMaxSize(),horizontalArrangement=Arrangement.spacedBy(2.dp)) {
-            preview.covers.forEach {cover ->Box(Modifier.weight(1f).fillMaxHeight().background(Color(0xFF24364E))) {
+            preview.covers.forEach {cover ->Box(Modifier.weight(1f).fillMaxHeight().background(Panel)) {
                 AsyncImage(cover,contentDescription=null,contentScale=ContentScale.Crop,modifier=Modifier.fillMaxSize())
             }}
         } else Box(Modifier.fillMaxSize().padding(bottom=42.dp),contentAlignment=Alignment.Center) {SettingsIconRC103("lists")}
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha=.08f),Color.Black.copy(alpha=.22f),Color(0xFF080D16).copy(alpha=.97f)))))
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha=.08f),Color.Black.copy(alpha=.22f),Bg.copy(alpha=.97f)))))
         Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(18.dp),verticalArrangement=Arrangement.spacedBy(7.dp)) {
-            Text(tr("TU COLECCIÓN","YOUR COLLECTION"),color=Color(0xFF9AE6DC),fontSize=10.sp,fontWeight=FontWeight.Bold)
+            Text(tr("TU COLECCIÓN","YOUR COLLECTION"),color=Accent,fontSize=10.sp,fontWeight=FontWeight.Bold)
             Text(preview.name,color=Color.White,fontSize=21.sp,lineHeight=25.sp,fontWeight=FontWeight.Bold,maxLines=2,overflow=TextOverflow.Ellipsis)
-            Text(if(preview.count==0) tr("Lista vacía · Añade tus favoritos","Empty list · Add your favorites") else "${preview.count} "+tr("títulos","titles"),color=Color(0xFFD0DBE8),fontSize=12.sp)
+            Text(if(preview.count==0) tr("Lista vacía · Añade tus favoritos","Empty list · Add your favorites") else "${preview.count} "+tr("títulos","titles"),color=Muted,fontSize=12.sp)
         }
         Box(Modifier.fillMaxSize().border(if(active) 2.dp else 1.dp,if(active) Color.White else Color.White.copy(alpha=.16f),shape))
     }
@@ -84,13 +84,21 @@ private fun CreateListCardRC104(modifier:Modifier=Modifier,onClick:()->Unit) {
     val source=remember {MutableInteractionSource()}
     val hovered by source.collectIsHoveredAsState()
     val shape=RoundedCornerShape(22.dp)
-    Column(modifier.height(208.dp).onFocusChanged {focused=it.isFocused}.clip(shape)
-        .background(Brush.linearGradient(listOf(Color(0xFF23445B),Color(0xFF172139))))
-        .border(if(focused || hovered) 2.dp else 1.dp,if(focused || hovered) Color.White else Color(0xFF48677C),shape)
-        .hoverable(source).clickable(role=Role.Button,onClick=onClick).padding(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        Text("+",color=Color(0xFF9AE6DC),fontSize=36.sp,fontWeight=FontWeight.Light)
-        Text(tr("Crea tu próxima colección","Create your next collection"),color=Color.White,fontSize=21.sp,lineHeight=25.sp,fontWeight=FontWeight.Bold,maxLines=2)
-        Text(tr("Tus títulos. Tu nombre. Tu estilo.","Your titles. Your name. Your style."),color=Color(0xFFB6CBDD),fontSize=12.sp)
+    // Home can constrain the shelf height below 208dp. Keep the primary action centered
+    // and omit secondary copy when there is insufficient room, instead of clipping it.
+    BoxWithConstraints(modifier.height(208.dp).onFocusChanged {focused=it.isFocused}.clip(shape)
+        .background(Panel).border(if(focused || hovered) 2.dp else 1.dp,if(focused || hovered) Color.White else PanelBorder,shape)
+        .hoverable(source).clickable(role=Role.Button,onClick=onClick),contentAlignment=Alignment.Center) {
+        val showSubtitle=maxHeight>=132.dp
+        Row(Modifier.fillMaxWidth().padding(horizontal=18.dp,vertical=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
+            Box(Modifier.size(38.dp).background(Color.White.copy(alpha=.08f),RoundedCornerShape(12.dp)),contentAlignment=Alignment.Center) {
+                Text("+",color=Color.White,fontSize=27.sp,lineHeight=30.sp)
+            }
+            Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(7.dp)) {
+                Text(tr("Crear lista","Create list"),color=Color.White,fontSize=20.sp,lineHeight=25.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
+                if(showSubtitle) Text(tr("Películas y series, a tu manera.","Movies and series, your way."),color=Muted,fontSize=12.sp,lineHeight=17.sp,maxLines=2,overflow=TextOverflow.Ellipsis)
+            }
+        }
     }
 }
 
@@ -100,7 +108,7 @@ internal fun LocalListsHomeRC104(state:AppState,onOpen:(String?)->Unit) {
     val previews=remember(owner,extras.revision) {extras.lists(owner).map(::localListPreviewRC104)}
     Column(Modifier.fillMaxWidth().padding(vertical=20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         Column(Modifier.padding(horizontal=40.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-            Text(tr("HECHAS POR TI","CURATED BY YOU"),color=Color(0xFF9AE6DC),fontSize=11.sp,fontWeight=FontWeight.Bold)
+            Text(tr("HECHAS POR TI","CURATED BY YOU"),color=Accent,fontSize=11.sp,fontWeight=FontWeight.Bold)
             Text(tr("Tus listas, tus historias","Your lists, your stories"),color=Color.White,fontSize=28.sp,fontWeight=FontWeight.Bold)
             Text(tr("Tus colecciones con un vistazo a lo que guardaste.","Your collections, with a peek at what you saved."),color=Muted,fontSize=14.sp)
         }
@@ -120,11 +128,11 @@ internal fun LocalListsPanelRC104(title:String,close:()->Unit,content:@Composabl
             val first=remember {FocusRequester()}
             LaunchedEffect(Unit) {withFrameNanos {};runCatching {first.requestFocus()}}
             Column(Modifier.widthIn(max=900.dp).fillMaxWidth().heightIn(max=maxHeight).clip(RoundedCornerShape(26.dp))
-                .background(Brush.verticalGradient(listOf(Color(0xFF1C2D43),Color(0xFF0C121D))))
-                .border(1.dp,Color(0xFF354B65),RoundedCornerShape(26.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                .background(Bg)
+                .border(1.dp,PanelBorder,RoundedCornerShape(26.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)) {
                     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-                        Text(tr("BRUNIO · TUS COLECCIONES","BRUNIO · YOUR COLLECTIONS"),color=Color(0xFF9AE6DC),fontSize=10.sp,fontWeight=FontWeight.Bold)
+                        Text(tr("BRUNIO · TUS COLECCIONES","BRUNIO · YOUR COLLECTIONS"),color=Accent,fontSize=10.sp,fontWeight=FontWeight.Bold)
                         Text(title,color=Color.White,fontSize=26.sp,lineHeight=31.sp,fontWeight=FontWeight.Bold,maxLines=2,overflow=TextOverflow.Ellipsis)
                         Text(tr("Listas de este perfil, guardadas en esta TV.","This profile's lists, saved on this TV."),color=Muted,fontSize=13.sp)
                     }
@@ -138,9 +146,9 @@ internal fun LocalListsPanelRC104(title:String,close:()->Unit,content:@Composabl
 
 @Composable
 internal fun LocalListTitleRC104(item:com.miflix.native2.model.MediaSummary,onOpen:()->Unit,onRemove:()->Unit) {
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0xFF172337)).padding(14.dp),
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Panel).padding(14.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)) {
-        Box(Modifier.width(66.dp).height(98.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFF2D405A)),contentAlignment=Alignment.Center) {
+        Box(Modifier.width(66.dp).height(98.dp).clip(RoundedCornerShape(10.dp)).background(Panel),contentAlignment=Alignment.Center) {
             AsyncImage(item.poster ?: item.backdrop,contentDescription=null,contentScale=ContentScale.Crop,modifier=Modifier.fillMaxSize())
         }
         Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(7.dp)) {

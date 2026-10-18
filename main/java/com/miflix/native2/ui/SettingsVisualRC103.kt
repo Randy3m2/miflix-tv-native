@@ -24,7 +24,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.Role
@@ -40,7 +39,7 @@ import androidx.tv.material3.Text
 internal data class SettingsHelpRC103(val title:String,val description:String,val icon:String,val value:String)
 internal val LocalSettingsHelpRC103=staticCompositionLocalOf<((SettingsHelpRC103)->Unit)?> {null}
 
-private val SettingsAccentRC103=Color(0xFF7CE0D3)
+private val SettingsAccentRC103=Accent
 
 /** Code-drawn icons: sharp on TV, no downloads or additional dependency. */
 @Composable
@@ -71,7 +70,7 @@ internal fun SettingsIconRC103(kind:String) {
 internal fun SettingsHeadingRC103(title:String,subtitle:String) {
     Column(Modifier.fillMaxWidth().padding(top=10.dp,bottom=4.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
         Text(title,color=Color.White,fontSize=21.sp,fontWeight=FontWeight.Bold)
-        Text(subtitle,color=Color(0xFFA9B7C8),fontSize=13.sp,lineHeight=18.sp)
+        Text(subtitle,color=Muted,fontSize=13.sp,lineHeight=18.sp)
     }
 }
 
@@ -96,39 +95,39 @@ internal fun SettingsTileRC103(title:String,description:String,icon:String,modif
     val help by rememberUpdatedState(LocalSettingsHelpRC103.current)
     val value=if(checked==null) tr("Abrir opciones","Open options") else if(checked) tr("Activado","On") else tr("Desactivado","Off")
     LaunchedEffect(active,title,description,checked,icon) {if(active) help?.invoke(SettingsHelpRC103(title,description,icon,value))}
-    val edge by animateColorAsState(if(active) Color.White else if(checked==true) SettingsAccentRC103.copy(alpha=.45f) else Color(0xFF2B3549),label="settingsEdge")
-    val track by animateColorAsState(if(checked==true) SettingsAccentRC103 else Color(0xFF455065),label="settingsTrack")
+    val edge by animateColorAsState(if(active) Color.White else if(checked==true) SettingsAccentRC103.copy(alpha=.45f) else PanelBorder,label="settingsEdge")
+    val track by animateColorAsState(if(checked==true) SettingsAccentRC103 else Color(0xFF454545),label="settingsTrack")
     val position by animateFloatAsState(if(checked==true) 1f else 0f,label="settingsThumb")
     val shape=RoundedCornerShape(18.dp)
     val interaction=if(checked==null) Modifier.clickable(role=Role.Button,onClick=onClick) else Modifier
         .semantics {stateDescription=if(checked) tr("Activado","On") else tr("Desactivado","Off")}
         .toggleable(value=checked,role=Role.Switch,onValueChange={onClick()})
-    Row(modifier.fillMaxWidth().clip(shape).background(Brush.horizontalGradient(listOf(if(active) Color(0xFF27394E) else Color(0xFF182133),Color(0xFF101725))))
+    Row(modifier.fillMaxWidth().clip(shape).background(Panel)
         .border(if(active) 2.dp else 1.dp,edge,shape).onFocusChanged {focused=it.isFocused}.hoverable(hoverSource).then(interaction).padding(16.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
         SettingsIconRC103(icon)
         Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
             Text(title,color=Color.White,fontSize=17.sp,lineHeight=22.sp,fontWeight=FontWeight.SemiBold)
-            Text(description,color=Color(0xFFB6C3D4),fontSize=13.sp,lineHeight=18.sp)
+            Text(description,color=Muted,fontSize=13.sp,lineHeight=18.sp)
         }
         if(checked!=null) Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(5.dp)) {
             Canvas(Modifier.size(44.dp,26.dp)) {
                 drawRoundRect(track,cornerRadius=androidx.compose.ui.geometry.CornerRadius(size.height/2))
                 val radius=size.height/2-3.dp.toPx()
-                drawCircle(if(checked) Color(0xFF092522) else Color.White,radius,Offset(size.height/2+(size.width-size.height)*position,size.height/2))
+                drawCircle(if(checked) Color.White else Color.White,radius,Offset(size.height/2+(size.width-size.height)*position,size.height/2))
             }
-            Text(if(checked) tr("ACTIVO","ON") else tr("INACTIVO","OFF"),color=if(checked) SettingsAccentRC103 else Color(0xFFA9B7C8),fontSize=10.sp,fontWeight=FontWeight.Bold)
+            Text(if(checked) tr("ACTIVO","ON") else tr("INACTIVO","OFF"),color=if(checked) SettingsAccentRC103 else Muted,fontSize=10.sp,fontWeight=FontWeight.Bold)
         } else Text("›",color=if(active) Color.White else SettingsAccentRC103,fontSize=30.sp)
     }
 }
 
 @Composable
 private fun SettingsHelpPanelRC103(help:SettingsHelpRC103,modifier:Modifier=Modifier) {
-    Column(modifier.clip(RoundedCornerShape(18.dp)).background(Color(0xFF101B2B)).border(1.dp,Color(0xFF30445C),RoundedCornerShape(18.dp)).padding(18.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+    Column(modifier.clip(RoundedCornerShape(18.dp)).background(Panel).border(1.dp,PanelBorder,RoundedCornerShape(18.dp)).padding(18.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         SettingsIconRC103(help.icon)
         Text(tr("ASÍ FUNCIONA","HOW IT WORKS"),color=SettingsAccentRC103,fontSize=11.sp,fontWeight=FontWeight.Bold)
         Text(help.title,color=Color.White,fontSize=21.sp,lineHeight=26.sp,fontWeight=FontWeight.Bold)
-        Text(help.description,color=Color(0xFFB6C3D4),fontSize=14.sp,lineHeight=21.sp)
+        Text(help.description,color=Muted,fontSize=14.sp,lineHeight=21.sp)
         if(help.value.isNotBlank()) Text(help.value,color=SettingsAccentRC103,fontSize=14.sp,fontWeight=FontWeight.SemiBold)
     }
 }
@@ -143,13 +142,13 @@ internal fun SettingsDialogRC103(title:String,subtitle:String,close:()->Unit,con
             val wide=maxWidth>=720.dp
             LaunchedEffect(Unit) {withFrameNanos {};runCatching {first.requestFocus()}}
             Column(Modifier.widthIn(max=1120.dp).fillMaxWidth().heightIn(max=maxHeight)
-                .clip(RoundedCornerShape(26.dp)).background(Brush.verticalGradient(listOf(Color(0xFF172538),Color(0xFF0C111C))))
-                .border(1.dp,Color(0xFF35465C),RoundedCornerShape(26.dp)).padding(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+                .clip(RoundedCornerShape(26.dp)).background(Bg)
+                .border(1.dp,PanelBorder,RoundedCornerShape(26.dp)).padding(22.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)) {
                     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
                         Text("B R U N I O  /  "+tr("TU EXPERIENCIA","YOUR EXPERIENCE"),color=SettingsAccentRC103,fontSize=10.sp,fontWeight=FontWeight.Bold)
                         Text(title,color=Color.White,fontSize=27.sp,fontWeight=FontWeight.Bold)
-                        Text(subtitle,color=Color(0xFFB6C3D4),fontSize=13.sp,lineHeight=18.sp)
+                        Text(subtitle,color=Muted,fontSize=13.sp,lineHeight=18.sp)
                     }
                     FocusButton(tr("Listo","Done"),modifier=Modifier.focusRequester(first)) {close()}
                 }

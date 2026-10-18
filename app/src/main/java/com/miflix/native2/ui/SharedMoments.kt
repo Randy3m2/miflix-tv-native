@@ -14,6 +14,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
+import coil3.compose.AsyncImage
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -80,19 +84,39 @@ internal fun SharedMomentsInbox(state: AppState,close: () -> Unit) {
     PlayerMenuDialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         LazyColumn(Modifier.width(630.dp).heightIn(max=460.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),
             verticalArrangement=Arrangement.spacedBy(14.dp)) {
-            item {Text(tr("Momentos compartidos","Shared moments"),color=Color.White,fontSize=26.sp)}
+            item {Column(verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                Text(tr("COMPARTIDO CONTIGO","SHARED WITH YOU"),color=Accent,fontSize=11.sp,fontWeight=FontWeight.Bold)
+                Text(tr("Momentos compartidos","Shared moments"),color=Color.White,fontSize=27.sp,fontWeight=FontWeight.Bold)
+            }}
             item {Text(tr("Pulsa Actualizar para buscar momentos nuevos. No se revisan automáticamente.","Select Refresh to check for new moments. No automatic checks."),color=Muted)}
-            item {FocusButton(if(state.sharedMomentsLoading) tr("Actualizando…","Refreshing…") else tr("Actualizar momentos","Refresh moments")) {
+            item {FeatureActionCard(if(state.sharedMomentsLoading) tr("Actualizando…","Refreshing…") else tr("Actualizar momentos","Refresh moments"),tr("Tú eliges cuándo buscar novedades","You choose when to check for new moments"),glyph="↻",modifier=Modifier.fillMaxWidth()) {
                 if(!state.sharedMomentsLoading) state.launch {state.refreshSharedMoments()}
             }}
             if(rows.isEmpty()) item {Text(tr("No hay momentos cargados.","No loaded moments."),color=Muted)}
             items(rows,key={it.id}) { moment ->
-                Column(Modifier.fillMaxWidth().background(Bg,RoundedCornerShape(14.dp)).padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                    Text(moment.title,color=Color.White,fontSize=20.sp)
-                    Text("${moment.nickname} · "+(if(moment.season>0) "S${moment.season} E${moment.episode} · " else "")+
-                        "${momentTime(moment.startMs)} – ${momentTime(moment.endMs)}",color=Muted)
+                val sender=state.friendActivity.firstOrNull {it.id==moment.sender}
+                val known=(state.movies+state.series+state.continueWatching+state.collectionItems).firstOrNull {it.cloudId==moment.cloud}
+                Column(Modifier.fillMaxWidth().background(Bg,RoundedCornerShape(20.dp))
+                    .border(1.dp,Accent.copy(alpha=.23f),RoundedCornerShape(20.dp)).padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+                    Row(horizontalArrangement=Arrangement.spacedBy(16.dp),verticalAlignment=Alignment.CenterVertically) {
+                        Box(Modifier.size(76.dp,112.dp).clip(RoundedCornerShape(12.dp)).background(Accent.copy(alpha=.12f)),contentAlignment=Alignment.Center) {
+                            if(known?.poster!=null) AsyncImage(known.poster,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+                            else Text("▶",color=Accent,fontSize=30.sp)
+                        }
+                        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                            Row(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
+                                ProfileAvatar(Profile(moment.sender,moment.nickname,sender?.avatar),Modifier.size(28.dp).clip(CircleShape))
+                                Text(moment.nickname,color=Muted,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+                            }
+                            Text(moment.title,color=Color.White,fontSize=19.sp,fontWeight=FontWeight.Bold,maxLines=2,overflow=TextOverflow.Ellipsis)
+                            if(moment.season>0) Text("S${moment.season} · E${moment.episode}",color=Muted,fontSize=12.sp)
+                            Text("${momentTime(moment.startMs)} → ${momentTime(moment.endMs)}  ·  ${momentTime(moment.endMs-moment.startMs)}",
+                                color=Accent,fontSize=12.sp,fontWeight=FontWeight.Bold,
+                                modifier=Modifier.background(Accent.copy(alpha=.1f),RoundedCornerShape(8.dp)).padding(horizontal=10.dp,vertical=6.dp))
+                        }
+                    }
                     Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                        FocusButton(if(state.watchParty!=null || state.pendingPartyCode!=null) tr("Salir del party y ver","Leave party and play") else tr("Ver momento","Play moment")) {
+                        FocusButton(if(state.watchParty!=null || state.pendingPartyCode!=null) tr("Salir del party y ver","Leave party and play") else tr("Ver momento","Play moment"),primary=true) {
                             if(!busy) {busy=true;state.launch {
                                 try {state.playSharedMoment(moment);if(state.screen==Screen.PLAYER) close()}
                                 finally {busy=false}

@@ -23,6 +23,8 @@ internal object StreamOrdering {
         .containsMatchIn(stream.name+" "+stream.title)
     fun languageRank(stream: StreamChoice): Int = StreamLanguagePriority.rank(
         stream.audioLanguages.joinToString(" "), "${stream.name}\n${stream.title}\n${stream.filename}")
+    fun hasEnglishAudio(stream: StreamChoice): Boolean = StreamLanguagePriority.hasEnglishAudio(
+        stream.audioLanguages.joinToString(" "),"${stream.name}\n${stream.title}\n${stream.filename}")
     /** Provider-neutral automatic selection: language precedes resolution, size and add-on order. */
     fun best(streams: List<StreamChoice>,preferredAudio: String = ""): StreamChoice? =
         sorted(streams,preferredAudio).firstOrNull()
@@ -37,8 +39,9 @@ internal object StreamOrdering {
     }
     fun sorted(streams: List<StreamChoice>, preferredAudio: String = ""): List<StreamChoice> {
         val spanish = StreamLanguagePriority.prefersSpanish(preferredAudio)
+        val english = StreamLanguagePriority.prefersEnglish(preferredAudio)
         return streams.filter { playable(it) }
-            .sortedWith(compareBy<StreamChoice> { if(spanish) languageRank(it) else 0 }
+            .sortedWith(compareBy<StreamChoice> { if(spanish) languageRank(it) else if(english) {if(hasEnglishAudio(it)) 0 else if(languageRank(it)==2) 1 else 2} else 0 }
                 .thenByDescending { quality(it) }.thenByDescending { bytes(it) })
             .distinctBy { it.url }
     }

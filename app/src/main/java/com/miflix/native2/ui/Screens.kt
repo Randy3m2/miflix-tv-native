@@ -471,8 +471,8 @@ fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
                     if(state.christmasCollectionPicks.isNotEmpty()) {
                         SpotlightRail(tr("Películas navideñas · Mejor valoradas","Christmas Movies · Best rated"),state.christmasCollectionPicks,
                             onClick={state.launch {state.open(it)}})
-                        FocusButton(tr("Ver todas · Cargar más de 25","View all · Load more 25"),
-                            modifier=Modifier.padding(start=34.dp,bottom=20.dp).then(homeReturnFocus("collections:christmas"))) {
+                        FeatureActionCard(tr("Explorar Navidad","Explore Christmas Movies"),tr("Las mejores · Carga 25 más","Best rated · Load 25 more"),
+                            modifier=Modifier.padding(start=34.dp,bottom=20.dp).width(370.dp).then(homeReturnFocus("collections:christmas"))) {
                             state.launch {state.openChristmasCollection()}
                         }
                     } else Column(Modifier.padding(horizontal=34.dp,vertical=18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -1496,6 +1496,19 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
             override fun onTracksChanged(value: androidx.media3.common.Tracks) {
                 tracks = value
+                // Reject a falsely labelled English release only when every supported
+                // audio track has an explicit language and none is English.
+                if(!request.live && state.watchParty==null &&
+                    com.miflix.native2.data.StreamLanguagePriority.prefersEnglish(state.audioLanguage) &&
+                    com.miflix.native2.data.StreamOrdering.hasEnglishAudio(request.stream)) {
+                    val languages=value.groups.filter {it.type==C.TRACK_TYPE_AUDIO}.flatMap {group ->
+                        (0 until group.length).filter {group.isTrackSupported(it)}.map {group.getTrackFormat(it).language.orEmpty().trim().lowercase(java.util.Locale.ROOT)}
+                    }
+                    val allKnown=languages.isNotEmpty() && languages.all {it.isNotBlank() && it!="und" && it!="mul" && it!="zxx"}
+                    if(allKnown && languages.none {com.miflix.native2.data.StreamLanguagePriority.prefersEnglish(it)}) {
+                        advanceSourceOrShow(tr("Esta fuente no tiene audio inglés. Probando otra…","This source has no English audio. Trying another…"))
+                    }
+                }
                 pendingSubtitleLabel?.let { label ->
                     val group=value.groups.firstOrNull { it.type==C.TRACK_TYPE_TEXT && (0 until it.length).any { index -> it.getTrackFormat(index).label==label && it.isTrackSupported(index) } }
                     if(group!=null) {

@@ -115,7 +115,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             Screen.GENRE_DETAIL -> CatalogScreen(state,state.genreTitle,state.genreItems,onBack={state.screen=state.genreReturnScreen},footer={
                 Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     if(state.genreMessage.isNotBlank()) Text(state.genreMessage,color=Muted)
-                    if(state.genreLoading || state.genreHasMore) FocusButton(if(state.genreLoading) tr("Cargando…","Loading…") else tr("Cargar más · 25","Load more · 25")) {
+                    if(state.genreLoading || state.genreHasMore) FeatureActionCard(if(state.genreLoading) tr("Cargando…","Loading…") else tr("Cargar más","Load more"),tr("25 títulos más","25 more titles"),modifier=Modifier.widthIn(max=400.dp).fillMaxWidth()) {
                         if(!state.genreLoading) state.launch {state.loadMoreGenre()}
                     } else Text(tr("Llegaste al final de esta selección.","You reached the end of this selection."),color=Muted)
                 }
@@ -285,7 +285,7 @@ private fun MyListScreen(state: AppState, onBack: () -> Unit) {
         if(state.myListLoading) Text(tr("Cargando…","Loading…"),color=Color.White)
         else {
             if(state.myListMessage.isNotBlank()) Text(state.myListMessage,color=Color.White)
-            if(ids.size>state.myListLimit) FocusButton(tr("Cargar más · 25","Load more · 25")) {state.myListLimit+=25}
+            if(ids.size>state.myListLimit) FeatureActionCard(tr("Cargar más","Load more"),tr("25 títulos más","25 more titles"),modifier=Modifier.widthIn(max=400.dp).fillMaxWidth()) {state.myListLimit+=25}
             if(state.myListMessage.isNotBlank()) FocusButton(tr("Reintentar","Retry")) { state.launch { state.loadMyListPage(owner,ids) } }
         }
         }

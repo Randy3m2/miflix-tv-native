@@ -78,7 +78,7 @@ fun FriendsScreen(state: AppState) {
                         FocusButton(if(state.watchParty==null) tr("Crear sala","Create Party") else tr("Mi sala","My Party")) { state.screen=Screen.WATCH_PARTY }
                     }
                     Text(tr("Descubre qué están viendo tus amigos.","Discover what your friends are watching."),color=Muted,fontSize=13.sp, lineHeight=16.sp)
-                    FocusButton(tr("Momentos compartidos · actualizar manualmente","Shared moments · manual refresh")) {momentsOpen=true}
+                    FeatureActionCard(tr("Momentos compartidos","Shared moments"),tr("De tus amigos · Actualización manual","From your friends · Manual refresh"),glyph="◷",modifier=Modifier.width(390.dp).padding(top=12.dp)) {momentsOpen=true}
 
                 Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement=Arrangement.spacedBy(16.dp)) {

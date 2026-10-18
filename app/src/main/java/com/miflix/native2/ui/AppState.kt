@@ -2029,12 +2029,21 @@ class AppState(context: Context) {
         val cacheKey="${tmdb.language}:$kidsMode:$normalized"
         searchResultCache[cacheKey]?.takeIf {System.currentTimeMillis()-it.first<5*60*1000L}?.let {return@supervisorScope it.second}
         val local=localSearch(normalized)
-        // One remote title search; do not wait for multiple speculative spelling variants.
-        val remote=tmdb.search(normalized)
+        // Extra queries only when the normal search has no close title match.
+        val remote=mutableListOf<MediaSummary>()
+        var primaryFailed=false
+        try {remote.addAll(tmdb.search(normalized))} catch(e: CancellationException) {throw e} catch(_: Exception) {primaryFailed=true}
+        if(!primaryFailed && (local+remote).none {FlexibleSearch.score(it.title,normalized)>=650}) {
+            for(variant in FlexibleSearch.variants(normalized)) {
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                try {remote.addAll(tmdb.search(variant))} catch(e: CancellationException) {throw e} catch(_: Exception) {break}
+                if(remote.any {FlexibleSearch.score(it.title,normalized)>=650}) break
+            }
+        }
         val all=FlexibleSearch.rank(local+remote,normalized).take(if(kidsMode) 20 else 60)
         val ranked=if(kidsMode) tmdb.kidsFilter(all) else all
         if(searchResultCache.size>=12) searchResultCache.remove(searchResultCache.keys.first())
-        searchResultCache[cacheKey]=System.currentTimeMillis() to ranked
+        if(!primaryFailed) searchResultCache[cacheKey]=System.currentTimeMillis() to ranked
         ranked
     }
 

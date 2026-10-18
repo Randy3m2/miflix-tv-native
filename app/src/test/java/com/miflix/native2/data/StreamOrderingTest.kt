@@ -88,4 +88,24 @@ class StreamOrderingTest {
         assertEquals(listOf(unknown),StreamOrdering.fallbackCandidates(listOf(unknown),"es"))
     }
 
+    @Test fun englishSelectionRejectsHigherQualityForeignSourcesForFirstFiveAttempts() {
+        val english=(1..5).map {stream("en$it","720p English",it.toLong())}
+        val foreign=listOf(stream("pl","2160p Polish"),stream("it","2160p Italian"),stream("fr","2160p French"))
+        val ordered=StreamOrdering.fallbackCandidates(foreign+english,"en")
+        assertTrue(ordered.take(5).all {StreamOrdering.hasEnglishAudio(it)})
+        assertTrue(StreamOrdering.hasEnglishAudio(StreamOrdering.best(foreign+english,"en")!!))
+    }
+    @Test fun bilingualEnglishMetadataCountsButEnglishSubtitlesDoNot() {
+        val bilingual=stream("dual","1080p").copy(audioLanguages=listOf("es","en"))
+        val french=stream("fr","2160p English subtitles").copy(audioLanguages=listOf("fr"))
+        assertTrue(StreamOrdering.hasEnglishAudio(bilingual))
+        assertFalse(StreamOrdering.hasEnglishAudio(french))
+        assertEquals(bilingual,StreamOrdering.best(listOf(french,bilingual),"en"))
+    }
+    @Test fun missingEnglishDoesNotPreventPlayback() {
+        val other=stream("other","1080p Italian")
+        assertEquals(other,StreamOrdering.best(listOf(other),"en"))
+        assertEquals(listOf(other),StreamOrdering.fallbackCandidates(listOf(other),"en"))
+    }
+
 }

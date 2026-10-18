@@ -116,7 +116,7 @@ internal fun SpotlightRail(
                     onFocused={selectedId=item.cloudId;publishPreview?.invoke(item)},onLongClick=hold?.let {action -> {action(item)}},onClick={onClick(item)})
             }
             if(homeShelf && more!=null) item(key="shelf_more") {
-                FocusButton(tr("Cargar más","Load more"),modifier=Modifier.width(150.dp).height(cardRowHeight-12.dp)
+                LoadMoreTile(modifier=Modifier.width(150.dp).height(cardRowHeight-12.dp)
                     .then(homeReturnFocus("more:$shelfKey"))) {more(shelfKey,title,rows)}
             }
         }

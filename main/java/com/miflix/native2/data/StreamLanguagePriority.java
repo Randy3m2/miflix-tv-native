@@ -11,7 +11,7 @@ public final class StreamLanguagePriority {
     private static final String END = "(?![\\p{L}\\p{N}])";
     private static final Pattern SPANISH = Pattern.compile(EDGE + "(?:es(?:[-_](?:es|mx|ar|co|do|cl|pe|ve|ec|419))?|spa|esp|spanish|espanol|castellano|castilian|espana|spain|lat|latino|latina|latam|latin[ ._-]+american|espanol[ ._-]+latino)" + END);
     private static final Pattern ENGLISH = Pattern.compile(EDGE + "(?:en(?:[-_](?:us|gb))?|eng|english|ingles)" + END);
-    private static final Pattern OTHER = Pattern.compile(EDGE + "(?:fr|fra|fre|french|francais|de|deu|ger|german|aleman|it|ita|italian|italiano|pt|por|portuguese|portugues|ru|rus|russian|ruso|ja|jpn|japanese|japones|ko|kor|korean|coreano|hi|hin|hindi)" + END);
+    private static final Pattern OTHER = Pattern.compile(EDGE + "(?:pl|pol|polish|polski|polaco|fr|fra|fre|french|francais|de|deu|ger|german|aleman|it|ita|italian|italiano|pt|por|portuguese|portugues|ru|rus|russian|ruso|ja|jpn|japanese|japones|ko|kor|korean|coreano|hi|hin|hindi)" + END);
     private static final Pattern SUB = Pattern.compile("\\b(?:subtitles?|subs?|subtitulos?|subbed|hardsubs?|vostfr|vose|vosi)\\b");
     private static final Pattern SUB_SECTION = Pattern.compile("(?:[|;]|📝|💬|📜)\\s*(?:subtitles?|subs?|subtitulos?)\\b");
     private static final Pattern AUDIO = Pattern.compile("\\b(?:audio|dubbed|doblado|doblaje)\\b");
@@ -23,6 +23,18 @@ public final class StreamLanguagePriority {
     public static boolean prefersSpanish(String language) {
         String value = normalize(language).trim();
         return value.equals("es") || value.startsWith("es-") || value.equals("spa") || value.equals("spanish") || value.equals("espanol");
+    }
+    public static boolean prefersEnglish(String language) {
+        String value=normalize(language).trim();
+        return value.equals("en") || value.startsWith("en-") || value.equals("eng") || value.equals("english") || value.equals("ingles");
+    }
+    private static boolean englishEvidence(String value) {
+        return ENGLISH.matcher(value).find() || value.contains("🇺🇸") || value.contains("🇬🇧");
+    }
+    public static boolean hasEnglishAudio(String declaredAudioLanguages,String labels) {
+        String declared=normalize(declaredAudioLanguages);
+        if(category(declared)!=2) return englishEvidence(declared);
+        return englishEvidence(audioEvidence(labels));
     }
     private static boolean spanishFlag(String text) {
         return text.contains("🇪🇸") || text.contains("🇲🇽") || text.contains("🇦🇷") || text.contains("🇨🇴") || text.contains("🇩🇴") || text.contains("🇨🇱") || text.contains("🇵🇪") || text.contains("🇻🇪") || text.contains("🇪🇨");
@@ -37,6 +49,9 @@ public final class StreamLanguagePriority {
         // Explicit audio metadata takes precedence over release-name guesses.
         int declared = category(normalize(declaredAudioLanguages));
         if (declared != 2) return declared;
+        return category(audioEvidence(labels));
+    }
+    private static String audioEvidence(String labels) {
         StringBuilder evidence = new StringBuilder();
         for (String line : normalize(labels).split("\\r?\\n")) {
             java.util.regex.Matcher section = SUB_SECTION.matcher(line);
@@ -49,6 +64,6 @@ public final class StreamLanguagePriority {
             }
             evidence.append(line).append('\n');
         }
-        return category(evidence.toString());
+        return evidence.toString();
     }
 }

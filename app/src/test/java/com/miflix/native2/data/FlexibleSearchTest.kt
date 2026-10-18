@@ -20,4 +20,16 @@ class FlexibleSearchTest {
         assertEquals(listOf(exact,other),FlexibleSearch.rank(listOf(other,exact,exact),"silo"))
         assertTrue(FlexibleSearch.variants("breking bad").size<=2)
     }
+    @Test fun transposedLettersAndMissingSpacesMatch() {
+        assertTrue(FlexibleSearch.score("Avengers","Avengres")>=650)
+        assertTrue(FlexibleSearch.score("John Wick","Jhon Wick")>=650)
+        assertTrue(FlexibleSearch.score("Star Wars","starwars")>=900)
+        assertTrue(FlexibleSearch.score("El conjuro","conjuro")>=750)
+        assertTrue(FlexibleSearch.score("Batman","Batman")>FlexibleSearch.score("Batman","Batmam"))
+    }
+    @Test fun typoVariantsStayBounded() {
+        assertTrue(FlexibleSearch.variants("the avengres endgame").size<=2)
+        assertFalse(FlexibleSearch.variants("the avengres endgame").contains("the"))
+    }
+
 }

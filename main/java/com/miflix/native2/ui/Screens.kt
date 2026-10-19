@@ -139,6 +139,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     var showTasteSetup by remember(tasteOwner) {mutableStateOf(state.shouldOfferTasteSetup())}
     if(showTasteSetup && !state.kidsMode) TasteOnboardingRC102(state) {showTasteSetup=false}
     LaunchedEffect(tasteOwner,state.tasteProfile.version(tasteOwner)) {state.refreshForYou()}
+    LaunchedEffect(state.interfaceLanguage,state.activeProfile.id) {if("comfort_comedies" !in state.hiddenHomeRows) state.loadComfortComedyHome()}
     LaunchedEffect(state.interfaceLanguage) {if("novelas" !in state.hiddenHomeRows) state.loadNovelasHome()}
     val discoveryOwner="${state.session?.userId}:${state.activeProfile.id}:${state.interfaceLanguage}"
     var discoveryMood by androidx.compose.runtime.saveable.rememberSaveable(discoveryOwner) {mutableStateOf("")}
@@ -255,6 +256,16 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                     }
                     Spacer(Modifier.height(8.dp))
                 } }
+                if(!state.kidsMode) shelf(key="comfort_comedies") {
+                    if(state.comfortComedyMatch && state.comfortComedyPicks.isNotEmpty()) {
+                        SpotlightRail(tr("Comedias para desconectar","Comfort comedies"),state.comfortComedyPicks.take(25),
+                            eyebrow=tr("TUS FAVORITAS · RISAS · BUENA COMPAÑÍA","FAMILIAR FAVORITES · LAUGHS · GOOD COMPANY"),onClick=openItem)
+                    } else Column(Modifier.padding(horizontal=40.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                        Text(tr("Comedias para desconectar","Comfort comedies"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
+                        Text(if(state.comfortComedyLoading) tr("Preparando historias para ti…","Preparing stories for you…") else state.comfortComedyMessage.ifBlank {tr("Descubre tu próxima comedia favorita.","Find your next favorite comedies.")},color=Muted)
+                        if(!state.comfortComedyLoading) FocusButton(tr("Ver comedias","Explore comedies")) {state.launch {state.loadComfortComedyHome()}}
+                    }
+                }
                 shelf(key="novelas") {
                     if(state.novelasMatch && state.localRecommendations(state.novelasPicks).isNotEmpty()) {
                         SpotlightRail(tr("Novelas que atrapan","Telenovelas to fall for"),state.localRecommendations(state.novelasPicks).take(25),

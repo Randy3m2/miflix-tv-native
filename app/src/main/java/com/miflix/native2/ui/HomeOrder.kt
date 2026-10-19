@@ -18,6 +18,7 @@ internal val HomeRows=listOf(
     "continue" to "Continue Watching",
     "streaming" to "Streaming",
     "genres_home" to "Browse by genre",
+    "comfort_comedies" to "Comfort comedies",
     "novelas" to "Telenovelas",
     "for_you" to "For you",
     "because_you_watched" to "Because you watched",

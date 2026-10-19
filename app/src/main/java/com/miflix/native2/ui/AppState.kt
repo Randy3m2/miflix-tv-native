@@ -130,6 +130,26 @@ class AppState(context: Context) {
         } catch(e:CancellationException) {throw e} catch(_:Exception) {novelasMessage=tr("No se pudieron cargar las novelas. Reintenta.","Telenovelas could not be loaded. Try again.")}
         finally {novelasLoading=false}
     }
+    val comfortComedyPicks=mutableStateListOf<MediaSummary>()
+    var comfortComedyLoading by mutableStateOf(false)
+        private set
+    var comfortComedyMessage by mutableStateOf("")
+        private set
+    private var comfortComedyLocale by mutableStateOf("")
+    val comfortComedyMatch:Boolean get()=!kidsMode && comfortComedyLocale==tmdb.language
+    private val comfortComedyMutex=Mutex()
+    internal suspend fun loadComfortComedyHome()=comfortComedyMutex.withLock {
+        if(kidsMode || tmdb.token.isBlank()) return@withLock
+        val locale=tmdb.language
+        fun publish(rows:List<MediaSummary>) {if(locale==tmdb.language && !kidsMode) {comfortComedyPicks.clear();comfortComedyPicks.addAll(rows);comfortComedyLocale=locale}}
+        comfortComedyLoading=true;comfortComedyMessage=""
+        try {
+            val rows=tmdb.comfortComedyPage(1).rows
+            if(rows.isNotEmpty()) {publish(rows)}
+            else comfortComedyMessage=tr("No se pudieron cargar las comedias. Reintenta.","Comedies could not be loaded. Try again.")
+        } catch(e:CancellationException) {throw e} catch(_:Exception) {comfortComedyMessage=tr("No se pudieron cargar las comedias. Reintenta.","Comedies could not be loaded. Try again.")}
+        finally {comfortComedyLoading=false}
+    }
     private val tasteActorMutex=Mutex()
     internal suspend fun onboardingActors(query:String=""):List<DirectorPerson> = tasteActorMutex.withLock {
         val locale=tmdb.language
@@ -225,7 +245,7 @@ class AppState(context: Context) {
     fun cinemaReport()=cinemaStats.snapshot(ratingsKey())
     private var homeOrderRevision by mutableIntStateOf(0)
     val homeRowOrder:List<String> get() {homeOrderRevision;val a=runCatching {org.json.JSONArray(playbackPrefs.getString("home_order:${ratingsKey()}","[]"))}.getOrDefault(org.json.JSONArray());val keys=(0 until a.length()).map {a.getString(it)}.distinct().toMutableList()
-        if(keys.isNotEmpty() && "novelas" !in keys) {val anchor=listOf("genres_home","streaming","continue").firstOrNull {it in keys};keys.add(if(anchor!=null) keys.indexOf(anchor)+1 else 0,"novelas")};return keys}
+        if(keys.isNotEmpty() && "novelas" !in keys) {val anchor=listOf("genres_home","streaming","continue").firstOrNull {it in keys};keys.add(if(anchor!=null) keys.indexOf(anchor)+1 else 0,"novelas")};if(keys.isNotEmpty() && "comfort_comedies" !in keys) {val anchor=listOf("genres_home","streaming","continue").firstOrNull {it in keys};keys.add(if(anchor!=null) keys.indexOf(anchor)+1 else 0,"comfort_comedies")};return keys}
     fun saveHomeRowOrder(keys:List<String>) {playbackPrefs.edit().putString("home_order:${ratingsKey()}",org.json.JSONArray(keys.distinct()).toString()).apply();homeOrderRevision++}
 
     val hiddenHomeRows:Set<String> get() {

@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP13: Peerflix de fábrica utiliza el manifest configurado. Sus resultados torrent requieren un motor P2P." to "RP13: default Peerflix uses the configured manifest. Its torrent results require a P2P engine.",
         "RP12: búsqueda inicial más ágil en español e inglés; 7 enlaces visibles por add-on y Load more. Fábrica: Peerflix, Addon Latam y Torrentio free." to "RP12: faster initial Spanish/English lookup; 7 visible links per add-on and Load more. Defaults: Peerflix, Addon Latam and free Torrentio.",
         "RP11: PIN Live score NBA, MLB y LIDOM; píldora con logos, movible con mando o arrastre, por perfil y sin Supabase." to "RP11: NBA, MLB and LIDOM live score pin; team-logo pill, movable by remote or drag, per-profile with no Supabase requests.",
         "RP10: Continue Watching desde los 5 segundos, con actualización local inmediata de la fila." to "RP10: Continue Watching from five seconds, with an immediate local shelf update.",

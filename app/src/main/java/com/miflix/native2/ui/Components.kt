@@ -302,7 +302,9 @@ fun CollectionCard(
                     .clip(RoundedCornerShape(14.dp))
                     .background(Color(0xFF191919))
             ) {
-                if(tile.id.startsWith("franchise:")) Box(Modifier.fillMaxSize().background(if(tile.id.endsWith("marvel")) Color(0xFF24080C) else Color(0xFF081B32)),contentAlignment=Alignment.Center) {
+                if(tile.id.startsWith("franchise:") && tile.id !in listOf("franchise:marvel","franchise:dc")) Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF222222),Color(0xFF080808)))).padding(18.dp),contentAlignment=Alignment.Center) {
+                    Text(tile.title,color=if(tile.id=="franchise:star_wars") Color(0xFFFFDC70) else Color.White,fontSize=25.sp,lineHeight=29.sp,fontWeight=FontWeight.Bold,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
+                } else if(tile.id.startsWith("franchise:")) Box(Modifier.fillMaxSize().background(if(tile.id.endsWith("marvel")) Color(0xFF24080C) else Color(0xFF081B32)),contentAlignment=Alignment.Center) {
                     Image(painterResource(if(tile.id.endsWith("marvel")) R.drawable.franchise_marvel else R.drawable.franchise_dc),tile.title,
                         modifier=Modifier.fillMaxSize().padding(if(tile.id.endsWith("marvel")) 24.dp else 10.dp),contentScale=ContentScale.Fit)
                 } else if(tile.id=="natgeo") Row(Modifier.fillMaxSize().padding(28.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {

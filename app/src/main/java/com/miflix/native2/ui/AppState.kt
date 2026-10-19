@@ -1232,10 +1232,10 @@ class AppState(context: Context) {
     var franchiseScrollOffset=0
     suspend fun openFranchise(brand: String) {
         if(franchiseLoading) return
-        franchiseBrand=brand;franchiseType="movie";franchiseItems.clear();franchisePage=0
+        franchiseBrand=brand;franchiseType=com.miflix.native2.data.FranchiseCatalogRP29.initialType(brand);franchiseItems.clear();franchisePage=0
         franchiseMore=false;franchiseError=""
         franchiseScrollIndex=0;franchiseScrollOffset=0;screen=Screen.FRANCHISE
-        loadFranchise("movie")
+        loadFranchise(franchiseType)
     }
     suspend fun loadFranchise(type: String,more: Boolean=false) {
         if(franchiseLoading) return

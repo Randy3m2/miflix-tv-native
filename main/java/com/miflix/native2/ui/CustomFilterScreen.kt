@@ -203,8 +203,8 @@ fun FranchiseScreen(state: AppState) {
     AppShell(state,Screen.FRANCHISE,{ state.screen=it }) {
         Column(Modifier.fillMaxSize().padding(horizontal=34.dp,vertical=24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                Text(if(state.franchiseBrand=="marvel") "Marvel" else "DC",color=Color.White,fontSize=30.sp,modifier=Modifier.weight(1f))
-                FocusButton(tr("Películas","Movies"),primary=state.franchiseType=="movie") { state.launch { state.loadFranchise("movie") } }
+                Text(com.miflix.native2.data.FranchiseCatalogRP29.title(state.franchiseBrand),color=Color.White,fontSize=30.sp,modifier=Modifier.weight(1f))
+                if(com.miflix.native2.data.FranchiseCatalogRP29.supportsMovies(state.franchiseBrand)) FocusButton(tr("Películas","Movies"),primary=state.franchiseType=="movie") { state.launch { state.loadFranchise("movie") } }
                 FocusButton(tr("Series","Series"),primary=state.franchiseType=="series") { state.launch { state.loadFranchise("series") } }
                 FocusButton(tr("Atrás","Back")) { state.screen=Screen.COLLECTIONS }
             }

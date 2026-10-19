@@ -139,6 +139,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     var showTasteSetup by remember(tasteOwner) {mutableStateOf(state.shouldOfferTasteSetup())}
     if(showTasteSetup && !state.kidsMode) TasteOnboardingRC102(state) {showTasteSetup=false}
     LaunchedEffect(tasteOwner,state.tasteProfile.version(tasteOwner)) {state.refreshForYou()}
+    LaunchedEffect(state.interfaceLanguage,state.activeProfile.id) {if("comfort_comedies" !in state.hiddenHomeRows) state.loadComfortComedyHome()}
     LaunchedEffect(state.interfaceLanguage) {if("novelas" !in state.hiddenHomeRows) state.loadNovelasHome()}
     val discoveryOwner="${state.session?.userId}:${state.activeProfile.id}:${state.interfaceLanguage}"
     var discoveryMood by androidx.compose.runtime.saveable.rememberSaveable(discoveryOwner) {mutableStateOf("")}
@@ -255,6 +256,16 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                     }
                     Spacer(Modifier.height(8.dp))
                 } }
+                if(!state.kidsMode) shelf(key="comfort_comedies") {
+                    if(state.comfortComedyMatch && state.comfortComedyPicks.isNotEmpty()) {
+                        SpotlightRail(tr("Comedias para desconectar","Comfort comedies"),state.comfortComedyPicks.take(25),
+                            eyebrow=tr("TUS FAVORITAS · RISAS · BUENA COMPAÑÍA","FAMILIAR FAVORITES · LAUGHS · GOOD COMPANY"),onClick=openItem)
+                    } else Column(Modifier.padding(horizontal=40.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                        Text(tr("Comedias para desconectar","Comfort comedies"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
+                        Text(if(state.comfortComedyLoading) tr("Preparando historias para ti…","Preparing stories for you…") else state.comfortComedyMessage.ifBlank {tr("Descubre tu próxima comedia favorita.","Find your next favorite comedies.")},color=Muted)
+                        if(!state.comfortComedyLoading) FocusButton(tr("Ver comedias","Explore comedies")) {state.launch {state.loadComfortComedyHome()}}
+                    }
+                }
                 shelf(key="novelas") {
                     if(state.novelasMatch && state.localRecommendations(state.novelasPicks).isNotEmpty()) {
                         SpotlightRail(tr("Novelas que atrapan","Telenovelas to fall for"),state.localRecommendations(state.novelasPicks).take(25),
@@ -300,7 +311,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                     SpotlightRail(tr("Clásicos de siempre","Timeless classics"),state.localRecommendations(state.classicPicks),onClick=openItem)
                 }
                 if(!simple) shelf(key="franchises_home") {
-                    CollectionRail(tr("Franquicias","Franchises"),listOf(CollectionTile("franchise:marvel","Marvel",""),CollectionTile("franchise:dc","DC",""))) { tile ->
+                    CollectionRail(tr("Franquicias","Franchises"),com.miflix.native2.data.FranchiseCatalogRP29.brands.map { (brand,label) -> CollectionTile("franchise:$brand",label,"") }) { tile ->
                         state.launch { state.openFranchise(tile.id.substringAfter(":")) }
                     }
                 }
@@ -564,7 +575,7 @@ fun CollectionsScreen(state: AppState, onBack: () -> Unit) {
             item {
                 Text(tr("Franquicias","Franchises"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(start=34.dp,bottom=12.dp))
                 LazyRow(Modifier.fillMaxWidth(),contentPadding=PaddingValues(horizontal=28.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(16.dp)) {
-                    items(listOf("marvel" to "Marvel","dc" to "DC")) { (brand,label) ->
+                    items(com.miflix.native2.data.FranchiseCatalogRP29.brands) { (brand,label) ->
                         Box(homeReturnFocus("franchise:$brand")) {CollectionCard(CollectionTile("franchise:$brand",label,"")) { state.launch { state.openFranchise(brand) } }}
                     }
                 }
@@ -708,7 +719,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
             LaunchedEffect(Unit) {withFrameNanos {};runCatching {first.requestFocus()} }
             Column(Modifier.consumeOpeningPress().focusRequester(first).focusGroup().width(530.dp).heightIn(max=470.dp).background(Panel,RoundedCornerShape(24.dp)).padding(24.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(16.dp)) {
                 var reveal by remember(item.cloudId,ep.season,ep.episode) { mutableStateOf(false) }
-                val hidden=!state.episodeWatched(item,ep) && !reveal
+                val hidden=state.hideEpisodeSpoilersRP20(item,ep) && !reveal
                 Text("S${ep.season} E${ep.episode} · ${if(hidden) tr("No visto","Not watched") else ep.title}",color=Color.White,fontSize=22.sp)
                 if(hidden) FocusButton(tr("Mostrar detalles (spoilers)","Reveal details (spoilers)")) { reveal=true }
                 if(reveal && ep.overview.isNotBlank()) Text(ep.overview,color=Muted,fontSize=15.sp,maxLines=5)
@@ -823,11 +834,15 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                             SeasonSelector(state, details?.seasonCount ?: 0)
 
                         }
+                        Spacer(Modifier.width(16.dp))
+                        FocusButton(if(state.showUnwatchedDetailsRP20) tr("Ocultar spoilers","Hide spoilers") else tr("Mostrar todos los detalles","Show all episode details")) {
+                            state.saveShowUnwatchedDetailsRP20(!state.showUnwatchedDetailsRP20)
+                        }
                     }
                     Spacer(Modifier.height(12.dp))
                     LazyRow(modifier = Modifier.fillMaxWidth().height(236.dp), contentPadding = PaddingValues(end = 54.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(state.episodes, key = { "${it.season}:${it.episode}" }) { ep ->
-                            EpisodeCard(ep, hidden=!state.episodeWatched(item,ep), onLongClick = { episodeChoice=ep }) { episodeChoice=ep }
+                            EpisodeCard(ep, hidden=state.hideEpisodeSpoilersRP20(item,ep), onLongClick = { episodeChoice=ep }) { episodeChoice=ep }
                         }
                     }
                     Spacer(Modifier.height(28.dp))
@@ -835,10 +850,10 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
             }
 
             if(!state.kidsMode) item(key="cast") {
-                Text(tr("Reparto","Cast"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
+                Text(tr("Reparto y dirección","Cast & director"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
                 Spacer(Modifier.height(14.dp))
                 LazyRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(16.dp),contentPadding=PaddingValues(end=24.dp)) {
-                    items(details?.cast.orEmpty(),key={"${it.id}:${it.name}"}) { CastCard(it,state) }
+                    items(details?.directorCast.orEmpty()+details?.cast.orEmpty(),key={"${it.creditRole}:${it.id}:${it.name}"}) { CastCard(it,state) }
                 }
                 Spacer(Modifier.height(28.dp))
             }
@@ -1048,6 +1063,14 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     if(category in listOf("playback","appearance","system")) item(key="local-extras-rc100") {
                         SettingsTileRC103(tr("Haz BruniO tuyo","Make BruniO yours"),tr("Temporizador, listas, filtros, memoria de audio y respaldo local.","Sleep timer, lists, filters, track memory and local backup."),"taste") {showLocalExtras=true}
                     }
+                    if(category=="appearance") item(key="unwatched-details-rp20") {
+                        SettingsSectionCard(onFocused={visualHelp=null;helpTitle=tr("Episodios no vistos","Unwatched episodes");helpDescription=tr("Muestra miniaturas, títulos y sinopsis de todos los episodios no vistos en este perfil. No los marca como vistos. Apagado: conserva la protección contra spoilers.","Show thumbnails, titles and synopses for all unwatched episodes in this profile. Does not mark them watched. Off keeps spoiler protection.");helpIndex=-1}) {
+                            SettingsTileRC103(tr("Mostrar detalles de episodios no vistos","Show unwatched episode details"),
+                                tr("Miniaturas y sinopsis para todos, sin revelarlos uno por uno.","Thumbnails and synopses for all episodes, without revealing them one by one."),"lists",checked=state.showUnwatchedDetailsRP20) {
+                                state.saveShowUnwatchedDetailsRP20(!state.showUnwatchedDetailsRP20)
+                            }
+                        }
+                    }
                     if(category=="appearance") item(key="home-order") {SettingsSectionCard {
                         SettingsHeadingRC103(tr("Diseña tu Home","Shape your Home"),tr("Tus filas favoritas, en el lugar que prefieras.","Your favorite rows, right where you want them."))
                         SettingsTileRC103(tr("Orden de filas de Home","Home row order"),tr("Decide qué aparece primero.","Decide what comes first."),"lists") {showHomeOrder=true}
@@ -1080,7 +1103,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         SettingsTileRC103(tr("Mi universo de cine","My cinema hub"),tr("Explora tus estadísticas de reproducción en esta TV.","Explore your viewing statistics on this TV."),"stats") {showCinemaHub=true}
                     }
                     if(category=="playback") item(key="setting-4") {
-                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Playback link size limit";helpDescription="Choose a maximum file size. Unknown sizes are hidden except Addon Latam and Nuve+.";helpIndex=4 }) {
+                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Playback link size limit";helpDescription="Choose a maximum file size. Unknown sizes are hidden except Addon Latam, Nuve+ and Deepflix.";helpIndex=4 }) {
                 var customLimit by remember(state.streamSizeLimitGb) { mutableStateOf(if(state.streamSizeLimitGb>0) state.streamSizeLimitGb.toString() else "") }
                 Text(tr("Límite de tamaño de enlaces","Playback link size limit"),color=Color.White,fontSize=22.sp,lineHeight=26.sp)
                 Text(if(state.streamSizeLimitGb==0.0) tr("Sin límite","Unlimited") else "${tr("Máximo","Maximum")}: ${state.streamSizeLimitGb} GB",color=Muted)
@@ -2138,7 +2161,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                         }
                     }
                     if(queueNext==null && !randomMode) upcoming?.let { next ->
-                        val hidden=!state.episodeWatched(request.item,next)
+                        val hidden=state.hideEpisodeSpoilersRP20(request.item,next)
                         Text("${tr("Siguiente","Next")}: S${next.season} E${next.episode} · ${if(hidden) tr("No visto","Not watched") else next.title}",color=Muted)
                         Text(if(hidden) tr("Sinopsis oculta para evitar spoilers","Synopsis hidden to avoid spoilers") else next.overview,color=Color.White,fontSize=15.sp,lineHeight=20.sp,maxLines=4)
                         FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -2248,7 +2271,7 @@ private fun EpisodePickerOverlay(state: AppState, request: PlayerRequest, onClos
             LazyColumn(state=listState,modifier=Modifier.weight(1f),contentPadding = PaddingValues(bottom = 30.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(state.episodes, key = { "${it.season}:${it.episode}" }) { ep ->
                     val active = ep.season == request.season && ep.episode == request.episode
-                    EpisodeListRow(ep, active, hidden=!state.episodeWatched(request.item,ep), modifier=if(state.episodes.indexOf(ep)==focusIndex) Modifier.focusRequester(episodeFocus) else Modifier, onLongClick = { episodeActions=ep }) {
+                    EpisodeListRow(ep, active, hidden=state.hideEpisodeSpoilersRP20(request.item,ep), modifier=if(state.episodes.indexOf(ep)==focusIndex) Modifier.focusRequester(episodeFocus) else Modifier, onLongClick = { episodeActions=ep }) {
                         onClose()
                         state.launch {runCatching {state.stopRandomEpisodes();state.playEpisode(ep)}.onFailure {state.error=it.message}}
                     }
@@ -2548,7 +2571,7 @@ private fun ActorCreditsDialog(person: CastMember, state: AppState, close: () ->
     var credits by remember(person.id) { mutableStateOf<List<MediaSummary>?>(null) }
     var failure by remember(person.id) { mutableStateOf<String?>(null) }
     LaunchedEffect(person.id) {
-        try { credits=state.tmdb.actorCredits(person.id) }
+        try { credits=if(person.creditRole=="director") state.tmdb.directedMovies(listOf(com.miflix.native2.data.DirectorPerson(person.id,person.name,person.profile))) else state.tmdb.actorCredits(person.id) }
         catch(e: kotlinx.coroutines.CancellationException) { throw e }
         catch(e: Exception) { failure=e.message ?: tr("Error al cargar", "Unable to load") }
     }

@@ -115,8 +115,38 @@ class TmdbRepository(var token: String) {
         require(result.first.isNotEmpty() || result.second.isNotEmpty()) { "Franchise metadata unavailable" }
         franchiseIds[brand]=result;result
     }
+    private val curatedFranchisePagesRP29=PlaybackLinkCache<String,CustomCatalogPage>(32) {System.currentTimeMillis()}
+    private suspend fun curatedFranchiseRP29(brand:String,type:String,page:Int):CustomCatalogPage=coroutineScope {
+        val locale=language
+        val key="$locale:$brand:$type:$page"
+        curatedFranchisePagesRP29.get(key)?.let {return@coroutineScope it}
+        val entries=FranchiseCatalogRP29.entries(brand,type)
+        val selected=entries.drop((page-1)*25).take(25)
+        var failed=false
+        val rows=selected.chunked(5).flatMap {batch -> batch.map {entry -> async {
+            try {
+                val tv=type=="series"
+                val result=get("/search/${if(tv) "tv" else "movie"}",mapOf("language" to locale,
+                    "query" to entry.title,"include_adult" to "false",
+                    (if(tv) "first_air_date_year" else "primary_release_year") to entry.year.toString()))
+                val a=result.optJSONArray("results") ?: org.json.JSONArray()
+                val matched=(0 until a.length()).map {a.getJSONObject(it)}.firstOrNull {
+                    !it.optBoolean("adult") && it.optString(if(tv) "first_air_date" else "release_date").take(4)==entry.year.toString() &&
+                    listOf(it.optString(if(tv) "original_name" else "original_title"),it.optString(if(tv) "name" else "title"))
+                        .any {name -> val actual=FlexibleSearch.normalize(name);val wanted=FlexibleSearch.normalize(entry.title);actual==wanted || (brand=="star_wars" && actual.removePrefix("star wars ")==wanted.removePrefix("star wars "))}
+                }
+                if(matched==null) failed=true
+                matched?.let {mapItem(it,type)}
+            } catch(e:CancellationException) {throw e} catch(_:Exception) {failed=true;null}
+        }}.awaitAll().filterNotNull()}
+        if(selected.isNotEmpty() && rows.isEmpty()) throw IllegalStateException("Franchise catalog unavailable; please retry")
+        val result=CustomCatalogPage(rows.distinctBy {it.cloudId},page*25<entries.size)
+        if(!failed) curatedFranchisePagesRP29.put(key,result)
+        result
+    }
     suspend fun franchiseCatalog(brand: String,type: String,page: Int): CustomCatalogPage = coroutineScope {
         require(page in 1..500 && type in listOf("movie","series"))
+        if(FranchiseCatalogRP29.curated(brand)) return@coroutineScope curatedFranchiseRP29(brand,type,page)
         val (companies,keywords)=franchiseMetadata(brand)
         val filters=buildList {
             if(companies.isNotEmpty()) add("with_companies" to companies.joinToString("|"))

@@ -50,7 +50,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     val permits=remember {Semaphore(4)}
     val first=remember {FocusRequester()}
     val firstChannel=remember {FocusRequester()}
-    var iptv by remember {mutableStateOf(initialProvider in IptvRepository.sources)}
+    val playingChannelFocus=remember {FocusRequester()}
     val channelList=rememberLazyListState()
     var initialFocus by remember {mutableStateOf(true)}
     var categories by remember {mutableStateOf<List<BrowserCategoryRP34>>(emptyList())}
@@ -68,9 +68,9 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     val revision=LiveLibrary.revision
     val favorites=remember(revision,state.session?.userId,state.activeProfile.id) {LiveLibrary.favorites(context,state)}
     val group=categories.firstOrNull {it.key==selected}
-    LaunchedEffect(retry,iptv) {
+    LaunchedEffect(retry) {
         loading=true;message="";categories=emptyList();selected=""
-        val providers=if(iptv) IptvRepository.sources.keys.toList() else listOf(if(initialProvider=="sports") "sports" else "nauta")
+        val providers=listOf(if(initialProvider=="sports") "sports" else "nauta")
         val found=coroutineScope {providers.map {provider ->async {
             try {permits.withPermit {
                 val manifest=state.calendarLiveManifest(provider)
@@ -78,8 +78,11 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                 catalog.map {BrowserCategoryRP34(provider,it,if(provider=="nauta") "Nauta" else if(provider=="sports") tr("Deportes","Sports") else IptvRepository.sources[provider]?.first.orEmpty())}
             }} catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
         }}.awaitAll().flatten()}
-        categories=found.distinctBy {it.key}
-        selected=categories.firstOrNull {it.provider==current?.liveProvider && it.value.genre==null}?.key ?: categories.firstOrNull()?.key ?: "favorites"
+        categories=(found+IptvRepository.sources.map {(provider,source) ->
+            BrowserCategoryRP34(provider,LiveCategory("tv","iptv:all","IPTV · "+source.first,paginated=true,searchable=true),"")
+        }).distinctBy {it.key}
+        selected=categories.firstOrNull {it.provider==current?.liveProvider && current?.liveProvider in IptvRepository.sources}?.key
+            ?: categories.firstOrNull {isMostViewedRP37(it.value)}?.key ?: categories.firstOrNull()?.key ?: "favorites"
         loading=false
         if(!initialFocus) {withFrameNanos {};runCatching {first.requestFocus()}}
     }
@@ -105,7 +108,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
         } catch(e:CancellationException) {throw e} catch(_:Exception) {message=tr("No se pudo cargar esta categoría.","Could not load this category.")}
         finally {loading=false}
     }
-    val playing=current?.takeIf {r -> group?.provider==r.liveProvider && search.isBlank() && group?.value?.genre==null}?.let {r ->
+    val playing=current?.takeIf {r -> group?.provider==r.liveProvider && search.isBlank() && (group?.value?.genre==null || group?.value?.let {isMostViewedRP37(it)}==true)}?.let {r ->
         BrowserChannelRP34(r.liveProvider,LiveChannel(r.liveChannelId,r.liveType,r.item.title,r.item.backdrop,r.item.overview))
     }
     val displayed=(if(selected=="favorites") favorites.map {BrowserChannelRP34(it.provider,it.channel)} else listOfNotNull(playing)+channels).distinctBy {it.key}.filter {
@@ -114,7 +117,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     LaunchedEffect(displayed.map {it.key},loading) {
         if(initialFocus && !loading) {
             val index=displayed.indexOfFirst {it.provider==current?.liveProvider && it.value.id==current?.liveChannelId}
-            if(index>=0) {channelList.scrollToItem(index);withFrameNanos {};runCatching {firstChannel.requestFocus()}}
+            if(index>=0) {channelList.scrollToItem(index);withFrameNanos {};runCatching {playingChannelFocus.requestFocus()}}
             else {withFrameNanos {};runCatching {first.requestFocus()}}
             initialFocus=false
         }
@@ -138,16 +141,17 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     PlayerMenuDialog(onDismissRequest=close,fullScreen=true) {
         BoxWithConstraints(Modifier.fillMaxSize().consumeOpeningPress()) {
             val width=if(maxWidth<700.dp) .82f else .64f
-            Row(Modifier.align(Alignment.CenterStart).fillMaxHeight(.84f).fillMaxWidth(width).widthIn(max=740.dp).background(Color(0xEF080808)),horizontalArrangement=Arrangement.spacedBy(1.dp)) {
+            Row(Modifier.align(Alignment.CenterStart).fillMaxHeight().fillMaxWidth(width).widthIn(max=740.dp).background(Color(0xEF080808)),horizontalArrangement=Arrangement.spacedBy(1.dp)) {
                 Column(Modifier.weight(.36f).fillMaxHeight().onPreviewKeyEvent {event ->
                     if(event.nativeKeyEvent.keyCode==android.view.KeyEvent.KEYCODE_DPAD_RIGHT && displayed.isNotEmpty()) {
-                        if(event.type==KeyEventType.KeyDown) runCatching {firstChannel.requestFocus()};true
+                        if(event.type==KeyEventType.KeyDown) scope.launch {
+                            channelList.scrollToItem(0);withFrameNanos {};runCatching {firstChannel.requestFocus()}
+                        };true
                     } else false
                 }.background(Color(0xF00C0C0C)).padding(12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     Text(tr("CATEGORÍAS","CATEGORIES"),color=Muted,fontSize=12.sp)
                     LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp),contentPadding=PaddingValues(bottom=18.dp)) {
                         item(key="favorites") {BrowserCategoryRowRP34(tr("♥ Favoritos","♥ Favorites"),selected=="favorites",Modifier.then(if(selected=="favorites") Modifier.focusRequester(first) else Modifier),{selected="favorites"})}
-                        item(key="source") {BrowserCategoryRowRP34(if(iptv) "‹ Nauta" else "IPTV ›",false,Modifier,{iptv=!iptv},activateOnly=true)}
                         items(categories,key={it.key}) {c ->
                             BrowserCategoryRowRP34(c.value.name,selected==c.key,
                                 Modifier.then(if(c.key==selected) Modifier.focusRequester(first) else Modifier),
@@ -167,7 +171,8 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                             BrowserChannelRowRP34(entry.value,entry.value.number.takeIf {it>0} ?: (displayed.indexOf(entry)+1),favorite,
                                 playing=entry.provider==current?.liveProvider && entry.value.id==current?.liveChannelId,
                                 click={tune(entry)},hold={LiveLibrary.toggle(context,state,entry.provider,entry.value)},
-                                modifier=Modifier.then(if(entry==(displayed.firstOrNull {it.provider==current?.liveProvider && it.value.id==current?.liveChannelId} ?: displayed.firstOrNull())) Modifier.focusRequester(firstChannel) else Modifier).onPreviewKeyEvent {event ->
+                                modifier=Modifier.then(if(entry==displayed.firstOrNull()) Modifier.focusRequester(firstChannel) else Modifier)
+                                    .then(if(entry.provider==current?.liveProvider && entry.value.id==current?.liveChannelId) Modifier.focusRequester(playingChannelFocus) else Modifier).onPreviewKeyEvent {event ->
                                     if(event.nativeKeyEvent.keyCode==android.view.KeyEvent.KEYCODE_DPAD_LEFT) {if(event.type==KeyEventType.KeyDown) runCatching {first.requestFocus()};true} else false
                                 })
                         }
@@ -239,4 +244,11 @@ internal fun LiveFavoriteRP36(state:AppState,request:PlayerRequest,onInteraction
         onInteraction()
         LiveLibrary.toggle(context,state,request.liveProvider,LiveChannel(request.liveChannelId,request.liveType,request.item.title,request.item.backdrop,request.item.overview))
     }
+}
+
+/** Match the provider category without assuming accent/case/spelling of its id. */
+internal fun isMostViewedRP37(category:LiveCategory):Boolean {
+    val title=java.text.Normalizer.normalize(category.name,java.text.Normalizer.Form.NFD)
+        .replace(Regex("\\p{M}+"),"").lowercase(java.util.Locale.ROOT)
+    return title.contains("mas vistos") || title.contains("most viewed") || title.contains("most watched")
 }

@@ -34,8 +34,7 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
     val repo=remember {LiveRepository()}
     val scope=rememberCoroutineScope()
     val permits=remember {Semaphore(4)}
-    var country by remember {mutableStateOf("nauta")}
-    var selected by remember {mutableStateOf("all")}
+    var selected by remember {mutableStateOf("")}
     var query by remember {mutableStateOf(state.liveSearch)}
     var groups by remember {mutableStateOf<List<TVGroupRP32>>(emptyList())}
     var rows by remember {mutableStateOf<List<TVChannelRP32>>(emptyList())}
@@ -48,13 +47,8 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
     var links by remember {mutableStateOf<List<StreamChoice>>(emptyList())}
     val offsets=remember {mutableMapOf<String,Int>()}
     val finished=remember {mutableSetOf<String>()}
-    val countries=remember {listOf("nauta" to "Nauta", "iptv" to "IPTV")}
     fun manifest(provider:String)=state.calendarLiveManifest(provider)
-    val active=remember(groups,country,selected) {
-        val subset=groups.filter {country=="iptv" && it.provider in IptvRepository.sources || it.provider==country}
-        if(selected!="all") subset.filter {it.key==selected}
-        else subset.filter {it.category.genre==null}.distinctBy {"${it.provider}:${it.category.type}:${it.category.id}"}
-    }
+    val active=remember(groups,selected) {groups.filter {it.key==selected}}
     suspend fun page(reset:Boolean) {
         val stamp=generation
         val requested=active
@@ -86,15 +80,18 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
             else if(rows.isEmpty()) message=tr("No se encontraron canales en esta selección.","No channels found in this selection.")
         } finally {if(stamp==generation) busy=false}
     }
-    LaunchedEffect(retry,country) {
+    LaunchedEffect(retry) {
         busy=true;message="";groups=emptyList()
-        val providers=if(country=="iptv") IptvRepository.sources.keys.toList() else listOf("nauta")
+        val providers=listOf("nauta")
         var failures=0
         val loaded=coroutineScope {providers.map {provider ->async {
             try {permits.withPermit {repo.categories(manifest(provider)).map {TVGroupRP32(provider,it)}}}
             catch(e:CancellationException) {throw e} catch(_:Exception) {failures++;emptyList()}
         }}.awaitAll().flatten()}
-        groups=loaded
+        groups=loaded+IptvRepository.sources.map {(provider,source) ->
+            TVGroupRP32(provider,LiveCategory("tv","iptv:all","IPTV · "+source.first,paginated=true,searchable=true))
+        }
+        selected=groups.firstOrNull {isMostViewedRP37(it.category)}?.key ?: groups.firstOrNull()?.key.orEmpty()
         busy=false
         if(failures>0) message=tr("Algunas fuentes no están disponibles.","Some sources are unavailable.")
     }
@@ -125,20 +122,15 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
     }
     Column(modifier.fillMaxWidth().padding(top=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
         Text(tr("CATEGORÍAS","CATEGORIES"),color=Muted)
-        LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-            items(countries,key={it.first}) {(id,label)->FocusButton(label,primary=country==id) {country=id;selected="all"}}
-        }
-        val filters=groups.filter {country=="iptv" && it.provider in IptvRepository.sources || it.provider==country}.distinctBy {it.key}
-        if(filters.isNotEmpty()) LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            item {FocusButton(tr("Todas las categorías","All categories"),primary=selected=="all") {selected="all"}}
-            items(filters,key={it.key}) {g ->FocusButton((if(country=="all") (countries.firstOrNull {it.first==g.provider}?.second.orEmpty()+" · ") else "")+g.category.name,primary=selected==g.key) {selected=g.key}}
+        LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp),contentPadding=PaddingValues(horizontal=4.dp,vertical=4.dp)) {
+            items(groups,key={it.key}) {g ->FocusButton(g.category.name,primary=selected==g.key) {selected=g.key}}
         }
         NativeTextField(query,{query=it;state.liveSearch=it},tr("Buscar canales","Search channels"),modifier=Modifier.fillMaxWidth())
         if(busy) Text(tr("Cargando canales…","Loading channels…"),color=Color.White)
         if(message.isNotBlank()) Text(message,color=Color.White)
         if(!busy && groups.isEmpty()) FocusButton(tr("Reintentar","Retry")) {retry++}
         val visible=rows.filter {query.isBlank() || IptvPlaylist.searchKey(it.channel.name).contains(IptvPlaylist.searchKey(query)) || it.channel.number.toString()==query.trim()}
-        LazyVerticalGrid(GridCells.Adaptive(180.dp),modifier=Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(bottom=24.dp)) {
+        LazyVerticalGrid(GridCells.Adaptive(180.dp),modifier=Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(start=4.dp,end=4.dp,top=6.dp,bottom=48.dp)) {
             items(visible,key={it.key}) {entry ->
                 val revision=LiveLibrary.revision
                 val favorite=remember(revision,state.activeProfile.id,state.session?.userId,entry.key) {LiveLibrary.favorites(context,state).any {it.provider==entry.provider && it.channel.id==entry.channel.id}}

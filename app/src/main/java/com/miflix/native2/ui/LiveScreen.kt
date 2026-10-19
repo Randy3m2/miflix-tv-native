@@ -249,7 +249,7 @@ private fun LiveChannelRow(channel: LiveChannel, number: Int, onClick: () -> Uni
 @Composable
 internal fun LiveChannelTile(channel: LiveChannel,number: Int,favorite: Boolean,onClick: () -> Unit,onLongClick: () -> Unit) {
     var focused by remember(channel.id) { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().height(156.dp).onFocusChanged { focused=it.isFocused }.focusable()
+    Column(Modifier.fillMaxWidth().height(176.dp).onFocusChanged { focused=it.isFocused }.focusable()
         .tvPlaybackClick(onClick,onLongClick).clickable(onClick=onClick)
         .background(if(focused) FocusedPanel else Panel,RoundedCornerShape(14.dp))
         .border(1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(14.dp)).padding(14.dp),
@@ -258,7 +258,7 @@ internal fun LiveChannelTile(channel: LiveChannel,number: Int,favorite: Boolean,
             Text(number.toString().padStart(3,'0'),color=Muted,fontSize=12.sp)
             Text(if(favorite) "★" else tr("EN VIVO","LIVE"),color=if(favorite) Accent else Muted,fontSize=12.sp)
         }
-        Box(Modifier.fillMaxWidth().weight(1f),contentAlignment=androidx.compose.ui.Alignment.Center) {
+        Box(Modifier.fillMaxWidth().height(64.dp),contentAlignment=androidx.compose.ui.Alignment.Center) {
             if(channel.poster!=null) AsyncImage(channel.poster,channel.name,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
             else Text(channel.name.take(2).uppercase(),color=Accent,fontSize=24.sp)
         }

@@ -2528,7 +2528,7 @@ class AppState(context: Context) {
 
     fun localSearch(query: String): List<MediaSummary> {
         val normalized=FlexibleSearch.normalize(query)
-        if(normalized.length<2) return emptyList()
+        if(normalized.isBlank()) return emptyList()
         val rows=if(kidsMode) kidsMovies+kidsSeries else trending+movies+series+topRated+continueWatching+forYou+collectionItems+directorItems+myListTitles+comingMovies+comingSeries
         return FlexibleSearch.rank(rows.distinctBy {it.cloudId}.filter {FlexibleSearch.score(it.title,normalized)>=650},normalized).take(30)
     }

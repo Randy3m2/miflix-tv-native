@@ -201,14 +201,13 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
     var results by remember {mutableStateOf<List<MediaSummary>>(emptyList())}
     var searching by remember {mutableStateOf(false)}
     var searchError by remember {mutableStateOf(false)}
-    var history by remember(owner) {mutableStateOf(state.searchHistory())}
     val keyboardFocus=remember {FocusRequester()}
     val resultsFocus=remember {FocusRequester()}
     BackHandler(onBack=onBack)
     fun apply(edit: SearchTextEditor.Edit) {query=edit.text;cursor=edit.cursor;state.searchQuery=query}
     fun replace(value: String) {apply(SearchTextEditor.replace(value))}
     fun insert(value: String) {apply(SearchTextEditor.insert(query,cursor,value))}
-    fun submit() {state.rememberSearch(query);history=state.searchHistory();runCatching {resultsFocus.requestFocus()}}
+    fun submit() {state.rememberSearch(query);runCatching {resultsFocus.requestFocus()}}
     val voice=androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) { result ->
         if(result.resultCode==android.app.Activity.RESULT_OK) {
@@ -228,15 +227,17 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
     LaunchedEffect(Unit) {withFrameNanos { };runCatching {keyboardFocus.requestFocus()}}
     LaunchedEffect(query,state.interfaceLanguage,owner) {
         searchError=false
-        if(query.trim().length<2) {results=emptyList();searching=false;return@LaunchedEffect}
-        results=state.localSearch(query);searching=true
-        try {delay(if(com.miflix.native2.data.TasteQuery.parse(query)!=null) 650 else 250);results=state.searchFlexible(query.trim())}
+        if(query.isBlank()) {results=emptyList();searching=false;return@LaunchedEffect}
+        results=state.localSearch(query)
+        if(query.trim().length<2) {searching=false;return@LaunchedEffect}
+        searching=true
+        try {delay(if(com.miflix.native2.data.TasteQuery.parse(query)!=null) 650 else 350);results=state.searchFlexible(query.trim())}
         catch(e: CancellationException) {throw e}
         catch(_: Exception) {searchError=true}
         finally {searching=false}
     }
     val suggestions=(if(state.kidsMode) state.kidsMovies+state.kidsSeries else state.seasonalItems+state.trending+state.movies+state.series).distinctBy {it.cloudId}.take(30)
-    val display=if(query.trim().length<2) suggestions else results
+    val display=if(query.isBlank()) suggestions else results
     AppShell(state,Screen.SEARCH,{state.screen=it}) {
         Column(Modifier.fillMaxSize().padding(start=34.dp,end=28.dp,top=12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             // This text box uses the in-app keyboard; focusing it never invokes a covering IME.
@@ -295,32 +296,24 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
                             }
                         }
                     }
-                    if(history.isNotEmpty()) item {
+                    if(display.isNotEmpty()) item {
                         Column(verticalArrangement=Arrangement.spacedBy(5.dp)) {
-                            Text(tr("Recientes","Recent searches"),color=Muted,fontSize=12.sp)
-                            history.take(5).forEach {previous -> SearchKey(previous,Modifier.fillMaxWidth()) {replace(previous)} }
-                        }
-                    } else if(state.kidsMode) item {
-                        Column(verticalArrangement=Arrangement.spacedBy(5.dp)) {
-                            Text(tr("Explora Kids","Explore Kids"),color=Muted,fontSize=12.sp)
-                            state.kidsMovies.take(3).forEach {item -> SearchKey(item.title,Modifier.fillMaxWidth()) {replace(item.title)} }
-                        }
-                    } else item {
-                        Column(verticalArrangement=Arrangement.spacedBy(5.dp)) {
-                            SearchKey(seasonalTitle(state.seasonalTheme),Modifier.fillMaxWidth()) {
-                                replace(when(state.seasonalTheme) {"halloween"->"Halloween";"christmas"->"Christmas";else->"Adventure"})
+                            Text(tr("Sugerencias de títulos","Title suggestions"),color=Muted,fontSize=12.sp)
+                            display.take(5).forEach {title ->
+                                SearchKey(title.title,Modifier.fillMaxWidth()) {
+                                    state.rememberSearch(query);state.launch {state.open(title)}
+                                }
                             }
-                            state.genres.take(5).forEach {genre -> SearchKey(genre.title,Modifier.fillMaxWidth()) {state.launch {state.openGenre(genre)}} }
                         }
                     }
                 }
                 Column(Modifier.weight(1f).fillMaxHeight()) {
-                    Text(if(query.trim().length<2) tr("Tus recomendaciones de búsqueda","Your Search Recommendations") else tr("Resultados para","Results for")+" “${query.trim()}”",
+                    Text(if(query.isBlank()) tr("Tus recomendaciones de búsqueda","Your Search Recommendations") else tr("Resultados para","Results for")+" “${query.trim()}”",
                         color=Color.White,fontSize=20.sp,lineHeight=24.sp,fontWeight=FontWeight.Bold,maxLines=2,modifier=Modifier.padding(bottom=6.dp))
                     if(com.miflix.native2.data.TasteQuery.parse(query)!=null) Text(tr("Coincidencias por temas, reparto y fotografía disponibles","Matches based on available themes, cast and cinematography"),color=Muted,fontSize=12.sp)
                     if(com.miflix.native2.data.DiscoveryMood.intent(query).isNotBlank()) Text(tr("Selección por ánimo · basada en géneros y tus preferencias","Mood picks · based on genres and your preferences"),color=Muted,fontSize=12.sp)
                     if(searching || searchError) Text(if(searching) tr("Buscando más…","Finding more…") else tr("No pudimos completar la búsqueda.","Could not complete the search."),color=Muted,fontSize=12.sp)
-                    if(!searching && !searchError && query.trim().length>=2 && display.isEmpty()) Text(tr("Prueba otro título.","Try another title."),color=Muted,fontSize=14.sp)
+                    if(!searching && !searchError && query.isNotBlank() && display.isEmpty()) Text(tr("Prueba otro título.","Try another title."),color=Muted,fontSize=14.sp)
                     LazyVerticalGrid(GridCells.Adaptive(142.dp),modifier=Modifier.weight(1f).fillMaxWidth().focusRequester(resultsFocus).focusGroup(),
                         horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(top=4.dp,bottom=32.dp)) {
                         gridItems(display,key={it.cloudId}) {item -> MediaCard(item,compact=true) {state.rememberSearch(query);state.launch {state.open(item)}} }

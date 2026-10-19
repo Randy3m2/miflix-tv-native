@@ -48,7 +48,9 @@ internal object FlexibleSearch {
         val words=normalize(query).split(' ').filter {it.isNotBlank() && it !in stop}.sortedByDescending {it.length}
         if(words.isEmpty()) return emptyList()
         // Small, bounded provider fallback rather than fetching a large catalog.
-        return listOfNotNull(words.first().takeIf {words.size>1},words.first().take(4).takeIf {words.first().length>=6},
+        val normalized=normalize(query)
+        val collapsed=normalized.replace(Regex("(\\p{L})\\1+"),"$1").takeIf {it!=normalized && it.length>=2}
+        return listOfNotNull(collapsed,words.first().takeIf {words.size>1},words.first().take(4).takeIf {words.first().length>=6},
             words.getOrNull(1)?.takeIf {it.length>=4}).distinct().filter {it!=normalize(query)}.take(2)
     }
 }

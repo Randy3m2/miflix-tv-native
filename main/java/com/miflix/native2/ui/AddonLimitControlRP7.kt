@@ -16,10 +16,10 @@ internal fun AddonLimitControlRP7(state:AppState,manifest:String) {
     if(showLimits) {
         var custom by remember {mutableStateOf(if(limit>0) limit.toString() else "")}
         var error by remember {mutableStateOf("")}
-        SettingsDialogRC103(tr("Límite de enlaces","Link limit"),state.streamRepo.addonLabel(manifest),{showLimits=false}) {
-            Text(tr("Se guarda por perfil en esta TV. Conserva primero los enlaces del idioma preferido y después el orden de calidad.","Saved per profile on this TV. Keeps preferred-audio links first, then quality order."),color=Muted)
+        SettingsDialogRC103(tr("Enlaces por tanda","Links per batch"),state.streamRepo.addonLabel(manifest),{showLimits=false}) {
+            Text(tr("7 por defecto por add-on. Load more muestra otra tanda; se guarda por perfil en esta TV.","7 by default per add-on. Load more reveals another batch; saved per profile on this TV."),color=Muted)
             FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                listOf(0,5,10,15).forEach {n ->
+                listOf(0,5,7,10,15).forEach {n ->
                     FocusButton(if(n==0) tr("Todos","All") else n.toString(),primary=limit==n) {state.saveAddonLimitRP7(manifest,n);showLimits=false}
                 }
             }

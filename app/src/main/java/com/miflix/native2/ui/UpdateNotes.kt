@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP12: búsqueda inicial más ágil en español e inglés; 7 enlaces visibles por add-on y Load more. Fábrica: Peerflix, Addon Latam y Torrentio free." to "RP12: faster initial Spanish/English lookup; 7 visible links per add-on and Load more. Defaults: Peerflix, Addon Latam and free Torrentio.",
         "RP11: PIN Live score NBA, MLB y LIDOM; píldora con logos, movible con mando o arrastre, por perfil y sin Supabase." to "RP11: NBA, MLB and LIDOM live score pin; team-logo pill, movable by remote or drag, per-profile with no Supabase requests.",
         "RP10: Continue Watching desde los 5 segundos, con actualización local inmediata de la fila." to "RP10: Continue Watching from five seconds, with an immediate local shelf update.",
         "RP9: SplitScreen para LIDOM con hasta cuatro señales, fuentes por equipo, YouTube y audio seleccionable." to "RP9: LIDOM SplitScreen with up to four broadcasts, team source selection, YouTube and selectable audio.",

@@ -1186,7 +1186,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                                 .replace("Configuration required","Requiere configuración")
                                 .replace("Request failed","Falló la consulta")
                                 .replace("Returned:","Recibidos:").replace("Available:","Disponibles:")
-                                .replace("Hidden (unknown size):","Ocultos (sin tamaño):") else status,color=Muted,fontSize=12.sp)
+                                .replace("Hidden (unknown size):","Ocultos (sin tamaño):").replace("P2P required:","Requiere motor P2P:") else status,color=Muted,fontSize=12.sp)
                         }
                         AddonLimitButtonRP8(state,manifest)
                         FocusButton(tr("Eliminar","Remove"),destructive=true) { state.launch { state.socialAction { state.removeAddonManifest(manifest) } } }
@@ -2339,15 +2339,25 @@ private fun formatPosition(ms: Long): String {
 fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
     var addonFilter by remember(selection.item.cloudId,selection.season,selection.episode) {mutableStateOf("")}
     val addonNames=(state.orderedSourceAddonsRP2().map {it.name}+selection.streams.map {it.addonName.ifBlank {"Add-on"}}).distinct()
-    val visibleStreams=selection.streams.filter {addonFilter.isBlank() || it.addonName.ifBlank {"Add-on"}==addonFilter}
+    val filteredStreams=selection.streams.filter {addonFilter.isBlank() || it.addonName.ifBlank {"Add-on"}==addonFilter}
+    val pages=remember(selection) {mutableStateMapOf<String,Int>()}
+    val sizes=state.sourcePageSizesRP12()
     LaunchedEffect(addonNames) {if(addonFilter.isNotBlank() && addonFilter !in addonNames) addonFilter=""}
     val firstLink = remember(selection) { FocusRequester() }
     val activeRequest=state.playerRequest?.takeIf {it.item.cloudId==selection.item.cloudId &&
         it.season==selection.season && it.episode==selection.episode}
     val playingUrl=activeRequest?.stream?.let {it.sourceUrl.ifBlank {it.url}}
+    val visibleStreams=com.miflix.native2.data.SourcePaginationRP12.visible(filteredStreams,sizes,pages,playingUrl)
+    val nextLink=remember {FocusRequester()}
+    var nextKey by remember {mutableStateOf<String?>(null)}
     val currentIndex=visibleStreams.indexOfFirst {it.sourceUrl.ifBlank {it.url}==playingUrl}
     val focusIndex=currentIndex.coerceAtLeast(0)
     val linkScroll=rememberLazyListState(initialFirstVisibleItemIndex=focusIndex)
+    LaunchedEffect(nextKey,visibleStreams.size) {
+        val target=nextKey ?: return@LaunchedEffect
+        val index=visibleStreams.indexOfFirst {com.miflix.native2.data.SourcePaginationRP12.key(it)==target}
+        if(index>=0) {linkScroll.scrollToItem(index);withFrameNanos {};runCatching {nextLink.requestFocus()};nextKey=null}
+    }
     LaunchedEffect(selection) {
         if(selection.streams.isNotEmpty()) {
             linkScroll.scrollToItem(focusIndex)
@@ -2391,9 +2401,21 @@ fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
                         Column {
                         if(state.partyRole==PartyRole.GUEST && com.miflix.native2.data.PartySourcePolicy.key(stream)==state.watchParty?.sourceKey) Text(tr("FUENTE DEL PARTY","PARTY SOURCE"),color=Accent,fontSize=12.sp)
                         SourceLinkCard(stream,Modifier.fillMaxWidth().then(
-                            if(index==focusIndex) Modifier.focusRequester(firstLink) else Modifier),playing=index==currentIndex) {
+                            if(com.miflix.native2.data.SourcePaginationRP12.key(stream)==nextKey) Modifier.focusRequester(nextLink)
+                            else if(index==focusIndex) Modifier.focusRequester(firstLink) else Modifier),playing=index==currentIndex) {
                             state.launch { state.playSelectedSource(selection,stream) }
                         }
+                        }
+                    }
+                    if(visibleStreams.size<filteredStreams.size) item(key="load-more-sources") {
+                        FocusButton(tr("Cargar más enlaces","Load more links"),modifier=Modifier.fillMaxWidth()) {
+                            val before=visibleStreams.map {com.miflix.native2.data.SourcePaginationRP12.key(it)}.toSet()
+                            filteredStreams.map {com.miflix.native2.data.SourcePaginationRP12.name(it)}.distinct().forEach {name ->
+                                pages[name]=(pages[name] ?: 1)+1
+                            }
+                            nextKey=com.miflix.native2.data.SourcePaginationRP12.visible(filteredStreams,sizes,pages,playingUrl)
+                                .firstOrNull {com.miflix.native2.data.SourcePaginationRP12.key(it) !in before}
+                                ?.let {com.miflix.native2.data.SourcePaginationRP12.key(it)}
                         }
                     }
                 }
@@ -2549,10 +2571,10 @@ private fun AddonLimitButtonRP8(state:AppState,manifest:String) {
     if(showLimits) {
         var custom by remember {mutableStateOf(if(limit>0) limit.toString() else "")}
         var error by remember {mutableStateOf("")}
-        SettingsDialogRC103(tr("Límite de enlaces","Link limit"),state.streamRepo.addonLabel(manifest),{showLimits=false}) {
-            Text(tr("Se guarda por perfil en esta TV. Conserva primero los enlaces del idioma preferido y después el orden de calidad.","Saved per profile on this TV. Keeps preferred-audio links first, then quality order."),color=Muted)
+        SettingsDialogRC103(tr("Enlaces por tanda","Links per batch"),state.streamRepo.addonLabel(manifest),{showLimits=false}) {
+            Text(tr("7 por defecto por add-on. Load more muestra otra tanda; se guarda por perfil en esta TV.","7 by default per add-on. Load more reveals another batch; saved per profile on this TV."),color=Muted)
             FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                listOf(0,5,10,15).forEach {n ->
+                listOf(0,5,7,10,15).forEach {n ->
                     FocusButton(if(n==0) tr("Todos","All") else n.toString(),primary=limit==n) {state.saveAddonLimitRP7(manifest,n);showLimits=false}
                 }
             }

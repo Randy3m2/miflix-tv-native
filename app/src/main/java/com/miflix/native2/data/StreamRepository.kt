@@ -8,15 +8,21 @@ import kotlinx.coroutines.coroutineScope
 import org.json.JSONObject
 import java.net.URI
 
-class StreamRepository(initialManifestUrl: String) {
+class StreamRepository internal constructor(initialManifestUrl:String,
+    private val fetch:suspend (String,Int)->String) {
+    constructor(initialManifestUrl:String):this(initialManifestUrl,{url,timeout ->AddonHttpRP12.text(url,timeout)})
+    private val torrentCounts=java.util.concurrent.ConcurrentHashMap<String,Int>()
+    fun hasTorrentOnlyResults():Boolean = manifests().any {(torrentCounts[it] ?: 0)>0}
+
     private data class ManifestInfo(val name:String,val streams:Boolean,val at:Long)
     private val statuses=java.util.concurrent.ConcurrentHashMap<String,String>()
     fun status(manifest:String):String = statuses[manifest].orEmpty()
     fun addonLabel(manifest:String):String = label(manifest,manifests().indexOf(manifest).coerceAtLeast(0))
     private val metadata=java.util.concurrent.ConcurrentHashMap<String,ManifestInfo>()
     private fun label(manifest:String,position:Int):String {
-        val host=runCatching {URI(manifest).host}.getOrNull().orEmpty().ifBlank {"Add-on"}
-        return (metadata[manifest]?.name?.takeIf {it.isNotBlank()} ?: host)+" · "+(position+1)
+        val host=runCatching {URI(manifest.replace("|","%7C")).host}.getOrNull().orEmpty().ifBlank {"Add-on"}
+        val known=when(host) {"peerflix.mov"->"Peerflix";"addonlatam.duckdns.org"->"Addon Latam";"torrentio.strem.fun"->"Torrentio";else->host}
+        return (metadata[manifest]?.name?.takeIf {it.isNotBlank()} ?: known)+" · "+(position+1)
     }
     suspend fun inspectSourceAddons() = coroutineScope {
         manifests().map {manifest ->async {info(manifest)}}.awaitAll()
@@ -30,7 +36,7 @@ class StreamRepository(initialManifestUrl: String) {
         val now=System.currentTimeMillis()
         metadata[manifest]?.takeIf {now-it.at<6*60*60_000L}?.let {return it}
         return try {
-            val json=JSONObject(Http.text(manifest,timeoutMs=8000))
+            val json=JSONObject(fetch(manifest,2000))
             val resources=json.optJSONArray("resources")
             if(json.optJSONObject("behaviorHints")?.optBoolean("configurationRequired")==true)
                 statuses[manifest]="Configuration required"
@@ -48,10 +54,10 @@ class StreamRepository(initialManifestUrl: String) {
         get() = manifestUrls.firstOrNull().orEmpty()
         set(value) {
             if (value.isNotBlank()) {
-                manifestUrls.remove(value.trim())
+                manifestUrls.remove(value.trim().replace("|","%7C"))
                 val copy = manifestUrls.toList()
                 manifestUrls.clear()
-                manifestUrls.add(value.trim())
+                manifestUrls.add(value.trim().replace("|","%7C"))
                 manifestUrls.addAll(copy)
             }
         }
@@ -64,14 +70,14 @@ class StreamRepository(initialManifestUrl: String) {
     }
 
     fun addManifest(value: String): Boolean {
-        val clean = value.trim()
+        val clean = value.trim().replace("|","%7C")
         if (clean.isBlank()) return false
         val normalized = if (clean.endsWith("/manifest.json")) clean else clean.trimEnd('/') + "/manifest.json"
         return manifestUrls.add(normalized)
     }
 
     fun removeManifest(value: String) {
-        manifestUrls.remove(value.trim())
+        manifestUrls.remove(value.trim().replace("|","%7C"))
     }
 
     suspend fun resolve(imdbId: String, type: String, season: Int = 0, episode: Int = 0, movieYear: String? = null, maxBytes: Long = 0, movieTitle: String? = null, preferredAudio: String = ""): List<StreamChoice> = coroutineScope {
@@ -84,12 +90,13 @@ class StreamRepository(initialManifestUrl: String) {
                     val accepted=raw.filter {StreamFilters.allowed(it,type,movieYear,maxBytes,movieTitle)}
                     val unknownSize=if(maxBytes>0) raw.count {StreamOrdering.bytes(it)<=0 && !StreamFilters.allowsUnknownSize(it)} else 0
                     statuses[manifest]="Returned: ${raw.size} · Available: ${accepted.size}"+
-                        if(unknownSize>0) " · Hidden (unknown size): $unknownSize" else ""
+                        (if(unknownSize>0) " · Hidden (unknown size): $unknownSize" else "")+
+                        (if((torrentCounts[manifest] ?: 0)>0) " · P2P required: ${torrentCounts[manifest]}" else "")
                     accepted
                 } catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(e:Exception) {
                     val configured=statuses[manifest]=="Configuration required"
                     statuses[manifest]=if(configured) "Configuration required" else
-                        if(e is HttpFailure) "HTTP ${e.status}" else "Request failed"
+                        if(e is AddonHttpFailureRP12) "HTTP ${e.status}" else if(e is HttpFailure) "HTTP ${e.status}" else "Request failed"
                     emptyList()
                 }
             }
@@ -98,17 +105,29 @@ class StreamRepository(initialManifestUrl: String) {
         StreamOrdering.sorted(rows.filter { StreamFilters.allowed(it,type,movieYear,maxBytes,movieTitle) },preferredAudio)
     }
 
-    private suspend fun resolveOne(manifest: String, index:Int, imdbId: String, type: String, season: Int, episode: Int): List<StreamChoice> {
+    private suspend fun resolveOne(manifest: String, index:Int, imdbId: String, type: String, season: Int, episode: Int): List<StreamChoice> = coroutineScope {
         val base = manifest.removeSuffix("/manifest.json")
         val stremioType = if (type == "series") "series" else "movie"
         val mediaId = if (stremioType == "series") "$imdbId:$season:$episode" else imdbId
-        if(!info(manifest).streams) return emptyList()
+        torrentCounts[manifest]=0
+        if(metadata[manifest]?.streams==false) return@coroutineScope emptyList()
+        // Metadata must not add a second sequential wait before the stream request.
+        val manifestInfo=async {info(manifest)}
+        val streamResponse=async {JSONObject(fetch("$base/stream/$stremioType/$mediaId.json",8000))}
+        val json=streamResponse.await()
+        if(!manifestInfo.await().streams) return@coroutineScope emptyList()
         val addonName = label(manifest,index)
-        val json = JSONObject(Http.text("$base/stream/$stremioType/$mediaId.json", timeoutMs = 18000))
-        val a = json.optJSONArray("streams") ?: return emptyList()
-        return (0 until a.length()).mapNotNull { i ->
+        val a = json.optJSONArray("streams") ?: return@coroutineScope emptyList()
+        torrentCounts[manifest]=(0 until a.length()).count {i ->
+            val row=a.optJSONObject(i)
+            row!=null && row.optString("url").let {url ->
+                !url.startsWith("http://") && !url.startsWith("https://") &&
+                    (row.optString("infoHash").isNotBlank() || url.startsWith("magnet:"))
+            }
+        }
+        (0 until a.length()).mapNotNull { i ->
             val s = a.optJSONObject(i) ?: return@mapNotNull null
-            val url = s.optString("url").takeIf { it.startsWith("http") } ?: return@mapNotNull null
+            val url = s.optString("url").trim().takeIf { it.startsWith("http://") || it.startsWith("https://") } ?: return@mapNotNull null
             val hints = s.optJSONObject("behaviorHints")
             val filename = hints?.optString("filename").orEmpty().ifBlank {s.optString("filename")}
             val videoHash = hints?.optString("videoHash").orEmpty()

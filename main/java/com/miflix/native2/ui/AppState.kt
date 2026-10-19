@@ -1040,11 +1040,11 @@ class AppState(context: Context) {
         streamRepo.manifests().toList(),nativeSourceEnabled,nativeRevision,streamSizeBytes,audioLanguage)
     private suspend fun resolvePlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = playbackCacheMutex.withLock {
         val key=playbackCacheKey(item,imdb,season,episode)
-        playbackLinkCache.get(key)?.let { return@withLock limitAddonRowsRP7(StreamOrdering.sorted(it,audioLanguage,providerOrder=sourceProviderOrderRP2())) }
+        playbackLinkCache.get(key)?.let { return@withLock StreamOrdering.sorted(it,audioLanguage,providerOrder=sourceProviderOrderRP2()) }
         val streams=fetchPlaybackSources(item,imdb,season,episode)
         // Cache successful lists only; account/settings changes cannot publish stale results.
         if(streams.isNotEmpty() && key==playbackCacheKey(item,imdb,season,episode)) playbackLinkCache.put(key,streams)
-        limitAddonRowsRP7(streams)
+        streams
     }
     private suspend fun fetchPlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = supervisorScope {
         val owner=session?.userId
@@ -1060,7 +1060,7 @@ class AppState(context: Context) {
         val builtIn=try {
             check(token.isNotBlank()) { tr("Vuelve a guardar tu API key de TorBox","Save your TorBox API key again") }
             val detail=details?.takeIf { selected?.cloudId==item.cloudId } ?: tmdb.details(item)
-            kotlinx.coroutines.withTimeout(25000) { nativeSources.search(owner!!,token,listOf(detail.originalTitle,
+            kotlinx.coroutines.withTimeout(10000) { nativeSources.search(owner!!,token,listOf(detail.originalTitle,
                 if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(audioLanguage))
                     try {tmdb.spanishTitle(item).ifBlank {item.title}} catch(e: CancellationException) {throw e} catch(_: Exception) {item.title}
                 else item.title),item.type,item.year,season,episode,streamSizeBytes,audioLanguage) }
@@ -1074,17 +1074,15 @@ class AppState(context: Context) {
     private fun addonLimitKeyRP7(manifest:String)="addon_limit_rp7:${profileAddonScope()}:${AddonPriorityRP2.id(manifest)}"
     fun addonLimitRP7(manifest:String):Int {
         addonLimitRevisionRP7
-        return playbackPrefs.getInt(addonLimitKeyRP7(manifest),0).coerceAtLeast(0)
+        return playbackPrefs.getInt(addonLimitKeyRP7(manifest),com.miflix.native2.data.SourcePaginationRP12.DEFAULT_SIZE).coerceAtLeast(0)
     }
     fun saveAddonLimitRP7(manifest:String,limit:Int) {
         require(limit in 0..1000)
         playbackPrefs.edit().putInt(addonLimitKeyRP7(manifest),limit).apply()
         addonLimitRevisionRP7++;invalidatePlaybackWork()
     }
-    private fun limitAddonRowsRP7(rows:List<StreamChoice>):List<StreamChoice> {
-        val limits=streamRepo.manifests().associate {streamRepo.addonLabel(it) to addonLimitRP7(it)}
-        return com.miflix.native2.data.AddonResultLimitRP7.apply(rows,limits)
-    }
+    internal fun sourcePageSizesRP12():Map<String,Int> =
+        streamRepo.manifests().associate {streamRepo.addonLabel(it) to addonLimitRP7(it)}
     private var addonOrderRevision by mutableIntStateOf(0)
     var addonOrderLoading by mutableStateOf(false)
         private set
@@ -1124,22 +1122,17 @@ class AppState(context: Context) {
         val a=runCatching {org.json.JSONArray(playbackPrefs.getString("profile_addons:${profileAddonScope(profileId)}","[]"))}.getOrDefault(org.json.JSONArray())
         return (0 until a.length()).map {a.optString(it)}.filter {it.startsWith("https://") || it.startsWith("http://")}.distinct()
     }
-    private val bundledManifestsRP4=listOf(
-        "https://addonlatam.duckdns.org/A0wrYOb7z4LiG5vrhQwcb-g4/manifest.json",
-        "https://mg.homelabx.qzz.io/manifest.json",
-        "https://progreso-latino.xyz/api/addon/manifest.json",
-        "https://plus.nuvehub.app/zWdrusnz49s0vtAquiLXDbPwzVCnwZPf-nIed12NG5gYuDhQ5GhmMeRBo861VDX3/manifest.json"
-    )
-    private fun bundledRemovedKeyRP4(manifest:String,ownProfile:Boolean = !profileAddonsInherited):String {
-        val scope=if(ownProfile) profileAddonScope() else "${session?.userId ?: "local"}:account"
-        // Preserve the RP3 removal preference for MG.
-        return if(manifest==bundledManifestsRP4[1]) "bundled_mg_removed_rp3:$scope"
-        else "bundled_removed_rp4:$scope:${AddonPriorityRP2.id(manifest)}"
-    }
+    private val bundledManifestsRP4=BundledAddonsRP12.defaults
+    private val retiredBundledManifestsRP12=BundledAddonsRP12.retired
+    private fun bundledScopeRP12(ownProfile:Boolean)=if(ownProfile) profileAddonScope() else "${session?.userId ?: "local"}:account"
+    private fun retiredAddonKeyRP12(manifest:String,ownProfile:Boolean = !profileAddonsInherited)=
+        "retired_addon_optin_rp12:${bundledScopeRP12(ownProfile)}:${AddonPriorityRP2.id(manifest)}"
+    private fun bundledRemovedKeyRP4(manifest:String,ownProfile:Boolean = !profileAddonsInherited):String =
+        "bundled_removed_rp4:${bundledScopeRP12(ownProfile)}:${AddonPriorityRP2.id(manifest)}"
     private fun effectiveBundledAddonsRP4(values:List<String>):List<String> =
-        (values+bundledManifestsRP4).distinct().filterNot {
-            it in bundledManifestsRP4 && playbackPrefs.getBoolean(bundledRemovedKeyRP4(it),false)
-        }
+        BundledAddonsRP12.effective(values,
+            bundledManifestsRP4.filter {playbackPrefs.getBoolean(bundledRemovedKeyRP4(it),false)}.toSet(),
+            retiredBundledManifestsRP12.filter {playbackPrefs.getBoolean(retiredAddonKeyRP12(it),false)}.toSet())
     private fun applyEffectiveManifests(values:List<String>) {
         invalidatePlaybackWork()
         streamRepo.setManifests(values)
@@ -1869,31 +1862,43 @@ class AppState(context: Context) {
 
     suspend fun addAddonManifest(url: String) {
         val owner=session ?: throw IllegalStateException(tr("Inicia sesión para guardar tus complementos","Sign in to save your add-ons"))
-        val clean=url.trim()
+        val clean=url.trim().replace("|","%7C")
         if(clean.isBlank()) return
         require(clean.startsWith("https://") || clean.startsWith("http://")) { tr("Usa una URL HTTP válida","Use a valid HTTP URL") }
         val normalized=if(clean.endsWith("/manifest.json")) clean else clean.trimEnd('/')+"/manifest.json"
         val next=(streamRepo.manifests()+normalized).distinct()
         if(!activeProfile.primary) {
             if(normalized in bundledManifestsRP4) playbackPrefs.edit().remove(bundledRemovedKeyRP4(normalized,true)).apply()
+            if(normalized in retiredBundledManifestsRP12) playbackPrefs.edit().putBoolean(retiredAddonKeyRP12(normalized,true),true).apply()
             saveOwnProfileAddons(next);return
         }
         cloud.upsertPrivateSetup(owner,PrivateSetup(tmdb.token,next.firstOrNull().orEmpty(),next))
         if(session?.userId==owner.userId) {
             if(normalized in bundledManifestsRP4) playbackPrefs.edit().remove(bundledRemovedKeyRP4(normalized,false)).apply()
+            if(normalized in retiredBundledManifestsRP12) playbackPrefs.edit().putBoolean(retiredAddonKeyRP12(normalized,false),true).apply()
             setAccountManifests(next)
         }
     }
     suspend fun removeAddonManifest(manifest: String) {
-        val owner=session ?: return
+        val owner=session
         val next=streamRepo.manifests().filterNot { it==manifest }
+        if(owner==null) {
+            // Factory opt-outs stay local and must also work without an account.
+            if(manifest in bundledManifestsRP4) {
+                playbackPrefs.edit().putBoolean(bundledRemovedKeyRP4(manifest,!activeProfile.primary),true).apply()
+                if(activeProfile.primary) applyProfileAddons() else saveOwnProfileAddons(next)
+            }
+            return
+        }
         if(!activeProfile.primary) {
             if(manifest in bundledManifestsRP4) playbackPrefs.edit().putBoolean(bundledRemovedKeyRP4(manifest,true),true).apply()
+            if(manifest in retiredBundledManifestsRP12) playbackPrefs.edit().remove(retiredAddonKeyRP12(manifest,true)).apply()
             saveOwnProfileAddons(next);return
         }
         cloud.upsertPrivateSetup(owner,PrivateSetup(tmdb.token,next.firstOrNull().orEmpty(),next))
         if(session?.userId==owner.userId) {
             if(manifest in bundledManifestsRP4) playbackPrefs.edit().putBoolean(bundledRemovedKeyRP4(manifest,false),true).apply()
+            if(manifest in retiredBundledManifestsRP12) playbackPrefs.edit().remove(retiredAddonKeyRP12(manifest,false)).apply()
             setAccountManifests(next)
         }
     }
@@ -2633,7 +2638,9 @@ class AppState(context: Context) {
             val bandwidth=if(adaptiveSource) androidx.media3.exoplayer.upstream.DefaultBandwidthMeter.getSingletonInstance(appContext).bitrateEstimate else 0L
             val seconds=(details?.takeIf {it.summary.cloudId==item.cloudId}?.runtimeMinutes ?: 0)*60
             val chosen = selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2())
-                ?: throw IllegalStateException(tr("No se encontraron enlaces reproducibles","No playable sources found"))
+                ?: throw IllegalStateException(if(streamRepo.hasTorrentOnlyResults())
+                    tr("Estos complementos devolvieron torrents. Esta versión necesita enlaces directos; no tiene motor P2P.","These add-ons returned torrents. This version requires direct links and has no P2P engine.")
+                    else tr("No se encontraron enlaces reproducibles","No playable sources found"))
             val automaticFallback=autoplayNextLink && watchParty==null
             val retryRows=if(automaticFallback) {
                 val candidates=StreamOrdering.fallbackCandidates(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2()).filter {it.url!=chosen.url}
@@ -2642,7 +2649,7 @@ class AppState(context: Context) {
             } else listOf(chosen)
             val budget=com.miflix.native2.player.SourceFallbackBudget(retryRows.size,com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(audioLanguage))
             val best=materializeAutomaticSource(retryRows,budget,playbackOwner,::valid)
-            val externalSubs = withTimeoutOrNull(800) { subsJob.await() }.orEmpty()
+            val externalSubs = if(subsJob.isCompleted) subsJob.await() else emptyList()
             val mergedSubs = (best.subtitles + externalSubs)
                 .distinctBy { it.url }
                 .sortedWith(compareBy<SubtitleChoice> {

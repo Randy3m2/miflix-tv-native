@@ -892,7 +892,7 @@ class AppState(context: Context) {
         sharedMomentsLoading=true
         try {
             val rows=social.receivedMoments(s)
-            if(isCurrentSocialSession(s)) {sharedMoments.replaceWith(rows);sharedMomentsOwner=session?.userId.orEmpty()}
+            if(isCurrentSocialSession(s)) {sharedMoments.replaceWith(rows);sharedMomentsOwner=s.userId}
         } finally {sharedMomentsLoading=false}
     }
     suspend fun momentRecipients(): List<com.miflix.native2.data.SocialPerson> {

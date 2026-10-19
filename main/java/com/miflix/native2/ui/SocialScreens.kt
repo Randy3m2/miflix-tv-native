@@ -43,7 +43,7 @@ fun SocialBackdrop() {
 
 @Composable
 fun FriendsScreen(state: AppState) {
-    var tab by remember { mutableStateOf(0) }
+    var tab by remember(state.socialIdentityId) { mutableStateOf(0) }
     var search by remember { mutableStateOf("") }
     var person by remember { mutableStateOf<FriendActivity?>(null) }
     var recommendations by remember { mutableStateOf(false) }
@@ -59,9 +59,7 @@ fun FriendsScreen(state: AppState) {
             val rows=state.friendRecommendations()
             if(state.socialIdentityId==owner) recommendationsPreview=rows
             state.refreshCalendar()
-        } catch(e: kotlinx.coroutines.CancellationException) { throw e }
-        catch(e: Exception) { previewError=e.message }
-        finally { previewsLoading=false }
+        } catch(e: kotlinx.coroutines.CancellationException) { throw e } catch(e: Exception) { previewError=e.message } finally { previewsLoading=false }
     }
     BackHandler { if(tab==3) tab=0 else state.screen=Screen.HOME }
     val contentFocus=remember { FocusRequester() }
@@ -73,20 +71,24 @@ fun FriendsScreen(state: AppState) {
             Column(Modifier.fillMaxSize().padding(horizontal=34.dp,vertical=16.dp)) {
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                         Text(tr("Amigos y salas","Friends & Party"),color=Color.White,fontSize=28.sp, lineHeight=34.sp,modifier=Modifier.weight(1f))
-                        FocusButton(if(state.friendsTabLoading) tr("Actualizando…","Refreshing…") else tr("Actualizar","Refresh")) { state.refreshFriendsTab();previewRevision++ }
+                        val refreshing=if(tab==1) state.sharedMomentsLoading else state.friendsTabLoading
+                        FocusButton(if(refreshing) tr("Actualizando…","Refreshing…") else if(tab==1) tr("Actualizar momentos","Refresh moments") else tr("Actualizar","Refresh")) {
+                            if(tab==1) {if(!state.sharedMomentsLoading && state.session!=null) state.launch {state.refreshSharedMoments()}} else {state.refreshFriendsTab();previewRevision++}
+                        }
                         FocusButton(if(state.watchParty==null) tr("Crear sala","Create Party") else tr("Mi sala","My Party")) { state.screen=Screen.WATCH_PARTY }
                     }
                     Text(tr("Descubre qué están viendo tus amigos.","Discover what your friends are watching."),color=Muted,fontSize=13.sp, lineHeight=16.sp)
 
                 Spacer(Modifier.height(12.dp))
                     Row(horizontalArrangement=Arrangement.spacedBy(16.dp)) {
-                        listOf(0 to tr("Amigos","Friends"),2 to tr("Solicitudes","Requests")).forEach { (index,label) -> NavigationTab(label,selected=tab==index) { tab=index } }
+                        listOf(0 to tr("Amigos","Friends"),2 to tr("Solicitudes","Requests"),1 to tr("Momentos","Moments")).forEach { (index,label) -> NavigationTab(label,selected=tab==index) { tab=index } }
                         NavigationTab(tr("Calendario","Calendar"),selected=tab==3) { tab=3 }
                     }
 
                 Spacer(Modifier.height(12.dp))
                 Box(Modifier.weight(1f).fillMaxWidth()) {
-                    if(tab==3 && state.session!=null) InlineCalendar(state,Modifier.fillMaxSize())
+                    if(tab==1 && state.session!=null) SharedMomentsContentRP23(state,close={},modifier=Modifier.fillMaxSize(),embedded=true)
+                    else if(tab==3 && state.session!=null) InlineCalendar(state,Modifier.fillMaxSize())
                     else LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(bottom=32.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 if(state.session==null) item { FocusButton(tr("Iniciar sesión","Sign in")) { state.screen=Screen.SETTINGS } }
                 else {
@@ -346,9 +348,7 @@ private fun NextEventSummary(state: AppState,event: com.miflix.native2.data.Cale
     var poster by remember(event?.id) { mutableStateOf<String?>(null) }
     LaunchedEffect(event?.id,state.session?.userId) {
         val id=event?.cloud
-        if(id!=null) try { poster=state.tmdb.byCloudId(id)?.poster }
-        catch(e: kotlinx.coroutines.CancellationException) { throw e }
-        catch(_: Exception) { poster=null }
+        if(id!=null) try { poster=state.tmdb.byCloudId(id)?.poster } catch(e: kotlinx.coroutines.CancellationException) { throw e } catch(_: Exception) { poster=null }
     }
     if(event==null) Text(tr("Sin eventos próximos","No upcoming events"),color=Color.White,fontSize=18.sp)
     else {

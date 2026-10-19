@@ -76,13 +76,19 @@ internal fun MomentComposer(state: AppState,req: PlayerRequest,start: Long?,end:
 }
 
 @Composable
-internal fun SharedMomentsInbox(state: AppState,close: () -> Unit) {
-    var busy by remember {mutableStateOf(false)}
-    val owner=state.session?.userId
+internal fun SharedMomentsInbox(state:AppState,close:()->Unit) {
+    PlayerMenuDialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+        SharedMomentsContentRP23(state,close,Modifier.width(630.dp).heightIn(max=460.dp))
+    }
+}
+
+@Composable
+internal fun SharedMomentsContentRP23(state: AppState,close: () -> Unit,modifier:Modifier=Modifier,embedded:Boolean=false) {
+    val owner=state.socialIdentityId
+    var busy by remember(owner) {mutableStateOf(false)}
     val rows=if(state.sharedMomentsOwner==owner) state.sharedMoments.toList() else emptyList()
     // Deliberately no LaunchedEffect/network request on open. Only the button loads the inbox.
-    PlayerMenuDialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
-        LazyColumn(Modifier.width(630.dp).heightIn(max=460.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),
+        LazyColumn(modifier.background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),
             verticalArrangement=Arrangement.spacedBy(14.dp)) {
             item {Column(verticalArrangement=Arrangement.spacedBy(5.dp)) {
                 Text(tr("COMPARTIDO CONTIGO","SHARED WITH YOU"),color=Accent,fontSize=11.sp,fontWeight=FontWeight.Bold)
@@ -126,9 +132,8 @@ internal fun SharedMomentsInbox(state: AppState,close: () -> Unit) {
                     }
                 }
             }
-            item {FocusButton(tr("Cerrar","Close")) {close()}}
+            if(!embedded) item {FocusButton(tr("Cerrar","Close")) {close()}}
         }
-    }
 }
 
 

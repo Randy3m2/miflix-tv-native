@@ -53,7 +53,7 @@ internal fun CompactPlayerControls(
     onResize: () -> Unit, onMenu: (String) -> Unit, onLinks: () -> Unit, onSeek: (Long) -> Unit,
     seekable: Boolean, party: Boolean, onParty: () -> Unit, onChat: () -> Unit, onReactions: () -> Unit, onQuickReactions: () -> Unit, onClose: () -> Unit, onMaximize: () -> Unit,
     nextAvailable: Boolean, onNext: () -> Unit, onEpisodes: () -> Unit, onQueue: () -> Unit, onInfo: () -> Unit, onPip: () -> Unit, onMultiView: () -> Unit, onMoment: () -> Unit,
-    previousChannelVisible:Boolean=false,previousChannelAvailable:Boolean=false,previousChannelName:String="",onPreviousChannel:()->Unit={},onScores:()->Unit={}
+    previousChannelVisible:Boolean=false,previousChannelAvailable:Boolean=false,previousChannelName:String="",onPreviousChannel:()->Unit={},onScores:()->Unit={},badgePlayerRP26:androidx.media3.exoplayer.ExoPlayer?=null
 ) {
     val seekFocus=remember { FocusRequester() }
     var focusedLabel by remember { mutableStateOf("") }
@@ -74,6 +74,7 @@ internal fun CompactPlayerControls(
                     .background(if(titleFocused) Color.White else Color.Transparent,RoundedCornerShape(6.dp))
                     .semantics { contentDescription=request.item.title+" · "+tr("Opciones de contenido y Party","Content and Party options") }
                     .clickable { onInteraction(); onMenu("content") }.padding(horizontal=4.dp,vertical=2.dp))
+            PlaybackBadgesRP26(badgePlayerRP26,request)
             Text(if(request.item.type=="series") "S${request.season} E${request.episode} · ${request.stream.name}" else request.stream.name,
                 color=Color(0xFFBBBBBB),fontSize=12.sp,lineHeight=15.sp,maxLines=1)
             Text(focusedLabel,color=Color.White,fontSize=12.sp,lineHeight=16.sp,maxLines=2,modifier=Modifier.fillMaxWidth().height(32.dp))

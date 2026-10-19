@@ -43,11 +43,10 @@ fun LiveScreen(state: AppState) {
     val prefs = remember { context.getSharedPreferences("miflix_live", Context.MODE_PRIVATE) }
     val repo = remember { LiveRepository() }
     val scope = rememberCoroutineScope()
-    var provider by remember { mutableStateOf(state.liveProviderTab) }
+    var provider by remember { mutableStateOf(if(state.liveProviderTab=="sports") "sports" else "tv") }
     var showFavorites by remember { mutableStateOf(false) }
     val sports=provider=="sports"
     val iptv=provider.startsWith("iptv")
-    var refreshVersion by remember { mutableStateOf(0) }
     var sportsManifest by remember { mutableStateOf(prefs.getString("sports_manifest", "https://sportsfree-us2.highfly.to/manifest.json").orEmpty()) }
     var editManifest by remember { mutableStateOf(false) }
     val manifest = if(sports) sportsManifest else state.calendarLiveManifest(provider)
@@ -73,7 +72,8 @@ fun LiveScreen(state: AppState) {
     var canLoadMore by remember { mutableStateOf(false) }
     var generation by remember { mutableStateOf(0) }
 
-    LaunchedEffect(manifest,refreshVersion) {
+    LaunchedEffect(manifest,sports) {
+        if(!sports) return@LaunchedEffect
         categories = emptyList(); category = null; channels = emptyList(); message = ""; loading = true
         try {
             categories = repo.categories(manifest)
@@ -84,7 +84,8 @@ fun LiveScreen(state: AppState) {
             message = if (sports) "Sports service unavailable. Open Configure in your browser and paste its generated manifest. ${e.message}" else e.message.orEmpty()
         } finally { loading = false }
     }
-    LaunchedEffect(manifest, category, search) {
+    LaunchedEffect(manifest, category, search,sports) {
+        if(!sports) return@LaunchedEffect
         generation++;canLoadMore=false;sources=emptyList();sourceChannel=null
         val selected = category ?: return@LaunchedEffect
         loading = true; message = ""; channels = emptyList(); offset = 0
@@ -130,19 +131,14 @@ fun LiveScreen(state: AppState) {
             Text(tr("TV en vivo","Live TV"), color=Color.White,fontSize=30.sp,lineHeight=36.sp)
             Spacer(Modifier.height(8.dp))
             LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                item { FocusButton(tr("Canales de TV","TV Channels"),primary=provider=="nauta") { provider="nauta";state.liveProviderTab=provider;state.liveCategoryId=null } }
+                item { FocusButton(tr("Canales de TV","TV Channels"),primary=!sports) { provider="tv";state.liveProviderTab=provider;state.liveCategoryId=null } }
                 item { FocusButton(tr("Deportes en vivo","Live Sports"),primary=sports) { provider="sports";state.liveProviderTab=provider;state.liveCategoryId=null } }
-                item { FocusButton(tr("Canales","Channels"),primary=iptv) { provider="iptv:do";state.liveProviderTab=provider;state.liveCategoryId=null } }
                 item { FocusButton(tr("★ Favoritos","★ Favorites")) { showFavorites=true } }
                 item { FocusButton("Live Scores") {state.showLiveScoresRP11=true} }
-                if(iptv) item { FocusButton(tr("Actualizar","Refresh")) { if(!loading) scope.launch {
-                    loading=true
-                    try { IptvRepository.refresh(manifest);refreshVersion++ } catch(e: Exception) { if(e is CancellationException) throw e;message=e.message.orEmpty() } finally { loading=false }
-                } } }
-                if(sports) item { FocusButton(tr("Manifiesto de deportes","Sports manifest")) { editManifest=true } }
             }
-            if(sports) {Spacer(Modifier.height(10.dp));FocusButton("⚾ LIDOM 2026–27",primary=true) {state.screen=Screen.LIDOM}}
-            if(iptv) { Spacer(Modifier.height(8.dp));RegionTabs(provider) { provider=it;state.liveProviderTab=it;state.liveCategoryId=null } }
+            if(sports) {Spacer(Modifier.height(10.dp));Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {FocusButton("⚾ LIDOM 2026–27",primary=true) {state.screen=Screen.LIDOM};FocusButton(tr("Configurar deportes","Configure sports")) {editManifest=true}}}
+            if(!sports) key(state.session?.userId,state.activeProfile.id) {UnifiedLiveTVRP32(state,Modifier.weight(1f))}
+            if(sports) {
             Spacer(Modifier.height(8.dp))
             NativeTextField(search, { search = it; state.liveSearch=it }, tr("Buscar nombre o número de canal","Search channel name or number"), modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp))
@@ -191,6 +187,7 @@ fun LiveScreen(state: AppState) {
                 }
             }
         }
+    }
     }
     if(showFavorites) FavoriteChannelsDialog(state,{ showFavorites=false;state.openLivePlayer(it) }) { showFavorites=false }
     if (editManifest) Dialog(onDismissRequest = { editManifest = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {

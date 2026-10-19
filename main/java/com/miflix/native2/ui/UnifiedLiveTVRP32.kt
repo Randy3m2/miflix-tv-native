@@ -34,7 +34,7 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
     val repo=remember {LiveRepository()}
     val scope=rememberCoroutineScope()
     val permits=remember {Semaphore(4)}
-    var country by remember {mutableStateOf("all")}
+    var country by remember {mutableStateOf("nauta")}
     var selected by remember {mutableStateOf("all")}
     var query by remember {mutableStateOf(state.liveSearch)}
     var groups by remember {mutableStateOf<List<TVGroupRP32>>(emptyList())}
@@ -48,10 +48,10 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
     var links by remember {mutableStateOf<List<StreamChoice>>(emptyList())}
     val offsets=remember {mutableMapOf<String,Int>()}
     val finished=remember {mutableSetOf<String>()}
-    val countries=remember {listOf("all" to "Todos / All","nauta" to "Internacional · Nauta")+IptvRepository.sources.map {it.key to it.value.first}}
+    val countries=remember {listOf("nauta" to "Nauta", "iptv" to "IPTV")}
     fun manifest(provider:String)=state.calendarLiveManifest(provider)
     val active=remember(groups,country,selected) {
-        val subset=groups.filter {country=="all" || it.provider==country}
+        val subset=groups.filter {country=="iptv" && it.provider in IptvRepository.sources || it.provider==country}
         if(selected!="all") subset.filter {it.key==selected}
         else subset.filter {it.category.genre==null}.distinctBy {"${it.provider}:${it.category.type}:${it.category.id}"}
     }
@@ -86,9 +86,9 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
             else if(rows.isEmpty()) message=tr("No se encontraron canales en esta selección.","No channels found in this selection.")
         } finally {if(stamp==generation) busy=false}
     }
-    LaunchedEffect(retry) {
+    LaunchedEffect(retry,country) {
         busy=true;message="";groups=emptyList()
-        val providers=listOf("nauta")+IptvRepository.sources.keys
+        val providers=if(country=="iptv") IptvRepository.sources.keys.toList() else listOf("nauta")
         var failures=0
         val loaded=coroutineScope {providers.map {provider ->async {
             try {permits.withPermit {repo.categories(manifest(provider)).map {TVGroupRP32(provider,it)}}}
@@ -124,11 +124,11 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
         }
     }
     Column(modifier.fillMaxWidth().padding(top=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-        Text(tr("PAÍSES Y REGIONES","COUNTRIES & REGIONS"),color=Muted)
+        Text(tr("CATEGORÍAS","CATEGORIES"),color=Muted)
         LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
             items(countries,key={it.first}) {(id,label)->FocusButton(label,primary=country==id) {country=id;selected="all"}}
         }
-        val filters=groups.filter {country=="all" || it.provider==country}.distinctBy {it.key}
+        val filters=groups.filter {country=="iptv" && it.provider in IptvRepository.sources || it.provider==country}.distinctBy {it.key}
         if(filters.isNotEmpty()) LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             item {FocusButton(tr("Todas las categorías","All categories"),primary=selected=="all") {selected="all"}}
             items(filters,key={it.key}) {g ->FocusButton((if(country=="all") (countries.firstOrNull {it.first==g.provider}?.second.orEmpty()+" · ") else "")+g.category.name,primary=selected==g.key) {selected=g.key}}

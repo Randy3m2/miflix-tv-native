@@ -53,7 +53,7 @@ internal fun CompactPlayerControls(
     onResize: () -> Unit, onMenu: (String) -> Unit, onLinks: () -> Unit, onSeek: (Long) -> Unit,
     seekable: Boolean, party: Boolean, onParty: () -> Unit, onChat: () -> Unit, onReactions: () -> Unit, onQuickReactions: () -> Unit, onClose: () -> Unit, onMaximize: () -> Unit,
     nextAvailable: Boolean, onNext: () -> Unit, onEpisodes: () -> Unit, onQueue: () -> Unit, onInfo: () -> Unit, onPip: () -> Unit, onMultiView: () -> Unit, onMoment: () -> Unit,
-    previousChannelVisible:Boolean=false,previousChannelAvailable:Boolean=false,previousChannelName:String="",onPreviousChannel:()->Unit={},onScores:()->Unit={},badgePlayerRP26:androidx.media3.exoplayer.ExoPlayer?=null
+    previousChannelVisible:Boolean=false,previousChannelAvailable:Boolean=false,previousChannelName:String="",onPreviousChannel:()->Unit={},onScores:()->Unit={},channelFavoriteRP36: @Composable ()->Unit={},badgePlayerRP26:androidx.media3.exoplayer.ExoPlayer?=null
 ) {
     val seekFocus=remember { FocusRequester() }
     var focusedLabel by remember { mutableStateOf("") }
@@ -69,11 +69,14 @@ internal fun CompactPlayerControls(
             .background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xE6000000))))
             .padding(start=24.dp,end=24.dp,top=30.dp,bottom=16.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
             var titleFocused by remember { mutableStateOf(false) }
+            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             Text(request.item.title,color=if(titleFocused) Color.Black else Color.White,fontSize=22.sp,lineHeight=26.sp,maxLines=1,
-                modifier=Modifier.onFocusChanged { titleFocused=it.isFocused; if(it.isFocused) onInteraction() }
+                modifier=Modifier.weight(1f,fill=false).onFocusChanged { titleFocused=it.isFocused; if(it.isFocused) onInteraction() }
                     .background(if(titleFocused) Color.White else Color.Transparent,RoundedCornerShape(6.dp))
                     .semantics { contentDescription=request.item.title+" · "+tr("Opciones de contenido y Party","Content and Party options") }
                     .clickable { onInteraction(); onMenu("content") }.padding(horizontal=4.dp,vertical=2.dp))
+            channelFavoriteRP36()
+            }
             PlaybackBadgesRP26(badgePlayerRP26,request)
             Text(if(request.item.type=="series") "S${request.season} E${request.episode} · ${request.stream.name}" else request.stream.name,
                 color=Color(0xFFBBBBBB),fontSize=12.sp,lineHeight=15.sp,maxLines=1)

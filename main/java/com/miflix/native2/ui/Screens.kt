@@ -2017,7 +2017,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             state.localExtras.rememberTracks(state.localExtrasScope(),request.item,player,value)
             // Explicit user adjustment, not a recovery loop. Re-read subtitle cues at this position.
             if(player.isCurrentMediaItemSeekable) player.seekTo(player.currentPosition)
-        },close={ playerMenu=null;dismissKey=null;controlInteraction++;channelMenuScopeRP34.launch {withFrameNanos {};runCatching {surfaceFocus.requestFocus()}} })
+        },close={ playerMenu=null;controlInteraction++ })
         if(playerMenu=="info") PlaybackInfoDialog(player,request) { playerMenu=null;controlInteraction++ }
         if(playerMenu=="channel_permission") PlayerMenuDialog(onDismissRequest={ playerMenu=null }) {
             val first=remember { FocusRequester() }
@@ -2030,7 +2030,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         if(playerMenu=="channels") LiveChannelPicker(state,request.liveProvider,select={ req ->
             if(state.partyRole==PartyRole.GUEST) state.error=tr("El host cambia el canal del party","The host changes the party channel")
             else {playerMenu=null;dismissKey=null;state.openLivePlayer(req)}
-        },close={ playerMenu=null;controlInteraction++ })
+        },close={ playerMenu=null;dismissKey=null;controlInteraction++;channelMenuScopeRP34.launch {withFrameNanos {};runCatching {surfaceFocus.requestFocus()}} })
         if(confirmMulti) PlayerMenuDialog(onDismissRequest={ confirmMulti=false }) {
             val first=remember { FocusRequester() }
             LaunchedEffect(Unit) { withFrameNanos { };first.requestFocus() }
@@ -2061,6 +2061,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 onEpisodes={ if(request.liveProvider=="lidom") state.showLidomSources(request) else if(request.live) playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else "channels" else { episodesResumeAfterClose=false;showEpisodes=true } },onQueue={ showQueue=true },
                 onMoment={momentNotice=false;showMomentComposer=true},onInfo={ playerMenu="info" },onPip={ parkCurrentPlayback();playerMenu=null;controlsVisible=false;state.miniPlayer=true;state.screen=Screen.HOME },
                 onScores={state.showLiveScoresRP11=true},
+                channelFavoriteRP36={if(request.live) LiveFavoriteRP36(state,request) {controlInteraction++}},
                 onMultiView={ if(state.watchParty!=null || state.pendingPartyCode!=null) confirmMulti=true else state.beginMultiView(request) })
         }
         if(showMomentComposer) MomentComposer(state,request,momentStart,momentEnd,

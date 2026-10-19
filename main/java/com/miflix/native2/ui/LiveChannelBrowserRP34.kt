@@ -7,6 +7,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,12 +43,16 @@ private data class BrowserChannelRP34(val provider:String,val value:LiveChannel)
 /** Shared TV remote picker for player Channels and multiview add/replace. */
 @Composable
 internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select:(PlayerRequest)->Unit,close:()->Unit) {
+    val current=state.playerRequest?.takeIf {it.live}
     val context=LocalContext.current
     val repo=remember {LiveRepository()}
     val scope=rememberCoroutineScope()
     val permits=remember {Semaphore(4)}
     val first=remember {FocusRequester()}
     val firstChannel=remember {FocusRequester()}
+    var iptv by remember {mutableStateOf(initialProvider in IptvRepository.sources)}
+    val channelList=rememberLazyListState()
+    var initialFocus by remember {mutableStateOf(true)}
     var categories by remember {mutableStateOf<List<BrowserCategoryRP34>>(emptyList())}
     var selected by remember {mutableStateOf("")}
     var channels by remember {mutableStateOf<List<BrowserChannelRP34>>(emptyList())}
@@ -63,20 +68,20 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     val revision=LiveLibrary.revision
     val favorites=remember(revision,state.session?.userId,state.activeProfile.id) {LiveLibrary.favorites(context,state)}
     val group=categories.firstOrNull {it.key==selected}
-    LaunchedEffect(retry) {
-        loading=true;message=""
-        val providers=(listOf(initialProvider.takeIf {it=="sports" || it=="nauta" || it in IptvRepository.sources},"nauta")+IptvRepository.sources.keys).filterNotNull().distinct()
+    LaunchedEffect(retry,iptv) {
+        loading=true;message="";categories=emptyList();selected=""
+        val providers=if(iptv) IptvRepository.sources.keys.toList() else listOf(if(initialProvider=="sports") "sports" else "nauta")
         val found=coroutineScope {providers.map {provider ->async {
             try {permits.withPermit {
                 val manifest=state.calendarLiveManifest(provider)
                 val catalog=browserCategoryCacheRP34.get(manifest) ?: repo.categories(manifest).also {browserCategoryCacheRP34.put(manifest,it)}
-                catalog.map {c -> BrowserCategoryRP34(provider,c,
-                    if(provider=="nauta") "Nauta" else if(provider=="sports") tr("Deportes","Sports") else IptvRepository.sources[provider]?.first.orEmpty())}
+                catalog.map {BrowserCategoryRP34(provider,it,if(provider=="nauta") "Nauta" else if(provider=="sports") tr("Deportes","Sports") else IptvRepository.sources[provider]?.first.orEmpty())}
             }} catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
         }}.awaitAll().flatten()}
-        val initial=selected.isBlank()
-        categories=found.distinctBy {it.key};if(initial) selected=categories.firstOrNull()?.key ?: "favorites";loading=false
-        if(initial) {withFrameNanos {};runCatching {first.requestFocus()}}
+        categories=found.distinctBy {it.key}
+        selected=categories.firstOrNull {it.provider==current?.liveProvider && it.value.genre==null}?.key ?: categories.firstOrNull()?.key ?: "favorites"
+        loading=false
+        if(!initialFocus) {withFrameNanos {};runCatching {first.requestFocus()}}
     }
     LaunchedEffect(selected,search) {
         generation++;resolving=false;more=false;channels=emptyList();offset=0;message=""
@@ -100,8 +105,19 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
         } catch(e:CancellationException) {throw e} catch(_:Exception) {message=tr("No se pudo cargar esta categoría.","Could not load this category.")}
         finally {loading=false}
     }
-    val displayed=(if(selected=="favorites") favorites.map {BrowserChannelRP34(it.provider,it.channel)} else channels).filter {
+    val playing=current?.takeIf {r -> group?.provider==r.liveProvider && search.isBlank() && group?.value?.genre==null}?.let {r ->
+        BrowserChannelRP34(r.liveProvider,LiveChannel(r.liveChannelId,r.liveType,r.item.title,r.item.backdrop,r.item.overview))
+    }
+    val displayed=(if(selected=="favorites") favorites.map {BrowserChannelRP34(it.provider,it.channel)} else listOfNotNull(playing)+channels).distinctBy {it.key}.filter {
         search.isBlank() || IptvPlaylist.searchKey(it.value.name).contains(IptvPlaylist.searchKey(search)) || it.value.number.toString()==search.trim()
+    }
+    LaunchedEffect(displayed.map {it.key},loading) {
+        if(initialFocus && !loading) {
+            val index=displayed.indexOfFirst {it.provider==current?.liveProvider && it.value.id==current?.liveChannelId}
+            if(index>=0) {channelList.scrollToItem(index);withFrameNanos {};runCatching {firstChannel.requestFocus()}}
+            else {withFrameNanos {};runCatching {first.requestFocus()}}
+            initialFocus=false
+        }
     }
     fun tune(entry:BrowserChannelRP34) {
         if(resolving) return
@@ -121,8 +137,8 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     }
     PlayerMenuDialog(onDismissRequest=close,fullScreen=true) {
         BoxWithConstraints(Modifier.fillMaxSize().consumeOpeningPress()) {
-            val width=if(maxWidth<700.dp) .96f else .82f
-            Row(Modifier.fillMaxHeight().fillMaxWidth(width).widthIn(max=980.dp).background(Color(0xEF080808)),horizontalArrangement=Arrangement.spacedBy(1.dp)) {
+            val width=if(maxWidth<700.dp) .82f else .64f
+            Row(Modifier.align(Alignment.CenterStart).fillMaxHeight(.84f).fillMaxWidth(width).widthIn(max=740.dp).background(Color(0xEF080808)),horizontalArrangement=Arrangement.spacedBy(1.dp)) {
                 Column(Modifier.weight(.36f).fillMaxHeight().onPreviewKeyEvent {event ->
                     if(event.nativeKeyEvent.keyCode==android.view.KeyEvent.KEYCODE_DPAD_RIGHT && displayed.isNotEmpty()) {
                         if(event.type==KeyEventType.KeyDown) runCatching {firstChannel.requestFocus()};true
@@ -131,6 +147,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                     Text(tr("CATEGORÍAS","CATEGORIES"),color=Muted,fontSize=12.sp)
                     LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp),contentPadding=PaddingValues(bottom=18.dp)) {
                         item(key="favorites") {BrowserCategoryRowRP34(tr("♥ Favoritos","♥ Favorites"),selected=="favorites",Modifier.then(if(selected=="favorites") Modifier.focusRequester(first) else Modifier),{selected="favorites"})}
+                        item(key="source") {BrowserCategoryRowRP34(if(iptv) "‹ Nauta" else "IPTV ›",false,Modifier,{iptv=!iptv},activateOnly=true)}
                         items(categories,key={it.key}) {c ->
                             BrowserCategoryRowRP34(c.value.name,selected==c.key,
                                 Modifier.then(if(c.key==selected) Modifier.focusRequester(first) else Modifier),
@@ -144,12 +161,13 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                     NativeTextField(search,{search=it},tr("Buscar canal","Search channels"),modifier=Modifier.fillMaxWidth())
                     if(loading || resolving) Text(if(resolving) tr("Abriendo canal…","Opening channel…") else tr("Cargando…","Loading…"),color=Muted,fontSize=12.sp)
                     if(message.isNotBlank()) Text(message,color=Color.White,fontSize=12.sp)
-                    LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(2.dp),contentPadding=PaddingValues(bottom=16.dp)) {
+                    LazyColumn(Modifier.weight(1f),state=channelList,verticalArrangement=Arrangement.spacedBy(2.dp),contentPadding=PaddingValues(bottom=16.dp)) {
                         items(displayed,key={it.key}) {entry ->
                             val favorite=favorites.any {it.provider==entry.provider && it.channel.id==entry.value.id}
                             BrowserChannelRowRP34(entry.value,entry.value.number.takeIf {it>0} ?: (displayed.indexOf(entry)+1),favorite,
+                                playing=entry.provider==current?.liveProvider && entry.value.id==current?.liveChannelId,
                                 click={tune(entry)},hold={LiveLibrary.toggle(context,state,entry.provider,entry.value)},
-                                modifier=Modifier.then(if(entry==displayed.firstOrNull()) Modifier.focusRequester(firstChannel) else Modifier).onPreviewKeyEvent {event ->
+                                modifier=Modifier.then(if(entry==(displayed.firstOrNull {it.provider==current?.liveProvider && it.value.id==current?.liveChannelId} ?: displayed.firstOrNull())) Modifier.focusRequester(firstChannel) else Modifier).onPreviewKeyEvent {event ->
                                     if(event.nativeKeyEvent.keyCode==android.view.KeyEvent.KEYCODE_DPAD_LEFT) {if(event.type==KeyEventType.KeyDown) runCatching {first.requestFocus()};true} else false
                                 })
                         }
@@ -181,17 +199,17 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
 }
 
 @Composable
-private fun BrowserCategoryRowRP34(title:String,selected:Boolean,modifier:Modifier,onSelect:()->Unit,source:String="") {
+private fun BrowserCategoryRowRP34(title:String,selected:Boolean,modifier:Modifier,onSelect:()->Unit,source:String="",activateOnly:Boolean=false) {
     var focused by remember {mutableStateOf(false)}
     Column(modifier.fillMaxWidth().clip(RoundedCornerShape(9.dp)).background(if(focused) Color.White else if(selected) Color(0xFF292929) else Color.Transparent)
-        .onFocusChanged {focused=it.isFocused;if(it.isFocused) onSelect()}.focusable().tvClick(onSelect).clickable(onClick=onSelect).padding(horizontal=12.dp,vertical=12.dp)) {
+        .onFocusChanged {focused=it.isFocused;if(it.isFocused && !activateOnly) onSelect()}.focusable().tvClick(onSelect).clickable(onClick=onSelect).padding(horizontal=12.dp,vertical=12.dp)) {
         Text(title,color=if(focused) Color.Black else Color.White,fontSize=14.sp,maxLines=2)
         if(source.isNotBlank()) Text(source,color=if(focused) Color.DarkGray else Muted,fontSize=10.sp)
     }
 }
 
 @Composable
-private fun BrowserChannelRowRP34(channel:LiveChannel,number:Int,favorite:Boolean,click:()->Unit,hold:()->Unit,modifier:Modifier=Modifier) {
+private fun BrowserChannelRowRP34(channel:LiveChannel,number:Int,favorite:Boolean,playing:Boolean,click:()->Unit,hold:()->Unit,modifier:Modifier=Modifier) {
     var focused by remember(channel.id) {mutableStateOf(false)}
     Row(modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(if(focused) Color(0xFF292929) else Color.Transparent)
         .border(if(focused) 1.dp else 0.dp,if(focused) Color.White else Color.Transparent,RoundedCornerShape(8.dp))
@@ -204,8 +222,21 @@ private fun BrowserChannelRowRP34(channel:LiveChannel,number:Int,favorite:Boolea
         Text(number.toString(),color=Muted,fontSize=12.sp)
         Column(Modifier.weight(1f)) {
             Text(channel.name,color=Color.White,fontWeight=FontWeight.Bold,fontSize=14.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-            Text(tr("EN VIVO","LIVE"),color=Muted,fontSize=10.sp)
+            Text(if(playing) tr("▶ Reproduciendo","▶ Now playing") else tr("EN VIVO","LIVE"),color=if(playing) Color.White else Muted,fontSize=10.sp)
         }
         Text(if(favorite) "♥" else "♡",color=if(favorite) Color.White else Muted,fontSize=20.sp)
+    }
+}
+
+@Composable
+internal fun LiveFavoriteRP36(state:AppState,request:PlayerRequest,onInteraction:()->Unit) {
+    val context=LocalContext.current
+    val revision=LiveLibrary.revision
+    val favorite=remember(revision,state.activeProfile.id,state.session?.userId,request.liveProvider,request.liveChannelId) {
+        LiveLibrary.favorites(context,state).any {it.provider==request.liveProvider && it.channel.id==request.liveChannelId}
+    }
+    FocusButton(if(favorite) "♥" else "♡",modifier=Modifier.width(56.dp)) {
+        onInteraction()
+        LiveLibrary.toggle(context,state,request.liveProvider,LiveChannel(request.liveChannelId,request.liveType,request.item.title,request.item.backdrop,request.item.overview))
     }
 }

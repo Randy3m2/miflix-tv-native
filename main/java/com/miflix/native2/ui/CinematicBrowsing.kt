@@ -33,7 +33,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -267,16 +266,7 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
                 Text(if(query.isEmpty()) tr("Películas, series…","Movies, series…") else query,
                     color=if(query.isEmpty()) Muted else Color.White,fontSize=19.sp,maxLines=1,
                     onTextLayout={searchLayoutRP35=it},
-                    modifier=Modifier.fillMaxWidth().onSizeChanged {fieldWidth=it.width}.horizontalScroll(textScroll).padding(end=2.dp)
-                        .drawWithContent {
-                            drawContent()
-                            val layout=searchLayoutRP35
-                            if(query.isNotEmpty() && layout!=null && layout.layoutInput.text.text==query) {
-                                val caret=layout.getCursorRect(cursor.coerceIn(0,query.length))
-                                drawLine(Accent,androidx.compose.ui.geometry.Offset(caret.left,caret.top+2.dp.toPx()),
-                                    androidx.compose.ui.geometry.Offset(caret.left,caret.bottom-2.dp.toPx()),strokeWidth=1.dp.toPx())
-                            }
-                        })
+                    modifier=Modifier.fillMaxWidth().onSizeChanged {fieldWidth=it.width}.horizontalScroll(textScroll))
             }
             Row(Modifier.weight(1f).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(24.dp)) {
                 LazyColumn(Modifier.width(220.dp).fillMaxHeight(),verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=20.dp)) {

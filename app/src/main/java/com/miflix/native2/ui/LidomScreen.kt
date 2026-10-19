@@ -64,6 +64,7 @@ internal fun LidomScreen(state:AppState) {
                 Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                     FocusButton(if(onlyFavorites) tr("Todos los equipos","All teams") else tr("★ Favoritos","★ Favorites")) {onlyFavorites=!onlyFavorites}
                     FocusButton(tr("Actualizar partidos","Refresh games")) {refresh++}
+                    FocusButton("PIN Live score") {state.showLiveScoresRP11=true}
                     FocusButton("SplitScreen") {
                         state.launch {
                             state.leaveWatchParty()

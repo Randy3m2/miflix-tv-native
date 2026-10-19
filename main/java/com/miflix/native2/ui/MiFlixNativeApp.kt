@@ -47,7 +47,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
 
     val localizedContext=remember(baseContext,state.interfaceLanguage) {
         val config=android.content.res.Configuration(context.resources.configuration)
-        config.setLocale(java.util.Locale.forLanguageTag(state.interfaceLanguage))
+        config.setLocale(java.util.Locale.forLanguageTag(if(state.interfaceLanguage=="es") "es-MX" else "en-US"))
         android.view.ContextThemeWrapper(baseContext,0).apply { applyOverrideConfiguration(config) }
     }
     CompositionLocalProvider(LocalCardFreshnessLoad provides {item: com.miflix.native2.model.MediaSummary -> state.requestCardFreshness(item)},LocalCardFreshness provides {item: com.miflix.native2.model.MediaSummary -> state.cardFreshness(item)},LocalPlayerMenuSide provides (state.screen==Screen.PLAYER || state.screen==Screen.MULTIVIEW),LocalContext provides localizedContext,LocalProfileManage provides {state.socialProfileEditor=true},LocalCastPair provides {state.localCastPairing=true},LocalTitleActions provides {item: com.miflix.native2.model.MediaSummary -> state.titleActions(item)}) {
@@ -143,6 +143,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 }
             }
         }
+        LiveScoreOverlayRP11(state)
         }
         LaunchedEffect(bootstrapped,state.session?.userId,state.activeProfile.id) {
             if(bootstrapped) runCatching { state.loadRatings() }.onFailure { state.error=it.message }

@@ -40,6 +40,7 @@ import java.util.UUID
 class AppState(context: Context) {
     init { com.miflix.native2.data.AwardSelections.configure(context.assets.open("awards_catalog.json").bufferedReader().use {it.readText()}) }
     private val appContext=context.applicationContext
+    var showLiveScoresRP11 by mutableStateOf(false)
     var clearingCache by mutableStateOf(false)
     var cacheCleared by mutableStateOf(false)
     suspend fun clearCache() {

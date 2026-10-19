@@ -174,6 +174,7 @@ fun MultiViewScreen(state: AppState) {
         Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
             Text("SplitScreen · ${state.multiViewRequests.size}/4",color=Color.White,fontSize=23.sp)
             FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            FocusButton("PIN Live score") {state.showLiveScoresRP11=true}
             FocusButton(tr("Añadir LIDOM","Add LIDOM"),modifier=Modifier.focusRequester(first)) {if(state.multiViewRequests.size<4) {replacing=null;lidomInitialTeam="";lidomPicker=true}}
             FocusButton(tr("Añadir canal","Add channel")) { if(state.multiViewRequests.size<4) { replacing=null;picker=true } }
             FocusButton(if(hd) "HD · 720p" else tr("Fluido · 540p","Smooth · 540p")) { hd=!hd }

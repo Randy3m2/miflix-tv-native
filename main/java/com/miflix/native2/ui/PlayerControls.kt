@@ -53,12 +53,13 @@ internal fun CompactPlayerControls(
     onResize: () -> Unit, onMenu: (String) -> Unit, onLinks: () -> Unit, onSeek: (Long) -> Unit,
     seekable: Boolean, party: Boolean, onParty: () -> Unit, onChat: () -> Unit, onReactions: () -> Unit, onQuickReactions: () -> Unit, onClose: () -> Unit, onMaximize: () -> Unit,
     nextAvailable: Boolean, onNext: () -> Unit, onEpisodes: () -> Unit, onQueue: () -> Unit, onInfo: () -> Unit, onPip: () -> Unit, onMultiView: () -> Unit, onMoment: () -> Unit,
-    previousChannelVisible:Boolean=false,previousChannelAvailable:Boolean=false,previousChannelName:String="",onPreviousChannel:()->Unit={}
+    previousChannelVisible:Boolean=false,previousChannelAvailable:Boolean=false,previousChannelName:String="",onPreviousChannel:()->Unit={},onScores:()->Unit={}
 ) {
     val seekFocus=remember { FocusRequester() }
     var focusedLabel by remember { mutableStateOf("") }
     Box(Modifier.fillMaxSize()) {
         Row(Modifier.align(Alignment.TopEnd).padding(top=20.dp,end=24.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+            PlayerIconButton("score",tr("PIN Live score","PIN Live score"),onInteraction=onInteraction,onClick=onScores,onLabel={focusedLabel=it})
             PlayerIconButton("info",tr("Información técnica","Playback info"),onInteraction=onInteraction,onClick=onInfo,onLabel={ focusedLabel=it })
             if(!request.live && seekable) PlayerIconButton("moment",tr("Grabar momento","Mark a moment"),onInteraction=onInteraction,onClick=onMoment,onLabel={ focusedLabel=it })
             PlayerIconButton("pip",tr("Ventana flotante","Picture in Picture"),onInteraction=onInteraction,onClick=onPip,onLabel={ focusedLabel=it })
@@ -131,6 +132,7 @@ private fun PlayerGlyph(icon: String, color: Color, modifier: Modifier) {
             "moment" -> { rectangle(.12f,.22f,.76f,.56f);line(.3f,.12f,.3f,.88f);line(.7f,.12f,.7f,.88f) }
             "info" -> { drawCircle(color,w*.4f,Offset(w*.5f,h*.5f),style=stroke);line(.5f,.45f,.5f,.75f);drawCircle(color,w*.04f,Offset(w*.5f,h*.27f)) }
             "pip" -> { rectangle(.05f,.15f,.9f,.7f);drawRect(color,Offset(w*.52f,h*.48f),Size(w*.33f,h*.26f)) }
+            "score" -> {rectangle(.05f,.18f,.9f,.64f);line(.5f,.18f,.5f,.82f);line(.17f,.38f,.35f,.38f);line(.17f,.58f,.35f,.58f);line(.65f,.38f,.83f,.38f);line(.65f,.58f,.83f,.58f)}
             "grid" -> { rectangle(.08f,.08f,.35f,.35f);rectangle(.57f,.08f,.35f,.35f);rectangle(.08f,.57f,.35f,.35f);rectangle(.57f,.57f,.35f,.35f) }
             "close" -> { line(.2f,.2f,.8f,.8f); line(.8f,.2f,.2f,.8f) }
             "maximize" -> { line(.1f,.35f,.1f,.1f);line(.1f,.1f,.35f,.1f);line(.65f,.1f,.9f,.1f);line(.9f,.1f,.9f,.35f);line(.9f,.65f,.9f,.9f);line(.9f,.9f,.65f,.9f);line(.35f,.9f,.1f,.9f);line(.1f,.9f,.1f,.65f) }

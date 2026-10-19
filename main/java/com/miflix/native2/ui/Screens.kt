@@ -1168,6 +1168,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     if(category=="sources") item(key="setting-8") {
                         SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Stream Add-ons";helpDescription="Use the main profile add-ons or configure sources for this profile on this TV.";helpIndex=8 }) {
                 Text(tr("Complementos de reproducción","Stream Add-ons"), color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold)
+                SettingsTileRC103("PIN Live score",tr("NBA, MLB y LIDOM en una píldora movible. Preferencias locales por perfil.","NBA, MLB and LIDOM in a movable pill. Local per-profile preferences."),"lists") {state.showLiveScoresRP11=true}
                 SettingsTileRC103(tr("Orden de los add-ons","Add-on priority"),tr("Prioridades independientes para español e inglés, guardadas para este perfil en esta TV.","Separate Spanish and English priorities, saved for this profile on this TV."),"lists") {showAddonOrder=true}
                 Spacer(Modifier.height(8.dp))
                 Text(tr("Añade las URLs de manifiesto de tus complementos compatibles. Cada perfil puede heredar las fuentes del principal o usar las suyas en esta TV.","Add manifest URLs for your compatible add-ons. Each profile can inherit the main profile sources or use its own on this TV."), color = Muted, fontSize = 14.sp, lineHeight=17.sp, modifier = Modifier.fillMaxWidth())
@@ -2014,6 +2015,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 onNext={cancelAutoplay=true;state.launch {state.socialAction {if(randomMode) state.playRandomEpisode(request.item) else upcoming?.let {state.playNext(request,it)} } }},
                 onEpisodes={ if(request.liveProvider=="lidom") state.showLidomSources(request) else if(request.live) playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else "channels" else { episodesResumeAfterClose=false;showEpisodes=true } },onQueue={ showQueue=true },
                 onMoment={momentNotice=false;showMomentComposer=true},onInfo={ playerMenu="info" },onPip={ parkCurrentPlayback();playerMenu=null;controlsVisible=false;state.miniPlayer=true;state.screen=Screen.HOME },
+                onScores={state.showLiveScoresRP11=true},
                 onMultiView={ if(state.watchParty!=null || state.pendingPartyCode!=null) confirmMulti=true else state.beginMultiView(request) })
         }
         if(showMomentComposer) MomentComposer(state,request,momentStart,momentEnd,

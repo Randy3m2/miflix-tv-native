@@ -85,11 +85,18 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 baseContext.playbackActivity()?.finish()
             } else homeExitArmedAt=now
         }
+        val scoreShortcut=remember(state.activeProfile.id,state.session?.userId,state.screen,state.appForeground) {ScorePinShortcutRP15()}
         val navigationState=androidx.compose.runtime.saveable.rememberSaveableStateHolder()
         Box(Modifier.fillMaxSize().onPreviewKeyEvent {
             MenuActivity.touch()
             if(it.nativeKeyEvent.action==android.view.KeyEvent.ACTION_DOWN && it.nativeKeyEvent.keyCode!=android.view.KeyEvent.KEYCODE_BACK) homeExitArmedAt=0L
-            false
+            val key=it.nativeKeyEvent
+            val shortcut=state.focusScorePinRP15
+            if(shortcut==null) {scoreShortcut.reset();false}
+            else if(key.action==android.view.KeyEvent.ACTION_DOWN &&
+                scoreShortcut.press(key.keyCode==android.view.KeyEvent.KEYCODE_DPAD_UP,key.repeatCount,key.eventTime)) {
+                shortcut();true
+            } else false
         }.pointerInput(Unit) {awaitPointerEventScope {while(true) {awaitPointerEvent(PointerEventPass.Initial);MenuActivity.touch()} }}) {
         navigationState.SaveableStateProvider("${state.session?.userId}:${state.activeProfile.id}:${state.screen.name}") {
         val destination=if(state.kidsMode && state.screen !in setOf(Screen.HOME,Screen.SEARCH,Screen.MY_LIST,Screen.DETAILS,Screen.PROFILES,Screen.NOTIFICATIONS,Screen.PLAYER)) Screen.HOME else state.screen

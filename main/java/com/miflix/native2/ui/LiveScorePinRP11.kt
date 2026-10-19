@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.PopupProperties
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
@@ -84,9 +85,19 @@ internal fun LiveScoreOverlayRP11(state:AppState) {
     val owner="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
     val pin=remember(owner) {ScorePinStateRP11(context,owner)}
     var moving by remember(owner) {mutableStateOf(false)}
+    var interacting by remember(owner) {mutableStateOf(false)}
+    var actions by remember(owner) {mutableStateOf(false)}
     val visible=state.appForeground && !state.kidsMode && state.screen !in setOf(Screen.PROFILES,Screen.SPLASH)
     LaunchedEffect(owner) {state.showLiveScoresRP11=false;moving=false}
     val current=pin.pinned
+    LaunchedEffect(visible,pin.enabled,current?.id) {
+        if(!visible || !pin.enabled || current==null) {actions=false;interacting=false;moving=false}
+    }
+    DisposableEffect(owner,visible,pin.enabled,current?.id) {
+        val callback:(() -> Unit)?=if(visible && pin.enabled && current!=null) ({moving=false;interacting=true;actions=true}) else null
+        state.focusScorePinRP15=callback
+        onDispose {if(state.focusScorePinRP15===callback) state.focusScorePinRP15=null}
+    }
     LaunchedEffect(owner,pin.enabled,current?.id,current?.league,current?.date,visible) {
         if(!visible || !pin.enabled || current==null || current.state=="final") return@LaunchedEffect
         var failures=0
@@ -103,69 +114,84 @@ internal fun LiveScoreOverlayRP11(state:AppState) {
     }
     if(visible && pin.enabled && current!=null) BoxWithConstraints(Modifier.fillMaxSize()) {
         val density=LocalDensity.current
-        val width=minOf(340.dp,maxWidth-16.dp)
-        val height=106.dp
-        val maxX=with(density) {(maxWidth-width-16.dp).toPx()}.coerceAtLeast(0f)
-        val maxY=with(density) {(maxHeight-height-16.dp).toPx()}.coerceAtLeast(0f)
-        val inset=with(density) {8.dp.toPx()}
+        val width=minOf(156.dp,maxWidth-8.dp)
+        val height=68.dp
+        val maxX=with(density) {(maxWidth-width-8.dp).toPx()}.coerceAtLeast(0f)
+        val maxY=with(density) {(maxHeight-height-8.dp).toPx()}.coerceAtLeast(0f)
+        val inset=with(density) {4.dp.toPx()}
         val focus=remember {FocusRequester()}
         Popup(alignment=Alignment.TopStart,
             offset=IntOffset((inset+pin.x*maxX).roundToInt(),(inset+pin.y*maxY).roundToInt()),
-            onDismissRequest={moving=false;pin.savePosition()},
-            properties=PopupProperties(focusable=moving,dismissOnBackPress=moving)) {
-            LaunchedEffect(moving) {if(moving) {withFrameNanos {};runCatching {focus.requestFocus()}}}
-            Column(Modifier.width(width).focusRequester(focus).onPreviewKeyEvent {event ->
-                if(!moving) false else {
+            onDismissRequest={moving=false;interacting=false;pin.savePosition()},
+            properties=PopupProperties(focusable=moving || interacting,dismissOnBackPress=moving || interacting)) {
+            LaunchedEffect(moving,interacting,actions) {if((moving || interacting) && !actions) {withFrameNanos {};runCatching {focus.requestFocus()}}}
+            Column(Modifier.consumeOpeningPress().width(width).focusRequester(focus).onPreviewKeyEvent {event ->
+                if(!moving && !interacting) false else {
                     val key=event.nativeKeyEvent
                     val supported=key.keyCode in listOf(KeyEvent.KEYCODE_DPAD_LEFT,KeyEvent.KEYCODE_DPAD_RIGHT,
                         KeyEvent.KEYCODE_DPAD_UP,KeyEvent.KEYCODE_DPAD_DOWN,KeyEvent.KEYCODE_DPAD_CENTER,
                         KeyEvent.KEYCODE_ENTER,KeyEvent.KEYCODE_BACK)
-                    if(supported && key.action==KeyEvent.ACTION_DOWN) {
+                    val arrow=key.keyCode in listOf(KeyEvent.KEYCODE_DPAD_LEFT,KeyEvent.KEYCODE_DPAD_RIGHT,KeyEvent.KEYCODE_DPAD_UP,KeyEvent.KEYCODE_DPAD_DOWN)
+                    if(supported && ((arrow && key.action==KeyEvent.ACTION_DOWN) || (!arrow && key.action==KeyEvent.ACTION_UP))) {
                         when(key.keyCode) {
-                            KeyEvent.KEYCODE_DPAD_LEFT->pin.x=ScorePolicyRP11.coordinate(pin.x-.025f)
-                            KeyEvent.KEYCODE_DPAD_RIGHT->pin.x=ScorePolicyRP11.coordinate(pin.x+.025f)
-                            KeyEvent.KEYCODE_DPAD_UP->pin.y=ScorePolicyRP11.coordinate(pin.y-.025f)
-                            KeyEvent.KEYCODE_DPAD_DOWN->pin.y=ScorePolicyRP11.coordinate(pin.y+.025f)
-                            else->{moving=false;pin.savePosition()}
+                            KeyEvent.KEYCODE_DPAD_LEFT->if(moving) {pin.x=ScorePolicyRP11.coordinate(pin.x-.025f)}
+                            KeyEvent.KEYCODE_DPAD_RIGHT->if(moving) {pin.x=ScorePolicyRP11.coordinate(pin.x+.025f)}
+                            KeyEvent.KEYCODE_DPAD_UP->if(moving) {pin.y=ScorePolicyRP11.coordinate(pin.y-.025f)}
+                            KeyEvent.KEYCODE_DPAD_DOWN->if(moving) {pin.y=ScorePolicyRP11.coordinate(pin.y+.025f)}
+                            KeyEvent.KEYCODE_DPAD_CENTER,KeyEvent.KEYCODE_ENTER->if(moving) {moving=false;interacting=false;pin.savePosition()} else {actions=true}
+                            else->{moving=false;interacting=false;pin.savePosition()}
                         }
                     }
                     supported
                 }
-            }.focusable(enabled=moving).pointerInput(owner,maxX,maxY) {
+            }.focusable(enabled=moving || interacting).pointerInput(owner,maxX,maxY) {
                 detectDragGestures(onDragEnd={pin.savePosition()},onDragCancel={pin.savePosition()}) {change,drag ->
                     change.consume()
                     if(maxX>0) pin.x=ScorePolicyRP11.coordinate(pin.x+drag.x/maxX)
                     if(maxY>0) pin.y=ScorePolicyRP11.coordinate(pin.y+drag.y/maxY)
                 }
             }) {
-                Column(Modifier.fillMaxWidth().height(70.dp)
+                Column(Modifier.fillMaxWidth().height(40.dp)
                     .background(Color(0xE6101010),RoundedCornerShape(36.dp))
-                    .border(if(moving) 2.dp else 1.dp,if(moving) Color.White else Color(0xFF444444),RoundedCornerShape(36.dp))
-                    .clickable {state.showLiveScoresRP11=true}.padding(horizontal=16.dp,vertical=8.dp),
-                    horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(3.dp)) {
-                    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        ScoreTeamLogoRP11(current.away,current.league)
-                        Text(current.away.short,color=Color.White,fontSize=13.sp,fontWeight=FontWeight.Bold,maxLines=1)
-                        Text(current.away.score+" – "+current.home.score,color=Color.White,fontSize=20.sp,fontWeight=FontWeight.Bold)
-                        Text(current.home.short,color=Color.White,fontSize=13.sp,fontWeight=FontWeight.Bold,maxLines=1)
-                        ScoreTeamLogoRP11(current.home,current.league)
+                    .border(if(moving || interacting) 2.dp else 1.dp,if(moving || interacting) Color.White else Color(0xFF444444),RoundedCornerShape(36.dp))
+                    .clickable {interacting=true;actions=true}.padding(horizontal=6.dp,vertical=3.dp),
+                    horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(1.dp,Alignment.CenterVertically)) {
+                    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                        ScoreTeamLogoRP11(current.away,current.league,18)
+                        Text(current.away.score+" – "+current.home.score,color=Color.White,fontSize=16.sp,lineHeight=18.sp,fontWeight=FontWeight.Bold)
+                        ScoreTeamLogoRP11(current.home,current.league,18)
                     }
                     val live=if(current.state=="live") tr("EN VIVO","LIVE")+" · " else ""
                     Text(current.league+" · "+live+scorePhaseRP11(current)+(if(pin.stale) tr(" · Sin actualizar"," · Update delayed") else ""),
-                        color=if(pin.stale) Color(0xFFFFD287) else Color(0xFFBDBDBD),fontSize=10.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+                        color=if(pin.stale) Color(0xFFFFD287) else Color(0xFFBDBDBD),fontSize=9.sp,lineHeight=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
                 }
+                if(interacting && !moving) Text(tr("OK · Opciones    Atrás · Salir","OK · Options    Back · Exit"),color=Color.White,fontSize=10.sp,lineHeight=12.sp,
+                    modifier=Modifier.background(Color(0xDC101010),RoundedCornerShape(12.dp)).padding(6.dp))
                 if(moving) Text(tr("Flechas · Mover     OK / Atrás · Guardar","Arrows · Move     OK / Back · Save"),
-                    color=Color.White,fontSize=11.sp,modifier=Modifier.background(Color(0xDC101010),RoundedCornerShape(12.dp)).padding(8.dp))
+                    color=Color.White,fontSize=10.sp,lineHeight=12.sp,modifier=Modifier.background(Color(0xDC101010),RoundedCornerShape(12.dp)).padding(6.dp))
             }
         }
     }
+    if(actions && current!=null && visible) {
+        val unpinFocus=remember {FocusRequester()}
+        Dialog(onDismissRequest={actions=false}) {
+            Column(Modifier.consumeOpeningPress().width(300.dp).background(Panel,RoundedCornerShape(22.dp)).padding(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                Text("Live Scores",color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
+                FocusButton(tr("Quitar marcador · Unpin","Unpin"),modifier=Modifier.focusRequester(unpinFocus)) {pin.pin(null);actions=false;interacting=false;moving=false}
+                FocusButton(tr("Mover marcador","Move score")) {actions=false;interacting=false;moving=true}
+                FocusButton(tr("Ver partidos","Browse games")) {actions=false;interacting=false;state.showLiveScoresRP11=true}
+                FocusButton(tr("Cerrar","Close")) {actions=false}
+            }
+            LaunchedEffect(Unit) {withFrameNanos {};runCatching {unpinFocus.requestFocus()}}
+        }
+    }
     if(state.showLiveScoresRP11 && !state.kidsMode) ScorePinManagerRP11(state,pin,onMove={
-        state.showLiveScoresRP11=false;moving=true
+        state.showLiveScoresRP11=false;interacting=false;moving=true
     },close={state.showLiveScoresRP11=false})
 }
 
 @Composable
-private fun ScoreTeamLogoRP11(team:ScoreTeamRP11,league:String) {
+private fun ScoreTeamLogoRP11(team:ScoreTeamRP11,league:String,size:Int=24) {
     val context=LocalContext.current
     val local=remember(team.id,league) {
         if(league!="LIDOM") 0 else runCatching {
@@ -174,9 +200,9 @@ private fun ScoreTeamLogoRP11(team:ScoreTeamRP11,league:String) {
             context.resources.getIdentifier(item?.optString("logo").orEmpty(),"drawable",context.packageName)
         }.getOrDefault(0)
     }
-    if(local!=0) Image(painterResource(local),team.name,Modifier.size(24.dp))
-    else if(team.logo.isNotBlank()) AsyncImage(team.logo,team.name,Modifier.size(24.dp))
-    else Text(team.short.take(2),color=Color.White,fontSize=11.sp,modifier=Modifier.width(24.dp))
+    if(local!=0) Image(painterResource(local),team.name,Modifier.size(size.dp))
+    else if(team.logo.isNotBlank()) AsyncImage(team.logo,team.name,Modifier.size(size.dp))
+    else Text(team.short.take(2),color=Color.White,fontSize=11.sp,modifier=Modifier.width(size.dp))
 }
 
 @Composable
@@ -194,7 +220,7 @@ private fun ScorePinManagerRP11(state:AppState,pin:ScorePinStateRP11,onMove:()->
         catch(e:CancellationException) {throw e} catch(_:Exception) {message=tr("No se pudo consultar el proveedor. Reintenta en unos momentos.","Could not reach the provider. Try again shortly.")}
         finally {loading=false}
     }
-    PlayerSideSheet(tr("PIN Live score","PIN Live score"),close) {
+    PlayerSideSheet("Live Scores",close) {
         item {
             Text(tr("Marcador flotante dentro de BruniO. Actualiza cada 30 segundos durante el juego; sin consultas a Supabase.",
                 "Floating score inside BruniO. Updates every 30 seconds during games; no Supabase requests."),color=Muted,fontSize=13.sp)
@@ -235,7 +261,11 @@ private fun ScorePinManagerRP11(state:AppState,pin:ScorePinStateRP11,onMove:()->
                 }
                 Text(game.away.name+" · "+game.home.name,color=Muted,fontSize=12.sp)
                 Text(scorePhaseRP11(game),color=Muted,fontSize=12.sp)
-                FocusButton(tr("Fijar marcador","Pin live score"),primary=true) {pin.saveEnabled(true);pin.pin(game);close()}
+                val isPinned=pin.pinned?.let {it.id==game.id && it.league==game.league}==true
+                FocusButton(if(isPinned) tr("Quitar marcador · Unpin","Unpin") else tr("Fijar marcador · Pin","Pin live score"),primary=!isPinned) {
+                    if(isPinned) pin.pin(null) else {pin.saveEnabled(true);pin.pin(game)}
+                    close()
+                }
             }
         }
     }

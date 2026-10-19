@@ -46,6 +46,7 @@ class AppState(context: Context) {
         com.miflix.native2.p2p.P2PSettingsRP14.saveEnabled(appContext,localExtrasScope(),value)
         playbackLinkCache.clear()
     }
+    internal var focusScorePinRP15:(() -> Unit)?=null
     var showLiveScoresRP11 by mutableStateOf(false)
     var clearingCache by mutableStateOf(false)
     var cacheCleared by mutableStateOf(false)

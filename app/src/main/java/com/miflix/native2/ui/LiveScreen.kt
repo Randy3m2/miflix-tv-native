@@ -134,6 +134,7 @@ fun LiveScreen(state: AppState) {
                 item { FocusButton(tr("Deportes en vivo","Live Sports"),primary=sports) { provider="sports";state.liveProviderTab=provider;state.liveCategoryId=null } }
                 item { FocusButton(tr("Canales","Channels"),primary=iptv) { provider="iptv:do";state.liveProviderTab=provider;state.liveCategoryId=null } }
                 item { FocusButton(tr("★ Favoritos","★ Favorites")) { showFavorites=true } }
+                item { FocusButton("Live Scores") {state.showLiveScoresRP11=true} }
                 if(iptv) item { FocusButton(tr("Actualizar","Refresh")) { if(!loading) scope.launch {
                     loading=true
                     try { IptvRepository.refresh(manifest);refreshVersion++ } catch(e: Exception) { if(e is CancellationException) throw e;message=e.message.orEmpty() } finally { loading=false }

@@ -1,5 +1,12 @@
 package com.miflix.native2.ui
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -229,7 +236,7 @@ private fun BrowserChannelRowRP34(channel:LiveChannel,number:Int,favorite:Boolea
             Text(channel.name,color=Color.White,fontWeight=FontWeight.Bold,fontSize=14.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             Text(if(playing) tr("▶ Reproduciendo","▶ Now playing") else tr("EN VIVO","LIVE"),color=if(playing) Color.White else Muted,fontSize=10.sp)
         }
-        Text(if(favorite) "♥" else "♡",color=if(favorite) Color.White else Muted,fontSize=20.sp)
+        ChannelHeartRP38(favorite)
     }
 }
 
@@ -240,9 +247,19 @@ internal fun LiveFavoriteRP36(state:AppState,request:PlayerRequest,onInteraction
     val favorite=remember(revision,state.activeProfile.id,state.session?.userId,request.liveProvider,request.liveChannelId) {
         LiveLibrary.favorites(context,state).any {it.provider==request.liveProvider && it.channel.id==request.liveChannelId}
     }
-    FocusButton(if(favorite) "♥" else "♡",modifier=Modifier.width(56.dp)) {
+    var focused by remember {mutableStateOf(false)}
+    val action=tr(if(favorite) "Quitar de favoritos" else "Agregar a favoritos",if(favorite) "Remove from favorites" else "Add to favorites")
+    val toggle={
         onInteraction()
         LiveLibrary.toggle(context,state,request.liveProvider,LiveChannel(request.liveChannelId,request.liveType,request.item.title,request.item.backdrop,request.item.overview))
+    }
+    Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp))
+        .background(if(focused) Color(0xFF303030) else Color.Transparent)
+        .border(if(focused) 1.dp else 0.dp,if(focused) Color.White else Color.Transparent,RoundedCornerShape(12.dp))
+        .semantics {contentDescription=action;stateDescription=if(favorite) "Favorito" else "Sin marcar"}
+        .onFocusChanged {focused=it.isFocused;if(it.isFocused) onInteraction()}
+        .focusable().tvClick(toggle).clickable(onClick=toggle),contentAlignment=Alignment.Center) {
+        ChannelHeartRP38(favorite)
     }
 }
 
@@ -251,4 +268,22 @@ internal fun isMostViewedRP37(category:LiveCategory):Boolean {
     val title=java.text.Normalizer.normalize(category.name,java.text.Normalizer.Form.NFD)
         .replace(Regex("\\p{M}+"),"").lowercase(java.util.Locale.ROOT)
     return title.contains("mas vistos") || title.contains("most viewed") || title.contains("most watched")
+}
+
+/** Drawn icon: independent of TV fonts, emoji substitution, and button text ellipsis. */
+@Composable
+private fun ChannelHeartRP38(favorite:Boolean) {
+    val heart=remember {Path().apply {
+        moveTo(12f,21f)
+        cubicTo(10f,19.2f,2f,13.5f,2f,7.5f)
+        cubicTo(2f,2f,8.8f,0.8f,12f,5.3f)
+        cubicTo(15.2f,0.8f,22f,2f,22f,7.5f)
+        cubicTo(22f,13.5f,14f,19.2f,12f,21f)
+        close()
+    }}
+    Canvas(Modifier.size(24.dp)) {
+        withTransform({scale(size.width/24f,size.height/24f,pivot=Offset.Zero)}) {
+            drawPath(heart,if(favorite) Color(0xFFFF3040) else Color.White)
+        }
+    }
 }

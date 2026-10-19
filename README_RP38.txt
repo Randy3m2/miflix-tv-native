@@ -1,0 +1,1 @@
+RP38 — aplicar sobre RP37. Corazón vectorial sólido blanco; rojo al estar en favoritos. Mismo icono en reproductor y listado. Sin texto ni elipsis dentro del botón. Mantiene favoritos por perfil y navegación con control. Sin builds ni SQL. Validación estática; pendiente TV.

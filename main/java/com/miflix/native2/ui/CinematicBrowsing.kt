@@ -33,6 +33,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -243,10 +244,11 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
             // This text box uses the in-app keyboard; focusing it never invokes a covering IME.
             var textFocused by remember {mutableStateOf(false)}
             val textScroll=rememberScrollState()
-            val density=androidx.compose.ui.platform.LocalDensity.current
             var fieldWidth by remember {mutableIntStateOf(0)}
-            LaunchedEffect(cursor,query,fieldWidth) {
-                val caret=with(density) {(cursor*10).dp.toPx()}
+            var searchLayoutRP35 by remember {mutableStateOf<androidx.compose.ui.text.TextLayoutResult?>(null)}
+            LaunchedEffect(cursor,query,fieldWidth,searchLayoutRP35) {
+                val layout=searchLayoutRP35?.takeIf {it.layoutInput.text.text==query} ?: return@LaunchedEffect
+                val caret=layout.getCursorRect(cursor.coerceIn(0,query.length)).left
                 textScroll.scrollTo((caret-fieldWidth*.8f).toInt().coerceAtLeast(0))
             }
             Box(Modifier.fillMaxWidth().height(46.dp).onFocusChanged {textFocused=it.isFocused}
@@ -262,16 +264,19 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
                 }.focusable().tvClick {keyboardFocus.requestFocus()}.clickable {keyboardFocus.requestFocus()}
                 .background(Panel,RoundedCornerShape(8.dp)).border(if(textFocused) 2.dp else 1.dp,if(textFocused) Accent else PanelBorder,RoundedCornerShape(8.dp))
                 .padding(horizontal=14.dp),contentAlignment=Alignment.CenterStart) {
-                Text(androidx.compose.ui.text.buildAnnotatedString {
-                    if(query.isEmpty()) append(tr("Películas, series…","Movies, series…"))
-                    else {
-                        val safe=cursor.coerceIn(0,query.length)
-                        append(query.substring(0,safe))
-                        pushStyle(androidx.compose.ui.text.SpanStyle(color=Accent));append("│");pop()
-                        append(query.substring(safe))
-                    }
-                },color=if(query.isEmpty()) Muted else Color.White,fontSize=19.sp,maxLines=1,
-                    modifier=Modifier.fillMaxWidth().onSizeChanged {fieldWidth=it.width}.horizontalScroll(textScroll))
+                Text(if(query.isEmpty()) tr("Películas, series…","Movies, series…") else query,
+                    color=if(query.isEmpty()) Muted else Color.White,fontSize=19.sp,maxLines=1,
+                    onTextLayout={searchLayoutRP35=it},
+                    modifier=Modifier.fillMaxWidth().onSizeChanged {fieldWidth=it.width}.horizontalScroll(textScroll).padding(end=2.dp)
+                        .drawWithContent {
+                            drawContent()
+                            val layout=searchLayoutRP35
+                            if(query.isNotEmpty() && layout!=null && layout.layoutInput.text.text==query) {
+                                val caret=layout.getCursorRect(cursor.coerceIn(0,query.length))
+                                drawLine(Accent,androidx.compose.ui.geometry.Offset(caret.left,caret.top+2.dp.toPx()),
+                                    androidx.compose.ui.geometry.Offset(caret.left,caret.bottom-2.dp.toPx()),strokeWidth=1.dp.toPx())
+                            }
+                        })
             }
             Row(Modifier.weight(1f).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(24.dp)) {
                 LazyColumn(Modifier.width(220.dp).fillMaxHeight(),verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=20.dp)) {

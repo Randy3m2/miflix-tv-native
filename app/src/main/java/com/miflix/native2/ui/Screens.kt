@@ -708,7 +708,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
             LaunchedEffect(Unit) {withFrameNanos {};runCatching {first.requestFocus()} }
             Column(Modifier.consumeOpeningPress().focusRequester(first).focusGroup().width(530.dp).heightIn(max=470.dp).background(Panel,RoundedCornerShape(24.dp)).padding(24.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(16.dp)) {
                 var reveal by remember(item.cloudId,ep.season,ep.episode) { mutableStateOf(false) }
-                val hidden=!state.episodeWatched(item,ep) && !reveal
+                val hidden=state.hideEpisodeSpoilersRP20(item,ep) && !reveal
                 Text("S${ep.season} E${ep.episode} · ${if(hidden) tr("No visto","Not watched") else ep.title}",color=Color.White,fontSize=22.sp)
                 if(hidden) FocusButton(tr("Mostrar detalles (spoilers)","Reveal details (spoilers)")) { reveal=true }
                 if(reveal && ep.overview.isNotBlank()) Text(ep.overview,color=Muted,fontSize=15.sp,maxLines=5)
@@ -823,11 +823,15 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                             SeasonSelector(state, details?.seasonCount ?: 0)
 
                         }
+                        Spacer(Modifier.width(16.dp))
+                        FocusButton(if(state.showUnwatchedDetailsRP20) tr("Ocultar spoilers","Hide spoilers") else tr("Mostrar todos los detalles","Show all episode details")) {
+                            state.saveShowUnwatchedDetailsRP20(!state.showUnwatchedDetailsRP20)
+                        }
                     }
                     Spacer(Modifier.height(12.dp))
                     LazyRow(modifier = Modifier.fillMaxWidth().height(236.dp), contentPadding = PaddingValues(end = 54.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(state.episodes, key = { "${it.season}:${it.episode}" }) { ep ->
-                            EpisodeCard(ep, hidden=!state.episodeWatched(item,ep), onLongClick = { episodeChoice=ep }) { episodeChoice=ep }
+                            EpisodeCard(ep, hidden=state.hideEpisodeSpoilersRP20(item,ep), onLongClick = { episodeChoice=ep }) { episodeChoice=ep }
                         }
                     }
                     Spacer(Modifier.height(28.dp))
@@ -1047,6 +1051,14 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     }}
                     if(category in listOf("playback","appearance","system")) item(key="local-extras-rc100") {
                         SettingsTileRC103(tr("Haz BruniO tuyo","Make BruniO yours"),tr("Temporizador, listas, filtros, memoria de audio y respaldo local.","Sleep timer, lists, filters, track memory and local backup."),"taste") {showLocalExtras=true}
+                    }
+                    if(category=="appearance") item(key="unwatched-details-rp20") {
+                        SettingsSectionCard(onFocused={visualHelp=null;helpTitle=tr("Episodios no vistos","Unwatched episodes");helpDescription=tr("Muestra miniaturas, títulos y sinopsis de todos los episodios no vistos en este perfil. No los marca como vistos. Apagado: conserva la protección contra spoilers.","Show thumbnails, titles and synopses for all unwatched episodes in this profile. Does not mark them watched. Off keeps spoiler protection.");helpIndex=-1}) {
+                            SettingsTileRC103(tr("Mostrar detalles de episodios no vistos","Show unwatched episode details"),
+                                tr("Miniaturas y sinopsis para todos, sin revelarlos uno por uno.","Thumbnails and synopses for all episodes, without revealing them one by one."),"lists",checked=state.showUnwatchedDetailsRP20) {
+                                state.saveShowUnwatchedDetailsRP20(!state.showUnwatchedDetailsRP20)
+                            }
+                        }
                     }
                     if(category=="appearance") item(key="home-order") {SettingsSectionCard {
                         SettingsHeadingRC103(tr("Diseña tu Home","Shape your Home"),tr("Tus filas favoritas, en el lugar que prefieras.","Your favorite rows, right where you want them."))
@@ -2137,7 +2149,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                         }
                     }
                     if(queueNext==null && !randomMode) upcoming?.let { next ->
-                        val hidden=!state.episodeWatched(request.item,next)
+                        val hidden=state.hideEpisodeSpoilersRP20(request.item,next)
                         Text("${tr("Siguiente","Next")}: S${next.season} E${next.episode} · ${if(hidden) tr("No visto","Not watched") else next.title}",color=Muted)
                         Text(if(hidden) tr("Sinopsis oculta para evitar spoilers","Synopsis hidden to avoid spoilers") else next.overview,color=Color.White,fontSize=15.sp,lineHeight=20.sp,maxLines=4)
                         FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -2247,7 +2259,7 @@ private fun EpisodePickerOverlay(state: AppState, request: PlayerRequest, onClos
             LazyColumn(state=listState,modifier=Modifier.weight(1f),contentPadding = PaddingValues(bottom = 30.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(state.episodes, key = { "${it.season}:${it.episode}" }) { ep ->
                     val active = ep.season == request.season && ep.episode == request.episode
-                    EpisodeListRow(ep, active, hidden=!state.episodeWatched(request.item,ep), modifier=if(state.episodes.indexOf(ep)==focusIndex) Modifier.focusRequester(episodeFocus) else Modifier, onLongClick = { episodeActions=ep }) {
+                    EpisodeListRow(ep, active, hidden=state.hideEpisodeSpoilersRP20(request.item,ep), modifier=if(state.episodes.indexOf(ep)==focusIndex) Modifier.focusRequester(episodeFocus) else Modifier, onLongClick = { episodeActions=ep }) {
                         onClose()
                         state.launch {runCatching {state.stopRandomEpisodes();state.playEpisode(ep)}.onFailure {state.error=it.message}}
                     }

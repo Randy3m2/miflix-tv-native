@@ -2779,6 +2779,14 @@ class AppState(context: Context) {
         continueWatching.removeAll {it.cloudId==item.cloudId};kidsContinue.removeAll {it.cloudId==item.cloudId}
         launch {runCatching {pushCloud()}.onFailure {error=it.message}}
     }
+    private var unwatchedVisibilityRevisionRP20 by mutableIntStateOf(0)
+    internal val showUnwatchedDetailsRP20:Boolean
+        get() {unwatchedVisibilityRevisionRP20;return playbackPrefs.getBoolean("unwatched_visible:${ratingsKey()}",false)}
+    internal fun saveShowUnwatchedDetailsRP20(value:Boolean) {
+        playbackPrefs.edit().putBoolean("unwatched_visible:${ratingsKey()}",value).apply()
+        unwatchedVisibilityRevisionRP20++
+    }
+    internal fun hideEpisodeSpoilersRP20(item:MediaSummary,ep:EpisodeSummary)=!showUnwatchedDetailsRP20 && !episodeWatched(item,ep)
     private fun watchedEpisodesKey()="watched_episodes_${session?.userId ?: "local"}_${activeProfile.id}"
     fun episodeWatched(item: MediaSummary, ep: EpisodeSummary): Boolean {
         val key="${item.cloudId}:s${ep.season}e${ep.episode}"

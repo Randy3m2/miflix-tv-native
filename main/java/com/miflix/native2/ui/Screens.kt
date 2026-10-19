@@ -1441,6 +1441,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var hadPlaybackError by remember(request.playbackId) {mutableStateOf(false)}
     var controlsVisible by remember(request.playbackId) { mutableStateOf(true) }
     var controlInteraction by remember { mutableStateOf(0) }
+    val channelMenuScopeRP34=rememberCoroutineScope()
+    var surfaceFocusedRP34 by remember {mutableStateOf(false)}
     val surfaceFocus = remember { FocusRequester() }
     LaunchedEffect(firstFrame) {if(firstFrame) {withFrameNanos {};runCatching {surfaceFocus.requestFocus()} }}
     val playFocus = remember { FocusRequester() }
@@ -1882,7 +1884,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         } else requestExit()
     }
 
-    Box(Modifier.fillMaxSize().consumeOpeningPress().background(Color.Black).focusRequester(surfaceFocus).onPreviewKeyEvent { event ->
+    Box(Modifier.fillMaxSize().consumeOpeningPress().background(Color.Black).focusRequester(surfaceFocus).onFocusChanged {surfaceFocusedRP34=it.isFocused}.onPreviewKeyEvent { event ->
         if(event.type==KeyEventType.KeyDown) state.localExtras.touch()
         if(mini || quickReactions) return@onPreviewKeyEvent false
         val code = event.nativeKeyEvent.keyCode
@@ -1891,6 +1893,12 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         else if(code in listOf(android.view.KeyEvent.KEYCODE_VOLUME_UP,android.view.KeyEvent.KEYCODE_VOLUME_DOWN,android.view.KeyEvent.KEYCODE_VOLUME_MUTE)) false
         else if (dismissKey == code) {
             if (event.type == KeyEventType.KeyUp) dismissKey = null
+            true
+        } else if(request.live && firstFrame && (!controlsVisible || surfaceFocusedRP34) &&
+            code==android.view.KeyEvent.KEYCODE_DPAD_RIGHT && event.type==KeyEventType.KeyDown &&
+            !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu==null && state.sourceSelection==null) {
+            dismissKey=code;pauseInfoDismissed=true;pauseSynopsis=false;controlsVisible=false
+            playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else "channels"
             true
         } else if (event.type == KeyEventType.KeyDown && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu == null && !quickReactions && state.sourceSelection == null) {
             val wasHidden = !controlsVisible
@@ -2009,7 +2017,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             state.localExtras.rememberTracks(state.localExtrasScope(),request.item,player,value)
             // Explicit user adjustment, not a recovery loop. Re-read subtitle cues at this position.
             if(player.isCurrentMediaItemSeekable) player.seekTo(player.currentPosition)
-        },close={ playerMenu=null;controlInteraction++ })
+        },close={ playerMenu=null;dismissKey=null;controlInteraction++;channelMenuScopeRP34.launch {withFrameNanos {};runCatching {surfaceFocus.requestFocus()}} })
         if(playerMenu=="info") PlaybackInfoDialog(player,request) { playerMenu=null;controlInteraction++ }
         if(playerMenu=="channel_permission") PlayerMenuDialog(onDismissRequest={ playerMenu=null }) {
             val first=remember { FocusRequester() }
@@ -2021,7 +2029,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }
         if(playerMenu=="channels") LiveChannelPicker(state,request.liveProvider,select={ req ->
             if(state.partyRole==PartyRole.GUEST) state.error=tr("El host cambia el canal del party","The host changes the party channel")
-            else { playerMenu=null;state.openLivePlayer(req) }
+            else {playerMenu=null;dismissKey=null;state.openLivePlayer(req)}
         },close={ playerMenu=null;controlInteraction++ })
         if(confirmMulti) PlayerMenuDialog(onDismissRequest={ confirmMulti=false }) {
             val first=remember { FocusRequester() }

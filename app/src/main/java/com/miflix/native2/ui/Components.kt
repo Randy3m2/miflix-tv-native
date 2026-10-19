@@ -302,8 +302,20 @@ fun CollectionCard(
                     .clip(RoundedCornerShape(14.dp))
                     .background(Color(0xFF191919))
             ) {
-                if(tile.id.startsWith("franchise:") && tile.id !in listOf("franchise:marvel","franchise:dc")) Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF222222),Color(0xFF080808)))).padding(18.dp),contentAlignment=Alignment.Center) {
-                    Text(tile.title,color=if(tile.id=="franchise:star_wars") Color(0xFFFFDC70) else Color.White,fontSize=25.sp,lineHeight=29.sp,fontWeight=FontWeight.Bold,textAlign=androidx.compose.ui.text.style.TextAlign.Center)
+                val franchisePhoto=when(tile.id) {
+                    "franchise:star_wars" -> R.drawable.franchise_star_wars
+                    "franchise:xmen" -> R.drawable.franchise_xmen
+                    "franchise:walking_dead" -> R.drawable.franchise_walking_dead
+                    "franchise:game_of_thrones" -> R.drawable.franchise_game_of_thrones
+                    else -> null
+                }
+                if(franchisePhoto!=null) Box(Modifier.fillMaxSize()) {
+                    Image(painterResource(franchisePhoto),tile.title,modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+                    Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(Color.Transparent,Color(0x33000000),Color(0xE6000000)))))
+                    Text(tile.title,color=Color.White,fontSize=23.sp,lineHeight=26.sp,fontWeight=FontWeight.Bold,
+                        maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        modifier=Modifier.align(Alignment.BottomStart).padding(16.dp))
                 } else if(tile.id.startsWith("franchise:")) Box(Modifier.fillMaxSize().background(if(tile.id.endsWith("marvel")) Color(0xFF24080C) else Color(0xFF081B32)),contentAlignment=Alignment.Center) {
                     Image(painterResource(if(tile.id.endsWith("marvel")) R.drawable.franchise_marvel else R.drawable.franchise_dc),tile.title,
                         modifier=Modifier.fillMaxSize().padding(if(tile.id.endsWith("marvel")) 24.dp else 10.dp),contentScale=ContentScale.Fit)

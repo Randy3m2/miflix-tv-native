@@ -31,7 +31,7 @@ internal object MenuActivity {
     fun touch() {lastInput=SystemClock.elapsedRealtime()}
 }
 
-internal data class PlaybackLoading(val item: com.miflix.native2.model.MediaSummary,val season: Int,val episode: Int,val artwork: String?,val playbackId: String?=null,val message: String="")
+internal data class PlaybackLoading(val item: com.miflix.native2.model.MediaSummary,val season: Int,val episode: Int,val artwork: String?,val playbackId: String?=null,val message: String="",val logo:String?=null,val artworkId:String=java.util.UUID.randomUUID().toString())
 
 @Composable
 internal fun PlaybackLoadingCover(load: PlaybackLoading,onCancel: (() -> Unit)?=null) {
@@ -46,8 +46,16 @@ internal fun PlaybackLoadingCover(load: PlaybackLoading,onCancel: (() -> Unit)?=
         LaunchedEffect(Unit) {withFrameNanos {};runCatching {focus.requestFocus()} }
     }
     Box(Modifier.fillMaxSize().background(Color.Black).then(if(onCancel!=null) Modifier.focusRequester(focus).onPreviewKeyEvent {it.nativeKeyEvent.keyCode!=android.view.KeyEvent.KEYCODE_BACK}.focusable() else Modifier),contentAlignment=Alignment.Center) {
-        AsyncImage(load.item.poster ?: load.item.backdrop,null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
-        if(load.artwork!=null) AsyncImage(load.artwork,null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+        AsyncImage(load.item.backdrop ?: load.item.poster,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x22000000),Color(0x66000000),Color(0xE6000000)))))
+        Column(Modifier.fillMaxWidth(.62f),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(18.dp)) {
+            var logoFailed by remember(load.item.cloudId,load.logo) {mutableStateOf(false)}
+            if(!load.logo.isNullOrBlank() && !logoFailed) AsyncImage(load.logo,load.item.title,
+                Modifier.fillMaxWidth().height(160.dp),contentScale=ContentScale.Fit,onError={logoFailed=true})
+            else Text(load.item.title,color=Color.White,fontSize=38.sp,fontWeight=FontWeight.Bold)
+            if(load.season>0) Text("S${load.season} · E${load.episode}",color=Color(0xFFDDDDDD),fontSize=16.sp)
+            Text(tr("Preparando reproducción…","Preparing playback…"),color=Color.White,fontSize=15.sp)
+        }
         val loadingMessageRP16=if(backAtRP16>=0) tr("Presiona Atrás otra vez para volver a los detalles","Press Back again to return to details") else load.message
         if(loadingMessageRP16.isNotBlank()) Text(loadingMessageRP16,color=Color.White,fontSize=16.sp,
             modifier=Modifier.align(Alignment.BottomCenter).padding(32.dp)

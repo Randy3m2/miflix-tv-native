@@ -698,6 +698,8 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
     var showTaste by remember(item.cloudId) {mutableStateOf(false)}
     if(showTaste) TasteTuning(state,item) {showTaste=false}
     var showRating by remember(item.cloudId) { mutableStateOf(false) }
+    var showTitleTrailerRP31 by remember(item.cloudId) {mutableStateOf(false)}
+    if(showTitleTrailerRP31) TitleTrailerRP31(state,item) {showTitleTrailerRP31=false}
     var episodeChoice by remember(item.cloudId) { mutableStateOf<EpisodeSummary?>(null) }
     var showQueueAdd by remember(item.cloudId) { mutableStateOf(false) }
     var showQueue by remember { mutableStateOf(false) }
@@ -713,26 +715,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     if(showRecommend) RecommendTitleDialog(state,item) { showRecommend=false }
     if(showRating) RatingDialog(state,item) { showRating=false }
-    episodeChoice?.let { ep ->
-        Dialog(onDismissRequest={ episodeChoice=null }) {
-            val first=remember {FocusRequester()}
-            LaunchedEffect(Unit) {withFrameNanos {};runCatching {first.requestFocus()} }
-            Column(Modifier.consumeOpeningPress().focusRequester(first).focusGroup().width(530.dp).heightIn(max=470.dp).background(Panel,RoundedCornerShape(24.dp)).padding(24.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-                var reveal by remember(item.cloudId,ep.season,ep.episode) { mutableStateOf(false) }
-                val hidden=state.hideEpisodeSpoilersRP20(item,ep) && !reveal
-                Text("S${ep.season} E${ep.episode} · ${if(hidden) tr("No visto","Not watched") else ep.title}",color=Color.White,fontSize=22.sp)
-                if(hidden) FocusButton(tr("Mostrar detalles (spoilers)","Reveal details (spoilers)")) { reveal=true }
-                if(reveal && ep.overview.isNotBlank()) Text(ep.overview,color=Muted,fontSize=15.sp,maxLines=5)
-                val resume=state.progress["${item.cloudId}:s${ep.season}e${ep.episode}"]
-                if((resume?.position ?: 0L)>0 && (resume?.percent ?: 0.0)<96) FocusButton(tr("Continuar viendo","Continue watching")) { episodeChoice=null;state.launch {state.socialAction {state.playEpisode(ep)} } }
-                FocusButton(tr("Desde el principio","Play from beginning")) { episodeChoice=null;state.launch {state.socialAction {state.playEpisode(ep,true)} } }
-                FocusButton(tr("Añadir a cola","Add to queue")) { state.enqueue(item,ep.season,ep.episode);episodeChoice=null }
-                FocusButton(tr("Elegir enlace","Play manually")) { episodeChoice=null;state.launch {state.chooseEpisodeSources(ep)} }
-                FocusButton(tr("Marcar como visto","Mark as watched")) { state.markWatched(item,ep.season,ep.episode);episodeChoice=null }
-                FocusButton(tr("Cancelar","Cancel")) { episodeChoice=null }
-            }
-        }
-    }
+    episodeChoice?.let { ep -> EpisodeActionsDialog(state,item,ep) {episodeChoice=null} }
     if(showQueueAdd) QueueAddDialog(state,item) { showQueueAdd=false }
     if(showQueue) QueueDialog(state) { showQueue=false }
 
@@ -817,6 +800,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                         if(item.type=="series" && !state.selectedUpcoming) FocusButton(if(state.randomEpisodeBusy) tr("Eligiendo…","Choosing…") else tr("🎲 Episodio aleatorio","🎲 Random episode")) {
                             state.launch {state.playRandomEpisode(item)}
                         }
+                        FocusButton(tr("▶  Tráiler","▶  Trailer")) {showTitleTrailerRP31=true}
                         if(!state.kidsMode) FocusButton(tr("Sala compartida","Watch Party")) { state.screen = Screen.WATCH_PARTY }
                         if(!state.kidsMode) FocusButton("★ "+(state.ratings[item.cloudId]?.let {"$it/10"} ?: tr("Puntuar","Rate"))) {showRating=true}
                         if(!state.kidsMode) FocusButton(tr("Afinar mis gustos","Tune my taste")) {showTaste=true}
@@ -842,7 +826,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                     Spacer(Modifier.height(12.dp))
                     LazyRow(modifier = Modifier.fillMaxWidth().height(236.dp), contentPadding = PaddingValues(end = 54.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         items(state.episodes, key = { "${it.season}:${it.episode}" }) { ep ->
-                            EpisodeCard(ep, hidden=state.hideEpisodeSpoilersRP20(item,ep), onLongClick = { episodeChoice=ep }) { episodeChoice=ep }
+                            EpisodeCard(ep, hidden=state.hideEpisodeSpoilersRP20(item,ep), onLongClick = { episodeChoice=ep }) { state.launch {state.socialAction {state.playEpisode(ep)}} }
                         }
                     }
                     Spacer(Modifier.height(28.dp))
@@ -1069,6 +1053,11 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                                 tr("Miniaturas y sinopsis para todos, sin revelarlos uno por uno.","Thumbnails and synopses for all episodes, without revealing them one by one."),"lists",checked=state.showUnwatchedDetailsRP20) {
                                 state.saveShowUnwatchedDetailsRP20(!state.showUnwatchedDetailsRP20)
                             }
+                        }
+                    }
+                    if(category=="playback") item(key="content-warnings-rp31") {
+                        SettingsSectionCard(onFocused={visualHelp=null;helpTitle=tr("Avisos de contenido","Content warnings");helpDescription=tr("Muestra una guía breve al empezar cuando haya datos. No retrasa el video y se guarda por perfil.","Show a short guide at playback start when data is available. Playback is not delayed; saved per profile.")}) {
+                            SettingsTileRC103(tr("Avisos al iniciar","Warnings at playback start"),tr("Lenguaje, violencia y otras categorías. Se ocultan automáticamente.","Language, violence and other categories. Automatically dismissed."),"lists",checked=state.contentWarningsRP31) {state.saveContentWarningsRP31(!state.contentWarningsRP31)}
                         }
                     }
                     if(category=="appearance") item(key="home-order") {SettingsSectionCard {
@@ -1957,6 +1946,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             modifier = if(maximized) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(horizontal=40.dp,vertical=24.dp)
         ) }
         if(!firstFrame && playbackError==null && state.playbackLoading==null) PlaybackArtwork(state,request)
+        ContentWarningOverlayRP31(state,request,firstFrame,visible=!mini && state.appForeground && playerMenu==null && !showEpisodes && !showPartyActions,
+            modifier=Modifier.align(Alignment.TopStart).padding(start=28.dp,top=24.dp))
         if(mini) {
             Row(Modifier.align(Alignment.BottomCenter).background(Color(0xEE171717)).padding(6.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                 FocusButton(if(paused) "▶" else "Ⅱ",horizontalPadding=12.dp) { userPlayback(!player.playWhenReady) }
@@ -2344,17 +2335,23 @@ private fun TrailerCard(trailer: TrailerSummary, onClick: () -> Unit) {
 
 @Composable
 private fun EpisodeCard(ep: EpisodeSummary, hidden: Boolean, onLongClick: () -> Unit, onClick: () -> Unit) {
-    var focused by remember(ep.season, ep.episode) { mutableStateOf(false) }
-    val scale by animateFloatAsState(if (focused) 1.012f else 1f, tween(80, easing = LinearOutSlowInEasing), label = "episodeScale")
-    Box(Modifier.width(328.dp).height(225.dp), contentAlignment = Alignment.TopCenter) {
-        Column(Modifier.width(316.dp).graphicsLayer { scaleX = scale; scaleY = scale }.onFocusChanged { focused = it.isFocused }.focusable().tvPlaybackClick(onClick, onLongClick).clickable(onClick = onClick)) {
-            Box(Modifier.fillMaxWidth().height(176.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFF1B1B1B)).border(if (focused) 2.dp else 0.dp, Accent, RoundedCornerShape(12.dp))) {
-                EpisodeArtwork(ep,hidden,Modifier.fillMaxSize())
-                if (focused) Box(Modifier.fillMaxSize().background(Color(0x26000000)), contentAlignment = Alignment.Center) { Text("▶", color = Color.White, fontSize = 32.sp, lineHeight=38.sp) }
+    var focused by remember(ep.season,ep.episode) {mutableStateOf(false)}
+    Box(Modifier.width(328.dp).height(225.dp),contentAlignment=Alignment.Center) {
+        Box(Modifier.width(316.dp).height(213.dp).clip(RoundedCornerShape(14.dp))
+            .background(Color(0xFF1B1B1B)).border(if(focused) 2.dp else 0.dp,Color.White,RoundedCornerShape(14.dp))
+            .onFocusChanged {focused=it.isFocused}.focusable().tvPlaybackClick(onClick,onLongClick).clickable(onClick=onClick)) {
+            EpisodeArtwork(ep,hidden,Modifier.fillMaxSize())
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x08000000),Color(0x55000000),Color(0xF5000000)))))
+            Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                Text("S${ep.season} · E${ep.episode}",color=Color(0xFFE1E1E1),fontSize=11.sp)
+                Text(if(hidden) tr("No visto","Not watched") else ep.title,color=Color.White,fontSize=17.sp,lineHeight=20.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Text(if(hidden) tr("Mantén pulsado para ver las opciones","Hold for episode options") else ep.overview.ifBlank {tr("Sin sinopsis disponible","Synopsis unavailable")},
+                    color=Color(0xFFE7E7E7),fontSize=12.sp,lineHeight=16.sp,maxLines=3,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+                    if(!hidden && ep.rating>0) Text("★ %.1f".format(ep.rating),color=Color(0xFFFFD16B),fontSize=11.sp)
+                    if(ep.airDate.isNotBlank()) Text(ep.airDate,color=Color(0xFFD0D0D0),fontSize=10.sp)
+                }
             }
-            Spacer(Modifier.height(7.dp))
-            Text("S${ep.season} E${ep.episode} · ${if(hidden) tr("No visto","Not watched") else ep.title}", color = Color.White, fontSize = 13.sp, lineHeight=16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-            if (ep.airDate.isNotBlank()) Text(ep.airDate, color = Muted, fontSize = 10.sp, lineHeight=12.sp, maxLines = 1)
         }
     }
 }

@@ -1573,7 +1573,16 @@ class AppState(context: Context) {
     internal var playbackLoading by mutableStateOf<PlaybackLoading?>(null)
         private set
     fun beginPlaybackLoading(item: MediaSummary,season: Int=0,episode: Int=0,art: String?=null) {
-        playbackLoading=PlaybackLoading(item,season,episode,art ?: episodes.firstOrNull {it.season==season && it.episode==episode}?.still ?: item.backdrop ?: item.poster)
+        val knownLogo=details?.takeIf {it.summary.cloudId==item.cloudId}?.logo
+        val load=PlaybackLoading(item,season,episode,item.backdrop ?: item.poster,logo=knownLogo)
+        playbackLoading=load
+        if(knownLogo.isNullOrBlank()) launch {
+            try {
+                val logo=tmdb.browseLogo(item)
+                val current=playbackLoading
+                if(current!=null && current.artworkId==load.artworkId && !logo.isNullOrBlank()) playbackLoading=current.copy(logo=logo)
+            } catch(e:CancellationException) {throw e} catch(_:Exception) { }
+        }
     }
     fun abortPlaybackLoading() {playbackLoading=null}
     fun cancelPlaybackStart() {
@@ -2806,6 +2815,9 @@ class AppState(context: Context) {
         playbackPrefs.edit().putBoolean("unwatched_visible:${ratingsKey()}",value).apply()
         unwatchedVisibilityRevisionRP20++
     }
+    private var contentWarningsRevisionRP31 by mutableIntStateOf(0)
+    val contentWarningsRP31:Boolean get() {contentWarningsRevisionRP31;return playbackPrefs.getBoolean("content_warnings_rp31:${ratingsKey()}",true)}
+    fun saveContentWarningsRP31(value:Boolean) {playbackPrefs.edit().putBoolean("content_warnings_rp31:${ratingsKey()}",value).apply();contentWarningsRevisionRP31++}
     internal fun hideEpisodeSpoilersRP20(item:MediaSummary,ep:EpisodeSummary)=!showUnwatchedDetailsRP20 && !episodeWatched(item,ep)
     private fun watchedEpisodesKey()="watched_episodes_${session?.userId ?: "local"}_${activeProfile.id}"
     fun episodeWatched(item: MediaSummary, ep: EpisodeSummary): Boolean {

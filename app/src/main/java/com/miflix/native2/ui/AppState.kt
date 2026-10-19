@@ -264,7 +264,7 @@ class AppState(context: Context) {
         if(!playbackPrefs.contains(key)) playbackPrefs.edit().putString(key,code).apply()
         val changed=interfaceLanguage!=code
         interfaceLanguage=code;UiLanguage.code=code
-        tmdb.language=if(code=="es") "es-ES" else "en-US"
+        tmdb.language=if(code=="es") "es-MX" else "en-US"
         if(changed) clearTranslatedCatalogRC100()
     }
     private fun clearTranslatedCatalogRC100() {
@@ -995,7 +995,7 @@ class AppState(context: Context) {
     }
     fun retrySocialPresenceEvent() { profileSocialSession()?.takeUnless {sessionNeedsSignIn}?.let {presenceEvents.retry(it)} }
 
-    val tmdb = TmdbRepository(BuildConfig.MIFLIX_TMDB_TOKEN).also { it.language=if(interfaceLanguage=="es") "es-ES" else "en-US" }
+    val tmdb = TmdbRepository(BuildConfig.MIFLIX_TMDB_TOKEN).also { it.language=if(interfaceLanguage=="es") "es-MX" else "en-US" }
     val streamRepo = StreamRepository("")
     private val nativeStore=NativeSourceStore(context)
     private val nativeSources=NativeSourceRepository()
@@ -1039,11 +1039,11 @@ class AppState(context: Context) {
         streamRepo.manifests().toList(),nativeSourceEnabled,nativeRevision,streamSizeBytes,audioLanguage)
     private suspend fun resolvePlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = playbackCacheMutex.withLock {
         val key=playbackCacheKey(item,imdb,season,episode)
-        playbackLinkCache.get(key)?.let { return@withLock StreamOrdering.sorted(it,audioLanguage,providerOrder=sourceProviderOrderRP2()) }
+        playbackLinkCache.get(key)?.let { return@withLock limitAddonRowsRP7(StreamOrdering.sorted(it,audioLanguage,providerOrder=sourceProviderOrderRP2())) }
         val streams=fetchPlaybackSources(item,imdb,season,episode)
         // Cache successful lists only; account/settings changes cannot publish stale results.
         if(streams.isNotEmpty() && key==playbackCacheKey(item,imdb,season,episode)) playbackLinkCache.put(key,streams)
-        streams
+        limitAddonRowsRP7(streams)
     }
     private suspend fun fetchPlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = supervisorScope {
         val owner=session?.userId
@@ -1068,6 +1068,21 @@ class AppState(context: Context) {
         if(session?.userId==owner) nativeSourceStatus=failure ?: tr("Motor nativo: ","Native engine: ")+builtIn.size+tr(" enlaces disponibles"," available links")
         if(links.isEmpty() && failure!=null) throw IllegalStateException(failure)
         links
+    }
+    private var addonLimitRevisionRP7 by mutableIntStateOf(0)
+    private fun addonLimitKeyRP7(manifest:String)="addon_limit_rp7:${profileAddonScope()}:${AddonPriorityRP2.id(manifest)}"
+    fun addonLimitRP7(manifest:String):Int {
+        addonLimitRevisionRP7
+        return playbackPrefs.getInt(addonLimitKeyRP7(manifest),0).coerceAtLeast(0)
+    }
+    fun saveAddonLimitRP7(manifest:String,limit:Int) {
+        require(limit in 0..1000)
+        playbackPrefs.edit().putInt(addonLimitKeyRP7(manifest),limit).apply()
+        addonLimitRevisionRP7++;invalidatePlaybackWork()
+    }
+    private fun limitAddonRowsRP7(rows:List<StreamChoice>):List<StreamChoice> {
+        val limits=streamRepo.manifests().associate {streamRepo.addonLabel(it) to addonLimitRP7(it)}
+        return com.miflix.native2.data.AddonResultLimitRP7.apply(rows,limits)
     }
     private var addonOrderRevision by mutableIntStateOf(0)
     var addonOrderLoading by mutableStateOf(false)

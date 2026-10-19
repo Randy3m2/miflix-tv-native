@@ -65,6 +65,20 @@ class AppState(context: Context) {
 
     private val socialPrefs = context.getSharedPreferences("miflix_social", Context.MODE_PRIVATE)
     private val playbackPrefs = context.getSharedPreferences("miflix_playback", Context.MODE_PRIVATE)
+    private val lastSourcePrefsRP16=context.getSharedPreferences("brunio_last_source_rp16",Context.MODE_PRIVATE)
+    private val lastSourceRP16=LastPlaybackSourceRP16({lastSourcePrefsRP16.getString("rows","{}").orEmpty()},
+        {lastSourcePrefsRP16.edit().putString("rows",it).apply()})
+    private fun lastSourceKeyRP16(item:MediaSummary,season:Int,episode:Int)=LastPlaybackSourceRP16.key(
+        localExtrasScope(),item.cloudId,season,episode,
+        org.json.JSONArray(listOf(audioLanguage,streamSizeBytes,p2pEnabledRP14(),nativeSourceEnabled,nativeRevision,
+            org.json.JSONArray(streamRepo.manifests()))).toString())
+    internal fun rememberSuccessfulPlaybackRP16(req:PlayerRequest) {
+        if(req.live || req.momentEndMs>0 || watchParty!=null || playerRequest?.playbackId!=req.playbackId || req.sourceMemoryKeyRP16.isBlank()) return
+        if(req.sourceMemoryKeyRP16==lastSourceKeyRP16(req.item,req.season,req.episode)) lastSourceRP16.save(req.sourceMemoryKeyRP16,req.stream)
+    }
+    private data class RememberedStartRP16(val playbackId:String,val imdb:String,val owner:String?,val profile:String,val generation:Long)
+    private var rememberedStartRP16:RememberedStartRP16?=null
+
     var adaptiveSource by mutableStateOf(playbackPrefs.getBoolean("adaptive_source",false))
         private set
     fun saveAdaptiveSource(enabled:Boolean) {adaptiveSource=enabled;playbackPrefs.edit().putBoolean("adaptive_source",enabled).apply()}
@@ -303,7 +317,7 @@ class AppState(context: Context) {
         invalidatePlaybackWork()
     }
     private fun invalidatePlaybackWork() {
-        playbackWork.invalidate(); sourceFallback=null; sourceSelection=null; busyMessage=null;playbackLoading=null
+        playbackWork.invalidate(); sourceFallback=null; rememberedStartRP16=null; sourceSelection=null; busyMessage=null;playbackLoading=null
         playbackSubtitleJobs.values.forEach { it.cancel() }; playbackSubtitleJobs.clear()
     }
     private fun sameParty(epoch: Long, owner: String, room: String): Boolean =
@@ -1542,7 +1556,17 @@ class AppState(context: Context) {
         playbackLoading=PlaybackLoading(item,season,episode,art ?: episodes.firstOrNull {it.season==season && it.episode==episode}?.still ?: item.backdrop ?: item.poster)
     }
     fun abortPlaybackLoading() {playbackLoading=null}
-    fun cancelPlaybackStart() {invalidatePlaybackWork();playerRequest=null;miniPlayer=false;screen=if(selected!=null) Screen.DETAILS else Screen.HOME}
+    fun cancelPlaybackStart() {
+        val target=playbackLoading?.item ?: playerRequest?.item ?: selected
+        invalidatePlaybackWork();playerRequest=null;miniPlayer=false
+        if(target==null) {screen=Screen.HOME;return}
+        selected=target;screen=Screen.DETAILS
+        if(details?.summary?.cloudId!=target.cloudId) {
+            details=null
+            val owner=session?.userId;val profile=activeProfile.id
+            launch {if(selected?.cloudId==target.cloudId && screen==Screen.DETAILS && session?.userId==owner && activeProfile.id==profile) open(target)}
+        }
+    }
     fun finishPlaybackLoading(id: String) {if(playbackLoading?.playbackId==id) playbackLoading=null}
     var busyMessage by mutableStateOf<String?>(null)
     var error by mutableStateOf<String?>(null)
@@ -2569,7 +2593,26 @@ class AppState(context: Context) {
         tr("El enlace falló. Probando el siguiente…","Source failed. Trying the next link…")+" (${index+1}/${count})"
     /** Reuses the already loaded list; no add-on search or Supabase read is made here. */
     suspend fun tryNextPlaybackSource(req: PlayerRequest,position: Long,playing: Boolean): Boolean {
-        if(!autoplayNextLink) return false
+        if(playerRequest?.playbackId!=req.playbackId || req.live) return false
+        if(req.sourceMemoryKeyRP16.isNotBlank()) lastSourceRP16.remove(req.sourceMemoryKeyRP16)
+        if(!autoplayNextLink || !appForeground || screen!=Screen.PLAYER || watchParty!=null) return false
+        val remembered=rememberedStartRP16?.takeIf {it.playbackId==req.playbackId}
+        if(remembered!=null && sourceFallback==null) {
+            rememberedStartRP16=null
+            fun stillValid()=playerRequest?.playbackId==req.playbackId && session?.userId==remembered.owner &&
+                activeProfile.id==remembered.profile && playbackWork.generation==remembered.generation && autoplayNextLink && watchParty==null
+            if(!stillValid()) return false
+            val fresh=try {
+                playbackLinkCache.clear()
+                resolvePlaybackSources(req.item,remembered.imdb,req.season,req.episode)
+            } catch(e:CancellationException) {throw e} catch(_:Exception) {return false}
+            if(!stillValid()) return false
+            val candidates=StreamOrdering.fallbackCandidates(fresh,audioLanguage,providerOrder=sourceProviderOrderRP2()).filter {it.url!=req.stream.url}
+            val rows=listOf(req.stream)+candidates
+            if(rows.size<2) return false
+            sourceFallback=SourceFallbackPlan(remembered.owner,remembered.profile,remembered.generation,rows,
+                com.miflix.native2.player.SourceFallbackBudget(rows.size,com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(audioLanguage)),req.playbackId)
+        }
         val plan=sourceFallback ?: return false
         fun valid()=autoplayNextLink && sourceFallback===plan && plan.playbackId==req.playbackId && playerRequest?.playbackId==req.playbackId &&
             session?.userId==plan.owner && activeProfile.id==plan.profile && playbackWork.generation==plan.generation &&
@@ -2626,12 +2669,19 @@ class AppState(context: Context) {
         if(randomEpisodeCloud!=item.cloudId) randomEpisodeCloud=null
         val ticket=playbackWork.begin()
         sourceFallback=null
+        rememberedStartRP16=null
         val playbackOwner=session?.userId; val playbackProfile=activeProfile.id
         fun valid()=playbackWork.current(ticket) && session?.userId==playbackOwner && activeProfile.id==playbackProfile
         if(playbackLoading?.let {it.item.cloudId==item.cloudId && it.season==season && it.episode==episode}!=true) beginPlaybackLoading(item,season,episode)
         busyMessage = tr("Buscando el mejor enlace…","Finding the best source…")
         error = null
-        val streamsJob = async { if (selectedStream != null) (listOf(selectedStream)+fallbackStreams).distinctBy {it.url}.filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) } else resolvePlaybackSources(item,imdb,season,episode) }
+        val memoryKeyRP16=lastSourceKeyRP16(item,season,episode)
+        val progressKeyRP16=if(item.type=="series") "${item.cloudId}:s${season}e${episode}" else item.cloudId
+        val targetProgressRP16=progress[progressKeyRP16] ?: progress[item.cloudId]?.takeIf {item.type!="series" || (it.season==season && it.episode==episode)}
+        val rememberedRP16=if(selectedStream==null && watchParty==null && (resumeOverride ?: targetProgressRP16?.position ?: 0L)>0L)
+            lastSourceRP16.get(memoryKeyRP16)?.takeIf {StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) &&
+                (!it.url.startsWith("brunio-p2p:") || p2pEnabledRP14())} else null
+        val streamsJob = async { if(rememberedRP16!=null) listOf(rememberedRP16) else if (selectedStream != null) (listOf(selectedStream)+fallbackStreams).distinctBy {it.url}.filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) } else resolvePlaybackSources(item,imdb,season,episode) }
         val subtitleKey=subtitleKey(item,season,episode)
         if(playbackSubtitleJobs.size>=16 && subtitleKey !in playbackSubtitleJobs) {
             val oldest=playbackSubtitleJobs.keys.first(); playbackSubtitleJobs.remove(oldest)?.cancel()
@@ -2645,7 +2695,7 @@ class AppState(context: Context) {
             if(!valid()) return@coroutineScope
             val bandwidth=if(adaptiveSource) androidx.media3.exoplayer.upstream.DefaultBandwidthMeter.getSingletonInstance(appContext).bitrateEstimate else 0L
             val seconds=(details?.takeIf {it.summary.cloudId==item.cloudId}?.runtimeMinutes ?: 0)*60
-            val chosen = selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2())
+            val chosen = rememberedRP16 ?: selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2())
                 ?: throw IllegalStateException(if(streamRepo.hasTorrentOnlyResults())
                     tr("Estos complementos devolvieron torrents. Activa P2P en Settings en una TV con Android 9 o superior.","These add-ons returned torrents. Enable P2P in Settings on a TV with Android 9 or newer.")
                     else tr("No se encontraron enlaces reproducibles","No playable sources found"))
@@ -2667,7 +2717,8 @@ class AppState(context: Context) {
             val enriched = best.copy(subtitles = mergedSubs)
             val key = if (item.type == "series") "${item.cloudId}:s${season}e${episode}" else item.cloudId
             val saved = progress[key] ?: progress[item.cloudId]
-            playerRequest = PlayerRequest(item, enriched, season, episode, resumeOverride ?: saved?.position ?: 0L)
+            playerRequest = PlayerRequest(item, enriched, season, episode, resumeOverride ?: saved?.position ?: 0L,sourceMemoryKeyRP16=memoryKeyRP16)
+            if(rememberedRP16!=null) playerRequest?.let {rememberedStartRP16=RememberedStartRP16(it.playbackId,imdb,playbackOwner,playbackProfile,ticket.generation)}
             playbackLoading=playbackLoading?.copy(playbackId=playerRequest?.playbackId)
             screen = Screen.PLAYER
             playerRequest?.let { onStarted?.invoke(it) }
@@ -3206,7 +3257,8 @@ data class PlayerRequest(
     val momentStartMs: Long = 0L,
     val momentEndMs: Long = 0L,
     val momentSender: String = "",
-    val sourceFallbackPlaying: Boolean? = null
+    val sourceFallbackPlaying: Boolean? = null,
+    val sourceMemoryKeyRP16: String = ""
 )
 
 data class SourceSelection(

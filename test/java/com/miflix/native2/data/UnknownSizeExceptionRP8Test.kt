@@ -8,13 +8,13 @@ class UnknownSizeExceptionRP8Test {
     private fun stream(host:String,size:Long=0)=StreamChoice("Source","https://video.test/file","Latino",
         videoSize=size,sourceAddonHost=host)
     @Test fun onlyApprovedManifestHostsAllowUnknownSize() {
-        for(host in listOf("addonlatam.duckdns.org","plus.nuvehub.app"))
+        for(host in listOf("addonlatam.duckdns.org","plus.nuvehub.app","mg.homelabx.qzz.io"))
             assertTrue(StreamFilters.allowed(stream(host),"movie",null,1000))
-        for(host in listOf("","mg.homelabx.qzz.io","progreso-latino.xyz","comet.test","plus.nuvehub.app.evil.test"))
+        for(host in listOf("","mg.homelabx.qzz.io.evil.test","progreso-latino.xyz","comet.test","plus.nuvehub.app.evil.test"))
             assertFalse(StreamFilters.allowed(stream(host),"movie",null,1000))
     }
     @Test fun knownSizesAlwaysRespectCap() {
-        for(host in listOf("addonlatam.duckdns.org","plus.nuvehub.app","other.test")) {
+        for(host in listOf("addonlatam.duckdns.org","plus.nuvehub.app","mg.homelabx.qzz.io","other.test")) {
             assertTrue(StreamFilters.allowed(stream(host,1000),"movie",null,1000))
             assertFalse(StreamFilters.allowed(stream(host,1001),"movie",null,1000))
         }

@@ -835,10 +835,10 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
             }
 
             if(!state.kidsMode) item(key="cast") {
-                Text(tr("Reparto","Cast"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
+                Text(tr("Reparto y dirección","Cast & director"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
                 Spacer(Modifier.height(14.dp))
                 LazyRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(16.dp),contentPadding=PaddingValues(end=24.dp)) {
-                    items(details?.cast.orEmpty(),key={"${it.id}:${it.name}"}) { CastCard(it,state) }
+                    items(details?.directorCast.orEmpty()+details?.cast.orEmpty(),key={"${it.creditRole}:${it.id}:${it.name}"}) { CastCard(it,state) }
                 }
                 Spacer(Modifier.height(28.dp))
             }
@@ -1080,7 +1080,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         SettingsTileRC103(tr("Mi universo de cine","My cinema hub"),tr("Explora tus estadísticas de reproducción en esta TV.","Explore your viewing statistics on this TV."),"stats") {showCinemaHub=true}
                     }
                     if(category=="playback") item(key="setting-4") {
-                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Playback link size limit";helpDescription="Choose a maximum file size. Unknown sizes are hidden except Addon Latam and Nuve+.";helpIndex=4 }) {
+                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Playback link size limit";helpDescription="Choose a maximum file size. Unknown sizes are hidden except Addon Latam, Nuve+ and Deepflix.";helpIndex=4 }) {
                 var customLimit by remember(state.streamSizeLimitGb) { mutableStateOf(if(state.streamSizeLimitGb>0) state.streamSizeLimitGb.toString() else "") }
                 Text(tr("Límite de tamaño de enlaces","Playback link size limit"),color=Color.White,fontSize=22.sp,lineHeight=26.sp)
                 Text(if(state.streamSizeLimitGb==0.0) tr("Sin límite","Unlimited") else "${tr("Máximo","Maximum")}: ${state.streamSizeLimitGb} GB",color=Muted)
@@ -2547,7 +2547,7 @@ private fun ActorCreditsDialog(person: CastMember, state: AppState, close: () ->
     var credits by remember(person.id) { mutableStateOf<List<MediaSummary>?>(null) }
     var failure by remember(person.id) { mutableStateOf<String?>(null) }
     LaunchedEffect(person.id) {
-        try { credits=state.tmdb.actorCredits(person.id) }
+        try { credits=if(person.creditRole=="director") state.tmdb.directedMovies(listOf(com.miflix.native2.data.DirectorPerson(person.id,person.name,person.profile))) else state.tmdb.actorCredits(person.id) }
         catch(e: kotlinx.coroutines.CancellationException) { throw e }
         catch(e: Exception) { failure=e.message ?: tr("Error al cargar", "Unable to load") }
     }

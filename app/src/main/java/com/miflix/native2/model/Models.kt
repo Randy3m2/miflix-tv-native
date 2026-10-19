@@ -19,7 +19,8 @@ data class CastMember(
     val name: String,
     val character: String,
     val profile: String?,
-    val id: Int = 0
+    val id: Int = 0,
+    val creditRole: String = "cast"
 )
 
 data class TrailerSummary(
@@ -57,7 +58,8 @@ data class MediaDetails(
     val runtimeMinutes: Int = 0,
     val genreIds: List<Int> = emptyList(),
     val directors: List<String> = emptyList(),
-    val cinematographers: List<String> = emptyList()
+    val cinematographers: List<String> = emptyList(),
+    val directorCast: List<CastMember> = emptyList()
 )
 
 data class EpisodeSummary(

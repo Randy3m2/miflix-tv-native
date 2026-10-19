@@ -614,6 +614,7 @@ class TmdbRepository(var token: String) {
             originCountry = origin,
             originalLanguage = originalLanguage,
             cast = cast,
+            directorCast = DetailPeopleRP18.directors(j.optJSONObject("credits")) {image(it,"w185")},
             logo = logo,
             originalTitle = j.optString(if(kind=="movie") "original_title" else "original_name")
         ).also {if(detailCache.size>=64) detailCache.remove(detailCache.keys.first());detailCache[detailKey]=System.currentTimeMillis() to it}

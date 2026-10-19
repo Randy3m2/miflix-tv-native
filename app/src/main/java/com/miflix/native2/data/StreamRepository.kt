@@ -22,7 +22,7 @@ class StreamRepository internal constructor(initialManifestUrl:String,
     private val metadata=java.util.concurrent.ConcurrentHashMap<String,ManifestInfo>()
     private fun label(manifest:String,position:Int):String {
         val host=runCatching {URI(manifest.replace("|","%7C")).host}.getOrNull().orEmpty().ifBlank {"Add-on"}
-        val known=when(host) {"peerflix.mov","addon.peerflix.mov"->"Peerflix";"addonlatam.duckdns.org"->"Addon Latam";"torrentio.strem.fun"->"Torrentio";else->host}
+        val known=when(host) {"peerflix.mov","addon.peerflix.mov"->"Peerflix";"addonlatam.duckdns.org"->"Addon Latam";"mg.homelabx.qzz.io"->"Deepflix";"torrentio.strem.fun"->"Torrentio";else->host}
         return (metadata[manifest]?.name?.takeIf {it.isNotBlank()} ?: known)+" · "+(position+1)
     }
     suspend fun inspectSourceAddons() = coroutineScope {

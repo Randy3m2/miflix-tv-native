@@ -28,7 +28,11 @@ internal class AvatarRepository(private val base: String,private val key: String
             c.setRequestProperty("apikey",key); c.setRequestProperty("Authorization","Bearer ${s.accessToken}")
             c.setRequestProperty("Content-Type","image/jpeg"); c.doOutput=true; c.setFixedLengthStreamingMode(bytes.size)
             c.outputStream.use { it.write(bytes) }
-            check(c.responseCode in 200..299) { "Avatar upload failed (HTTP ${c.responseCode}). Run supabase_rc18_upgrade.sql first." }
+            val status=c.responseCode
+            if(status !in 200..299) {
+                val response=runCatching {c.errorStream?.bufferedReader()?.use {reader -> val chars=CharArray(4096);var n=0;while(n<chars.size) {val count=reader.read(chars,n,chars.size-n);if(count<0) break;n+=count};String(chars,0,n)}.orEmpty()}.getOrDefault("")
+                throw IllegalStateException(AvatarUploadFailureRP18.message(status,response))
+            }
         } finally { c.disconnect() }
         "$base/storage/v1/object/public/miflix-avatars/$path"
     }

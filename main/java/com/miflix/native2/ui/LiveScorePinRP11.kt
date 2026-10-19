@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.focusable
 import androidx.compose.ui.graphics.Color
@@ -237,7 +238,7 @@ private fun ScorePinManagerRP11(state:AppState,pin:ScorePinStateRP11,onMove:()->
         }
         item {
             FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                listOf("NBA","MLB","LIDOM").forEach {l ->FocusButton(l,primary=league==l) {league=l}}
+                listOf("NBA","MLB","LIDOM").forEach {l ->ScoreLeagueButtonRP17(l,league==l) {league=l}}
             }
             Text(date,color=Color.White,fontSize=14.sp)
             FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -268,5 +269,22 @@ private fun ScorePinManagerRP11(state:AppState,pin:ScorePinStateRP11,onMove:()->
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ScoreLeagueButtonRP17(league:String,selected:Boolean,onClick:()->Unit) {
+    var focused by remember {mutableStateOf(false)}
+    val logo=when(league) {
+        "NBA"->com.miflix.native2.R.drawable.score_league_nba_rp17
+        "MLB"->com.miflix.native2.R.drawable.score_league_mlb_rp17
+        else->com.miflix.native2.R.drawable.score_league_lidom_rp17
+    }
+    Column(Modifier.onFocusChanged {focused=it.isFocused}.focusable().tvClick(onClick).clickable(onClick=onClick)
+        .width(88.dp).height(80.dp).background(if(focused) Color(0xFF292929) else Color(0xFF141414),RoundedCornerShape(16.dp))
+        .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else if(selected) Color(0xFFAAAAAA) else Color(0xFF343434),RoundedCornerShape(16.dp))
+        .padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(6.dp,Alignment.CenterVertically)) {
+        Image(painterResource(logo),league,Modifier.width(64.dp).height(36.dp),contentScale=androidx.compose.ui.layout.ContentScale.Fit)
+        Text(league,color=if(selected || focused) Color.White else Muted,fontSize=14.sp,lineHeight=16.sp,fontWeight=FontWeight.Bold)
     }
 }

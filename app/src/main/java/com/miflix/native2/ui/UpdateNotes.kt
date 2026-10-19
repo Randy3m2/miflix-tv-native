@@ -12,6 +12,8 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP10: Continue Watching desde los 5 segundos, con actualización local inmediata de la fila." to "RP10: Continue Watching from five seconds, with an immediate local shelf update.",
+        "RP9: SplitScreen para LIDOM con hasta cuatro señales, fuentes por equipo, YouTube y audio seleccionable." to "RP9: LIDOM SplitScreen with up to four broadcasts, team source selection, YouTube and selectable audio.",
         "RP8: Addon Latam y Nuve+ conservan sus enlaces sin tamaño aunque haya límite de GB; tamaños conocidos respetan el límite." to "RP8: Addon Latam and Nuve+ unknown-size links remain visible under a GB cap; known sizes still respect the cap.",
         "RP7: límites de enlaces por add-on, diagnóstico de consultas y filtros, y headers de reproducción de proveedores." to "RP7: per-add-on link limits, request/filter diagnostics and provider playback headers.",
         "RP6: audio latino primero, España después y etiquetas castellano a continuación; todo el español antes de inglés." to "RP6: Latin American audio first, Spain next, then Castilian labels; all Spanish before English.",

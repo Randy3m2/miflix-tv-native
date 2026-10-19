@@ -62,7 +62,7 @@ internal fun CompactPlayerControls(
             PlayerIconButton("info",tr("Información técnica","Playback info"),onInteraction=onInteraction,onClick=onInfo,onLabel={ focusedLabel=it })
             if(!request.live && seekable) PlayerIconButton("moment",tr("Grabar momento","Mark a moment"),onInteraction=onInteraction,onClick=onMoment,onLabel={ focusedLabel=it })
             PlayerIconButton("pip",tr("Ventana flotante","Picture in Picture"),onInteraction=onInteraction,onClick=onPip,onLabel={ focusedLabel=it })
-            if(request.live && request.liveProvider!="lidom") PlayerIconButton("grid",tr("Hasta 4 canales","Up to 4 channels"),onInteraction=onInteraction,onClick=onMultiView,onLabel={ focusedLabel=it })
+            if(request.live) PlayerIconButton("grid",if(request.liveProvider=="lidom") tr("SplitScreen · LIDOM","SplitScreen · LIDOM") else tr("Hasta 4 canales","Up to 4 channels"),onInteraction=onInteraction,onClick=onMultiView,onLabel={ focusedLabel=it })
         }
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
             .background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xE6000000))))

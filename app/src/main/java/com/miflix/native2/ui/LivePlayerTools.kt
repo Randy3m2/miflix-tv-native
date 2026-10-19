@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 package com.miflix.native2.ui
 
 import androidx.activity.compose.BackHandler
@@ -157,23 +158,31 @@ fun MultiViewScreen(state: AppState) {
     var replacing by remember { mutableStateOf<String?>(null) }
     var sourceTarget by remember {mutableStateOf<PlayerRequest?>(null)}
     var picker by remember { mutableStateOf(false) }
+    var lidomPicker by remember {mutableStateOf(state.multiViewRequests.isEmpty())}
+    var lidomInitialTeam by remember {mutableStateOf("")}
+    var youtubeFull by remember {mutableStateOf<PlayerRequest?>(null)}
+    val lidomSession=remember {state.multiViewRequests.isEmpty() || state.multiViewRequests.firstOrNull()?.liveProvider=="lidom"}
     var sound by remember { mutableStateOf(state.multiViewRequests.firstOrNull()?.playbackId) }
     var hd by remember { mutableStateOf(false) }
     val first=remember { FocusRequester() }
     LaunchedEffect(Unit) { withFrameNanos { };first.requestFocus() }
     val view=LocalView.current
     DisposableEffect(view) { val old=view.keepScreenOn;view.keepScreenOn=true;onDispose { view.keepScreenOn=old } }
-    fun exit() { players.releaseAll();state.multiViewRequests.clear();state.screen=Screen.LIVE_TV }
+    fun exit() { players.releaseAll();state.multiViewRequests.clear();state.screen=if(lidomSession) Screen.LIDOM else Screen.LIVE_TV }
     BackHandler { exit() }
     Column(Modifier.fillMaxSize().background(Color.Black).padding(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            Text(tr("Multivista","Multiview")+" · ${state.multiViewRequests.size}/4",color=Color.White,fontSize=23.sp,modifier=Modifier.weight(1f))
-            FocusButton(tr("Añadir canal","Add channel"),modifier=Modifier.focusRequester(first)) { if(state.multiViewRequests.size<4) { replacing=null;picker=true } }
+        Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            Text("SplitScreen · ${state.multiViewRequests.size}/4",color=Color.White,fontSize=23.sp)
+            FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            FocusButton(tr("Añadir LIDOM","Add LIDOM"),modifier=Modifier.focusRequester(first)) {if(state.multiViewRequests.size<4) {replacing=null;lidomInitialTeam="";lidomPicker=true}}
+            FocusButton(tr("Añadir canal","Add channel")) { if(state.multiViewRequests.size<4) { replacing=null;picker=true } }
             FocusButton(if(hd) "HD · 720p" else tr("Fluido · 540p","Smooth · 540p")) { hd=!hd }
+            if(youtubeFull!=null) FocusButton(tr("Volver a SplitScreen","Back to SplitScreen")) {youtubeFull=null}
             FocusButton(tr("Salir","Exit")) { exit() }
+            }
         }
         Text(tr("OK en un canal: elegir audio, cambiar, ampliar o quitar.","OK on a channel: choose audio, change, expand or remove."),color=Muted,fontSize=13.sp)
-        val slots=state.multiViewRequests.toList()
+        val slots=youtubeFull?.let {listOf(it)} ?: state.multiViewRequests.toList()
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val columns=if(slots.size<=1) 1 else 2
             val rows=if(slots.size>2) 2 else 1
@@ -181,7 +190,7 @@ fun MultiViewScreen(state: AppState) {
             val tileHeight=(maxHeight-12.dp*(rows-1))/rows
             slots.forEachIndexed { index,req ->
                 key(req.playbackId) {
-                    MultiViewTile(req,req.playbackId==sound,hd,players,
+                    MultiViewTile(req,if(youtubeFull!=null) req.playbackId==youtubeFull?.playbackId else req.playbackId==sound,hd,players,
                         Modifier.offset(x=(tileWidth+12.dp)*(index%columns),y=(tileHeight+12.dp)*(index/columns)).width(tileWidth).height(tileHeight),index) {
                         selected=req.playbackId
                     }
@@ -198,6 +207,7 @@ fun MultiViewScreen(state: AppState) {
             Column(Modifier.width(440.dp).heightIn(max=440.dp).verticalScroll(rememberScrollState()).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                 Text(req.item.title,color=Color.White,fontSize=23.sp)
                 FocusButton(tr("Reintentar","Retry"),modifier=Modifier.focusRequester(focus)) {
+                    youtubeFull=null
                     val replacement=req.copy(playbackId=java.util.UUID.randomUUID().toString())
                     val i=state.multiViewRequests.indexOfFirst { it.playbackId==id }
                     players.release(id)
@@ -206,10 +216,18 @@ fun MultiViewScreen(state: AppState) {
                     selected=null
                 }
                 FocusButton(tr("Escuchar este canal","Listen to this channel")) { sound=id;selected=null }
-                FocusButton(tr("Cambiar fuente","Change source")) {sourceTarget=req;selected=null}
-                FocusButton(tr("Cambiar canal","Change channel")) { replacing=id;selected=null;picker=true }
-                FocusButton(tr("Pantalla completa","Full screen")) { players.releaseAll();state.multiViewRequests.clear();state.openLivePlayer(req.copy(playbackId=java.util.UUID.randomUUID().toString())) }
+                FocusButton(tr("Cambiar fuente","Change source")) {youtubeFull=null;sourceTarget=req;selected=null}
+                FocusButton(tr("Cambiar canal","Change channel")) {
+                    youtubeFull=null;replacing=id;selected=null
+                    if(req.liveProvider=="lidom") {lidomInitialTeam="";lidomPicker=true} else picker=true
+                }
+                FocusButton(tr("Pantalla completa","Full screen")) {
+                    selected=null
+                    if(req.liveType=="youtube") youtubeFull=req
+                    else {players.releaseAll();state.multiViewRequests.clear();state.openLivePlayer(req.copy(playbackId=java.util.UUID.randomUUID().toString()))}
+                }
                 FocusButton(tr("Quitar","Remove")) {
+                    youtubeFull=null
                     players.release(id)
                     state.multiViewRequests.removeAll { it.playbackId==id }
                     if(sound==id) sound=state.multiViewRequests.firstOrNull()?.playbackId
@@ -221,7 +239,16 @@ fun MultiViewScreen(state: AppState) {
         }
     }
     sourceTarget?.let { target ->
-        MultiViewSourceDialog(state,target,choose={ stream ->
+        if(target.liveProvider=="lidom") LidomMultiViewPickerRP9(state,target.lidomTeam,select={req ->
+            val i=state.multiViewRequests.indexOfFirst {it.playbackId==target.playbackId}
+            if(i>=0) {
+                players.release(target.playbackId)
+                state.multiViewRequests[i]=req
+                if(sound==target.playbackId) sound=req.playbackId
+            }
+            sourceTarget=null
+        },close={sourceTarget=null})
+        else MultiViewSourceDialog(state,target,choose={ stream ->
             val i=state.multiViewRequests.indexOfFirst {it.playbackId==target.playbackId}
             if(i>=0) {
                 val replacement=target.copy(stream=stream,playbackId=java.util.UUID.randomUUID().toString())
@@ -232,6 +259,18 @@ fun MultiViewScreen(state: AppState) {
             sourceTarget=null
         },close={sourceTarget=null})
     }
+    if(lidomPicker) LidomMultiViewPickerRP9(state,lidomInitialTeam,select={req ->
+        val i=state.multiViewRequests.indexOfFirst {it.playbackId==replacing}
+        if(i>=0) {
+            replacing?.let {players.release(it)}
+            state.multiViewRequests[i]=req
+            if(sound==replacing) sound=req.playbackId
+        } else if(state.multiViewRequests.size<4) {
+            state.multiViewRequests.add(req)
+            if(sound==null) sound=req.playbackId
+        }
+        lidomPicker=false
+    },close={lidomPicker=false})
     if(picker) LiveChannelPicker(state,state.liveProviderTab,select={ req ->
         val i=state.multiViewRequests.indexOfFirst { it.playbackId==replacing }
         if(i>=0) { replacing?.let { players.release(it) };if(sound==replacing) sound=req.playbackId;state.multiViewRequests[i]=req }
@@ -256,8 +295,7 @@ private fun MultiViewSourceDialog(state: AppState,req: PlayerRequest,choose: (co
             val provider=req.liveProvider.ifBlank {state.liveProviderTab}
             rows=repo.streams(state.calendarLiveManifest(provider),LiveChannel(req.liveChannelId,req.liveType.ifBlank {"tv"},req.item.title,req.item.poster,req.item.overview))
             if(rows.isEmpty()) message=tr("El proveedor no devolvió fuentes alternativas.","The provider returned no alternative sources.")
-        } catch(e: CancellationException) {throw e}
-        catch(e: Exception) {message=e.message ?: tr("No se pudieron cargar las fuentes.","Could not load sources.")}
+        } catch(e: CancellationException) {throw e} catch(e: Exception) {message=e.message ?: tr("No se pudieron cargar las fuentes.","Could not load sources.")}
         finally {loading=false}
     }
     PlayerMenuDialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
@@ -281,6 +319,10 @@ private fun MultiViewSourceDialog(state: AppState,req: PlayerRequest,choose: (co
 
 @Composable
 private fun MultiViewTile(req: PlayerRequest, audible: Boolean, hd: Boolean, pool: MultiPlayerPool, modifier: Modifier, order: Int, click: () -> Unit) {
+    if(req.liveType=="youtube") {
+        LidomSplitYoutubeTileRP9(req,audible,modifier,click)
+        return
+    }
     val context=LocalContext.current
     var player by remember(req.playbackId) { mutableStateOf<ExoPlayer?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -326,7 +368,7 @@ private fun MultiViewTile(req: PlayerRequest, audible: Boolean, hd: Boolean, poo
                     p.stop()
                 }
             })
-            p.setMediaItem(MediaItem.fromUri(req.stream.url));p.prepare();p.playWhenReady=true;player=p
+            p.setMediaItem(MediaItem.Builder().setUri(req.stream.url).apply {if(req.liveMime.isNotBlank()) setMimeType(req.liveMime)}.build());p.prepare();p.playWhenReady=true;player=p
             kotlinx.coroutines.awaitCancellation()
         } catch(e: CancellationException) { throw e } catch(e: Exception) { error=e.message }
         finally { player=null;pool.release(req.playbackId) }

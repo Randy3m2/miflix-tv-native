@@ -1749,7 +1749,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     LaunchedEffect(player, request.stream.url) {
         var lastTick=android.os.SystemClock.elapsedRealtime()
         while (true) {
-            delay(4000)
+            // Capture the five-second Continue Watching threshold promptly; local updates only.
+            delay(if(player.currentPosition<5000L) 1000L else 4000L)
             val now=android.os.SystemClock.elapsedRealtime()
             if(player.isPlaying && state.appForeground) state.recordViewing(request,(now-lastTick).coerceIn(0,6000))
             lastTick=now

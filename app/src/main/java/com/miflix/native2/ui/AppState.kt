@@ -2145,13 +2145,7 @@ class AppState(context: Context) {
     }
 
     private suspend fun resolveContinueWatching(): List<MediaSummary> = coroutineScope {
-        val exactCloudId = Regex("^tmdb:(movie|series):\\d+$")
-        val ids = progress.entries
-            .filter { (id, p) -> exactCloudId.matches(id) && p.percent in 1.0..95.0 }
-            .sortedByDescending { it.value.updatedAt }
-            .map { it.key }
-            .distinct()
-            .take(10)
+        val ids = com.miflix.native2.data.ContinueWatchingPolicyRP10.ids(progress)
 
         ids.map { id -> async { runCatching { tmdb.byCloudId(id) }.getOrNull() } }
             .awaitAll()
@@ -2748,7 +2742,11 @@ class AppState(context: Context) {
         }
         progress[key] = row
         progress[req.item.cloudId] = row
-        if (ended) continueWatching.removeAll { it.cloudId == req.item.cloudId }
+        val shelf=if(kidsMode) kidsContinue else continueWatching
+        val available=(shelf.toList()+req.item).associateBy {it.cloudId}
+        val ids=com.miflix.native2.data.ContinueWatchingPolicyRP10.ids(progress)
+        val rows=ids.mapNotNull {available[it]}
+        if(shelf.toList()!=rows) {shelf.clear();shelf.addAll(rows)}
     }
 
     suspend fun createWatchParty(withCurrentTitle: Boolean = false): WatchParty? {

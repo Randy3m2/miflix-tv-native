@@ -1,0 +1,16 @@
+const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/strict'),path=require('node:path');
+const source=fs.readFileSync(path.join(__dirname,'../app/src/main/java/com/miflix/native2/ui/LidomSplitYoutubeTileRP9.kt'),'utf8');
+const html=source.match(/val html="""([\s\S]*?)"""/)[1];
+const js=html.match(/<script>([\s\S]*?)<\/script>/)[1].replaceAll('$video','abcdefghijk').replaceAll('$origin','https://com.miflix.native2').replaceAll('$audible','false').replaceAll('$active','true');
+const calls=[],errors=[];
+const fake={mute(){calls.push('mute')},unMute(){calls.push('sound')},playVideo(){calls.push('play')},pauseVideo(){calls.push('pause')}};
+let ready,fail;
+const c={BruniOSplit:{error(n){errors.push(n)}},YT:{Player:function(id,config){ready=config.events.onReady;fail=config.events.onError;return fake;}}};
+vm.createContext(c);vm.runInContext(js,c);
+c.onYouTubeIframeAPIReady();ready();
+assert.deepEqual(calls.splice(0),['mute','play']);
+c.brunioState(true,true);assert.deepEqual(calls.splice(0),['sound','play']);
+c.brunioState(false,true);assert.deepEqual(calls.splice(0),['mute','play']);
+c.brunioState(false,false);assert.deepEqual(calls.splice(0),['mute','pause']);
+fail({data:101});assert.deepEqual(errors,[101]);
+console.log('PASS: embedded YouTube starts muted, switches audio, mutes previous selection, pauses on background/disposal, and reports embedding errors.');

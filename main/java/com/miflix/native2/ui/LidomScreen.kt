@@ -64,6 +64,13 @@ internal fun LidomScreen(state:AppState) {
                 Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                     FocusButton(if(onlyFavorites) tr("Todos los equipos","All teams") else tr("★ Favoritos","★ Favorites")) {onlyFavorites=!onlyFavorites}
                     FocusButton(tr("Actualizar partidos","Refresh games")) {refresh++}
+                    FocusButton("SplitScreen") {
+                        state.launch {
+                            state.leaveWatchParty()
+                            state.miniPlayer=false;state.playerRequest=null
+                            state.multiViewRequests.clear();state.screen=Screen.MULTIVIEW
+                        }
+                    }
                     FocusButton(tr("Configurar fuentes","Source settings")) {configure=true}
                     FocusButton(tr("Volver","Back")) {state.screen=Screen.LIVE_TV}
                 }
@@ -143,7 +150,8 @@ private fun lidomMoveDate(value:String,days:Int):String {
 }
 
 @Composable
-private fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTeam,close:()->Unit,settings:()->Unit) {
+private fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTeam,close:()->Unit,settings:()->Unit,onSplitSelect:((PlayerRequest)->Unit)?=null) {
+    var splitMode by remember {mutableStateOf(false)}
     val scope=rememberCoroutineScope();var busy by remember {mutableStateOf(false)};var error by remember {mutableStateOf("")}
     var selected by remember {mutableStateOf<LidomSource?>(null)};var candidates by remember {mutableStateOf<List<com.miflix.native2.model.StreamChoice>>(emptyList())}
     var youtube by remember {mutableStateOf<LidomSource?>(null)}
@@ -151,11 +159,17 @@ private fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTeam
     fun play(source:LidomSource,stream:com.miflix.native2.model.StreamChoice) {
         state.lidomTeamId=team.id;state.lidomShowSources=false
         val item=MediaSummary(team.mlb,"live",team.name+" · "+source.name,tr("Transmisión seleccionada por el usuario. La programación puede variar.","User-selected broadcast. Programming may vary."),null,null,0.0,"LIDOM")
-        state.openLivePlayer(PlayerRequest(item,stream,0,0,0,true,"lidom:${team.id}:${source.id}","lidom",liveMime=if(source.kind=="DASH") "application/dash+xml" else if(source.kind=="HLS") "application/x-mpegURL" else "",lidomTeam=team.id,lidomSource=source.id,returnScreen=Screen.LIDOM))
+        val request=PlayerRequest(item,stream,0,0,0,true,"lidom:${team.id}:${source.id}","lidom",liveType=if(source.kind=="YOUTUBE") "youtube" else "tv",liveMime=if(source.kind=="DASH") "application/dash+xml" else if(source.kind=="HLS") "application/x-mpegURL" else "",lidomTeam=team.id,lidomSource=source.id,returnScreen=Screen.LIDOM)
+        if(onSplitSelect!=null) onSplitSelect(request)
+        else if(splitMode) state.launch {state.leaveWatchParty();state.beginMultiView(request)}
+        else state.openLivePlayer(request)
         close()
     }
     PlayerSideSheet(team.name+" · "+tr("Fuentes","Sources"),close) {
         item {Text(tr("YouTube primero, luego televisión. Ninguna fuente se presenta como un partido en vivo sin comprobarlo.","YouTube first, then TV. A channel listing does not confirm a live game broadcast."),color=Muted,fontSize=13.sp)}
+        if(onSplitSelect==null) item {
+            FocusButton(if(splitMode) tr("SplitScreen activado · elige una fuente","SplitScreen on · choose a source") else tr("Abrir en SplitScreen","Open in SplitScreen"),primary=splitMode) {splitMode=!splitMode}
+        }
         val sources=repo.sources(team.id)
         if(sources.isEmpty()) item {Text(tr("No hay fuentes. Agrega una en configuración.","No sources. Add one in settings."),color=Muted)}
         items(sources,key={it.id}) {source ->
@@ -176,7 +190,11 @@ private fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTeam
         items(candidates.indices.toList(),key={"choice:$it"}) {index -> val stream=candidates[index];FocusButton("▶ ${index+1} · "+stream.name+" · "+stream.title,modifier=Modifier.fillMaxWidth()) {selected?.let {play(it,stream)}}}
         item {FocusButton(tr("Agregar / editar fuentes","Add / edit sources"),modifier=Modifier.fillMaxWidth(),onClick=settings)}
     }
-    youtube?.let {source -> LidomYoutubeChooser(repo,source,onPlay={id -> video=LidomYoutubeSelection(team.id,source.id,id);youtube=null},close={youtube=null})}
+    youtube?.let {source -> LidomYoutubeChooser(repo,source,onPlay={id ->
+        youtube=null
+        if(onSplitSelect!=null || splitMode) play(source,com.miflix.native2.model.StreamChoice("YouTube","https://www.youtube.com/watch?v=$id",source.name,addonName="LIDOM"))
+        else video=LidomYoutubeSelection(team.id,source.id,id)
+    },close={youtube=null})}
     video?.let {playing -> LidomYoutubePlayer(playing.video,onWorking={repo.working(team.id,playing.source,playing.video)},close={video=null})}
 }
 
@@ -213,4 +231,20 @@ private fun LidomSourceEditor(repo:LidomRepository,source:LidomSource,close:()->
             item {FocusButton(tr("Cancelar","Cancel"),onClick=close)}
         }
     }
+}
+
+
+@Composable
+internal fun LidomMultiViewPickerRP9(state:AppState,initialTeam:String="",select:(PlayerRequest)->Unit,close:()->Unit) {
+    val context=LocalContext.current
+    val owner="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
+    val repo=remember(owner) {LidomRepository(context,owner)}
+    var team by remember(owner,initialTeam) {mutableStateOf(repo.team(initialTeam))}
+    var configuring by remember {mutableStateOf(false)}
+    if(configuring) LidomSourcesSettings(repo,team?.id.orEmpty(),{configuring=false})
+    else if(team==null) PlayerSideSheet(tr("SplitScreen · equipos LIDOM","SplitScreen · LIDOM teams"),close) {
+        item {Text(tr("Elige el equipo y después la transmisión que quieres añadir.","Choose a team, then the broadcast to add."),color=Muted)}
+        items(repo.teams,key={it.id}) {club ->FocusButton(club.name,modifier=Modifier.fillMaxWidth()) {team=club}}
+    }
+    else LidomSourcesSheet(state,repo,team!!,close,{configuring=true},onSplitSelect=select)
 }

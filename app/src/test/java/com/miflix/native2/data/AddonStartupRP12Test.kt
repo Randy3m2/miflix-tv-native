@@ -55,13 +55,13 @@ class AddonStartupRP12Test {
  }
  @Test fun factoryListAndMigrationKeepPersonalAddonsAndRemovals() {
   val factory=BundledAddonsRP12.defaults
-  assertEquals(3,factory.size)
-  assertEquals(listOf("addon.peerflix.mov","addonlatam.duckdns.org","torrentio.strem.fun"),factory.map {URI(it).host})
+  assertEquals(4,factory.size)
+  assertEquals(listOf("mg.homelabx.qzz.io","addon.peerflix.mov","addonlatam.duckdns.org","torrentio.strem.fun"),factory.map {URI(it).host})
   val custom="https://my-comet.test/config/manifest.json"
   assertEquals(listOf(custom)+factory,BundledAddonsRP12.effective(listOf(custom)+BundledAddonsRP12.retired.toList()))
   assertFalse(BundledAddonsRP12.effective(emptyList(),setOf(factory[1])).contains(factory[1]))
   val old=BundledAddonsRP12.retired.first()
   assertTrue(BundledAddonsRP12.effective(listOf(old),restored=setOf(old)).contains(old))
-  assertEquals(3,BundledAddonsRP12.effective(factory).size)
+  assertEquals(4,BundledAddonsRP12.effective(factory).size)
  }
 }

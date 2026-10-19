@@ -16,9 +16,9 @@ internal object AddonPriorityRP2 {
         val comet="comet" in name;val torrentio="torrentio" in name
         if(AddonPriorityRP2.language(language)=="en") return if(comet) 0 else if(torrentio) 1 else 10
         return when {
+            "deepflix" in name || addon.host.equals("mg.homelabx.qzz.io",ignoreCase=true) -> -1
             "latadd" in name ->0
             "addonlatam" in name ->1
-            "deepflix" in name ->2
             "progresolatino" in name ->3
             "umbra" in name ->4
             "nuvedebrid" in name ->5

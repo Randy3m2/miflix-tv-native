@@ -1053,6 +1053,20 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         SettingsTileRC103(tr("Orden de filas de Home","Home row order"),tr("Decide qué aparece primero.","Decide what comes first."),"lists") {showHomeOrder=true}
                         SettingsTileRC103(tr("Mostrar u ocultar filas","Show or hide rows"),tr("Elige qué secciones ver en este perfil.","Choose which sections to see in this profile."),"home") {showHomeVisibility=true}
                     }}
+                    if(category=="playback") item(key="p2p-rp14") {
+                        var p2p by remember(state.localExtrasScope()) {mutableStateOf(state.p2pEnabledRP14())}
+                        var cacheGb by remember {mutableStateOf(com.miflix.native2.p2p.P2PSettingsRP14.cacheGb(context))}
+                        SettingsSectionCard(onFocused={visualHelp=null;helpTitle="P2P";helpDescription=tr("Reproduce torrents desde los complementos. Comparte datos con otros peers mientras el player está abierto. Caché local; sin Supabase. Requiere Android 9+.","Play torrents from add-ons. Exchanges data with peers while the player is open. Local cache; no Supabase. Requires Android 9+.");helpIndex=-1}) {
+                            SettingsTileRC103("P2P · Peerflix / Torrentio",tr("Torrents dentro del reproductor. Android 9+.","Torrents inside the player. Android 9+."),"links",checked=p2p) {
+                                state.saveP2PRP14(!p2p);p2p=state.p2pEnabledRP14()
+                            }
+                            Text(tr("Almacenamiento temporal máximo por archivo. Se borra al cerrar el player. Un archivo mayor requiere aumentar el límite.","Maximum temporary storage per file. Cleared when the player closes. Larger files require a higher limit."),color=Muted)
+                            FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                                listOf(2,4,8,16,32).forEach {gb ->FocusButton("$gb GB",primary=cacheGb==gb) {com.miflix.native2.p2p.P2PSettingsRP14.saveCacheGb(context,gb);cacheGb=gb}}
+                            }
+                            if(!com.miflix.native2.p2p.P2PSettingsRP14.supported()) Text(tr("P2P no está disponible en esta TV. Los enlaces directos siguen disponibles.","P2P is unavailable on this TV. Direct links remain available."),color=Muted)
+                        }
+                    }
                     if(category=="playback") item(key="previous-live-channel") {
                         SettingsTileRC103(tr("TV en vivo · Canal anterior","Live TV · Previous channel"),tr("Alterna entre los dos últimos canales reproducidos. Historial por perfil durante esta sesión.","Switch between the last two played channels. Per-profile history for this session."),"previous",checked=state.previousLiveChannelEnabled) {state.savePreviousLiveChannelEnabled(!state.previousLiveChannelEnabled)}
                     }
@@ -1464,6 +1478,13 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var countdown by remember(request.playbackId) { mutableStateOf(10) }
     var cancelAutoplay by remember(request.playbackId) { mutableStateOf(false) }
 
+    val torrentPlayback=remember(request.playbackId) {
+        if(!request.live && request.stream.url.startsWith("brunio-p2p://") && state.p2pEnabledRP14())
+            com.miflix.native2.p2p.TorrentPlaybackRP14(java.io.File(context.cacheDir,"p2p-rp14"),
+                com.miflix.native2.p2p.P2PSettingsRP14.cacheGb(context)*1024L*1024*1024) else null
+    }
+    DisposableEffect(torrentPlayback) {onDispose {torrentPlayback?.close()}}
+    LaunchedEffect(torrentPlayback,state.appForeground) {kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {torrentPlayback?.setForeground(state.appForeground)}}
     val player = remember(request.playbackId) {
         val renderers = if(request.live) androidx.media3.exoplayer.DefaultRenderersFactory(context).setEnableDecoderFallback(true)
             else com.miflix.native2.player.TimedTextRenderers(context,timing).setEnableDecoderFallback(true)
@@ -1474,7 +1495,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         ExoPlayer.Builder(context, renderers)
             .apply {if(!request.live) setAudioAttributes(androidx.media3.common.AudioAttributes.Builder().setUsage(androidx.media3.common.C.USAGE_MEDIA).setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MOVIE).build(),true)}
             .setHandleAudioBecomingNoisy(true)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(dataFactory))
+            .setMediaSourceFactory(DefaultMediaSourceFactory(if(torrentPlayback==null) dataFactory else com.miflix.native2.p2p.P2PDataSourceRP14.Factory(dataFactory,torrentPlayback)))
             .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder()
                 .setBufferDurationsMs(15000,50000,1000,1500)
                 .setPrioritizeTimeOverSizeThresholds(true).build())
@@ -1629,7 +1650,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             if(eligible && failure!=null && com.miflix.native2.player.SourceFallbackBudget.sourceFailure(failure.errorCode)) {
                 advanceSourceOrShow(playerFailureDetails(failure))
             } else if(watchdog.shouldAdvance(android.os.SystemClock.elapsedRealtime(),firstFrame,
-                    player.playbackState==Player.STATE_BUFFERING,eligible)) {
+                    player.playbackState==Player.STATE_BUFFERING,eligible && torrentPlayback==null)) {
                 advanceSourceOrShow(if(state.autoplayNextLink) tr("La fuente se quedó cargando. Probando otro enlace.","The source stalled. Trying another link.") else tr("La fuente se quedó cargando. Elige otro enlace manualmente.","The source stalled. Choose another link manually."))
             }
         }

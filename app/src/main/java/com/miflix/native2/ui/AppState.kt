@@ -40,6 +40,12 @@ import java.util.UUID
 class AppState(context: Context) {
     init { com.miflix.native2.data.AwardSelections.configure(context.assets.open("awards_catalog.json").bufferedReader().use {it.readText()}) }
     private val appContext=context.applicationContext
+    init {com.miflix.native2.p2p.P2PSettingsRP14.cleanStale(appContext)}
+    internal fun p2pEnabledRP14()=com.miflix.native2.p2p.P2PSettingsRP14.enabled(appContext,localExtrasScope())
+    internal fun saveP2PRP14(value:Boolean) {
+        com.miflix.native2.p2p.P2PSettingsRP14.saveEnabled(appContext,localExtrasScope(),value)
+        playbackLinkCache.clear()
+    }
     var showLiveScoresRP11 by mutableStateOf(false)
     var clearingCache by mutableStateOf(false)
     var cacheCleared by mutableStateOf(false)
@@ -1029,7 +1035,7 @@ class AppState(context: Context) {
         val owner: String?,val profile: String,val cloudId: String,val imdb: String,
         val season: Int,val episode: Int,val year: String,val title: String,
         val manifests: List<String>,val nativeEnabled: Boolean,val nativeVersion: Int,
-        val sizeLimit: Long,val audio: String
+        val sizeLimit: Long,val audio: String,val p2p: Boolean
     )
     private val playbackLinkCache=com.miflix.native2.data.PlaybackLinkCache<PlaybackCacheKey,List<StreamChoice>>(12) {
         android.os.SystemClock.elapsedRealtime()
@@ -1037,8 +1043,9 @@ class AppState(context: Context) {
     private val playbackCacheMutex=Mutex()
     private fun playbackCacheKey(item: MediaSummary,imdb: String,season: Int,episode: Int)=PlaybackCacheKey(
         session?.userId,activeProfile.id,item.cloudId,imdb,season,episode,item.year,item.title,
-        streamRepo.manifests().toList(),nativeSourceEnabled,nativeRevision,streamSizeBytes,audioLanguage)
+        streamRepo.manifests().toList(),nativeSourceEnabled,nativeRevision,streamSizeBytes,audioLanguage,p2pEnabledRP14())
     private suspend fun resolvePlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = playbackCacheMutex.withLock {
+        streamRepo.p2pEnabled=p2pEnabledRP14()
         val key=playbackCacheKey(item,imdb,season,episode)
         playbackLinkCache.get(key)?.let { return@withLock StreamOrdering.sorted(it,audioLanguage,providerOrder=sourceProviderOrderRP2()) }
         val streams=fetchPlaybackSources(item,imdb,season,episode)
@@ -2639,7 +2646,7 @@ class AppState(context: Context) {
             val seconds=(details?.takeIf {it.summary.cloudId==item.cloudId}?.runtimeMinutes ?: 0)*60
             val chosen = selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2())
                 ?: throw IllegalStateException(if(streamRepo.hasTorrentOnlyResults())
-                    tr("Estos complementos devolvieron torrents. Esta versión necesita enlaces directos; no tiene motor P2P.","These add-ons returned torrents. This version requires direct links and has no P2P engine.")
+                    tr("Estos complementos devolvieron torrents. Activa P2P en Settings en una TV con Android 9 o superior.","These add-ons returned torrents. Enable P2P in Settings on a TV with Android 9 or newer.")
                     else tr("No se encontraron enlaces reproducibles","No playable sources found"))
             val automaticFallback=autoplayNextLink && watchParty==null
             val retryRows=if(automaticFallback) {

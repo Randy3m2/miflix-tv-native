@@ -21,8 +21,8 @@ android {
         applicationId 'com.miflix.native2'
         minSdk 23
         targetSdk 36
-        versionCode 22117
-        versionName '2.0.0-rp13'
+        versionCode 22118
+        versionName '2.0.0-rp14'
 
         buildConfigField 'String', 'SUPABASE_URL', '"https://iwvhigqxsvvgyzdygiqa.supabase.co"'
         buildConfigField 'String', 'SUPABASE_KEY', '"sb_publishable_TdzEQXtDadVMKhSLVe0ihw_EAQ4iNsd"'
@@ -86,6 +86,11 @@ dependencies {
     implementation 'io.coil-kt.coil3:coil-gif:3.5.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'org.libtorrent4j:libtorrent4j:2.1.0-39'
+    implementation 'org.libtorrent4j:libtorrent4j-android-arm:2.1.0-39'
+    implementation 'org.libtorrent4j:libtorrent4j-android-arm64:2.1.0-39'
+    implementation 'org.libtorrent4j:libtorrent4j-android-x86:2.1.0-39'
+    implementation 'org.libtorrent4j:libtorrent4j-android-x86_64:2.1.0-39'
     implementation 'com.google.zxing:core:3.5.3'
 
     testImplementation 'junit:junit:4.13.2'

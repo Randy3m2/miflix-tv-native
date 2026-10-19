@@ -77,7 +77,7 @@ internal fun CompactPlayerControls(
             PlaybackBadgesRP26(badgePlayerRP26,request)
             Text(if(request.item.type=="series") "S${request.season} E${request.episode} · ${request.stream.name}" else request.stream.name,
                 color=Color(0xFFBBBBBB),fontSize=12.sp,lineHeight=15.sp,maxLines=1)
-            Text(focusedLabel,color=Color.White,fontSize=12.sp,lineHeight=16.sp,maxLines=2,modifier=Modifier.fillMaxWidth().height(32.dp))
+            Text(focusedLabel,color=Color.White,fontSize=12.sp,lineHeight=16.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,modifier=Modifier.fillMaxWidth().height(18.dp))
             PlayerSeekBar(position,duration,seekable,seekFocus,playFocus,onInteraction,onSeek)
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 PlayerIconButton(if(paused) "play" else "pause",if(paused) tr("Reproducir","Play") else tr("Pausar","Pause"),Modifier.focusRequester(playFocus).focusProperties { up=seekFocus },onInteraction,onPlay,onLabel={ focusedLabel=it })
@@ -162,7 +162,7 @@ private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seek
     val fraction=if(duration>0) (shown.toFloat()/duration).coerceIn(0f,1f) else 0f
     LaunchedEffect(position,dragging) {if(!dragging && preview?.let {kotlin.math.abs(position-it)<1000L}==true) preview=null}
     LaunchedEffect(preview,dragging) {if(preview!=null && !dragging) {kotlinx.coroutines.delay(1500);preview=null} }
-    Box(Modifier.fillMaxWidth().height(48.dp).focusRequester(seekFocus).focusProperties {down=playFocus}
+    Box(Modifier.fillMaxWidth().height(30.dp).focusRequester(seekFocus).focusProperties {down=playFocus}
         .onFocusChanged {focused=it.isFocused;if(it.isFocused) interaction()}
         .semantics {contentDescription=playbackTime(shown)+" / "+playbackTime(duration)}
         .onPreviewKeyEvent {event ->
@@ -185,7 +185,7 @@ private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seek
         }) {
         Text(playbackTime(shown)+" / "+playbackTime(duration),color=Color.White,fontSize=12.sp,lineHeight=16.sp,
             modifier=Modifier.align(Alignment.TopEnd).background(Color(0xA0000000),RoundedCornerShape(5.dp)).padding(horizontal=7.dp,vertical=2.dp))
-        Canvas(Modifier.align(Alignment.BottomCenter).padding(bottom=6.dp).fillMaxWidth().height(if(focused || dragging) 8.dp else 5.dp)) {
+        Canvas(Modifier.align(Alignment.BottomCenter).padding(bottom=2.dp).fillMaxWidth().height(if(focused || dragging) 8.dp else 5.dp)) {
             drawRoundRect(Color(0xFF555555),cornerRadius=androidx.compose.ui.geometry.CornerRadius(size.height))
             if(fraction>0) drawRoundRect(Color.White,size=Size(size.width*fraction,size.height),cornerRadius=androidx.compose.ui.geometry.CornerRadius(size.height))
             if((focused || dragging) && enabled) drawCircle(Color.White,7.dp.toPx(),Offset(size.width*fraction,size.height/2))

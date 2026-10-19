@@ -187,17 +187,7 @@ internal fun localCatalogRC100(state:AppState,key:String,rows:List<MediaSummary>
 
 @Composable
 internal fun LocalCatalogFiltersRC100(state:AppState,key:String,rows:List<MediaSummary>,close:()->Unit) {
-    val extras=state.localExtras;val owner=state.localExtrasScope();val f=extras.preference(owner,"filter:$key")
-    fun save(field:String,value:Any) {extras.savePreference(owner,"filter:$key",JSONObject(f.toString()).put(field,value))}
-    LocalPanelRC100(tr("Filtros locales","Local filters"),close) {
-        Text(tr("Aplican a los títulos cargados de este catálogo. Se recuerdan por perfil y catálogo; no realizan búsquedas nuevas.","Apply to loaded titles in this catalog. Remembered per profile and catalog; no new searches."),color=Muted)
-        FocusButton(tr("Restablecer","Reset")) {extras.savePreference(owner,"filter:$key",JSONObject())}
-        listOf("" to tr("Todos los tipos","All types"),"movie" to tr("Películas","Movies"),"series" to tr("Series","Series")).forEach {(v,label) ->FocusButton(label,primary=f.optString("type")==v) {save("type",v)}}
-        FocusButton(tr("Ocultar vistos","Hide watched")+" · "+if(f.optBoolean("unwatched")) "ON" else "OFF") {save("unwatched",!f.optBoolean("unwatched"))}
-        listOf("" to tr("Orden original","Original order"),"rating" to tr("Valoración","Rating"),"year" to tr("Más recientes","Newest year"),"title" to tr("Título A–Z","Title A–Z")).forEach {(v,label) ->FocusButton(label,primary=f.optString("sort")==v) {save("sort",v)}}
-        FocusButton(tr("Todos los años","All years"),primary=f.optString("year").isBlank()) {save("year","")}
-        rows.map {it.year}.filter {it.isNotBlank()}.distinct().sortedDescending().forEach {year ->FocusButton(year,primary=f.optString("year")==year) {save("year",year)}}
-    }
+    LocalCatalogFiltersRP24(state,key,rows,close)
 }
 
 @Composable

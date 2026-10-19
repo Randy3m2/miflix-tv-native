@@ -27,37 +27,46 @@ internal fun ContentWarningOverlayRP31(state:AppState,request:PlayerRequest,star
     var rows by remember(request.item.cloudId,request.season,request.episode) {mutableStateOf<List<ContentAdvisoriesRP31.Warning>>(emptyList())}
     var count by remember(request.item.cloudId,request.season,request.episode) {mutableIntStateOf(0)}
     var showGuide by remember(request.item.cloudId,request.season,request.episode) {mutableStateOf(false)}
-    var attempted by remember(request.item.cloudId,request.season,request.episode) {mutableStateOf(false)}
-    LaunchedEffect(started,state.contentWarningsRP31,request.item.cloudId,request.season,request.episode) {
-        if(!started || request.live || !state.contentWarningsRP31 || attempted) return@LaunchedEffect
-        attempted=true
+    var shown by remember(request.item.cloudId,request.season,request.episode) {mutableStateOf(false)}
+    // Fetch while the player is preparing; never make playback wait for this data.
+    LaunchedEffect(state.contentWarningsRP31,request.item.cloudId,request.season,request.episode) {
+        rows=emptyList()
+        if(request.live || !state.contentWarningsRP31) return@LaunchedEffect
         try {
-            val found=withTimeoutOrNull(6500) {
-                val imdb=(state.details?.takeIf {it.summary.cloudId==request.item.cloudId} ?: state.tmdb.details(request.item)).imdbId
-                if(imdb==null || !Regex("tt[0-9]{5,12}").matches(imdb)) return@withTimeoutOrNull emptyList()
-                val prefs=context.getSharedPreferences("brunio_content_guide_rp31",0)
-                val stored=runCatching {JSONObject(prefs.getString(imdb,"{}").orEmpty())}.getOrDefault(JSONObject())
-                val age=System.currentTimeMillis()-stored.optLong("at",0)
-                val ttl=if(stored.optBoolean("unavailable")) 3_600_000L else 7*24*3_600_000L
-                val cached=stored.optJSONObject("data")
-                if(age in 0 until ttl && cached!=null) return@withTimeoutOrNull ContentAdvisoriesRP31.parse(cached)
-                val data=try {JSONObject(Http.text("https://api.imdbapi.dev/titles/$imdb/parentsGuide",timeoutMs=5000).take(262144))} catch(e:CancellationException) {throw e} catch(_:Exception) {JSONObject()}
-                val warnings=ContentAdvisoriesRP31.parse(data)
-                val editor=prefs.edit()
-                if(prefs.all.size>=60) prefs.all.keys.filter {it!=imdb}.take(20).forEach {editor.remove(it)}
-                // Store only normalized categories/votes, never scene descriptions or profile data.
-                val normalized=JSONObject().put("parentsGuide",org.json.JSONArray(warnings.map {w -> JSONObject().put("category",w.category)
-                    .put("severityBreakdowns",org.json.JSONArray().put(JSONObject().put("severityLevel",w.severity).put("voteCount",1)))}))
-                editor.putString(imdb,JSONObject().put("at",System.currentTimeMillis()).put("unavailable",warnings.isEmpty()).put("data",normalized).toString()).apply()
-                warnings
-            }.orEmpty()
-            rows=found
-            if(found.isNotEmpty()) {
-                showGuide=true
-                for(i in 1..found.size) {count=i;delay(260)}
-                delay(3500);showGuide=false
+            val known=state.details?.takeIf {it.summary.cloudId==request.item.cloudId}?.imdbId
+            val imdb=known ?: withTimeoutOrNull(12000) {state.tmdb.details(request.item).imdbId}
+            if(imdb==null || !Regex("tt[0-9]{5,12}").matches(imdb)) return@LaunchedEffect
+            // New namespace discards RP31 entries that confused HTTP failures with absent guides.
+            val prefs=context.getSharedPreferences("brunio_content_guide_rp33",0)
+            val stored=runCatching {JSONObject(prefs.getString(imdb,"{}").orEmpty())}.getOrDefault(JSONObject())
+            val age=System.currentTimeMillis()-stored.optLong("at",0)
+            val ttl=if(stored.optBoolean("empty")) 3_600_000L else 7*24*3_600_000L
+            val cached=stored.optJSONObject("data")
+            if(age in 0 until ttl && cached!=null && com.miflix.native2.data.ContentGuideClientRP33.validPayload(cached)) {
+                rows=ContentAdvisoriesRP31.parse(cached)
+                return@LaunchedEffect
             }
-        } catch(e:CancellationException) {showGuide=false;throw e} catch(_:Exception) {showGuide=false}
+            val data=com.miflix.native2.data.ContentGuideClientRP33.fetch(imdb)
+            val warnings=ContentAdvisoriesRP31.parse(data)
+            val editor=prefs.edit()
+            if(prefs.all.size>=60) prefs.all.keys.filter {it!=imdb}.take(20).forEach {editor.remove(it)}
+            val normalized=JSONObject().put("parentsGuide",org.json.JSONArray(warnings.map {w -> JSONObject().put("category",w.category)
+                .put("severityBreakdowns",org.json.JSONArray().put(JSONObject().put("severityLevel",w.severity).put("voteCount",1)))}))
+            editor.putString(imdb,JSONObject().put("at",System.currentTimeMillis()).put("empty",warnings.isEmpty()).put("data",normalized).toString()).apply()
+            rows=warnings
+        } catch(e:CancellationException) {throw e} catch(_:Exception) {
+            // An unavailable service is not a negative rating and is never cached.
+            rows=emptyList()
+        }
+    }
+    LaunchedEffect(started,rows,state.contentWarningsRP31) {
+        showGuide=false
+        if(!started || rows.isEmpty() || !state.contentWarningsRP31 || shown) return@LaunchedEffect
+        shown=true;count=0;showGuide=true
+        try {
+            for(i in 1..rows.size) {count=i;delay(260)}
+            delay(3500)
+        } finally {showGuide=false}
     }
     AnimatedVisibility(showGuide && visible && state.contentWarningsRP31,enter=fadeIn(tween(180)),exit=fadeOut(tween(300)),modifier=modifier) {
         Row(Modifier.background(Color(0x99000000)).padding(12.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {

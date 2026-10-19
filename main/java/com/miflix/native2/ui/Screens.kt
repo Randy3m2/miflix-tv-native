@@ -1055,6 +1055,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                             }
                         }
                     }
+                    if(category=="playback") item(key="content-guide-diagnostics-rp33") {ContentGuideDiagnosticsRP33()}
                     if(category=="playback") item(key="content-warnings-rp31") {
                         SettingsSectionCard(onFocused={visualHelp=null;helpTitle=tr("Avisos de contenido","Content warnings");helpDescription=tr("Muestra una guía breve al empezar cuando haya datos. No retrasa el video y se guarda por perfil.","Show a short guide at playback start when data is available. Playback is not delayed; saved per profile.")}) {
                             SettingsTileRC103(tr("Avisos al iniciar","Warnings at playback start"),tr("Lenguaje, violencia y otras categorías. Se ocultan automáticamente.","Language, violence and other categories. Automatically dismissed."),"lists",checked=state.contentWarningsRP31) {state.saveContentWarningsRP31(!state.contentWarningsRP31)}

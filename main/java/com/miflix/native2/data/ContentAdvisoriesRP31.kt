@@ -10,7 +10,7 @@ internal object ContentAdvisoriesRP31 {
         val rows=json.optJSONArray("parentsGuide") ?: return emptyList()
         return (0 until rows.length()).mapNotNull {index ->
             val row=rows.optJSONObject(index) ?: return@mapNotNull null
-            val category=row.optString("category")
+            val category=row.optString("category").uppercase(java.util.Locale.ROOT)
             if(category !in categories) return@mapNotNull null
             val votes=row.optJSONArray("severityBreakdowns") ?: return@mapNotNull null
             val levels=listOf("none","mild","moderate","severe")

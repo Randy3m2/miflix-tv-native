@@ -172,6 +172,12 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     }
     fun tune(entry:BrowserChannelRP34) {
         if(resolving) return
+        if(entry.provider==CustomChannelsRP45.provider) {
+            val channel=CustomChannelsRP45.list(context,CustomChannelsRP45.owner(state)).firstOrNull {it.id==entry.value.id}
+            if(channel!=null && state.partyRole!=PartyRole.GUEST && !state.kidsMode) select(CustomChannelsRP45.request(channel))
+            else message=tr("El canal ya no está disponible en este perfil.","This channel is no longer available in this profile.")
+            return
+        }
         if(entry.provider=="sports") {pendingSportsRP44=entry;return}
         val stamp=generation
         scope.launch {

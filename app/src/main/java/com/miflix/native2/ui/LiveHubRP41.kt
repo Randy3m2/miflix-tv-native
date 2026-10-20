@@ -60,6 +60,7 @@ internal fun LiveHubRP41(state:AppState) {
     var error by remember {mutableStateOf("")}
     val scope=rememberCoroutineScope()
     var opening by remember {mutableStateOf<Job?>(null)}
+    var customChannelsRP45 by remember(owner) {mutableStateOf(false)}
     var configuring by remember {mutableStateOf(false)}
     var revision by remember {mutableIntStateOf(0)}
     val first=remember {FocusRequester()}
@@ -74,7 +75,10 @@ internal fun LiveHubRP41(state:AppState) {
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
             FocusButton("‹",horizontalPadding=14.dp) {if(section=="hub") state.screen=Screen.HOME else back()}
             Text(if(section=="hub") tr("En Vivo","Live") else when(section) {"basketball"->"NBA · Basketball";"baseball"->"MLB · Baseball";"football"->"NFL · American Football";"soccer"->tr("Fútbol","Football");"f1"->"F1";"lidom"->"LIDOM";else->"Others"},color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
-            if(section=="others") FocusButton(tr("Configurar deportes","Sports settings")) {configuring=true}
+            if(section=="others") {
+                FocusButton(tr("Mis canales","My channels")) {customChannelsRP45=true}
+                FocusButton(tr("Configurar deportes","Sports settings")) {configuring=true}
+            }
         }
         if(busy) Text(tr("Abriendo canal…","Opening channel…"),color=Muted)
         if(error.isNotBlank()) Text(error,color=Color.White,fontSize=12.sp)
@@ -111,6 +115,7 @@ internal fun LiveHubRP41(state:AppState) {
         else key(section,revision) {HubSportsRP41(state,section,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())}
     }
     }
+    if(customChannelsRP45) CustomChannelsPanelRP45(state) {customChannelsRP45=false}
     if(configuring) {
         var manifest by remember {mutableStateOf(state.calendarLiveManifest("sports"))}
         PlayerMenuDialog(onDismissRequest={configuring=false}) {

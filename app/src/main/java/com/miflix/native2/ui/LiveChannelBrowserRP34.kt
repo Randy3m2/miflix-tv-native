@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.composed
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
@@ -191,6 +192,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
         }
     }
     var pendingSportsRP44 by remember {mutableStateOf<BrowserChannelRP34?>(null)}
+    var genericOptionsRP54 by remember {mutableStateOf<BrowserChannelRP34?>(null)}
     fun selectSportsRP44(entry:BrowserChannelRP34,stream:StreamChoice) {
         val c=entry.value
         val activeCategory=group ?: BrowserCategoryRP34(entry.provider,LiveCategory(c.type,"sports","Sports"),"Sports")
@@ -268,7 +270,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                             val favorite=favorites.any {it.provider==entry.provider && it.channel.id==entry.value.id}
                             BrowserChannelRowRP34(entry.value,entry.value.number.takeIf {it>0} ?: (displayed.indexOf(entry)+1),favorite,
                                 playing=entry.provider==current?.liveProvider && entry.value.id==current?.liveChannelId,
-                                click={tune(entry)},hold={if(entry.provider=="sports" || entry.provider==NuvioTestConfigRP49.PROVIDER) tune(entry) else if(entry.provider==CustomChannelsRP45.provider) customManageRP48=CustomChannelsRP45.findRP48(context,localOwnerRP48,entry.value.id) else LiveLibrary.toggle(context,state,entry.provider,entry.value)},
+                                click={tune(entry)},favoriteHold={LiveLibrary.toggle(context,state,entry.provider,entry.value)},optionsHold={if(entry.provider==CustomChannelsRP45.provider) customManageRP48=CustomChannelsRP45.findRP48(context,localOwnerRP48,entry.value.id) else genericOptionsRP54=entry},
                                 modifier=Modifier.then(if(entry==displayed.firstOrNull()) Modifier.focusRequester(firstChannel) else Modifier)
                                     .then(if(entry.provider==current?.liveProvider && entry.value.id==current?.liveChannelId) Modifier.focusRequester(playingChannelFocus) else Modifier).onPreviewKeyEvent {event ->
                                     false
@@ -300,6 +302,19 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
         }
     }
     customManageRP48?.let {channel ->CustomChannelManageRP48(state,channel) {customManageRP48=null}}
+    genericOptionsRP54?.let {entry ->
+        val isFav=LiveLibrary.favorites(context,state).any {it.provider==entry.provider && it.channel.id==entry.value.id}
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest={genericOptionsRP54=null},
+            title={androidx.compose.material3.Text(entry.value.name)},
+            text={androidx.compose.material3.Text(if(isFav) "Remove from Favorites" else "Add to Favorites")},
+            confirmButton={androidx.compose.material3.TextButton(onClick={
+                LiveLibrary.toggle(context,state,entry.provider,entry.value)
+                genericOptionsRP54=null
+            }) {androidx.compose.material3.Text(if(isFav) "Remove from Favorites" else "Add to Favorites")}},
+            dismissButton={androidx.compose.material3.TextButton(onClick={genericOptionsRP54=null}) {androidx.compose.material3.Text("Close")}}
+        )
+    }
     pendingSportsRP44?.let {entry ->LiveSportsLinksRP44(state,entry.value,{pendingSportsRP44=null},manifestOverrideRP49=if(entry.provider==NuvioTestConfigRP49.PROVIDER) NuvioTestConfigRP49.MANIFEST else null) {stream ->pendingSportsRP44=null;selectSportsRP44(entry,stream)}}
 
 }
@@ -315,11 +330,11 @@ private fun BrowserCategoryRowRP34(title:String,selected:Boolean,modifier:Modifi
 }
 
 @Composable
-private fun BrowserChannelRowRP34(channel:LiveChannel,number:Int,favorite:Boolean,playing:Boolean,click:()->Unit,hold:()->Unit,modifier:Modifier=Modifier) {
+private fun BrowserChannelRowRP34(channel:LiveChannel,number:Int,favorite:Boolean,playing:Boolean,click:()->Unit,favoriteHold:()->Unit,optionsHold:()->Unit,modifier:Modifier=Modifier) {
     var focused by remember(channel.id) {mutableStateOf(false)}
     Row(modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(if(focused) Color(0xFF292929) else Color.Transparent)
         .border(if(focused) 1.dp else 0.dp,if(focused) Color.White else Color.Transparent,RoundedCornerShape(8.dp))
-        .onFocusChanged {focused=it.isFocused}.focusable().tvPlaybackClick(click,hold).clickable(onClick=click).padding(horizontal=10.dp,vertical=9.dp),
+        .onFocusChanged {focused=it.isFocused}.focusable().tvChannelTimedClickRP54(click,favoriteHold,optionsHold).padding(horizontal=10.dp,vertical=9.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
         Box(Modifier.size(40.dp),contentAlignment=Alignment.Center) {
             if(channel.poster!=null) AsyncImage(channel.poster,null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
@@ -380,4 +395,41 @@ private fun ChannelHeartRP38(favorite:Boolean) {
             drawPath(heart,if(favorite) Color(0xFFFF3040) else Color.White)
         }
     }
+}
+
+/** RP54: OK short press plays, 750-1749ms toggles favorite, >=1750ms opens options. */
+private fun Modifier.tvChannelTimedClickRP54(
+    play:()->Unit, toggleFavorite:()->Unit, openOptions:()->Unit
+):Modifier = composed {
+    val playNow by rememberUpdatedState(play)
+    val favoriteNow by rememberUpdatedState(toggleFavorite)
+    val optionsNow by rememberUpdatedState(openOptions)
+    var pressedAt by remember { mutableLongStateOf(-1L) }
+    this.onFocusChanged { if (!it.hasFocus) pressedAt=-1L }
+        .onPreviewKeyEvent { event ->
+            val native=event.nativeKeyEvent
+            if (native.keyCode !in listOf(23,66,160)) false
+            else {
+                when(event.type) {
+                    KeyEventType.KeyDown -> {
+                        if(native.repeatCount==0 && pressedAt<0L) pressedAt=native.eventTime
+                        true
+                    }
+                    KeyEventType.KeyUp -> {
+                        val start=pressedAt
+                        pressedAt=-1L
+                        if(start>=0L && !native.isCanceled) {
+                            val elapsed=(native.eventTime-start).coerceAtLeast(0L)
+                            when {
+                                elapsed>=1750L -> optionsNow()
+                                elapsed>=750L -> favoriteNow()
+                                else -> playNow()
+                            }
+                        }
+                        true
+                    }
+                    else -> true
+                }
+            }
+        }
 }

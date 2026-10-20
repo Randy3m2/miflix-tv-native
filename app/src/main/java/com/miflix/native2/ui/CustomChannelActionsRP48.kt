@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 import com.miflix.native2.model.PartyRole
+import com.miflix.native2.model.LiveChannel
 
 @Composable
 internal fun CustomChannelManageRP48(state:AppState,channel:CustomChannelRP45,close:()->Unit) {
@@ -28,6 +29,12 @@ internal fun CustomChannelActionsRP48(state:AppState,channel:CustomChannelRP45,e
     val owner=CustomChannelsRP45.owner(state)
     val originalOwner=remember {owner}
     val first=remember {FocusRequester()}
+    val favoritesRevision=LiveLibrary.revision
+    val isFavorite=remember(favoritesRevision,owner,channel.id) {
+        LiveLibrary.favorites(context,state).any { it.provider==CustomChannelsRP45.provider && it.channel.id==channel.id }
+    }
+    val favoriteChannel=LiveChannel(channel.id,"custom",channel.name,channel.logo,null)
+
     LaunchedEffect(owner) {if(owner!=originalOwner) close()}
     PlayerMenuDialog(onDismissRequest=close,fullScreen=true) {
         BoxWithConstraints(Modifier.fillMaxSize().consumeOpeningPress()) {
@@ -36,7 +43,14 @@ internal fun CustomChannelActionsRP48(state:AppState,channel:CustomChannelRP45,e
                 Text(channel.name,color=Color.White,fontSize=23.sp)
                 Text(tr("CANAL PERSONAL","PERSONAL CHANNEL"),color=Muted,fontSize=12.sp)
                 if(state.partyRole!=PartyRole.GUEST && !state.kidsMode) {
-                    FocusButton(tr("Editar nombre o URL por QR","Edit name or URL by QR"),modifier=Modifier.fillMaxWidth().focusRequester(first)) {edit()}
+                    FocusButton(
+                        tr(if(isFavorite) "Quitar de favoritos" else "Agregar a favoritos",
+                           if(isFavorite) "Remove from Favorites" else "Add to Favorites"),
+                        modifier=Modifier.fillMaxWidth().focusRequester(first)
+                    ) {
+                        LiveLibrary.toggle(context,state,CustomChannelsRP45.provider,favoriteChannel)
+                    }
+                    FocusButton(tr("Editar nombre o URL por QR","Edit name or URL by QR"),modifier=Modifier.fillMaxWidth()) {edit()}
                     FocusButton(tr("Eliminar canal","Delete channel"),modifier=Modifier.fillMaxWidth(),destructive=true) {
                         if(originalOwner==CustomChannelsRP45.owner(state)) CustomChannelsRP45.remove(context,owner,channel.id)
                         close()

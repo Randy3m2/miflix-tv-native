@@ -1,5 +1,1 @@
-BruniO RP53 version fix
-Replace app/build.gradle in GitHub.
-versionCode 22157
-versionName 2.0.0-rp53
-Re-run GitHub Actions and install the newly built APK.
+RP54 timed long press: under 750ms play; 750-1749ms favorite; >=1750ms options. Triggered on OK release. Not compiled. Apply on top of RP53.

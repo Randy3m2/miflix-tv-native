@@ -70,13 +70,14 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     var more by remember {mutableStateOf(false)}
     var offset by remember {mutableIntStateOf(0)}
     var generation by remember {mutableIntStateOf(0)}
+    var catalogWarningRP39 by remember {mutableStateOf("")}
     var retry by remember {mutableIntStateOf(0)}
     val pageCache=remember {mutableMapOf<String,Pair<List<BrowserChannelRP34>,Boolean>>()}
     val revision=LiveLibrary.revision
     val favorites=remember(revision,state.session?.userId,state.activeProfile.id) {LiveLibrary.favorites(context,state)}
     val group=categories.firstOrNull {it.key==selected}
     LaunchedEffect(retry) {
-        loading=true;message="";categories=emptyList();selected=""
+        loading=true;message="";catalogWarningRP39="";categories=emptyList();selected=""
         val providers=listOf(if(initialProvider=="sports") "sports" else "nauta")
         val found=coroutineScope {providers.map {provider ->async {
             try {permits.withPermit {
@@ -92,6 +93,20 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
             ?: categories.firstOrNull {isMostViewedRP37(it.value)}?.key ?: categories.firstOrNull()?.key ?: "favorites"
         loading=false
         if(!initialFocus) {withFrameNanos {};runCatching {first.requestFocus()}}
+        // Keep the initial provider usable while the other catalog loads. Only metadata:
+        // event lists and playback URLs are requested when the user selects them.
+        val otherProvider=if(initialProvider=="sports") "nauta" else "sports"
+        try {
+            val manifest=state.calendarLiveManifest(otherProvider)
+            val catalog=browserCategoryCacheRP34.get(manifest)
+                ?: repo.categories(manifest).also {browserCategoryCacheRP34.put(manifest,it)}
+            val extra=catalog.map {BrowserCategoryRP34(otherProvider,it,if(otherProvider=="sports") tr("Deportes","Sports") else "Nauta")}
+            categories=(categories.filter {it.provider !in IptvRepository.sources}+extra+
+                categories.filter {it.provider in IptvRepository.sources}).distinctBy {it.key}
+        } catch(e:CancellationException) {throw e} catch(_:Exception) {
+            catalogWarningRP39=if(otherProvider=="sports") tr("No se pudieron cargar las categorías de deportes.","Could not load sports categories.")
+                else tr("No se pudieron cargar las categorías de TV.","Could not load TV categories.")
+        }
     }
     LaunchedEffect(selected,search) {
         generation++;resolving=false;more=false;channels=emptyList();offset=0;message=""
@@ -164,6 +179,10 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                                 Modifier.then(if(c.key==selected) Modifier.focusRequester(first) else Modifier),
                                 {selected=c.key},c.sourceLabel)
                         }
+                    }
+                    if(catalogWarningRP39.isNotBlank()) {
+                        Text(catalogWarningRP39,color=Muted,fontSize=10.sp)
+                        FocusButton(tr("Reintentar","Retry"),modifier=Modifier.fillMaxWidth()) {retry++}
                     }
                     FocusButton(tr("Cerrar","Close"),modifier=Modifier.fillMaxWidth(),onClick=close)
                 }

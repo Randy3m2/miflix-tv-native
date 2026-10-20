@@ -80,10 +80,9 @@ internal fun LiveHubRP41(state:AppState) {
         if(section=="hub") {
             val board=ImageBitmap.imageResource(R.drawable.live_hub_board_rp41)
             BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().focusRequester(contentFocusRP44).focusGroup()) {
-            val aspectRP46=467f/292f
-            val gapRP46=12.dp
-            val tileWidthRP46=minOf((maxWidth-48.dp-gapRP46*2)/3,(maxHeight-gapRP46*2)/3*aspectRP46)
-            val tileHeightRP46=tileWidthRP46/aspectRP46
+            val gapRP46=10.dp
+            val tileWidthRP46=(maxWidth-32.dp-gapRP46*2)/3
+            val tileHeightRP46=(maxHeight-8.dp-gapRP46*2)/3
             Column(Modifier.width(tileWidthRP46*3+gapRP46*2).height(tileHeightRP46*3+gapRP46*2).align(Alignment.Center),verticalArrangement=Arrangement.spacedBy(gapRP46)) {
                 repeat(3) {row ->
                     Row(Modifier.height(tileHeightRP46).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(gapRP46)) {
@@ -127,13 +126,20 @@ internal fun LiveHubRP41(state:AppState) {
 @Composable
 private fun HubTileRP41(board:ImageBitmap,index:Int,label:String,modifier:Modifier,click:()->Unit) {
     var focused by remember {mutableStateOf(false)}
-    val scale by animateFloatAsState(if(focused) 1.025f else 1f,label="Live tile focus")
+    val scale by animateFloatAsState(if(focused) 1.015f else 1f,label="Live tile focus")
     val xs=listOf(40,534,1029);val ys=listOf(24,355,672)
     Box(modifier.graphicsLayer {scaleX=scale;scaleY=scale;shadowElevation=if(focused) 10.dp.toPx() else 0f;shape=RoundedCornerShape(13.dp)}
         .clip(RoundedCornerShape(13.dp)).border(if(focused) 2.dp else 1.dp,if(focused) Color.White else Color(0xFF263245),RoundedCornerShape(13.dp))
         .semantics {contentDescription=label}.onFocusChanged {focused=it.isFocused}.focusable().tvClick(click).clickable(onClick=click)) {
         Canvas(Modifier.fillMaxSize()) {
-            drawImage(board,srcOffset=IntOffset(xs[index%3],ys[index/3]+if(index/3==2) 0 else 8),srcSize=IntSize(467,292),dstSize=IntSize(size.width.toInt(),size.height.toInt()))
+            val sourceY=ys[index/3]+if(index/3==2) 0 else 8
+            drawRect(Color(0xFF080B13))
+            // Cover the wider card with dim stadium art; fit the main artwork without stretching.
+            val backgroundHeight=(467f*size.height/size.width).toInt().coerceIn(1,292)
+            drawImage(board,srcOffset=IntOffset(xs[index%3],sourceY+(292-backgroundHeight)/2),srcSize=IntSize(467,backgroundHeight),dstSize=IntSize(size.width.toInt(),size.height.toInt()),alpha=.24f)
+            val fit=minOf(size.width/467f,size.height/292f)
+            val artWidth=(467*fit).toInt();val artHeight=(292*fit).toInt()
+            drawImage(board,srcOffset=IntOffset(xs[index%3],sourceY),srcSize=IntSize(467,292),dstOffset=IntOffset((size.width.toInt()-artWidth)/2,(size.height.toInt()-artHeight)/2),dstSize=IntSize(artWidth,artHeight))
             if(focused) drawRect(Color.White.copy(alpha=.07f))
         }
     }

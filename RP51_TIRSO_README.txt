@@ -1,0 +1,1 @@
+RP51 Tirso TV: replace only listed files. Live TV includes Tirso TV and its subcategories; RP50 local channel editor, deletion and playback logic retained. Existing Others screen restored. Logos use RP50 index fallback. No APK build or stream playback verification performed.

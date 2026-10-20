@@ -59,9 +59,16 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
         if(reset) {offsets.clear();finished.clear();rows=emptyList()}
         busy=true;message=""
         if(requested.any {it.provider==CustomChannelsRP45.provider}) {
-            rows=CustomChannelsRP45.channelsRP48(context,ownerRP46).map {TVChannelRP32(CustomChannelsRP45.provider,it)}
+            val category=active.firstOrNull()?.category?.id.orEmpty()
+            val all=CustomChannelsRP45.list(context,ownerRP46)
+            val filtered=when {
+                category=="tirso:Todos" -> all.filter {it.id.startsWith("magma:rp51:")}
+                category.startsWith("tirso:") -> all.filter {it.id.startsWith("magma:rp51:") && it.category==category.removePrefix("tirso:")}
+                else -> all.filterNot {it.id.startsWith("magma:rp51:")}
+            }
+            rows=filtered.map {TVChannelRP32(CustomChannelsRP45.provider,LiveChannel(it.id,"tv",it.name,it.logo,"Tirso TV",number=it.number))}
             more=false;busy=false
-            if(rows.isEmpty()) message=tr("Agrega canales desde Others → Mis canales.","Add channels from Others → My channels.")
+            if(rows.isEmpty()) message=tr("No hay canales en esta categoría.","No channels in this category.")
             return
         }
         try {
@@ -98,7 +105,9 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
             try {permits.withPermit {repo.categories(manifest(provider)).map {TVGroupRP32(provider,it)}}}
             catch(e:CancellationException) {throw e} catch(_:Exception) {failures++;emptyList()}
         }}.awaitAll().flatten()}
-        groups=loaded+TVGroupRP32(CustomChannelsRP45.provider,CustomChannelsRP45.categoryRP48())+IptvRepository.sources.map {(provider,source) ->
+        groups=loaded+listOf(TVGroupRP32(CustomChannelsRP45.provider,CustomChannelsRP45.categoryRP48()))+
+            CustomChannelsRP45.categoriesRP51().map {TVGroupRP32(CustomChannelsRP45.provider,it)}+
+            IptvRepository.sources.map {(provider,source) ->
             TVGroupRP32(provider,LiveCategory("tv","iptv:all","IPTV · "+source.first,paginated=true,searchable=true))
         }
         val savedRP46=LiveHubMemoryRP46.category(ownerRP46,"tv")

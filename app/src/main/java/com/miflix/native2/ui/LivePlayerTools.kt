@@ -64,30 +64,18 @@ fun MultiViewScreen(state: AppState) {
     var lidomPicker by remember {mutableStateOf(state.multiViewRequests.isEmpty())}
     var lidomInitialTeam by remember {mutableStateOf("")}
     var youtubeFull by remember {mutableStateOf<PlayerRequest?>(null)}
-    val lidomSession=remember {state.multiViewRequests.isEmpty() || state.multiViewRequests.firstOrNull()?.liveProvider=="lidom"}
     var sound by remember { mutableStateOf(state.multiViewRequests.firstOrNull()?.playbackId) }
     var hd by remember { mutableStateOf(false) }
+    var panelRP43 by remember {mutableStateOf(true)}
     val first=remember { FocusRequester() }
-    LaunchedEffect(Unit) { withFrameNanos { };first.requestFocus() }
+    LaunchedEffect(panelRP43) { withFrameNanos { };runCatching {first.requestFocus()} }
     val view=LocalView.current
     DisposableEffect(view) { val old=view.keepScreenOn;view.keepScreenOn=true;onDispose { view.keepScreenOn=old } }
-    fun exit() { players.releaseAll();state.multiViewRequests.clear();state.screen=if(lidomSession) Screen.LIDOM else Screen.LIVE_TV }
-    BackHandler { exit() }
-    Column(Modifier.fillMaxSize().background(Color.Black).padding(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
-            Text("SplitScreen · ${state.multiViewRequests.size}/4",color=Color.White,fontSize=23.sp)
-            FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-            FocusButton("PIN Live score") {state.showLiveScoresRP11=true}
-            FocusButton(tr("Añadir LIDOM","Add LIDOM"),modifier=Modifier.focusRequester(first)) {if(state.multiViewRequests.size<4) {replacing=null;lidomInitialTeam="";lidomPicker=true}}
-            FocusButton(tr("Añadir canal","Add channel")) { if(state.multiViewRequests.size<4) { replacing=null;picker=true } }
-            FocusButton(if(hd) "HD · 720p" else tr("Fluido · 540p","Smooth · 540p")) { hd=!hd }
-            if(youtubeFull!=null) FocusButton(tr("Volver a SplitScreen","Back to SplitScreen")) {youtubeFull=null}
-            FocusButton(tr("Salir","Exit")) { exit() }
-            }
-        }
-        Text(tr("OK en un canal: elegir audio, cambiar, ampliar o quitar.","OK on a channel: choose audio, change, expand or remove."),color=Muted,fontSize=13.sp)
+    fun exit() {players.releaseAll();state.multiViewRequests.clear();state.playerRequest=null;state.miniPlayer=false;state.screen=Screen.LIVE_TV}
+    BackHandler {if(panelRP43) panelRP43=false else exit()}
+    BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black).padding(6.dp)) {
         val slots=youtubeFull?.let {listOf(it)} ?: state.multiViewRequests.toList()
-        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+        BoxWithConstraints(Modifier.fillMaxSize()) {
             val columns=if(slots.size<=1) 1 else 2
             val rows=if(slots.size>2) 2 else 1
             val tileWidth=(maxWidth-12.dp*(columns-1))/columns
@@ -101,14 +89,40 @@ fun MultiViewScreen(state: AppState) {
                 }
             }
         }
+        if(panelRP43) {
+            val panelWidth=if(maxWidth<700.dp) maxWidth*.52f else maxWidth*.36f
+            Column(Modifier.align(Alignment.CenterEnd).width(panelWidth).fillMaxHeight(.86f)
+                .background(Color(0xF20C0C0C),RoundedCornerShape(20.dp)).border(1.dp,Color(0xFF404040),RoundedCornerShape(20.dp))
+                .padding(18.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                Text("SPLITSCREEN",color=Muted,fontSize=11.sp)
+                Text("${state.multiViewRequests.size} / 4 · "+tr("pantallas","screens"),color=Color.White,fontSize=22.sp)
+                FocusButton(tr("Añadir canal","Add channel"),modifier=Modifier.fillMaxWidth().focusRequester(first),primary=true) {
+                    if(state.multiViewRequests.size<4) {replacing=null;picker=true}
+                }
+                FocusButton(tr("Añadir LIDOM","Add LIDOM"),modifier=Modifier.fillMaxWidth()) {
+                    if(state.multiViewRequests.size<4) {replacing=null;lidomInitialTeam="";lidomPicker=true}
+                }
+                Text(tr("PANTALLAS ACTIVAS","ACTIVE SCREENS"),color=Muted,fontSize=11.sp,modifier=Modifier.padding(top=6.dp))
+                state.multiViewRequests.forEachIndexed {index,req ->
+                    FocusButton("${index+1} · "+req.item.title+(if(req.playbackId==sound) " · ♪" else ""),modifier=Modifier.fillMaxWidth()) {selected=req.playbackId}
+                }
+                Text(tr("AUDIO Y OPCIONES","AUDIO & OPTIONS"),color=Muted,fontSize=11.sp,modifier=Modifier.padding(top=6.dp))
+                FocusButton(if(hd) "HD · 720p" else tr("Fluido · 540p","Smooth · 540p"),modifier=Modifier.fillMaxWidth()) {hd=!hd}
+                FocusButton("PIN Live score",modifier=Modifier.fillMaxWidth()) {state.showLiveScoresRP11=true}
+                if(youtubeFull!=null) FocusButton(tr("Volver al mosaico","Back to grid"),modifier=Modifier.fillMaxWidth()) {youtubeFull=null}
+                FocusButton(tr("Ocultar panel","Hide panel"),modifier=Modifier.fillMaxWidth()) {panelRP43=false}
+                FocusButton(tr("Salir de SplitScreen","Exit SplitScreen"),modifier=Modifier.fillMaxWidth()) {exit()}
+            }
+        } else FocusButton("SplitScreen · ☷",modifier=Modifier.align(Alignment.TopEnd).padding(10.dp).focusRequester(first)) {panelRP43=true}
     }
 
     selected?.let { id ->
         val req=state.multiViewRequests.firstOrNull { it.playbackId==id }
-        if(req!=null) PlayerMenuDialog(onDismissRequest={ selected=null }) {
+        if(req!=null) PlayerMenuDialog(onDismissRequest={ selected=null },fullScreen=true) {
+            Box(Modifier.fillMaxSize(),contentAlignment=Alignment.CenterEnd) {
             val focus=remember { FocusRequester() }
             LaunchedEffect(Unit) { withFrameNanos { };focus.requestFocus() }
-            Column(Modifier.width(440.dp).heightIn(max=440.dp).verticalScroll(rememberScrollState()).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+            Column(Modifier.fillMaxWidth(.40f).fillMaxHeight(.86f).padding(end=12.dp).verticalScroll(rememberScrollState()).background(Color(0xF20C0C0C),RoundedCornerShape(20.dp)).padding(20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                 Text(req.item.title,color=Color.White,fontSize=23.sp)
                 FocusButton(tr("Reintentar","Retry"),modifier=Modifier.focusRequester(focus)) {
                     youtubeFull=null
@@ -139,6 +153,7 @@ fun MultiViewScreen(state: AppState) {
                     if(state.multiViewRequests.isEmpty()) exit()
                 }
                 FocusButton(tr("Cerrar","Close")) { selected=null }
+            }
             }
         }
     }
@@ -175,7 +190,7 @@ fun MultiViewScreen(state: AppState) {
         }
         lidomPicker=false
     },close={lidomPicker=false})
-    if(picker) LiveChannelPicker(state,state.liveProviderTab,select={ req ->
+    if(picker) LiveChannelBrowserRP34(state,state.liveProviderTab,compactRP43=true,select={ req ->
         val i=state.multiViewRequests.indexOfFirst { it.playbackId==replacing }
         if(i>=0) { replacing?.let { players.release(it) };if(sound==replacing) sound=req.playbackId;state.multiViewRequests[i]=req }
         else if(state.multiViewRequests.size<4) { state.multiViewRequests.add(req);if(sound==null) sound=req.playbackId }

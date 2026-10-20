@@ -149,10 +149,11 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier) {
     var message by remember {mutableStateOf("")};var retry by remember {mutableIntStateOf(0)}
     var offset by remember {mutableIntStateOf(0)};var more by remember {mutableStateOf(false)}
     var generation by remember {mutableIntStateOf(0)}
-    var m3uRP42 by remember {mutableStateOf(false)}
     var nautaF1RP42 by remember {mutableStateOf<List<HubEventRP41>>(emptyList())}
     var nautaWarningRP42 by remember {mutableStateOf("")}
-    val displayedRP42=events+nautaF1RP42
+    var iptvF1RP43 by remember {mutableStateOf<List<HubEventRP41>>(emptyList())}
+    var iptvWarningRP43 by remember {mutableStateOf("")}
+    val displayedRP42=events+nautaF1RP42+iptvF1RP43
     val offsetsRP41=remember {mutableMapOf<LiveCategory,Int>()}
     val pendingRP41=remember {mutableSetOf<LiveCategory>()}
     val permitsRP41=remember {Semaphore(3)}
@@ -164,10 +165,31 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier) {
             val catalog=hubCatalogRP41.get(source) ?: repo.categories(source).also {hubCatalogRP41.put(source,it)}
             val category=catalog.firstOrNull {it.searchable} ?: catalog.firstOrNull() ?: error("No Nauta catalogs")
             val rows=if(category.searchable) coroutineScope {
-                listOf("F1","Formula 1").map {query ->async {repo.channels(source,category,search=query)}}.awaitAll().flatten()
+                listOf("F1","Formula 1","Movistar","DAZN").map {query ->async {
+                    try {permitsRP41.withPermit {repo.channels(source,category,search=query)}}
+                    catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
+                }}.awaitAll().flatten()
             } else repo.channels(source,category)
-            nautaF1RP42=rows.filter {f1ChannelRP42(it.name)}.distinctBy {it.type+":"+it.id}.map {HubEventRP41("nauta",it,category)}
+            nautaF1RP42=rows.filter {requestedF1StationRP43(it.name)}.distinctBy {it.type+":"+it.id}.map {HubEventRP41("nauta",it,category)}
         } catch(e:CancellationException) {throw e} catch(_:Exception) {nautaWarningRP42=tr("Nauta no respondió. Los eventos de Live Sports siguen disponibles.","Nauta did not respond. Live Sports events remain available.")}
+    }
+    LaunchedEffect(section,retry) {
+        if(section!="f1") return@LaunchedEffect
+        iptvWarningRP43=""
+        val limits=Semaphore(2)
+        val providers=IptvRepository.sources.keys.sortedBy {if(it=="iptv:es") 0 else 1}
+        var failures=0
+        val rows=coroutineScope {providers.map {provider ->async {
+            try {limits.withPermit {
+                val category=LiveCategory("tv","iptv:all","IPTV · "+IptvRepository.sources[provider]?.first.orEmpty(),paginated=true,searchable=true)
+                val manifest=state.calendarLiveManifest(provider)
+                val candidates=mutableListOf<LiveChannel>()
+                for(query in listOf("F1","Formula","Movistar","DAZN")) candidates+=repo.channels(manifest,category,search=query)
+                candidates.filter {requestedF1StationRP43(it.name)}.distinctBy {it.type+":"+it.id}.map {HubEventRP41(provider,it,category)}
+            }} catch(e:CancellationException) {throw e} catch(_:Exception) {failures++;emptyList()}
+        }}.awaitAll().flatten()}
+        iptvF1RP43=rows
+        if(failures>0) iptvWarningRP43=tr("Algunas listas IPTV no respondieron.","Some IPTV playlists did not respond.")
     }
     LaunchedEffect(manifest,retry) {
         loading=true;message=""
@@ -207,7 +229,7 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier) {
                 val stream=repo.streams(state.calendarLiveManifest(event.provider),event.channel).firstOrNull() ?: error("No links")
                 if(stamp!=generation || profile!=(state.session?.userId to state.activeProfile.id) || state.screen!=Screen.LIVE_TV || state.partyRole==PartyRole.GUEST) return@launch
                 val c=event.channel
-                LiveChannelNavigationRP40.save(state,LiveBrowseSnapshotRP40(BrowserCategoryRP34(event.provider,event.category,if(event.provider=="nauta") "Nauta" else "Sports"),displayedRP42.filter {it.provider==event.provider && it.category==event.category}.map {BrowserChannelRP34(it.provider,it.channel)},offset=if(event.provider=="nauta") nautaF1RP42.size else offsetsRP41[event.category] ?: offset,more=event.provider=="sports" && event.category in pendingRP41))
+                LiveChannelNavigationRP40.save(state,LiveBrowseSnapshotRP40(BrowserCategoryRP34(event.provider,event.category,if(event.provider=="nauta") "Nauta" else "Sports"),displayedRP42.filter {it.provider==event.provider && it.category==event.category}.map {BrowserChannelRP34(it.provider,it.channel)},offset=if(event.provider=="sports") offsetsRP41[event.category] ?: offset else displayedRP42.count {it.provider==event.provider && it.category==event.category},more=event.provider=="sports" && event.category in pendingRP41))
                 state.openLivePlayer(PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),stream,0,0,0L,live=true,liveChannelId=c.id,liveProvider=event.provider,liveType=c.type,returnScreen=Screen.LIVE_TV))
             } catch(e:CancellationException) {throw e} catch(_:Exception) {message=tr("Este evento no devolvió un enlace reproducible.","This event returned no playable link.")}
             finally {resolving=false}
@@ -218,16 +240,15 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier) {
         if(section=="others") {
             Text(tr("EXPLORA MÁS","EXPLORE MORE"),color=Muted,fontSize=11.sp,fontWeight=FontWeight.Bold)
             LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp),contentPadding=PaddingValues(4.dp)) {
-                item(key="m3u") {HubCategoryChipRP42("M3U",m3uRP42) {m3uRP42=true}}
-                items(categories,key={it.type+":"+it.id+":"+it.genre}) {c ->HubCategoryChipRP42(c.name,!m3uRP42 && c==selected) {m3uRP42=false;selected=c}}
+                items(categories,key={it.type+":"+it.id+":"+it.genre}) {c ->HubCategoryChipRP42(c.name,c==selected) {selected=c}}
             }
         }
-        if(m3uRP42) HubM3URP42(state,Modifier.weight(1f)) else {
         if(loading || resolving) Text(if(resolving) tr("Abriendo evento…","Opening event…") else tr("Cargando eventos…","Loading events…"),color=Muted)
+        if(iptvWarningRP43.isNotBlank()) Text(iptvWarningRP43,color=Muted,fontSize=12.sp)
         if(nautaWarningRP42.isNotBlank()) Text(nautaWarningRP42,color=Muted,fontSize=12.sp)
         if(message.isNotBlank()) {Text(message,color=Muted);FocusButton(tr("Reintentar","Retry")) {retry++}}
         LazyVerticalGrid(GridCells.Adaptive(240.dp),Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(6.dp,6.dp,6.dp,30.dp)) {
-            items(displayedRP42,key={it.key}) {event ->HubEventCardRP41(event.channel.name,event.channel.poster,if(event.provider=="nauta") "Nauta · F1" else event.channel.description) {tune(event)}}
+            items(displayedRP42,key={it.key}) {event ->HubEventCardRP41(event.channel.name,event.channel.poster,when {event.provider=="nauta"->if(f1ChannelRP42(event.channel.name)) "Nauta · F1" else "Nauta · DAZN";event.provider in IptvRepository.sources->"IPTV · "+IptvRepository.sources[event.provider]?.first.orEmpty();else->event.channel.description}) {tune(event)}}
             if(!loading && displayedRP42.isEmpty() && message.isBlank()) item(span={GridItemSpan(maxLineSpan)}) {Text(tr("No hay eventos publicados ahora.","No events published right now."),color=Muted)}
             if(more && !loading) item(span={GridItemSpan(maxLineSpan)}) {FocusButton(tr("Cargar más","Load more")) {
                 val c=selected
@@ -250,7 +271,6 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier) {
                     finally {if(stamp==generation) loading=false}
                 }
             }}
-        }
         }
     }
 }

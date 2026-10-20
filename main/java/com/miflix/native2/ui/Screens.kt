@@ -1765,6 +1765,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         tracks = player.currentTracks
         updateScreenAwake()
         onDispose {
+            try {
             playbackView.keepScreenOn = previousKeepScreenOn
             player.removeListener(listener)
             parkCurrentPlayback()
@@ -1775,7 +1776,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 state.launch { state.traktMarkWatched(request,lastPosition,lastDuration) }
                 state.launch { runCatching { state.pushCloud() } }
             }
-            player.release()
+            } finally {player.release()}
         }
     }
 

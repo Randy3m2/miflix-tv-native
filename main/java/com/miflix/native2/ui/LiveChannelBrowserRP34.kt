@@ -49,7 +49,7 @@ internal data class BrowserChannelRP34(val provider:String,val value:LiveChannel
 
 /** Shared TV remote picker for player Channels and multiview add/replace. */
 @Composable
-internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select:(PlayerRequest)->Unit,close:()->Unit) {
+internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select:(PlayerRequest)->Unit,close:()->Unit,compactRP43:Boolean=false) {
     val current=state.playerRequest?.takeIf {it.live}
     val ownerRP40=remember {state.session?.userId to state.activeProfile.id}
     val restoredRP40=remember {LiveChannelNavigationRP40.matching(state,current)}
@@ -183,8 +183,8 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     }
     PlayerMenuDialog(onDismissRequest=close,fullScreen=true) {
         BoxWithConstraints(Modifier.fillMaxSize().consumeOpeningPress()) {
-            val width=if(maxWidth<700.dp) .82f else .64f
-            Row(Modifier.align(Alignment.CenterStart).fillMaxHeight().fillMaxWidth(width).widthIn(max=740.dp).background(Color(0xEF080808)),horizontalArrangement=Arrangement.spacedBy(1.dp)) {
+            val width=if(compactRP43) {if(maxWidth<700.dp) .82f else .60f} else if(maxWidth<700.dp) .82f else .64f
+            Row(Modifier.align(if(compactRP43) Alignment.CenterEnd else Alignment.CenterStart).fillMaxHeight(if(compactRP43) .88f else 1f).fillMaxWidth(width).widthIn(max=740.dp).clip(RoundedCornerShape(if(compactRP43) 18.dp else 0.dp)).background(Color(0xEF080808)),horizontalArrangement=Arrangement.spacedBy(1.dp)) {
                 Column(Modifier.weight(.36f).fillMaxHeight().onPreviewKeyEvent {event ->
                     if(event.nativeKeyEvent.keyCode==android.view.KeyEvent.KEYCODE_DPAD_RIGHT && displayed.isNotEmpty()) {
                         if(event.type==KeyEventType.KeyDown) scope.launch {

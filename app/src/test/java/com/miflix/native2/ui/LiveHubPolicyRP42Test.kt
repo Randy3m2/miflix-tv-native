@@ -7,6 +7,10 @@ import org.junit.Test
 class LiveHubPolicyRP42Test {
     @Test fun findsF1Stations() {assertTrue(f1ChannelRP42("Sky Sports F1 HD"));assertTrue(f1ChannelRP42("DAZN F1"))}
     @Test fun findsFormulaAliases() {assertTrue(f1ChannelRP42("Fórmula-1"));assertTrue(f1ChannelRP42("Formula One"));assertTrue(f1ChannelRP42("F1TV Pro"))}
+    @Test fun findsNamedProviders() {assertTrue(f1ChannelRP42("Movistar F1 HD"));assertTrue(f1ChannelRP42("MovistarF1"));assertTrue(f1ChannelRP42("DAZNF1"));assertTrue(f1ChannelRP42("M+ Fórmula 1"))}
+    @Test fun includesRequestedGeneralDazn() {assertTrue(requestedF1StationRP43("DAZN HD"));assertTrue(requestedF1StationRP43("DAZN 2"));assertTrue(requestedF1StationRP43("DAZN 1 ES"))}
+    @Test fun doesNotIncludeUnrelatedStations() {assertFalse(requestedF1StationRP43("Movistar LaLiga"));assertFalse(requestedF1StationRP43("DAZN LaLiga"));assertFalse(requestedF1StationRP43("ESPN"))}
+    @Test fun excludesUnrelatedDazn() {assertFalse(f1ChannelRP42("DAZN 1"));assertFalse(f1ChannelRP42("DAZN LaLiga"))}
     @Test fun rejectsLookalikes() {assertFalse(f1ChannelRP42("F10 Movies"));assertFalse(f1ChannelRP42("Formula 10"));assertFalse(f1ChannelRP42("ESPN"))}
     @Test fun distinguishesPageFromMedia() {assertTrue(playlistWebRP42("https://sportsbite.org/247/tnt1uk"));assertFalse(playlistWebRP42("https://video.example/live/master.m3u8"));assertFalse(playlistWebRP42("https://video.example/live/123"))}
     @Test fun m3uDoesNotTurnHtmlIntoMedia() {

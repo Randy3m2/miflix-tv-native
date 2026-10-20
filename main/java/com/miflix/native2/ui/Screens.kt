@@ -1447,6 +1447,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     val surfaceFocus = remember { FocusRequester() }
     LaunchedEffect(firstFrame) {if(firstFrame) {withFrameNanos {};runCatching {surfaceFocus.requestFocus()} }}
     val playFocus = remember { FocusRequester() }
+    var sportsTargetRP44 by remember(request.playbackId) {mutableStateOf<BrowserChannelRP34?>(null)}
     var playerMenu by remember(request.playbackId) { mutableStateOf<String?>(null) }
     var resizeMode by remember { mutableStateOf(androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT) }
     var maximized by remember { mutableStateOf(true) }
@@ -1914,7 +1915,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             if(event.type==KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount==0) {
                 dismissKey=code
                 if(channelStepJobRP40?.isActive!=true) channelStepJobRP40=channelMenuScopeRP34.launch {
-                    LiveChannelNavigationRP40.step(state,request,if(code==android.view.KeyEvent.KEYCODE_DPAD_UP) 1 else -1)
+                    LiveChannelNavigationRP40.step(state,request,if(code==android.view.KeyEvent.KEYCODE_DPAD_UP) 1 else -1) {sportsTargetRP44=it}
                 }
             }
             true
@@ -2051,6 +2052,13 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 FocusButton("OK",modifier=Modifier.focusRequester(first)) { playerMenu=null;controlInteraction++ }
             }
         }
+        if(playerMenu=="sports_links") LiveSportsLinksRP44(state,LiveChannel(request.liveChannelId,request.liveType,request.item.title,request.item.backdrop,request.item.overview),{playerMenu=null}) {stream ->
+            playerMenu=null;state.openLivePlayer(request.copy(stream=stream,playbackId=java.util.UUID.randomUUID().toString()))
+        }
+        sportsTargetRP44?.let {entry ->LiveSportsLinksRP44(state,entry.value,{sportsTargetRP44=null}) {stream ->
+            val c=entry.value;sportsTargetRP44=null
+            state.openLivePlayer(PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),stream,0,0,0L,live=true,liveChannelId=c.id,liveProvider=entry.provider,liveType=c.type))
+        }}
         if(playerMenu=="channels") LiveChannelPicker(state,request.liveProvider,select={ req ->
             if(state.partyRole==PartyRole.GUEST) state.error=tr("El host cambia el canal del party","The host changes the party channel")
             else {playerMenu=null;dismissKey=null;state.openLivePlayer(req)}
@@ -2074,7 +2082,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 onInteraction={ controlInteraction++ },
                 onPlay={ userPlayback(!player.playWhenReady) },
                 onResize={ resizeMode=if(resizeMode == androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT) androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM else androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT },
-                onMenu={ playerMenu=it }, onLinks={ state.launch { state.playerSources(request,player.currentPosition) } },
+                onMenu={ playerMenu=it }, onLinks={ if(request.live && request.liveProvider=="sports") playerMenu="sports_links" else state.launch { state.playerSources(request,player.currentPosition) } },
                 onSeek={ if(player.isCurrentMediaItemSeekable) { if(state.partyRole==PartyRole.GUEST && state.watchParty?.hostOnlyControls==true) state.partyFollowHost=false;positionMs=it; player.seekTo(it) } }, seekable=player.isCurrentMediaItemSeekable && durationMs>0,
                 party=state.watchParty!=null,onParty={ openPlayerParty() },
                 onChat={ if(state.watchParty==null) openPlayerParty() else playerMenu="party-chat" },

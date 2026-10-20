@@ -22,11 +22,12 @@ internal object LiveChannelNavigationRP40 {
         return snapshots[owner(state)]?.takeIf {snapshot -> snapshot.rows.any {it.provider==request.liveProvider && it.value.id==request.liveChannelId}}
     }
     fun startHidden(request:PlayerRequest)=request.playbackId==hiddenPlaybackId
-    suspend fun step(state:AppState,request:PlayerRequest,direction:Int) {
+    suspend fun step(state:AppState,request:PlayerRequest,direction:Int,chooseSports:((BrowserChannelRP34)->Unit)?=null) {
         if(state.kidsMode || state.partyRole==PartyRole.GUEST || state.playerRequest?.playbackId!=request.playbackId) return
         val snapshot=matching(state,request) ?: return
         val index=snapshot.rows.indexOfFirst {it.provider==request.liveProvider && it.value.id==request.liveChannelId}
         val target=snapshot.rows.getOrNull(index+direction) ?: return
+        if(target.provider=="sports") {chooseSports?.invoke(target);return}
         val profile=owner(state)
         try {
             val stream=LiveRepository().streams(state.calendarLiveManifest(target.provider),target.value).firstOrNull()

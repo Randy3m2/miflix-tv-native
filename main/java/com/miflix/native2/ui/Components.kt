@@ -400,7 +400,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
         Screen.HOME to tr("Inicio","Home"),
         Screen.SEARCH to tr("Buscar","Search"),
         Screen.FRIENDS to tr("Amigos y salas","Friends & Party"),
-        Screen.LIVE_TV to tr("TV en vivo","Live TV"),
+        Screen.LIVE_TV to tr("En Vivo","Live"),
         Screen.MY_LIST to tr("Mi lista","My List")
     ))
     var headerHadFocus by remember { mutableStateOf(false) }
@@ -460,8 +460,8 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
                 items(navItems,key={it.first}) { (destination,label) ->
                     var focused by remember { mutableStateOf(false) }
                                         Box(Modifier.onGloballyPositioned { bounds[destination]=Pair(it.positionInRoot().x-navOrigin,it.size.width.toFloat()) }) {
-                        if(destination==Screen.SEARCH) SearchNavigationButton(onFocused={ focused=it; if(it) target=destination }) { onNavigate(destination) }
-                        else NavigationTab(label,selected=current==destination,onFocused={ focused=it; if(it) target=destination }) { onNavigate(destination) }
+                        if(destination==Screen.SEARCH) SearchNavigationButton(onFocused={ focused=it; if(it) target=destination }) { if(destination==Screen.LIVE_TV && current==destination && onMoveDown!=null) onMoveDown() else onNavigate(destination) }
+                        else NavigationTab(label,selected=current==destination,onFocused={ focused=it; if(it) target=destination }) { if(destination==Screen.LIVE_TV && current==destination && onMoveDown!=null) onMoveDown() else onNavigate(destination) }
                     }
                 }
             }

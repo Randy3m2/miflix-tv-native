@@ -163,8 +163,16 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                 ?.let {LiveChannelNavigationRP40.save(state,it)}
         }
     }
+    var pendingSportsRP44 by remember {mutableStateOf<BrowserChannelRP34?>(null)}
+    fun selectSportsRP44(entry:BrowserChannelRP34,stream:StreamChoice) {
+        val c=entry.value
+        val activeCategory=group ?: BrowserCategoryRP34(entry.provider,LiveCategory(c.type,"sports","Sports"),"Sports")
+        LiveChannelNavigationRP40.save(state,LiveBrowseSnapshotRP40(activeCategory,displayed,search,offset,more,channelList.firstVisibleItemIndex,channelList.firstVisibleItemScrollOffset))
+        select(PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),stream,0,0,0L,live=true,liveChannelId=c.id,liveProvider=entry.provider,liveType=c.type))
+    }
     fun tune(entry:BrowserChannelRP34) {
         if(resolving) return
+        if(entry.provider=="sports") {pendingSportsRP44=entry;return}
         val stamp=generation
         scope.launch {
             resolving=true;message=""
@@ -217,7 +225,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                             val favorite=favorites.any {it.provider==entry.provider && it.channel.id==entry.value.id}
                             BrowserChannelRowRP34(entry.value,entry.value.number.takeIf {it>0} ?: (displayed.indexOf(entry)+1),favorite,
                                 playing=entry.provider==current?.liveProvider && entry.value.id==current?.liveChannelId,
-                                click={tune(entry)},hold={LiveLibrary.toggle(context,state,entry.provider,entry.value)},
+                                click={tune(entry)},hold={if(entry.provider=="sports") tune(entry) else LiveLibrary.toggle(context,state,entry.provider,entry.value)},
                                 modifier=Modifier.then(if(entry==displayed.firstOrNull()) Modifier.focusRequester(firstChannel) else Modifier)
                                     .then(if(entry.provider==current?.liveProvider && entry.value.id==current?.liveChannelId) Modifier.focusRequester(playingChannelFocus) else Modifier).onPreviewKeyEvent {event ->
                                     if(event.nativeKeyEvent.keyCode==android.view.KeyEvent.KEYCODE_DPAD_LEFT) {if(event.type==KeyEventType.KeyDown) runCatching {first.requestFocus()};true} else false
@@ -243,11 +251,13 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                             }
                         }
                     }
-                    Text(tr("Mantén OK · ♥ Favorito    Atrás · Cerrar","Hold OK · ♥ Favorite    Back · Close"),color=Muted,fontSize=10.sp)
+                    Text(if(group?.provider=="sports") tr("OK / Mantén OK · Enlaces    Atrás · Cerrar","OK / Hold OK · Links    Back · Close") else tr("Mantén OK · ♥ Favorito    Atrás · Cerrar","Hold OK · ♥ Favorite    Back · Close"),color=Muted,fontSize=10.sp)
                 }
             }
         }
     }
+    pendingSportsRP44?.let {entry ->LiveSportsLinksRP44(state,entry.value,{pendingSportsRP44=null}) {stream ->pendingSportsRP44=null;selectSportsRP44(entry,stream)}}
+
 }
 
 @Composable

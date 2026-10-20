@@ -7,6 +7,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -62,20 +63,24 @@ internal fun LiveHubRP41(state:AppState) {
     var configuring by remember {mutableStateOf(false)}
     var revision by remember {mutableIntStateOf(0)}
     val first=remember {FocusRequester()}
+    val contentFocusRP44=remember {FocusRequester()}
     fun back() {opening?.cancel();busy=false;error="";section="hub"}
     BackHandler {if(section!="hub" || busy) back() else state.screen=Screen.HOME}
     LaunchedEffect(section) {if(section=="hub") {withFrameNanos {};runCatching {first.requestFocus()}}}
     Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal=14.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        Sidebar(Screen.LIVE_TV,state.activeProfile.name,{state.screen=it},state.unreadNoticeCount,state.activeProfile,
+            onMoveDown={runCatching {contentFocusRP44.requestFocus()};Unit},onEditPicture={state.profilePhotoEditor=state.activeProfile},kids=state.kidsMode)
+        Column(Modifier.weight(1f).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
             FocusButton("‹",horizontalPadding=14.dp) {if(section=="hub") state.screen=Screen.HOME else back()}
-            Text(if(section=="hub") "BRUNIO · LIVE" else when(section) {"basketball"->"NBA · Basketball";"baseball"->"MLB · Baseball";"football"->"NFL · American Football";"soccer"->tr("Fútbol","Football");"f1"->"F1";"lidom"->"LIDOM";else->"Others"},color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
+            Text(if(section=="hub") tr("En Vivo","Live") else when(section) {"basketball"->"NBA · Basketball";"baseball"->"MLB · Baseball";"football"->"NFL · American Football";"soccer"->tr("Fútbol","Football");"f1"->"F1";"lidom"->"LIDOM";else->"Others"},color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
             if(section=="others") FocusButton(tr("Configurar deportes","Sports settings")) {configuring=true}
         }
         if(busy) Text(tr("Abriendo canal…","Opening channel…"),color=Muted)
         if(error.isNotBlank()) Text(error,color=Color.White,fontSize=12.sp)
         if(section=="hub") {
             val board=ImageBitmap.imageResource(R.drawable.live_hub_board_rp41)
-            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().focusRequester(contentFocusRP44).focusGroup()) {
             val gridWidth=maxWidth
             Column(Modifier.width(gridWidth).fillMaxHeight().align(Alignment.Center),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 repeat(3) {row ->
@@ -102,8 +107,9 @@ internal fun LiveHubRP41(state:AppState) {
                 }
             }
             }
-        } else if(section=="lidom") HubLidomRP41(state,Modifier.weight(1f))
-        else key(section,revision) {HubSportsRP41(state,section,Modifier.weight(1f))}
+        } else if(section=="lidom") HubLidomRP41(state,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())
+        else key(section,revision) {HubSportsRP41(state,section,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())}
+    }
     }
     if(configuring) {
         var manifest by remember {mutableStateOf(state.calendarLiveManifest("sports"))}
@@ -206,7 +212,7 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier) {
         loading=true;events=emptyList();message="";more=false;offset=0
         try {
             offsetsRP41.clear();pendingRP41.clear()
-            val requested=if(section=="others") listOf(c) else categories.distinctBy {it.type+":"+it.id}
+            val requested=listOf(c)
             val batches=coroutineScope {requested.map {cat -> async {
                 val rows=permitsRP41.withPermit {repo.channels(manifest,cat)}
                 cat to rows
@@ -219,9 +225,17 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier) {
         } catch(e:CancellationException) {throw e} catch(_:Exception) {message=tr("No se pudieron cargar los eventos.","Could not load events.")}
         finally {loading=false}
     }
+    var pendingRP44 by remember {mutableStateOf<HubEventRP41?>(null)}
+    fun playRP44(event:HubEventRP41,stream:StreamChoice) {
+        val c=event.channel
+        LiveChannelNavigationRP40.save(state,LiveBrowseSnapshotRP40(BrowserCategoryRP34(event.provider,event.category,"Sports"),displayedRP42.filter {it.provider==event.provider && it.category==event.category}.map {BrowserChannelRP34(it.provider,it.channel)},offset=offsetsRP41[event.category] ?: offset,more=event.category in pendingRP41))
+        state.openLivePlayer(PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),stream,0,0,0L,live=true,liveChannelId=c.id,liveProvider=event.provider,liveType=c.type,returnScreen=Screen.LIVE_TV))
+    }
+    pendingRP44?.let {event ->LiveSportsLinksRP44(state,event.channel,{pendingRP44=null}) {stream ->pendingRP44=null;playRP44(event,stream)}}
     fun tune(event:HubEventRP41) {
         if(resolving) return
         if(state.partyRole==PartyRole.GUEST) {message=tr("El anfitrión elige el contenido.","The host chooses the content.");return}
+        if(event.provider=="sports") {pendingRP44=event;return}
         val stamp=generation;val profile=state.session?.userId to state.activeProfile.id
         scope.launch {
             resolving=true;message=""
@@ -237,7 +251,7 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier) {
     }
     Column(modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
         // Only Others has category tabs. Dedicated sports present event cards only.
-        if(section=="others") {
+        if(categories.isNotEmpty()) {
             Text(tr("EXPLORA MÁS","EXPLORE MORE"),color=Muted,fontSize=11.sp,fontWeight=FontWeight.Bold)
             LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp),contentPadding=PaddingValues(4.dp)) {
                 items(categories,key={it.type+":"+it.id+":"+it.genre}) {c ->HubCategoryChipRP42(c.name,c==selected) {selected=c}}
@@ -282,7 +296,7 @@ internal fun HubEventCardRP41(title:String,poster:String?,subtitle:String,click:
     Column(Modifier.fillMaxWidth().height(194.dp).graphicsLayer {scaleX=scale;scaleY=scale}
         .clip(RoundedCornerShape(13.dp)).background(Brush.verticalGradient(listOf(Color(0xFF242424),Color(0xFF101010))))
         .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(13.dp))
-        .onFocusChanged {focused=it.isFocused}.focusable().tvClick(click).clickable(onClick=click)) {
+        .onFocusChanged {focused=it.isFocused}.focusable().tvPlaybackClick(click,click).clickable(onClick=click)) {
         Box(Modifier.fillMaxWidth().weight(1f).background(Brush.verticalGradient(listOf(Color(0xFF17283C),Color.Black))),contentAlignment=Alignment.Center) {
             if(!poster.isNullOrBlank()) AsyncImage(poster,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
             else Text(title,color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(14.dp),maxLines=2)

@@ -4,21 +4,21 @@
     "name": "Los Simpson 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/635.m3u8",
     "category": "General",
-    "logo": "https://commons.wikimedia.org/wiki/Special:Redirect/file/The_Simpsons_Logo.svg?width=330"
+    "logo": "file:///android_asset/tirso_art_rp55/001.jpg"
   },
   {
     "number": 2,
     "name": "El Chavo del 8",
     "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/344.m3u8",
     "category": "General",
-    "logo": "file:///android_asset/tirso_logos/002.png"
+    "logo": "file:///android_asset/tirso_art_rp55/002.jpg"
   },
   {
     "number": 3,
     "name": "El Chavo del 8 HD",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1173.m3u8",
     "category": "General",
-    "logo": "file:///android_asset/tirso_logos/003.png"
+    "logo": "file:///android_asset/tirso_art_rp55/003.jpg"
   },
   {
     "number": 4,
@@ -291,14 +291,14 @@
     "name": "Series Comedia 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/LDtGK8dg/807.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/042.png"
+    "logo": "file:///android_asset/tirso_art_rp55/042.jpg"
   },
   {
     "number": 43,
     "name": "Dragon Ball 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/301.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/043.png"
+    "logo": "file:///android_asset/tirso_art_rp55/043.jpg"
   },
   {
     "number": 44,
@@ -319,623 +319,623 @@
     "name": "Dragon Ball Super 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/305.m3u8",
     "category": "24/7",
-    "logo": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Dragon_Ball_Super.png"
+    "logo": "file:///android_asset/tirso_art_rp55/046.jpg"
   },
   {
     "number": 47,
     "name": "Dragon Ball GT 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/303.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/047.png"
+    "logo": "file:///android_asset/tirso_art_rp55/047.jpg"
   },
   {
     "number": 48,
     "name": "Game of Thrones 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/484.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/048.png"
+    "logo": "file:///android_asset/tirso_art_rp55/048.jpg"
   },
   {
     "number": 49,
     "name": "Malcom HD 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/641.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/049.png"
+    "logo": "file:///android_asset/tirso_art_rp55/049.jpg"
   },
   {
     "number": 50,
     "name": "Two And a Half Men 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/973.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/050.png"
+    "logo": "file:///android_asset/tirso_art_rp55/050.jpg"
   },
   {
     "number": 51,
     "name": "Tom y Jerry",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/940.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/051.png"
+    "logo": "file:///android_asset/tirso_art_rp55/051.jpg"
   },
   {
     "number": 52,
     "name": "Bob Esponja",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/96.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/052.png"
+    "logo": "file:///android_asset/tirso_art_rp55/052.jpg"
   },
   {
     "number": 53,
     "name": "Friends 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/470.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/053.png"
+    "logo": "file:///android_asset/tirso_art_rp55/053.jpg"
   },
   {
     "number": 54,
     "name": "Chapulin Colorado 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/152.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/054.png"
+    "logo": "file:///android_asset/tirso_art_rp55/054.jpg"
   },
   {
     "number": 55,
     "name": "Looney Tunes 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/618.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/055.png"
+    "logo": "file:///android_asset/tirso_art_rp55/055.jpg"
   },
   {
     "number": 56,
     "name": "Pokemon 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/773.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/056.png"
+    "logo": "file:///android_asset/tirso_art_rp55/056.jpg"
   },
   {
     "number": 57,
     "name": "Naruto 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/702.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/057.png"
+    "logo": "file:///android_asset/tirso_art_rp55/057.jpg"
   },
   {
     "number": 58,
     "name": "La Pantera Rosa 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/597.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/058.png"
+    "logo": "file:///android_asset/tirso_art_rp55/058.jpg"
   },
   {
     "number": 59,
     "name": "Alf 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/28.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/059.png"
+    "logo": "file:///android_asset/tirso_art_rp55/059.jpg"
   },
   {
     "number": 60,
     "name": "Los Expedientes Secretos X 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/623.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/060.png"
+    "logo": "file:///android_asset/tirso_art_rp55/060.jpg"
   },
   {
     "number": 61,
     "name": "Hey Arnold 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/551.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/061.png"
+    "logo": "file:///android_asset/tirso_art_rp55/061.jpg"
   },
   {
     "number": 62,
     "name": "Smallville 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/812.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/062.png"
+    "logo": "file:///android_asset/tirso_art_rp55/062.jpg"
   },
   {
     "number": 63,
     "name": "Super Campeones 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/850.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/063.png"
+    "logo": "file:///android_asset/tirso_art_rp55/063.jpg"
   },
   {
     "number": 64,
     "name": "Caballeros del Zodiaco 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/100.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/064.png"
+    "logo": "file:///android_asset/tirso_art_rp55/064.jpg"
   },
   {
     "number": 65,
     "name": "Las Chicas Super Poderosas 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/608.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/065.png"
+    "logo": "file:///android_asset/tirso_art_rp55/065.jpg"
   },
   {
     "number": 66,
     "name": "Los 3 Chiflados 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/619.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/066.png"
+    "logo": "file:///android_asset/tirso_art_rp55/066.jpg"
   },
   {
     "number": 67,
     "name": "El Gallo Claudio 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/347.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/067.png"
+    "logo": "file:///android_asset/tirso_art_rp55/067.png"
   },
   {
     "number": 68,
     "name": "The Big Bang Theory 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/899.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/068.png"
+    "logo": "file:///android_asset/tirso_art_rp55/068.jpg"
   },
   {
     "number": 69,
     "name": "Los Picapiedras 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/625.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/069.png"
+    "logo": "file:///android_asset/tirso_art_rp55/069.jpg"
   },
   {
     "number": 70,
     "name": "Scooby Doo 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/804.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/070.png"
+    "logo": "file:///android_asset/tirso_art_rp55/070.jpg"
   },
   {
     "number": 71,
     "name": "Family Guy (Padre de Familia) 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/747.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/071.png"
+    "logo": "file:///android_asset/tirso_art_rp55/071.jpg"
   },
   {
     "number": 72,
     "name": "Caso Cerrado 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/138.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/072.png"
+    "logo": "file:///android_asset/tirso_art_rp55/072.jpg"
   },
   {
     "number": 73,
     "name": "Chespirito 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/153.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/073.png"
+    "logo": "file:///android_asset/tirso_art_rp55/073.jpg"
   },
   {
     "number": 74,
     "name": "One Punch Man 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/744.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/074.png"
+    "logo": "file:///android_asset/tirso_art_rp55/074.jpg"
   },
   {
     "number": 75,
     "name": "Dinosuarios 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/244.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/075.png"
+    "logo": "file:///android_asset/tirso_art_rp55/075.jpg"
   },
   {
     "number": 76,
     "name": "El Coyote y el Correcaminos 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/346.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/076.png"
+    "logo": "file:///android_asset/tirso_art_rp55/076.jpg"
   },
   {
     "number": 77,
     "name": "Ranma 1/2 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/782.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/077.png"
+    "logo": "file:///android_asset/tirso_art_rp55/077.jpg"
   },
   {
     "number": 78,
     "name": "Elementary 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/363.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/078.png"
+    "logo": "file:///android_asset/tirso_art_rp55/078.jpg"
   },
   {
     "number": 79,
     "name": "Coraje el Perro Cobarde 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/223.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/079.png"
+    "logo": "file:///android_asset/tirso_art_rp55/079.jpg"
   },
   {
     "number": 80,
     "name": "El Principe del Rap 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/357.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/080.png"
+    "logo": "file:///android_asset/tirso_art_rp55/080.jpg"
   },
   {
     "number": 81,
     "name": "Doraemon 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/297.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/081.png"
+    "logo": "file:///android_asset/tirso_art_rp55/081.jpg"
   },
   {
     "number": 82,
     "name": "Sakura Card Captor 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/800.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/082.png"
+    "logo": "file:///android_asset/tirso_art_rp55/082.jpg"
   },
   {
     "number": 83,
     "name": "Patoaventuras 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/758.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/083.png"
+    "logo": "file:///android_asset/tirso_art_rp55/083.jpg"
   },
   {
     "number": 84,
     "name": "Yu-Gi-Oh! 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1052.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/084.png"
+    "logo": "file:///android_asset/tirso_art_rp55/084.jpg"
   },
   {
     "number": 85,
     "name": "Nosotros Los Guapos 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/739.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/085.png"
+    "logo": "file:///android_asset/tirso_art_rp55/085.jpg"
   },
   {
     "number": 86,
     "name": "Ed, Edd y Eddy 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/339.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/086.png"
+    "logo": "file:///android_asset/tirso_art_rp55/086.jpg"
   },
   {
     "number": 87,
     "name": "Las Aventuras de Tom Sawyer 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/607.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/087.png"
+    "logo": "file:///android_asset/tirso_art_rp55/087.jpg"
   },
   {
     "number": 88,
     "name": "Los Pitufos 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/627.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/088.png"
+    "logo": "file:///android_asset/tirso_art_rp55/088.jpg"
   },
   {
     "number": 89,
     "name": "Peppa Pig 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/760.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/089.png"
+    "logo": "file:///android_asset/tirso_art_rp55/089.jpg"
   },
   {
     "number": 90,
     "name": "Mr.Bean 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/670.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/090.png"
+    "logo": "file:///android_asset/tirso_art_rp55/090.jpg"
   },
   {
     "number": 91,
     "name": "La Casa de los Dibujos 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/590.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/091.png"
+    "logo": "file:///android_asset/tirso_art_rp55/091.jpg"
   },
   {
     "number": 92,
     "name": "Los Chicos del Barrio 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/622.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/092.png"
+    "logo": "file:///android_asset/tirso_art_rp55/092.jpg"
   },
   {
     "number": 93,
     "name": "Hercules 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/550.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/093.png"
+    "logo": "file:///android_asset/tirso_art_rp55/093.jpg"
   },
   {
     "number": 94,
     "name": "Los Pinguinos de Madagascar 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/626.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/094.png"
+    "logo": "file:///android_asset/tirso_art_rp55/094.jpg"
   },
   {
     "number": 95,
     "name": "Yogui 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1051.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/095.png"
+    "logo": "file:///android_asset/tirso_art_rp55/095.jpg"
   },
   {
     "number": 96,
     "name": "Pinky y Cerebro 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/771.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/096.png"
+    "logo": "file:///android_asset/tirso_art_rp55/096.jpg"
   },
   {
     "number": 97,
     "name": "Duelo Xiaolin 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/330.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/097.png"
+    "logo": "file:///android_asset/tirso_art_rp55/097.jpg"
   },
   {
     "number": 98,
     "name": "TrollHunters 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/945.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/098.png"
+    "logo": "file:///android_asset/tirso_art_rp55/098.jpg"
   },
   {
     "number": 99,
     "name": "Animniacs 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/43.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/099.png"
+    "logo": "file:///android_asset/tirso_art_rp55/099.jpg"
   },
   {
     "number": 100,
     "name": "Doug 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/298.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/100.png"
+    "logo": "file:///android_asset/tirso_art_rp55/100.jpg"
   },
   {
     "number": 101,
     "name": "Garfield 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/486.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/101.png"
+    "logo": "file:///android_asset/tirso_art_rp55/101.jpg"
   },
   {
     "number": 102,
     "name": "Johnny Bravo 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/584.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/102.png"
+    "logo": "file:///android_asset/tirso_art_rp55/102.jpg"
   },
   {
     "number": 103,
     "name": "El Pato Darkwing 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/356.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/103.png"
+    "logo": "file:///android_asset/tirso_art_rp55/103.jpg"
   },
   {
     "number": 104,
     "name": "Samurai X 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/802.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/104.png"
+    "logo": "file:///android_asset/tirso_art_rp55/104.jpg"
   },
   {
     "number": 105,
     "name": "Ragrats 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/797.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/105.png"
+    "logo": "file:///android_asset/tirso_art_rp55/105.jpg"
   },
   {
     "number": 106,
     "name": "Malcolm 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/640.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/106.png"
+    "logo": "file:///android_asset/tirso_art_rp55/106.jpg"
   },
   {
     "number": 107,
     "name": "Rugrats Crecidos 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/798.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/107.png"
+    "logo": "file:///android_asset/tirso_art_rp55/107.jpg"
   },
   {
     "number": 108,
     "name": "Calabozos y Dragones 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/103.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/108.png"
+    "logo": "file:///android_asset/tirso_art_rp55/108.jpg"
   },
   {
     "number": 109,
     "name": "BayBlade 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/85.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/109.png"
+    "logo": "file:///android_asset/tirso_art_rp55/109.jpg"
   },
   {
     "number": 110,
     "name": "El Pajaro Loco 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/355.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/110.png"
+    "logo": "file:///android_asset/tirso_art_rp55/110.jpg"
   },
   {
     "number": 111,
     "name": "Cantiflas 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/123.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/111.png"
+    "logo": "file:///android_asset/tirso_art_rp55/111.webp"
   },
   {
     "number": 112,
     "name": "Breaking Bad 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/R7AqYREI/98.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/112.png"
+    "logo": "file:///android_asset/tirso_art_rp55/112.jpg"
   },
   {
     "number": 113,
     "name": "Los Vengadores Unidos 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/irw64QcQ/638.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/113.png"
+    "logo": "file:///android_asset/tirso_art_rp55/113.jpg"
   },
   {
     "number": 114,
     "name": "Max Steel 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/-kV88JGK/647.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/114.png"
+    "logo": "file:///android_asset/tirso_art_rp55/114.jpg"
   },
   {
     "number": 115,
     "name": "Le temes a la oscuridad 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/f7acnVDt/611.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/115.png"
+    "logo": "file:///android_asset/tirso_art_rp55/115.jpg"
   },
   {
     "number": 116,
     "name": "Neon Genesis Evangelion 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/-hHFFv16/716.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/116.png"
+    "logo": "file:///android_asset/tirso_art_rp55/116.jpg"
   },
   {
     "number": 117,
     "name": "Spider-Man 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/D4BzuFwk/827.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/117.png"
+    "logo": "file:///android_asset/tirso_art_rp55/117.jpg"
   },
   {
     "number": 118,
     "name": "Futurama 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/2PRvFeQs/473.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/118.png"
+    "logo": "file:///android_asset/tirso_art_rp55/118.jpg"
   },
   {
     "number": 119,
     "name": "La Vaca y el Pollito 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/lu6tq9pa/606.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/119.png"
+    "logo": "file:///android_asset/tirso_art_rp55/119.jpg"
   },
   {
     "number": 120,
     "name": "Iron Man 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/dqVgtmfJ/582.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/120.png"
+    "logo": "file:///android_asset/tirso_art_rp55/120.jpg"
   },
   {
     "number": 121,
     "name": "Patrulla Canina 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/cspl5s6m/759.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/121.png"
+    "logo": "file:///android_asset/tirso_art_rp55/121.jpg"
   },
   {
     "number": 122,
     "name": "La Familia Monster 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/BcqxbI5Q/591.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/122.png"
+    "logo": "file:///android_asset/tirso_art_rp55/122.jpg"
   },
   {
     "number": 123,
     "name": "Gres Anatomy 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/P9WCAnem/505.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/123.png"
+    "logo": "file:///android_asset/tirso_art_rp55/123.jpg"
   },
   {
     "number": 124,
     "name": "Los Años Maravillosos 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/h1Nu5phr/621.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/124.png"
+    "logo": "file:///android_asset/tirso_art_rp55/124.jpg"
   },
   {
     "number": 125,
     "name": "El Conde  Patula 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/Z4RsAsrk/345.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/125.png"
+    "logo": "file:///android_asset/tirso_art_rp55/125.jpg"
   },
   {
     "number": 126,
     "name": "Mazinger Z 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/kIh4di3I/649.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/126.png"
+    "logo": "file:///android_asset/tirso_art_rp55/126.jpg"
   },
   {
     "number": 127,
     "name": "Fear The Walking Dead 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/UjDl4JP2/415.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/127.png"
+    "logo": "file:///android_asset/tirso_art_rp55/127.jpg"
   },
   {
     "number": 128,
     "name": "Dr. House 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/tPr3lrSj/299.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/128.png"
+    "logo": "file:///android_asset/tirso_art_rp55/128.jpg"
   },
   {
     "number": 129,
     "name": "South Park 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/yT4IbHqY/820.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/129.png"
+    "logo": "file:///android_asset/tirso_art_rp55/129.jpg"
   },
   {
     "number": 130,
     "name": "Celebrity Deathmatch (EN) 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/EdZFqnrT/150.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/130.png"
+    "logo": "file:///android_asset/tirso_art_rp55/130.jpg"
   },
   {
     "number": 131,
     "name": "La Hora Pico 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/mbtfMF0Q/593.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/131.png"
+    "logo": "file:///android_asset/tirso_art_rp55/131.jpg"
   },
   {
     "number": 132,
     "name": "Sailor Moon 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/tcNOIqBa/799.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/132.png"
+    "logo": "file:///android_asset/tirso_art_rp55/132.jpg"
   },
   {
     "number": 133,
     "name": "Supernatural 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/NLQIpBWv/851.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/133.png"
+    "logo": "file:///android_asset/tirso_art_rp55/133.jpg"
   },
   {
     "number": 134,
     "name": "Happy Tree Friends 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/88M9fQjs/511.m3u8",
     "category": "24/7",
-    "logo": "file:///android_asset/tirso_logos/134.png"
+    "logo": "file:///android_asset/tirso_art_rp55/134.jpg"
   },
   {
     "number": 135,

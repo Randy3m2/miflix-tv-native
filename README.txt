@@ -1,1 +1,5 @@
-RP53 patch: Dragon Ball Z 24/7 custom image at 044.png. Allows local asset logos in CustomChannelsRP45.kt. Apply after RP53 logo packs and category hotfix. Not compiled or device tested. Note: if more recent modifications to CustomChannelsRP45.kt exist, merge the startsWith condition rather than overwrite.
+BruniO RP53 version fix
+Replace app/build.gradle in GitHub.
+versionCode 22157
+versionName 2.0.0-rp53
+Re-run GitHub Actions and install the newly built APK.

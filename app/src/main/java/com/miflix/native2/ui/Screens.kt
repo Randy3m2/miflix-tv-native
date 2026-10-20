@@ -71,6 +71,7 @@ import androidx.media3.ui.PlayerView
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.miflix.native2.BuildConfig
+import com.miflix.native2.data.LiveChannel
 import com.miflix.native2.model.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

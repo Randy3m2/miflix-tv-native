@@ -1,0 +1,6 @@
+RP40 — aplicar sobre RP39 conservando rutas.
+Con controles ocultos: arriba reproduce el siguiente canal de la lista de origen; abajo el anterior. Con controles visibles mantienen navegación normal. Sin salto circular en extremos ni repeticiones por mantener la flecha.
+Memoria local de sesión por perfil para TODAS las categorías, incluidas Cultura, deportes y favoritos: selección, búsqueda, lista/páginas cargadas y desplazamiento. Al reabrir se restaura la categoría y se enfoca el canal en reproducción, sin volver a Más vistos. Se conserva el orden real de la lista, sin anteponer artificialmente el canal al restaurar.
+El canal cambia usando su primer enlace. Durante la resolución se conserva la reproducción actual; errores no cambian el canal. Respeta invitados de Party y Kids; evita aplicar respuestas tardías tras cambiar perfil/reproducción.
+8 verificaciones JVM del código de navegación con reproductor/red simulados: siguiente/anterior, límites, invitado, reproducción obsoleta, cambio de perfil y error. Revisión estática de Kotlin y rutas espejo. Sin builds ni APK. Pendiente validar foco y control remoto en TV.
+No SQL, Vercel ni consultas nuevas a Supabase. La memoria es de sesión, no persiste tras cerrar el proceso de Android.

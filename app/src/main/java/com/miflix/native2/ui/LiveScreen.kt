@@ -102,6 +102,8 @@ fun LiveScreen(state: AppState) {
         finally { loading = false }
     }
     fun play(channel: LiveChannel, stream: StreamChoice) {
+        category?.let {c ->LiveChannelNavigationRP40.save(state,LiveBrowseSnapshotRP40(
+            BrowserCategoryRP34(provider,c,if(sports) "Sports" else "Nauta"),channels.filter {search.isBlank() || liveSearchKey(it.name).contains(liveSearchKey(search)) || channelNumber(it).toString()==search.trim()}.map {BrowserChannelRP34(provider,it)},search,offset,canLoadMore))}
         sources = emptyList(); sourceChannel = null
         val item = MediaSummary(channel.id.hashCode(), "live", channel.name, channel.description, null, channel.poster, 0.0, tr("EN VIVO","LIVE"))
         state.openLivePlayer(PlayerRequest(item, stream, 0, 0, 0L, live = true, liveChannelId = channel.id, liveProvider = provider, liveType=channel.type))

@@ -1439,9 +1439,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var quickReactions by remember(request.playbackId) { mutableStateOf(false) }
     var firstFrame by remember(request.playbackId) {mutableStateOf(false)}
     var hadPlaybackError by remember(request.playbackId) {mutableStateOf(false)}
-    var controlsVisible by remember(request.playbackId) { mutableStateOf(true) }
+    var controlsVisible by remember(request.playbackId) { mutableStateOf(!LiveChannelNavigationRP40.startHidden(request)) }
     var controlInteraction by remember { mutableStateOf(0) }
     val channelMenuScopeRP34=rememberCoroutineScope()
+    var channelStepJobRP40 by remember {mutableStateOf<kotlinx.coroutines.Job?>(null)}
     var surfaceFocusedRP34 by remember {mutableStateOf(false)}
     val surfaceFocus = remember { FocusRequester() }
     LaunchedEffect(firstFrame) {if(firstFrame) {withFrameNanos {};runCatching {surfaceFocus.requestFocus()} }}
@@ -1893,6 +1894,17 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         else if(code in listOf(android.view.KeyEvent.KEYCODE_VOLUME_UP,android.view.KeyEvent.KEYCODE_VOLUME_DOWN,android.view.KeyEvent.KEYCODE_VOLUME_MUTE)) false
         else if (dismissKey == code) {
             if (event.type == KeyEventType.KeyUp) dismissKey = null
+            true
+        } else if(request.live && firstFrame && !controlsVisible &&
+            code in listOf(android.view.KeyEvent.KEYCODE_DPAD_UP,android.view.KeyEvent.KEYCODE_DPAD_DOWN) &&
+            !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu==null &&
+            playbackError==null && state.sourceSelection==null) {
+            if(event.type==KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount==0) {
+                dismissKey=code
+                if(channelStepJobRP40?.isActive!=true) channelStepJobRP40=channelMenuScopeRP34.launch {
+                    LiveChannelNavigationRP40.step(state,request,if(code==android.view.KeyEvent.KEYCODE_DPAD_UP) 1 else -1)
+                }
+            }
             true
         } else if(request.live && firstFrame && (!controlsVisible || surfaceFocusedRP34) &&
             code==android.view.KeyEvent.KEYCODE_DPAD_RIGHT && event.type==KeyEventType.KeyDown &&

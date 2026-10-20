@@ -40,10 +40,10 @@ import kotlinx.coroutines.sync.withPermit
 
 private val browserCategoryCacheRP34=PlaybackLinkCache<String,List<LiveCategory>>(12) {System.currentTimeMillis()}
 
-private data class BrowserCategoryRP34(val provider:String,val value:LiveCategory,val sourceLabel:String) {
+internal data class BrowserCategoryRP34(val provider:String,val value:LiveCategory,val sourceLabel:String) {
     val key:String get()="$provider:${value.type}:${value.id}:${value.genre.orEmpty()}"
 }
-private data class BrowserChannelRP34(val provider:String,val value:LiveChannel) {
+internal data class BrowserChannelRP34(val provider:String,val value:LiveChannel) {
     val key:String get()="$provider:${value.type}:${value.id}"
 }
 
@@ -51,6 +51,9 @@ private data class BrowserChannelRP34(val provider:String,val value:LiveChannel)
 @Composable
 internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select:(PlayerRequest)->Unit,close:()->Unit) {
     val current=state.playerRequest?.takeIf {it.live}
+    val ownerRP40=remember {state.session?.userId to state.activeProfile.id}
+    val restoredRP40=remember {LiveChannelNavigationRP40.matching(state,current)}
+    var restorePendingRP40 by remember {mutableStateOf(restoredRP40!=null)}
     val context=LocalContext.current
     val repo=remember {LiveRepository()}
     val scope=rememberCoroutineScope()
@@ -58,12 +61,13 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     val first=remember {FocusRequester()}
     val firstChannel=remember {FocusRequester()}
     val playingChannelFocus=remember {FocusRequester()}
-    val channelList=rememberLazyListState()
+    val categoryListRP40=rememberLazyListState()
+    val channelList=rememberLazyListState(restoredRP40?.scrollIndex ?: 0,restoredRP40?.scrollOffset ?: 0)
     var initialFocus by remember {mutableStateOf(true)}
     var categories by remember {mutableStateOf<List<BrowserCategoryRP34>>(emptyList())}
     var selected by remember {mutableStateOf("")}
     var channels by remember {mutableStateOf<List<BrowserChannelRP34>>(emptyList())}
-    var search by remember {mutableStateOf("")}
+    var search by remember {mutableStateOf(restoredRP40?.search.orEmpty())}
     var loading by remember {mutableStateOf(true)}
     var resolving by remember {mutableStateOf(false)}
     var message by remember {mutableStateOf("")}
@@ -89,9 +93,10 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
         categories=(found+IptvRepository.sources.map {(provider,source) ->
             BrowserCategoryRP34(provider,LiveCategory("tv","iptv:all","IPTV · "+source.first,paginated=true,searchable=true),"")
         }).distinctBy {it.key}
-        selected=categories.firstOrNull {it.provider==current?.liveProvider && current?.liveProvider in IptvRepository.sources}?.key
+        selected=if(restoredRP40?.category?.value?.id=="favorites") "favorites" else categories.firstOrNull {it.key==restoredRP40?.category?.key}?.key
+            ?: categories.firstOrNull {it.provider==current?.liveProvider && current?.liveProvider in IptvRepository.sources}?.key
             ?: categories.firstOrNull {isMostViewedRP37(it.value)}?.key ?: categories.firstOrNull()?.key ?: "favorites"
-        loading=false
+        categoryListRP40.scrollToItem((categories.indexOfFirst {it.key==selected}+1).coerceAtLeast(0))
         if(!initialFocus) {withFrameNanos {};runCatching {first.requestFocus()}}
         // Keep the initial provider usable while the other catalog loads. Only metadata:
         // event lists and playback URLs are requested when the user selects them.
@@ -115,6 +120,11 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
         val c=group ?: return@LaunchedEffect
         loading=true
         try {
+            val restored=restoredRP40
+            if(restorePendingRP40 && restored!=null && c.key==restored.category.key && search==restored.search) {
+                channels=restored.rows;offset=restored.offset;more=restored.more;restorePendingRP40=false
+                return@LaunchedEffect
+            }
             // Focusing categories switches lists; only settled focus sends a request.
             delay(if(search.isBlank()) 180 else 350)
             val cacheKey=c.key+"|"+search
@@ -130,7 +140,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
         } catch(e:CancellationException) {throw e} catch(_:Exception) {message=tr("No se pudo cargar esta categoría.","Could not load this category.")}
         finally {loading=false}
     }
-    val playing=current?.takeIf {r -> group?.provider==r.liveProvider && search.isBlank() && (group?.value?.genre==null || group?.value?.let {isMostViewedRP37(it)}==true)}?.let {r ->
+    val playing=current?.takeIf {r -> restoredRP40==null && group?.provider==r.liveProvider && search.isBlank() && (group?.value?.genre==null || group?.value?.let {isMostViewedRP37(it)}==true)}?.let {r ->
         BrowserChannelRP34(r.liveProvider,LiveChannel(r.liveChannelId,r.liveType,r.item.title,r.item.backdrop,r.item.overview))
     }
     val displayed=(if(selected=="favorites") favorites.map {BrowserChannelRP34(it.provider,it.channel)} else listOfNotNull(playing)+channels).distinctBy {it.key}.filter {
@@ -144,6 +154,15 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
             initialFocus=false
         }
     }
+    val lastBrowseRP40 by rememberUpdatedState(group?.let {c ->
+        LiveBrowseSnapshotRP40(c,displayed,search,offset,more,channelList.firstVisibleItemIndex,channelList.firstVisibleItemScrollOffset)
+    })
+    DisposableEffect(Unit) {
+        onDispose {
+            lastBrowseRP40?.takeIf {snap -> ownerRP40==(state.session?.userId to state.activeProfile.id) && snap.rows.any {it.provider==current?.liveProvider && it.value.id==current?.liveChannelId}}
+                ?.let {LiveChannelNavigationRP40.save(state,it)}
+        }
+    }
     fun tune(entry:BrowserChannelRP34) {
         if(resolving) return
         val stamp=generation
@@ -154,6 +173,8 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                     ?: error("No streams")
                 if(stamp!=generation) return@launch
                 val c=entry.value
+                val activeCategory=group ?: BrowserCategoryRP34(entry.provider,LiveCategory(entry.value.type,"favorites","Favorites"),"")
+                LiveChannelNavigationRP40.save(state,LiveBrowseSnapshotRP40(activeCategory,displayed,search,offset,more,channelList.firstVisibleItemIndex,channelList.firstVisibleItemScrollOffset))
                 select(PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),stream,0,0,0L,
                     live=true,liveChannelId=c.id,liveProvider=entry.provider,liveType=c.type))
             } catch(e:CancellationException) {throw e} catch(_:Exception) {if(stamp==generation) message=tr("No se pudo abrir el canal. Prueba otro.","Could not open the channel. Try another.")}
@@ -172,7 +193,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                     } else false
                 }.background(Color(0xF00C0C0C)).padding(12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     Text(tr("CATEGORÍAS","CATEGORIES"),color=Muted,fontSize=12.sp)
-                    LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp),contentPadding=PaddingValues(bottom=18.dp)) {
+                    LazyColumn(Modifier.weight(1f),state=categoryListRP40,verticalArrangement=Arrangement.spacedBy(5.dp),contentPadding=PaddingValues(bottom=18.dp)) {
                         item(key="favorites") {BrowserCategoryRowRP34(tr("♥ Favoritos","♥ Favorites"),selected=="favorites",Modifier.then(if(selected=="favorites") Modifier.focusRequester(first) else Modifier),{selected="favorites"})}
                         items(categories,key={it.key}) {c ->
                             BrowserCategoryRowRP34(c.value.name,selected==c.key,

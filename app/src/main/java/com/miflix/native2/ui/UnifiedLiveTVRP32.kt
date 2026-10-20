@@ -102,6 +102,9 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
         page(true)
     }
     fun play(entry:TVChannelRP32,stream:StreamChoice) {
+        active.firstOrNull()?.let {g ->LiveChannelNavigationRP40.save(state,LiveBrowseSnapshotRP40(
+            BrowserCategoryRP34(g.provider,g.category,if(g.provider=="nauta") "Nauta" else "IPTV"),
+            rows.filter {query.isBlank() || IptvPlaylist.searchKey(it.channel.name).contains(IptvPlaylist.searchKey(query)) || it.channel.number.toString()==query.trim()}.map {BrowserChannelRP34(it.provider,it.channel)},query,offsets[g.key] ?: rows.size,more))}
         chosen=null;links=emptyList()
         val c=entry.channel
         state.openLivePlayer(PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,tr("EN VIVO","LIVE")),stream,0,0,0L,

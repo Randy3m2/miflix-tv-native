@@ -22,22 +22,10 @@ internal val LocalHomeCardRowHeight=staticCompositionLocalOf {188.dp}
 /** One catalog group per remaining viewport. Header and artwork move as a unit in either direction. */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-internal fun HomeShelfFrame(index:Int,scroll:LazyListState,modifier:Modifier=Modifier,content:@Composable ()->Unit) {
-    var active by remember {mutableStateOf(false)}
-    val returning=LocalHomeReturnFocus.current
-    val frameScope=rememberCoroutineScope()
-    val motion=LocalHomeShelfMotion.current ?: remember(scroll) {HomeShelfMotion(frameScope)}
-    val rowFocus=remember {FocusRequester()}
-    DisposableEffect(motion,index,rowFocus) {
-        motion.register(index,rowFocus)
-        onDispose {motion.unregister(index,rowFocus)}
-    }
-    LaunchedEffect(active,index,returning?.pending) {
-        if(active && returning?.pending==null) {
-            motion.align(scroll,index)
-        }
-    }
-    BoxWithConstraints(modifier.padding(vertical=8.dp).focusRequester(rowFocus).onFocusChanged {active=it.hasFocus;motion.focusChanged(index,it.hasFocus)}.focusGroup()) {
+internal fun HomeShelfFrame(@Suppress("UNUSED_PARAMETER") index:Int,@Suppress("UNUSED_PARAMETER") scroll:LazyListState,modifier:Modifier=Modifier,content:@Composable ()->Unit) {
+    // Focus moves immediately through Compose's lazy focus search. There is no separate
+    // scroll job and no focus request delayed until an animation completes.
+    BoxWithConstraints(modifier.padding(vertical=8.dp).focusGroup()) {
         val cardHeight=(maxHeight-64.dp).coerceIn(124.dp,188.dp)
         CompositionLocalProvider(LocalHomeShelfPaging provides true,LocalHomeCardRowHeight provides cardHeight) {content()}
     }

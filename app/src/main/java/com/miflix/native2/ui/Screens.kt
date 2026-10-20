@@ -179,6 +179,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     val contentFocus=remember { FocusRequester() }
     val scope=rememberCoroutineScope()
     val shelfMotion=remember(scroll) {HomeShelfMotion(scope)}
+    val verticalAnchorPx=with(androidx.compose.ui.platform.LocalDensity.current) {48.dp.toPx()}
     val headerWork=remember {mutableListOf<kotlinx.coroutines.Job>()}
     fun cancelHeaderWork() {headerWork.forEach {it.cancel()};headerWork.clear()}
 
@@ -213,17 +214,15 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
         BrowsingViewport(state,(state.localRecommendations(state.trending)+state.localRecommendations(state.movies)).firstOrNull {it.type=="movie"},heroHeight=homeHeroHeight,headerInset=84.dp,heroFocus=heroFocus,ranked=(state.localRecommendations(state.trending)+state.localRecommendations(state.movies)).filter {it.type=="movie"}.distinctBy {it.cloudId}.take(10),
             onRandom={if(!state.randomChoosing) state.launch {state.playRandomMovie()}}) {
         CompositionLocalProvider(LocalBringIntoViewSpec provides object : BringIntoViewSpec {
-            // HomeShelfFrame aligns the full group. Child focus must not scroll away its heading.
-            override fun calculateScrollDistance(offset: Float,size: Float,containerSize: Float): Float = 0f
+            // RP60: native focus and native scrolling share one animation, as on horizontal rails.
+            // Keep enough space above the focused artwork for the row heading.
+            override fun calculateScrollDistance(offset: Float,size: Float,containerSize: Float): Float {
+                if(size<=0f || containerSize<=0f) return 0f
+                val anchor=minOf(verticalAnchorPx,(containerSize-size).coerceAtLeast(0f))
+                return offset-anchor
+            }
         }) {
-            LazyColumn(Modifier.fillMaxSize().smoothVerticalDpad { !scroll.isScrollInProgress }
-                .onPreviewKeyEvent { event ->
-                    if(event.type==KeyEventType.KeyDown && homeReturn.pending==null) when(event.key) {
-                        Key.DirectionDown -> shelfMotion.move(scroll,1)
-                        Key.DirectionUp -> shelfMotion.move(scroll,-1)
-                        else -> false
-                    } else false
-                }.focusRequester(contentFocus).focusGroup(),state=scroll,contentPadding=PaddingValues(0.dp)) {
+            LazyColumn(Modifier.fillMaxSize().smoothVerticalDpad { !scroll.isScrollInProgress }.focusRequester(contentFocus).focusGroup(),state=scroll,contentPadding=PaddingValues(0.dp)) {
                 var shelfIndex=0
                 val homeSections=mutableListOf<HomeSection>()
                 fun shelf(key:String,content:@Composable ()->Unit) {homeSections.add(HomeSection(key,content))}

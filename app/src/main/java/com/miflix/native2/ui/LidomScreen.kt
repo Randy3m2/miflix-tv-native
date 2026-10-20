@@ -151,7 +151,7 @@ private fun lidomMoveDate(value:String,days:Int):String {
 }
 
 @Composable
-private fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTeam,close:()->Unit,settings:()->Unit,onSplitSelect:((PlayerRequest)->Unit)?=null) {
+internal fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTeam,close:()->Unit,settings:()->Unit,onSplitSelect:((PlayerRequest)->Unit)?=null) {
     var splitMode by remember {mutableStateOf(false)}
     val scope=rememberCoroutineScope();var busy by remember {mutableStateOf(false)};var error by remember {mutableStateOf("")}
     var selected by remember {mutableStateOf<LidomSource?>(null)};var candidates by remember {mutableStateOf<List<com.miflix.native2.model.StreamChoice>>(emptyList())}
@@ -200,7 +200,7 @@ private fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTeam
 }
 
 @Composable
-private fun LidomSourcesSettings(repo:LidomRepository,initialTeam:String,close:()->Unit) {
+internal fun LidomSourcesSettings(repo:LidomRepository,initialTeam:String,close:()->Unit) {
     var team by remember {mutableStateOf(repo.team(initialTeam) ?: repo.teams.first())};var revision by remember {mutableIntStateOf(0)}
     var editing by remember {mutableStateOf<LidomSource?>(null)}
     PlayerSideSheet(tr("LIDOM · Configuración","LIDOM · Source settings"),close) {

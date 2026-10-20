@@ -65,7 +65,7 @@ internal fun LiveHubRP41(state:AppState) {
     fun back() {opening?.cancel();busy=false;error="";section="hub"}
     BackHandler {if(section!="hub" || busy) back() else state.screen=Screen.HOME}
     LaunchedEffect(section) {if(section=="hub") {withFrameNanos {};runCatching {first.requestFocus()}}}
-    Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal=28.dp,vertical=18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal=14.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
             FocusButton("‹",horizontalPadding=14.dp) {if(section=="hub") state.screen=Screen.HOME else back()}
             Text(if(section=="hub") "BRUNIO · LIVE" else when(section) {"basketball"->"NBA · Basketball";"baseball"->"MLB · Baseball";"football"->"NFL · American Football";"soccer"->tr("Fútbol","Football");"f1"->"F1";"lidom"->"LIDOM";else->"Others"},color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
@@ -76,10 +76,10 @@ internal fun LiveHubRP41(state:AppState) {
         if(section=="hub") {
             val board=ImageBitmap.imageResource(R.drawable.live_hub_board_rp41)
             BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-            val gridWidth=minOf(maxWidth,maxHeight*1.54f)
-            Column(Modifier.width(gridWidth).fillMaxHeight().align(Alignment.Center),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            val gridWidth=maxWidth
+            Column(Modifier.width(gridWidth).fillMaxHeight().align(Alignment.Center),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 repeat(3) {row ->
-                    Row(Modifier.weight(1f).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(14.dp)) {
+                    Row(Modifier.weight(1f).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                         repeat(3) {col ->
                             val index=row*3+col;val key=liveHubKeysRP41[index]
                             HubTileRP41(board,index,key,Modifier.weight(1f).fillMaxHeight().then(if(index==0) Modifier.focusRequester(first) else Modifier)) {
@@ -149,10 +149,26 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier) {
     var message by remember {mutableStateOf("")};var retry by remember {mutableIntStateOf(0)}
     var offset by remember {mutableIntStateOf(0)};var more by remember {mutableStateOf(false)}
     var generation by remember {mutableIntStateOf(0)}
-    var web by remember {mutableStateOf<String?>(null)}
+    var m3uRP42 by remember {mutableStateOf(false)}
+    var nautaF1RP42 by remember {mutableStateOf<List<HubEventRP41>>(emptyList())}
+    var nautaWarningRP42 by remember {mutableStateOf("")}
+    val displayedRP42=events+nautaF1RP42
     val offsetsRP41=remember {mutableMapOf<LiveCategory,Int>()}
     val pendingRP41=remember {mutableSetOf<LiveCategory>()}
     val permitsRP41=remember {Semaphore(3)}
+    LaunchedEffect(section,retry) {
+        if(section!="f1") return@LaunchedEffect
+        nautaWarningRP42=""
+        try {
+            val source=state.calendarLiveManifest("nauta")
+            val catalog=hubCatalogRP41.get(source) ?: repo.categories(source).also {hubCatalogRP41.put(source,it)}
+            val category=catalog.firstOrNull {it.searchable} ?: catalog.firstOrNull() ?: error("No Nauta catalogs")
+            val rows=if(category.searchable) coroutineScope {
+                listOf("F1","Formula 1").map {query ->async {repo.channels(source,category,search=query)}}.awaitAll().flatten()
+            } else repo.channels(source,category)
+            nautaF1RP42=rows.filter {f1ChannelRP42(it.name)}.distinctBy {it.type+":"+it.id}.map {HubEventRP41("nauta",it,category)}
+        } catch(e:CancellationException) {throw e} catch(_:Exception) {nautaWarningRP42=tr("Nauta no respondió. Los eventos de Live Sports siguen disponibles.","Nauta did not respond. Live Sports events remain available.")}
+    }
     LaunchedEffect(manifest,retry) {
         loading=true;message=""
         try {
@@ -188,29 +204,31 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier) {
         scope.launch {
             resolving=true;message=""
             try {
-                val stream=repo.streams(manifest,event.channel).firstOrNull() ?: error("No links")
+                val stream=repo.streams(state.calendarLiveManifest(event.provider),event.channel).firstOrNull() ?: error("No links")
                 if(stamp!=generation || profile!=(state.session?.userId to state.activeProfile.id) || state.screen!=Screen.LIVE_TV || state.partyRole==PartyRole.GUEST) return@launch
                 val c=event.channel
-                LiveChannelNavigationRP40.save(state,LiveBrowseSnapshotRP40(BrowserCategoryRP34("sports",event.category,"Sports"),events.filter {it.category==event.category}.map {BrowserChannelRP34(it.provider,it.channel)},offset=offsetsRP41[event.category] ?: offset,more=event.category in pendingRP41))
-                state.openLivePlayer(PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),stream,0,0,0L,live=true,liveChannelId=c.id,liveProvider="sports",liveType=c.type,returnScreen=Screen.LIVE_TV))
+                LiveChannelNavigationRP40.save(state,LiveBrowseSnapshotRP40(BrowserCategoryRP34(event.provider,event.category,if(event.provider=="nauta") "Nauta" else "Sports"),displayedRP42.filter {it.provider==event.provider && it.category==event.category}.map {BrowserChannelRP34(it.provider,it.channel)},offset=if(event.provider=="nauta") nautaF1RP42.size else offsetsRP41[event.category] ?: offset,more=event.provider=="sports" && event.category in pendingRP41))
+                state.openLivePlayer(PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),stream,0,0,0L,live=true,liveChannelId=c.id,liveProvider=event.provider,liveType=c.type,returnScreen=Screen.LIVE_TV))
             } catch(e:CancellationException) {throw e} catch(_:Exception) {message=tr("Este evento no devolvió un enlace reproducible.","This event returned no playable link.")}
             finally {resolving=false}
         }
     }
     Column(modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
         // Only Others has category tabs. Dedicated sports present event cards only.
-        if(section=="others" && categories.isNotEmpty()) LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp),contentPadding=PaddingValues(4.dp)) {
-            items(categories,key={it.type+":"+it.id+":"+it.genre}) {c ->FocusButton(c.name,primary=c==selected) {selected=c}}
+        if(section=="others") {
+            Text(tr("EXPLORA MÁS","EXPLORE MORE"),color=Muted,fontSize=11.sp,fontWeight=FontWeight.Bold)
+            LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp),contentPadding=PaddingValues(4.dp)) {
+                item(key="m3u") {HubCategoryChipRP42("M3U",m3uRP42) {m3uRP42=true}}
+                items(categories,key={it.type+":"+it.id+":"+it.genre}) {c ->HubCategoryChipRP42(c.name,!m3uRP42 && c==selected) {m3uRP42=false;selected=c}}
+            }
         }
+        if(m3uRP42) HubM3URP42(state,Modifier.weight(1f)) else {
         if(loading || resolving) Text(if(resolving) tr("Abriendo evento…","Opening event…") else tr("Cargando eventos…","Loading events…"),color=Muted)
+        if(nautaWarningRP42.isNotBlank()) Text(nautaWarningRP42,color=Muted,fontSize=12.sp)
         if(message.isNotBlank()) {Text(message,color=Muted);FocusButton(tr("Reintentar","Retry")) {retry++}}
         LazyVerticalGrid(GridCells.Adaptive(240.dp),Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(6.dp,6.dp,6.dp,30.dp)) {
-            if(section=="others") {
-                item(key="tnt-web") {HubWebCardRP41("TNT Sports","tnt",{web="https://sportsbite.org/247/tnt1uk"})}
-                item(key="tbs-web") {HubWebCardRP41("TBS Sports","tbs",{web="https://sportsbite.org/t247/tbs"})}
-            }
-            items(events,key={it.key}) {event ->HubEventCardRP41(event.channel.name,event.channel.poster,event.channel.description) {tune(event)}}
-            if(!loading && events.isEmpty() && message.isBlank()) item(span={GridItemSpan(maxLineSpan)}) {Text(tr("No hay eventos publicados ahora.","No events published right now."),color=Muted)}
+            items(displayedRP42,key={it.key}) {event ->HubEventCardRP41(event.channel.name,event.channel.poster,if(event.provider=="nauta") "Nauta · F1" else event.channel.description) {tune(event)}}
+            if(!loading && displayedRP42.isEmpty() && message.isBlank()) item(span={GridItemSpan(maxLineSpan)}) {Text(tr("No hay eventos publicados ahora.","No events published right now."),color=Muted)}
             if(more && !loading) item(span={GridItemSpan(maxLineSpan)}) {FocusButton(tr("Cargar más","Load more")) {
                 val c=selected
                 if(c!=null) scope.launch {
@@ -233,19 +251,22 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier) {
                 }
             }}
         }
+        }
     }
-    web?.let {SportsWebRP41(it) {web=null}}
 }
 
 @Composable
-private fun HubEventCardRP41(title:String,poster:String?,subtitle:String,click:()->Unit) {
+internal fun HubEventCardRP41(title:String,poster:String?,subtitle:String,click:()->Unit) {
     var focused by remember(title) {mutableStateOf(false)}
-    Column(Modifier.fillMaxWidth().height(194.dp).clip(RoundedCornerShape(13.dp)).background(Color(0xFF151515))
+    val scale by animateFloatAsState(if(focused) 1.015f else 1f,label="Event focus")
+    Column(Modifier.fillMaxWidth().height(194.dp).graphicsLayer {scaleX=scale;scaleY=scale}
+        .clip(RoundedCornerShape(13.dp)).background(Brush.verticalGradient(listOf(Color(0xFF242424),Color(0xFF101010))))
         .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(13.dp))
         .onFocusChanged {focused=it.isFocused}.focusable().tvClick(click).clickable(onClick=click)) {
         Box(Modifier.fillMaxWidth().weight(1f).background(Brush.verticalGradient(listOf(Color(0xFF17283C),Color.Black))),contentAlignment=Alignment.Center) {
             if(!poster.isNullOrBlank()) AsyncImage(poster,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
             else Text(title,color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(14.dp),maxLines=2)
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0x80000000)))))
         }
         Text(title,color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(horizontal=12.dp,vertical=6.dp))
         if(subtitle.isNotBlank()) Text(subtitle,color=Muted,fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(start=12.dp,end=12.dp,bottom=8.dp))
@@ -254,61 +275,83 @@ private fun HubEventCardRP41(title:String,poster:String?,subtitle:String,click:(
 
 @Composable
 private fun HubLidomRP41(state:AppState,modifier:Modifier) {
-    val context=LocalContext.current;val scope=rememberCoroutineScope()
+    val context=LocalContext.current
     val owner="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
     val repo=remember(owner) {LidomRepository(context,owner)}
-    var games by remember {mutableStateOf<List<LidomGame>>(emptyList())};var loading by remember {mutableStateOf(true)}
+    var date by remember(owner) {mutableStateOf(LidomRepository.today())}
+    var games by remember {mutableStateOf<List<LidomGame>>(emptyList())}
+    var loading by remember {mutableStateOf(true)}
     var message by remember {mutableStateOf("")};var retry by remember {mutableIntStateOf(0)}
-    var video by remember {mutableStateOf<String?>(null)}
-    LaunchedEffect(retry) {loading=true;try {games=repo.games(LidomRepository.today())} catch(e:CancellationException) {throw e} catch(_:Exception) {message=tr("No se pudo cargar el calendario.","Could not load schedule.")} finally {loading=false}}
+    var team by remember(owner) {mutableStateOf<LidomTeam?>(null)}
+    var configure by remember {mutableStateOf(false)}
+    LaunchedEffect(date,retry) {
+        loading=true;message=""
+        try {games=repo.games(date)} catch(e:CancellationException) {throw e} catch(_:Exception) {games=emptyList();message=tr("No se pudo cargar el calendario.","Could not load schedule.")}
+        finally {loading=false}
+    }
     Column(modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-        if(loading) Text(tr("Cargando…","Loading…"),color=Muted)
-        if(message.isNotBlank()) Text(message,color=Muted)
-        Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-            FocusButton(tr("Actualizar","Refresh")) {message="";retry++}
-            FocusButton(tr("Configurar fuentes","Source settings")) {state.lidomConfigure=true;state.screen=Screen.LIDOM}
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+            FocusButton("‹",horizontalPadding=16.dp) {date=moveLidomDayRP42(date,-1)}
+            FocusButton(tr("Hoy","Today")) {date=LidomRepository.today()}
+            FocusButton("›",horizontalPadding=16.dp) {date=moveLidomDayRP42(date,1)}
+            Text(date+" · AST",color=Color.White,fontSize=16.sp,modifier=Modifier.weight(1f))
+            FocusButton(tr("Ajustes","Settings")) {configure=true}
         }
-        LazyVerticalGrid(GridCells.Adaptive(260.dp),Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(bottom=30.dp)) {
-            items(games,key={it.id}) {game ->
+        if(loading) Text(tr("Cargando partidos…","Loading games…"),color=Muted)
+        if(message.isNotBlank()) {Text(message,color=Muted);FocusButton(tr("Reintentar","Retry")) {retry++}}
+        LazyVerticalGrid(GridCells.Adaptive(260.dp),Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(4.dp,4.dp,4.dp,30.dp)) {
+            items(games,key={"game:${it.id}"}) {game ->
                 var focused by remember {mutableStateOf(false)}
-                val play={
-                    if(!loading && state.partyRole!=PartyRole.GUEST) scope.launch {
-                        loading=true;message=""
-                        try {
-                            val sources=repo.sources(game.home.id).sortedBy {if(it.id==repo.last(game.home.id)) 0 else 1}
-                            var opened=false
-                            for(source in sources) {
-                                if(owner!="${state.session?.userId ?: "local"}:${state.activeProfile.id}" || state.screen!=Screen.LIVE_TV) break
-                                if(source.kind=="YOUTUBE") {
-                                    val id=LidomRepository.youtubeId(source.url)
-                                    if(id!=null) {video=id;opened=true;break} // Never label an arbitrary old channel upload as this game.
-                                } else {
-                                    val stream=try {repo.resolve(source,state.calendarLiveManifest("nauta")).firstOrNull()} catch(e:CancellationException) {throw e} catch(_:Exception) {null}
-                                    if(stream!=null && owner=="${state.session?.userId ?: "local"}:${state.activeProfile.id}" && state.screen==Screen.LIVE_TV) {
-                                        val title=game.away.short+" vs "+game.home.short
-                                        state.openLivePlayer(PlayerRequest(MediaSummary(game.id,"live",title,game.status,null,null,0.0,"LIDOM"),stream,0,0,0L,live=true,liveChannelId="lidom:${game.home.id}:${source.id}",liveProvider="lidom",liveType="tv",lidomTeam=game.home.id,lidomSource=source.id,returnScreen=Screen.LIVE_TV))
-                                        opened=true;break
-                                    }
-                                }
-                            }
-                            if(!opened) message=tr("No hay una fuente directa disponible para este equipo. Revisa Configurar fuentes.","No direct source available for this team. Check Source settings.")
-                        } finally {loading=false}
-                    };Unit
-                }
-                Column(Modifier.fillMaxWidth().height(194.dp).clip(RoundedCornerShape(14.dp)).background(Panel).border(if(focused) 2.dp else 1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(14.dp))
-                    .onFocusChanged {focused=it.isFocused}.focusable().tvClick(play).clickable(onClick=play).padding(14.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                    Row(Modifier.weight(1f),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)) {
-                        for(team in listOf(game.away,game.home)) {
-                            val id=context.resources.getIdentifier(team.logo,"drawable",context.packageName)
-                            if(id!=0) Image(painterResource(id),team.name,Modifier.size(64.dp))
-                        }
+                val choose={team=game.home;state.lidomTeamId=game.home.id}
+                Column(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(14.dp))
+                    .background(Brush.verticalGradient(listOf(Color(0xFF202020),Color(0xFF0D0D0D))))
+                    .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(14.dp))
+                    .onFocusChanged {focused=it.isFocused}.focusable().tvClick(choose).clickable(onClick=choose).padding(14.dp),
+                    horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.weight(1f),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
+                        val away=context.resources.getIdentifier(game.away.logo,"drawable",context.packageName)
+                        val home=context.resources.getIdentifier(game.home.logo,"drawable",context.packageName)
+                        if(away!=0) Image(painterResource(away),game.away.name,Modifier.size(58.dp))
+                        Text("VS",color=Muted,fontWeight=FontWeight.Bold)
+                        if(home!=0) Image(painterResource(home),game.home.name,Modifier.size(58.dp))
                     }
                     Text(game.away.short+" vs "+game.home.short,color=Color.White,fontWeight=FontWeight.Bold)
                     Text(game.time+" · "+game.status,color=Muted,fontSize=12.sp,maxLines=1)
                 }
             }
-            if(!loading && games.isEmpty()) item(span={GridItemSpan(maxLineSpan)}) {Text(tr("No hay partidos publicados para hoy.","No games published for today."),color=Muted)}
+            if(!loading && games.isEmpty()) item(span={GridItemSpan(maxLineSpan)}) {Text(tr("No hay partidos para esta fecha. Puedes abrir los canales de cada equipo.","No games for this date. You can open each team's channels."),color=Muted)}
+            item(span={GridItemSpan(maxLineSpan)}) {Text(tr("EQUIPOS Y CANALES","TEAMS & CHANNELS"),color=Muted,fontSize=12.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=12.dp,bottom=4.dp))}
+            items(repo.teams,key={"team:${it.id}"}) {club ->
+                var focused by remember {mutableStateOf(false)}
+                val choose={team=club;state.lidomTeamId=club.id}
+                Row(Modifier.fillMaxWidth().height(100.dp).clip(RoundedCornerShape(14.dp))
+                    .background(if(focused) Color(0xFF303030) else Color(0xFF171717))
+                    .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(14.dp))
+                    .onFocusChanged {focused=it.isFocused}.focusable().tvClick(choose).clickable(onClick=choose).padding(14.dp),
+                    verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
+                    val logo=context.resources.getIdentifier(club.logo,"drawable",context.packageName)
+                    if(logo!=0) Image(painterResource(logo),club.name,Modifier.size(56.dp))
+                    Column {Text(club.short,color=Color.White,fontWeight=FontWeight.Bold);Text(tr("Ver canales","View channels"),color=Muted,fontSize=12.sp)}
+                }
+            }
         }
     }
-    video?.let {LidomYoutubePlayer(it,{},close={video=null})}
+    team?.let {club ->LidomSourcesSheet(state,repo,club,{team=null},{team=null;configure=true})}
+    if(configure) LidomSourcesSettings(repo,state.lidomTeamId,{configure=false})
+}
+
+@Composable
+private fun HubCategoryChipRP42(label:String,selected:Boolean,click:()->Unit) {
+    var focused by remember {mutableStateOf(false)}
+    Row(Modifier.clip(RoundedCornerShape(18.dp)).background(if(selected) Color(0xFF303030) else Color(0xFF161616))
+        .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else if(selected) Color(0xFF727272) else Color(0xFF2A2A2A),RoundedCornerShape(18.dp))
+        .onFocusChanged {focused=it.isFocused}.focusable().tvClick(click).clickable(onClick=click).padding(horizontal=16.dp,vertical=12.dp),
+        verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(9.dp)) {
+        Canvas(Modifier.size(16.dp)) {
+            if(label=="M3U") {
+                for(i in 0..2) drawLine(Color.White,androidx.compose.ui.geometry.Offset(0f,size.height*(.2f+i*.3f)),androidx.compose.ui.geometry.Offset(size.width,size.height*(.2f+i*.3f)),strokeWidth=2.dp.toPx())
+            } else drawCircle(if(selected) Color.White else Color(0xFF888888),radius=size.minDimension*.28f)
+        }
+        Text(label,color=Color.White,fontSize=13.sp,fontWeight=if(selected) FontWeight.Bold else FontWeight.Normal)
+    }
 }

@@ -29,7 +29,7 @@ internal object CustomChannelsRP45 {
         val simple=java.text.Normalizer.normalize(name.replace(Regex("\\s+HD$",RegexOption.IGNORE_CASE),"" ).lowercase(java.util.Locale.ROOT),java.text.Normalizer.Form.NFD).replace(Regex("[\\p{M}]"),"").replace(Regex("[^a-z0-9]"),"")
         return (direct.ifBlank {index.optJSONObject("names")?.optString(simple).orEmpty()}).takeIf {it.startsWith("https://")}
     }
-    fun categoryRP48()=LiveCategory("tv","custom-rp48","Mis canales")
+    fun categoryRP48()=LiveCategory("tv","custom-rp48","Others")
     fun categoriesRP51()=listOf("Todos","General","Cine","24/7","Deportes").map {LiveCategory("tv","tirso:"+it,if(it=="Todos") "Tirso TV" else "Tirso TV · "+it)}
     fun labelRP50(c:CustomChannelRP45)=if(c.number>0) "${c.number} · ${c.name}" else c.name
     fun channelsRP48(context:Context,owner:String)=list(context,owner).map {LiveChannel(it.id,"tv",it.name,it.logo,"Tirso TV",number=it.number)}

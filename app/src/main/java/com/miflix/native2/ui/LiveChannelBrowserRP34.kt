@@ -87,9 +87,10 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     LaunchedEffect(retry) {
         loading=true;message="";catalogWarningRP39="";categories=emptyList();selected=""
         val localCategoryRP48=BrowserCategoryRP34(CustomChannelsRP45.provider,CustomChannelsRP45.categoryRP48(),"")
-        categories=listOf(localCategoryRP48)
+        val tirsoCategoriesRP51=CustomChannelsRP45.categoriesRP51().map {BrowserCategoryRP34(CustomChannelsRP45.provider,it,"")}
+        categories=tirsoCategoriesRP51+listOf(localCategoryRP48)
         if(initialProvider==CustomChannelsRP45.provider) {
-            selected=localCategoryRP48.key;loading=false
+            selected=tirsoCategoriesRP51.firstOrNull()?.key ?: localCategoryRP48.key;loading=false
             return@LaunchedEffect
         }
         val providers=listOf(if(initialProvider==NuvioTestConfigRP49.PROVIDER) NuvioTestConfigRP49.PROVIDER else if(initialProvider=="sports") "sports" else "nauta")
@@ -100,9 +101,9 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                 catalog.map {BrowserCategoryRP34(provider,it,if(provider==NuvioTestConfigRP49.PROVIDER) "Nuvio Test" else if(provider=="nauta") "Nauta" else if(provider=="sports") tr("Deportes","Sports") else IptvRepository.sources[provider]?.first.orEmpty())}
             }} catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
         }}.awaitAll().flatten()}
-        categories=(found+localCategoryRP48+IptvRepository.sources.map {(provider,source) ->
+        categories=(tirsoCategoriesRP51+found+IptvRepository.sources.map {(provider,source) ->
             BrowserCategoryRP34(provider,LiveCategory("tv","iptv:all","IPTV · "+source.first,paginated=true,searchable=true),"")
-        }).distinctBy {it.key}
+        }+localCategoryRP48).distinctBy {it.key}
         selected=if(restoredRP40?.category?.value?.id=="favorites") "favorites" else categories.firstOrNull {it.key==restoredRP40?.category?.key}?.key
             ?: categories.firstOrNull {initialProvider==CustomChannelsRP45.provider && it.provider==CustomChannelsRP45.provider}?.key
             ?: categories.firstOrNull {it.provider==current?.liveProvider && current?.liveProvider in IptvRepository.sources}?.key
@@ -117,8 +118,9 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
             val catalog=browserCategoryCacheRP34.get(manifest)
                 ?: repo.categories(manifest).also {browserCategoryCacheRP34.put(manifest,it)}
             val extra=catalog.map {BrowserCategoryRP34(otherProvider,it,if(otherProvider=="sports") tr("Deportes","Sports") else "Nauta")}
-            categories=(categories.filter {it.provider !in IptvRepository.sources}+extra+
-                categories.filter {it.provider in IptvRepository.sources}).distinctBy {it.key}
+            categories=(categories.filter {it.provider==CustomChannelsRP45.provider && it.value.id!="custom-rp48"}+extra+
+                categories.filter {it.provider in IptvRepository.sources}+
+                categories.filter {it.provider==CustomChannelsRP45.provider && it.value.id=="custom-rp48"}).distinctBy {it.key}
         } catch(e:CancellationException) {throw e} catch(_:Exception) {
             catalogWarningRP39=if(otherProvider=="sports") tr("No se pudieron cargar las categorías de deportes.","Could not load sports categories.")
                 else tr("No se pudieron cargar las categorías de TV.","Could not load TV categories.")
@@ -131,9 +133,17 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
         val c=group ?: return@LaunchedEffect
         loading=true
         if(c.provider==CustomChannelsRP45.provider) {
-            channels=CustomChannelsRP45.channelsRP48(context,localOwnerRP48).map {BrowserChannelRP34(CustomChannelsRP45.provider,it)}
+            val categoryId=c.value.id
+            val local=CustomChannelsRP45.list(context,localOwnerRP48).filter {channel ->
+                when {
+                    categoryId=="tirso:Todos" -> channel.id.startsWith("magma:rp51:")
+                    categoryId.startsWith("tirso:") -> channel.id.startsWith("magma:rp51:") && channel.category==categoryId.removePrefix("tirso:")
+                    else -> !channel.id.startsWith("magma:rp51:")
+                }
+            }
+            channels=local.map {channel ->BrowserChannelRP34(CustomChannelsRP45.provider,LiveChannel(channel.id,"tv",channel.name,channel.logo,"Tirso TV",number=channel.number))}
             offset=channels.size;loading=false
-            if(channels.isEmpty()) message=tr("Agrega canales desde Others → Mis canales.","Add channels from Others → My channels.")
+            if(channels.isEmpty()) message=tr("No hay canales en esta categoría.","No channels in this category.")
             return@LaunchedEffect
         }
         try {
@@ -238,7 +248,17 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                     }
                     FocusButton(tr("Cerrar","Close"),modifier=Modifier.fillMaxWidth(),onClick=close)
                 }
-                Column(Modifier.weight(.64f).fillMaxHeight().padding(horizontal=16.dp,vertical=14.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.weight(.64f).fillMaxHeight().onPreviewKeyEvent {event ->
+                    if(event.nativeKeyEvent.keyCode==android.view.KeyEvent.KEYCODE_DPAD_LEFT) {
+                        if(event.type==KeyEventType.KeyDown) scope.launch {
+                            val target=if(selected=="favorites") 0 else (categories.indexOfFirst {it.key==selected}+1).coerceAtLeast(0)
+                            categoryListRP40.scrollToItem(target)
+                            withFrameNanos {}
+                            runCatching {first.requestFocus()}
+                        }
+                        true
+                    } else false
+                }.padding(horizontal=16.dp,vertical=14.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     Text(if(selected=="favorites") tr("Favoritos","Favorites") else group?.value?.name ?: tr("Canales","Channels"),color=Color.White,fontSize=21.sp,fontWeight=FontWeight.Bold)
                     NativeTextField(search,{search=it},tr("Buscar canal","Search channels"),modifier=Modifier.fillMaxWidth())
                     if(loading || resolving) Text(if(resolving) tr("Abriendo canal…","Opening channel…") else tr("Cargando…","Loading…"),color=Muted,fontSize=12.sp)
@@ -251,7 +271,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                                 click={tune(entry)},hold={if(entry.provider=="sports" || entry.provider==NuvioTestConfigRP49.PROVIDER) tune(entry) else if(entry.provider==CustomChannelsRP45.provider) customManageRP48=CustomChannelsRP45.findRP48(context,localOwnerRP48,entry.value.id) else LiveLibrary.toggle(context,state,entry.provider,entry.value)},
                                 modifier=Modifier.then(if(entry==displayed.firstOrNull()) Modifier.focusRequester(firstChannel) else Modifier)
                                     .then(if(entry.provider==current?.liveProvider && entry.value.id==current?.liveChannelId) Modifier.focusRequester(playingChannelFocus) else Modifier).onPreviewKeyEvent {event ->
-                                    if(event.nativeKeyEvent.keyCode==android.view.KeyEvent.KEYCODE_DPAD_LEFT) {if(event.type==KeyEventType.KeyDown) runCatching {first.requestFocus()};true} else false
+                                    false
                                 })
                         }
                         if(displayed.isEmpty() && !loading) item {Text(tr("No hay canales en esta selección.","No channels in this selection."),color=Muted)}

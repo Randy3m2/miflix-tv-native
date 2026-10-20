@@ -33,7 +33,7 @@ internal fun CustomChannelActionsRP48(state:AppState,channel:CustomChannelRP45,e
     val isFavorite=remember(favoritesRevision,owner,channel.id) {
         LiveLibrary.favorites(context,state).any { it.provider==CustomChannelsRP45.provider && it.channel.id==channel.id }
     }
-    val favoriteChannel=LiveChannel(channel.id,"custom",channel.name,channel.logo,null)
+    val favoriteChannel=LiveChannel(channel.id,"custom",channel.name,channel.logo,"")
 
     LaunchedEffect(owner) {if(owner!=originalOwner) close()}
     PlayerMenuDialog(onDismissRequest=close,fullScreen=true) {

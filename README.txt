@@ -1,1 +1,1 @@
-RP54 timed long press: under 750ms play; 750-1749ms favorite; >=1750ms options. Triggered on OK release. Not compiled. Apply on top of RP53.
+RP54 compile fix: LiveChannel.description is non-null String. Replaced null with empty string at line 36. Upload only CustomChannelActionsRP48.kt to its existing GitHub path. No version bump.

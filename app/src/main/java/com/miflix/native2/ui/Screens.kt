@@ -1327,7 +1327,7 @@ fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
     var managing by remember { mutableStateOf(false) }
     var picking by remember { mutableStateOf(false) }
     val firstProfile=remember { FocusRequester() }
-    LaunchedEffect(Unit) { delay(150); runCatching { firstProfile.requestFocus() } }
+    LaunchedEffect(managing) { if(managing) { delay(150); runCatching { firstProfile.requestFocus() } } }
     var newName by remember { mutableStateOf("") }
     var inheritMainAddons by remember {mutableStateOf(true)}
     var newAvatar by remember { mutableStateOf("ai:astronaut") }
@@ -1336,6 +1336,16 @@ fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
     var choosingNewAvatar by remember { mutableStateOf(false) }
     var renamingProfile by remember { mutableStateOf<Profile?>(null) }
     var profileName by remember { mutableStateOf("") }
+    if (!managing) {
+        ProfilePickerRP56(state, picking,
+            onSelect = { profile ->
+                if (!picking) {
+                    picking = true
+                    state.launch { try { state.selectProfile(profile) } finally { picking = false } }
+                }
+            }, onManage = { managing = true }, onBack = onBack)
+        return
+    }
     BackHandler { if(managing) managing=false else onBack() }
     Box(Modifier.fillMaxSize().background(Bg)) {
     ProfileLandscape(state.appForeground)

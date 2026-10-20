@@ -4,21 +4,21 @@
     "name": "Los Simpson 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/635.m3u8",
     "category": "General",
-    "logo": ""
+    "logo": "https://commons.wikimedia.org/wiki/Special:Redirect/file/The_Simpsons_Logo.svg?width=330"
   },
   {
     "number": 2,
     "name": "El Chavo del 8",
     "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/344.m3u8",
     "category": "General",
-    "logo": ""
+    "logo": "file:///android_asset/tirso_logos/002.png"
   },
   {
     "number": 3,
     "name": "El Chavo del 8 HD",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1173.m3u8",
     "category": "General",
-    "logo": ""
+    "logo": "file:///android_asset/tirso_logos/003.png"
   },
   {
     "number": 4,
@@ -123,819 +123,819 @@
     "name": "Cine 2025",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1159.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/018.png"
   },
   {
     "number": 19,
     "name": "Cine 2024",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1099.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/019.png"
   },
   {
     "number": 20,
     "name": "Cine 2026",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1180.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/020.png"
   },
   {
     "number": 21,
     "name": "Cine Marvel HD",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/177.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/021.png"
   },
   {
     "number": 22,
     "name": "Cine Marvel",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/176.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/022.png"
   },
   {
     "number": 23,
     "name": "Cine Accion",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/157.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/023.png"
   },
   {
     "number": 24,
     "name": "Cine Infantil",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/169.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/024.png"
   },
   {
     "number": 25,
     "name": "Cine Zombis HD",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/184.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/025.png"
   },
   {
     "number": 26,
     "name": "Cine Infantil Sagas",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/171.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/026.png"
   },
   {
     "number": 27,
     "name": "Cine Accion Sagas HD",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/160.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/027.png"
   },
   {
     "number": 28,
     "name": "Cine Infantil HD",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/170.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/028.png"
   },
   {
     "number": 29,
     "name": "Cine Terror HD",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/181.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/029.png"
   },
   {
     "number": 30,
     "name": "Cine Comedia",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/161.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/030.png"
   },
   {
     "number": 31,
     "name": "Cine Ficcion/Fantasia HD",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/168.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/031.png"
   },
   {
     "number": 32,
     "name": "Cine Comedia 2",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/163.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/032.png"
   },
   {
     "number": 33,
     "name": "Cine Romance",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/178.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/033.png"
   },
   {
     "number": 34,
     "name": "Cine Ficcion/Fantasia 2 HD",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/167.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/034.png"
   },
   {
     "number": 35,
     "name": "Cine Comedia 1 HD",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/162.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/035.png"
   },
   {
     "number": 36,
     "name": "Cine Romance HD",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/179.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/036.png"
   },
   {
     "number": 37,
     "name": "Cine Comedia 2 HD",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/164.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/037.png"
   },
   {
     "number": 38,
     "name": "Cine Ficcion/Fantasia 2",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/166.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/038.png"
   },
   {
     "number": 39,
     "name": "Cine Zombis",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/183.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/039.png"
   },
   {
     "number": 40,
     "name": "Cine Accion HD",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/158.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/040.png"
   },
   {
     "number": 41,
     "name": "Cine Terror Sagas HD",
     "url": "http://tv.m3uts.xyz/stream/secure/0uTjbnJb/182.m3u8",
     "category": "Cine",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+    "logo": "file:///android_asset/tirso_logos/041.png"
   },
   {
     "number": 42,
     "name": "Series Comedia 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/LDtGK8dg/807.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/042.png"
   },
   {
     "number": 43,
     "name": "Dragon Ball 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/301.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/043.png"
   },
   {
     "number": 44,
     "name": "Dragon Ball Z 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/307.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/044.png"
   },
   {
     "number": 45,
     "name": "Dragon Ball Z 24/7 Op.2",
     "url": "http://tv.m3uts.xyz/stream/secure/RApyYcsZ/308.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/045.png"
   },
   {
     "number": 46,
     "name": "Dragon Ball Super 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/305.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Dragon_Ball_Super.png"
   },
   {
     "number": 47,
     "name": "Dragon Ball GT 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/303.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/047.png"
   },
   {
     "number": 48,
     "name": "Game of Thrones 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/484.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/048.png"
   },
   {
     "number": 49,
     "name": "Malcom HD 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/641.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/049.png"
   },
   {
     "number": 50,
     "name": "Two And a Half Men 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/973.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/050.png"
   },
   {
     "number": 51,
     "name": "Tom y Jerry",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/940.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/051.png"
   },
   {
     "number": 52,
     "name": "Bob Esponja",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/96.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/052.png"
   },
   {
     "number": 53,
     "name": "Friends 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/470.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/053.png"
   },
   {
     "number": 54,
     "name": "Chapulin Colorado 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/152.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/054.png"
   },
   {
     "number": 55,
     "name": "Looney Tunes 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/618.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/055.png"
   },
   {
     "number": 56,
     "name": "Pokemon 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/773.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/056.png"
   },
   {
     "number": 57,
     "name": "Naruto 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/702.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/057.png"
   },
   {
     "number": 58,
     "name": "La Pantera Rosa 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/597.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/058.png"
   },
   {
     "number": 59,
     "name": "Alf 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/28.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/059.png"
   },
   {
     "number": 60,
     "name": "Los Expedientes Secretos X 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/623.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/060.png"
   },
   {
     "number": 61,
     "name": "Hey Arnold 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/551.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/061.png"
   },
   {
     "number": 62,
     "name": "Smallville 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/812.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/062.png"
   },
   {
     "number": 63,
     "name": "Super Campeones 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/850.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/063.png"
   },
   {
     "number": 64,
     "name": "Caballeros del Zodiaco 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/100.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/064.png"
   },
   {
     "number": 65,
     "name": "Las Chicas Super Poderosas 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/608.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/065.png"
   },
   {
     "number": 66,
     "name": "Los 3 Chiflados 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/619.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/066.png"
   },
   {
     "number": 67,
     "name": "El Gallo Claudio 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/347.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/067.png"
   },
   {
     "number": 68,
     "name": "The Big Bang Theory 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/899.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/068.png"
   },
   {
     "number": 69,
     "name": "Los Picapiedras 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/625.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/069.png"
   },
   {
     "number": 70,
     "name": "Scooby Doo 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/804.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/070.png"
   },
   {
     "number": 71,
     "name": "Family Guy (Padre de Familia) 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/747.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/071.png"
   },
   {
     "number": 72,
     "name": "Caso Cerrado 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/138.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/072.png"
   },
   {
     "number": 73,
     "name": "Chespirito 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/153.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/073.png"
   },
   {
     "number": 74,
     "name": "One Punch Man 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/744.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/074.png"
   },
   {
     "number": 75,
     "name": "Dinosuarios 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/244.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/075.png"
   },
   {
     "number": 76,
     "name": "El Coyote y el Correcaminos 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/346.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/076.png"
   },
   {
     "number": 77,
     "name": "Ranma 1/2 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/782.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/077.png"
   },
   {
     "number": 78,
     "name": "Elementary 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/363.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/078.png"
   },
   {
     "number": 79,
     "name": "Coraje el Perro Cobarde 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/223.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/079.png"
   },
   {
     "number": 80,
     "name": "El Principe del Rap 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/357.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/080.png"
   },
   {
     "number": 81,
     "name": "Doraemon 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/297.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/081.png"
   },
   {
     "number": 82,
     "name": "Sakura Card Captor 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/800.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/082.png"
   },
   {
     "number": 83,
     "name": "Patoaventuras 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/758.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/083.png"
   },
   {
     "number": 84,
     "name": "Yu-Gi-Oh! 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1052.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/084.png"
   },
   {
     "number": 85,
     "name": "Nosotros Los Guapos 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/739.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/085.png"
   },
   {
     "number": 86,
     "name": "Ed, Edd y Eddy 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/339.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/086.png"
   },
   {
     "number": 87,
     "name": "Las Aventuras de Tom Sawyer 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/607.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/087.png"
   },
   {
     "number": 88,
     "name": "Los Pitufos 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/627.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/088.png"
   },
   {
     "number": 89,
     "name": "Peppa Pig 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/760.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/089.png"
   },
   {
     "number": 90,
     "name": "Mr.Bean 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/670.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/090.png"
   },
   {
     "number": 91,
     "name": "La Casa de los Dibujos 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/590.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/091.png"
   },
   {
     "number": 92,
     "name": "Los Chicos del Barrio 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/622.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/092.png"
   },
   {
     "number": 93,
     "name": "Hercules 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/550.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/093.png"
   },
   {
     "number": 94,
     "name": "Los Pinguinos de Madagascar 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/626.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/094.png"
   },
   {
     "number": 95,
     "name": "Yogui 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1051.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/095.png"
   },
   {
     "number": 96,
     "name": "Pinky y Cerebro 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/771.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/096.png"
   },
   {
     "number": 97,
     "name": "Duelo Xiaolin 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/330.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/097.png"
   },
   {
     "number": 98,
     "name": "TrollHunters 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/945.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/098.png"
   },
   {
     "number": 99,
     "name": "Animniacs 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/43.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/099.png"
   },
   {
     "number": 100,
     "name": "Doug 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/298.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/100.png"
   },
   {
     "number": 101,
     "name": "Garfield 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/486.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/101.png"
   },
   {
     "number": 102,
     "name": "Johnny Bravo 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/584.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/102.png"
   },
   {
     "number": 103,
     "name": "El Pato Darkwing 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/356.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/103.png"
   },
   {
     "number": 104,
     "name": "Samurai X 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/802.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/104.png"
   },
   {
     "number": 105,
     "name": "Ragrats 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/797.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/105.png"
   },
   {
     "number": 106,
     "name": "Malcolm 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/640.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/106.png"
   },
   {
     "number": 107,
     "name": "Rugrats Crecidos 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/798.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/107.png"
   },
   {
     "number": 108,
     "name": "Calabozos y Dragones 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/103.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/108.png"
   },
   {
     "number": 109,
     "name": "BayBlade 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/85.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/109.png"
   },
   {
     "number": 110,
     "name": "El Pajaro Loco 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/355.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/110.png"
   },
   {
     "number": 111,
     "name": "Cantiflas 24/7",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/123.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/111.png"
   },
   {
     "number": 112,
     "name": "Breaking Bad 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/R7AqYREI/98.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/112.png"
   },
   {
     "number": 113,
     "name": "Los Vengadores Unidos 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/irw64QcQ/638.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/113.png"
   },
   {
     "number": 114,
     "name": "Max Steel 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/-kV88JGK/647.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/114.png"
   },
   {
     "number": 115,
     "name": "Le temes a la oscuridad 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/f7acnVDt/611.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/115.png"
   },
   {
     "number": 116,
     "name": "Neon Genesis Evangelion 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/-hHFFv16/716.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/116.png"
   },
   {
     "number": 117,
     "name": "Spider-Man 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/D4BzuFwk/827.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/117.png"
   },
   {
     "number": 118,
     "name": "Futurama 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/2PRvFeQs/473.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/118.png"
   },
   {
     "number": 119,
     "name": "La Vaca y el Pollito 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/lu6tq9pa/606.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/119.png"
   },
   {
     "number": 120,
     "name": "Iron Man 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/dqVgtmfJ/582.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/120.png"
   },
   {
     "number": 121,
     "name": "Patrulla Canina 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/cspl5s6m/759.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/121.png"
   },
   {
     "number": 122,
     "name": "La Familia Monster 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/BcqxbI5Q/591.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/122.png"
   },
   {
     "number": 123,
     "name": "Gres Anatomy 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/P9WCAnem/505.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/123.png"
   },
   {
     "number": 124,
     "name": "Los Años Maravillosos 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/h1Nu5phr/621.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/124.png"
   },
   {
     "number": 125,
     "name": "El Conde  Patula 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/Z4RsAsrk/345.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/125.png"
   },
   {
     "number": 126,
     "name": "Mazinger Z 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/kIh4di3I/649.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/126.png"
   },
   {
     "number": 127,
     "name": "Fear The Walking Dead 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/UjDl4JP2/415.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/127.png"
   },
   {
     "number": 128,
     "name": "Dr. House 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/tPr3lrSj/299.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/128.png"
   },
   {
     "number": 129,
     "name": "South Park 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/yT4IbHqY/820.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/129.png"
   },
   {
     "number": 130,
     "name": "Celebrity Deathmatch (EN) 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/EdZFqnrT/150.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/130.png"
   },
   {
     "number": 131,
     "name": "La Hora Pico 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/mbtfMF0Q/593.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/131.png"
   },
   {
     "number": 132,
     "name": "Sailor Moon 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/tcNOIqBa/799.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/132.png"
   },
   {
     "number": 133,
     "name": "Supernatural 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/NLQIpBWv/851.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/133.png"
   },
   {
     "number": 134,
     "name": "Happy Tree Friends 24/7",
     "url": "http://tv.m3uts.xyz/stream/secure/88M9fQjs/511.m3u8",
     "category": "24/7",
-    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+    "logo": "file:///android_asset/tirso_logos/134.png"
   },
   {
     "number": 135,
@@ -1285,258 +1285,258 @@
     "name": "Eventos",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1131.m3u8",
     "category": "Deportes",
-    "logo": ""
+    "logo": "file:///android_asset/tirso_logos/184.png"
   },
   {
     "number": 185,
     "name": "Disney Junior",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/284.m3u8",
-    "category": "General",
+    "category": "Infantiles",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/disney-jr-ar.png"
   },
   {
     "number": 186,
     "name": "Discovery Kids",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/264.m3u8",
-    "category": "General",
+    "category": "Infantiles",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-kids-ar.png"
   },
   {
     "number": 187,
     "name": "Cartoon Network",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/128.m3u8",
-    "category": "General",
+    "category": "Infantiles",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/cartoon-network-ar.png"
   },
   {
     "number": 188,
     "name": "Cartoonito",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/134.m3u8",
-    "category": "General",
+    "category": "Infantiles",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/cartoonito-lam.png"
   },
   {
     "number": 189,
     "name": "Baby TV",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/79.m3u8",
-    "category": "General",
+    "category": "Infantiles",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/baby-tv-ar.png"
   },
   {
     "number": 190,
     "name": "Nickelodeon",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/736.m3u8",
-    "category": "General",
+    "category": "Infantiles",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/nickelodeon-ar.png"
   },
   {
     "number": 191,
     "name": "Disney Channel",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/280.m3u8",
-    "category": "General",
+    "category": "Infantiles",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/disney-channel-ar.png"
   },
   {
     "number": 192,
     "name": "Tooncast",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/941.m3u8",
-    "category": "General",
+    "category": "Infantiles",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/tooncast-ar.png"
   },
   {
     "number": 193,
     "name": "Nick JR",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/729.m3u8",
-    "category": "General",
+    "category": "Infantiles",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/nick-jr-ar.png"
   },
   {
     "number": 194,
     "name": "Nick Toons",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/735.m3u8",
-    "category": "General",
+    "category": "Infantiles",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/nick-toons-us.png"
   },
   {
     "number": 195,
     "name": "TeenNick",
     "url": "http://tv.m3uts.xyz/stream/secure/Ur34DxGJ/865.m3u8",
-    "category": "General",
+    "category": "Infantiles",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/teen-nick-us.png"
   },
   {
     "number": 196,
     "name": "Tiin",
     "url": "http://tv.m3uts.xyz/stream/secure/R-1TwjEF/907.m3u8",
-    "category": "General",
-    "logo": ""
+    "category": "Infantiles",
+    "logo": "file:///android_asset/tirso_logos/196.png"
   },
   {
     "number": 197,
     "name": "CBeebies",
     "url": "http://tv.m3uts.xyz/stream/secure/vsLJmFR2/139.m3u8",
-    "category": "General",
+    "category": "Infantiles",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-kingdom/bbc-cbeebies-uk.png"
   },
   {
     "number": 198,
     "name": "Disney XD",
     "url": "http://tv.m3uts.xyz/stream/secure/5761zf05/289.m3u8",
-    "category": "General",
+    "category": "Infantiles",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/disney-xd-ar.png"
   },
   {
     "number": 199,
     "name": "PakaPaka",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/748.m3u8",
-    "category": "General",
+    "category": "Infantiles",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/pakapaka-ar.png"
   },
   {
     "number": 200,
     "name": "Antena 3",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/45.m3u8",
-    "category": "General",
+    "category": "España",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/spain/antena-3-es.png"
   },
   {
     "number": 201,
     "name": "La 1 HD",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/588.m3u8",
-    "category": "General",
+    "category": "España",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/spain/tve-1-es.png"
   },
   {
     "number": 202,
     "name": "La 2 HD",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/589.m3u8",
-    "category": "General",
+    "category": "España",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/spain/tve-2-es.png"
   },
   {
     "number": 203,
     "name": "A3 Series",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/17.m3u8",
-    "category": "General",
+    "category": "España",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/spain/atreseries-es.png"
   },
   {
     "number": 204,
     "name": "Mega ES HD",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/653.m3u8",
-    "category": "General",
+    "category": "España",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/spain/mega-es.png"
   },
   {
     "number": 205,
     "name": "TVE HD",
     "url": "http://tv.m3uts.xyz/stream/secure/_c_KJLm8/969.m3u8",
-    "category": "General",
+    "category": "España",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/spain/tve-1-es.png"
   },
   {
     "number": 206,
     "name": "TVE",
     "url": "http://tv.m3uts.xyz/stream/secure/j_ZNdRlO/968.m3u8",
-    "category": "General",
+    "category": "España",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/spain/tve-1-es.png"
   },
   {
     "number": 207,
     "name": "StarTVE",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/838.m3u8",
-    "category": "General",
+    "category": "España",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/spain/tve-1-es.png"
   },
   {
     "number": 208,
     "name": "Discovery Turbo",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/274.m3u8",
-    "category": "General",
+    "category": "Cultura",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-turbo-ar.png"
   },
   {
     "number": 209,
     "name": "Nat Geo Wild",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/709.m3u8",
-    "category": "General",
+    "category": "Cultura",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/national-geographic-wild-ar.png"
   },
   {
     "number": 210,
     "name": "Nat Geo",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/703.m3u8",
-    "category": "General",
+    "category": "Cultura",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/national-geographic-ar.png"
   },
   {
     "number": 211,
     "name": "Discovery H&H",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/254.m3u8",
-    "category": "General",
+    "category": "Cultura",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-home-and-health-ar.png"
   },
   {
     "number": 212,
     "name": "Discovery World",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/276.m3u8",
-    "category": "General",
+    "category": "Cultura",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-world-hd-ar.png"
   },
   {
     "number": 213,
     "name": "Animal Planet",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/41.m3u8",
-    "category": "General",
+    "category": "Cultura",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/animal-planet-ar.png"
   },
   {
     "number": 214,
     "name": "Discovery Theater HD",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/271.m3u8",
-    "category": "General",
+    "category": "Cultura",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-theater-hd-ar.png"
   },
   {
     "number": 215,
     "name": "History Channel",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/558.m3u8",
-    "category": "General",
+    "category": "Cultura",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/history-channel-ar.png"
   },
   {
     "number": 216,
     "name": "H2",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/509.m3u8",
-    "category": "General",
+    "category": "Cultura",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/history-channel-2-ar.png"
   },
   {
     "number": 217,
     "name": "Discovery Channel",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/247.m3u8",
-    "category": "General",
+    "category": "Cultura",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-channel-ar.png"
   },
   {
     "number": 218,
     "name": "Discovery Civilization",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/252.m3u8",
-    "category": "General",
-    "logo": ""
+    "category": "Cultura",
+    "logo": "file:///android_asset/tirso_logos/218.png"
   },
   {
     "number": 219,
     "name": "Discovery SCI",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/267.m3u8",
-    "category": "General",
+    "category": "Cultura",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-science-ar.png"
   },
   {
     "number": 220,
     "name": "Investigation Discovery",
     "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/579.m3u8",
-    "category": "General",
+    "category": "Cultura",
     "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/id-investigation-discovery-ar.png"
   }
 ]

@@ -89,12 +89,12 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
         val localCategoryRP48=BrowserCategoryRP34(CustomChannelsRP45.provider,CustomChannelsRP45.categoryRP48(),"")
         categories=listOf(localCategoryRP48)
         if(initialProvider==CustomChannelsRP45.provider) {selected=localCategoryRP48.key;loading=false}
-        val providers=listOf(if(initialProvider=="sports") "sports" else "nauta")
+        val providers=listOf(if(initialProvider==NuvioTestConfigRP49.PROVIDER) NuvioTestConfigRP49.PROVIDER else if(initialProvider=="sports") "sports" else "nauta")
         val found=coroutineScope {providers.map {provider ->async {
             try {permits.withPermit {
                 val manifest=state.calendarLiveManifest(provider)
-                val catalog=browserCategoryCacheRP34.get(manifest) ?: repo.categories(manifest).also {browserCategoryCacheRP34.put(manifest,it)}
-                catalog.map {BrowserCategoryRP34(provider,it,if(provider=="nauta") "Nauta" else if(provider=="sports") tr("Deportes","Sports") else IptvRepository.sources[provider]?.first.orEmpty())}
+                val catalog=if(provider==NuvioTestConfigRP49.PROVIDER) NuvioTestConfigRP49.categories(context) else browserCategoryCacheRP34.get(manifest) ?: repo.categories(manifest).also {browserCategoryCacheRP34.put(manifest,it)}
+                catalog.map {BrowserCategoryRP34(provider,it,if(provider==NuvioTestConfigRP49.PROVIDER) "Nuvio Test" else if(provider=="nauta") "Nauta" else if(provider=="sports") tr("Deportes","Sports") else IptvRepository.sources[provider]?.first.orEmpty())}
             }} catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
         }}.awaitAll().flatten()}
         categories=(found+localCategoryRP48+IptvRepository.sources.map {(provider,source) ->
@@ -192,7 +192,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
             else message=tr("El canal ya no está disponible en este perfil.","This channel is no longer available in this profile.")
             return
         }
-        if(entry.provider=="sports") {pendingSportsRP44=entry;return}
+        if(entry.provider=="sports" || entry.provider==NuvioTestConfigRP49.PROVIDER) {pendingSportsRP44=entry;return}
         val stamp=generation
         scope.launch {
             resolving=true;message=""
@@ -245,7 +245,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                             val favorite=favorites.any {it.provider==entry.provider && it.channel.id==entry.value.id}
                             BrowserChannelRowRP34(entry.value,entry.value.number.takeIf {it>0} ?: (displayed.indexOf(entry)+1),favorite,
                                 playing=entry.provider==current?.liveProvider && entry.value.id==current?.liveChannelId,
-                                click={tune(entry)},hold={if(entry.provider=="sports") tune(entry) else if(entry.provider==CustomChannelsRP45.provider) customManageRP48=CustomChannelsRP45.findRP48(context,localOwnerRP48,entry.value.id) else LiveLibrary.toggle(context,state,entry.provider,entry.value)},
+                                click={tune(entry)},hold={if(entry.provider=="sports" || entry.provider==NuvioTestConfigRP49.PROVIDER) tune(entry) else if(entry.provider==CustomChannelsRP45.provider) customManageRP48=CustomChannelsRP45.findRP48(context,localOwnerRP48,entry.value.id) else LiveLibrary.toggle(context,state,entry.provider,entry.value)},
                                 modifier=Modifier.then(if(entry==displayed.firstOrNull()) Modifier.focusRequester(firstChannel) else Modifier)
                                     .then(if(entry.provider==current?.liveProvider && entry.value.id==current?.liveChannelId) Modifier.focusRequester(playingChannelFocus) else Modifier).onPreviewKeyEvent {event ->
                                     if(event.nativeKeyEvent.keyCode==android.view.KeyEvent.KEYCODE_DPAD_LEFT) {if(event.type==KeyEventType.KeyDown) runCatching {first.requestFocus()};true} else false
@@ -271,13 +271,13 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                             }
                         }
                     }
-                    Text(if(group?.provider==CustomChannelsRP45.provider) tr("OK · Reproducir    Mantén OK · Opciones","OK · Play    Hold OK · Options") else if(group?.provider=="sports") tr("OK / Mantén OK · Enlaces    Atrás · Cerrar","OK / Hold OK · Links    Back · Close") else tr("Mantén OK · ♥ Favorito    Atrás · Cerrar","Hold OK · ♥ Favorite    Back · Close"),color=Muted,fontSize=10.sp)
+                    Text(if(group?.provider==CustomChannelsRP45.provider) tr("OK · Reproducir    Mantén OK · Opciones","OK · Play    Hold OK · Options") else if(group?.provider=="sports" || group?.provider==NuvioTestConfigRP49.PROVIDER) tr("OK / Mantén OK · Enlaces    Atrás · Cerrar","OK / Hold OK · Links    Back · Close") else tr("Mantén OK · ♥ Favorito    Atrás · Cerrar","Hold OK · ♥ Favorite    Back · Close"),color=Muted,fontSize=10.sp)
                 }
             }
         }
     }
     customManageRP48?.let {channel ->CustomChannelManageRP48(state,channel) {customManageRP48=null}}
-    pendingSportsRP44?.let {entry ->LiveSportsLinksRP44(state,entry.value,{pendingSportsRP44=null}) {stream ->pendingSportsRP44=null;selectSportsRP44(entry,stream)}}
+    pendingSportsRP44?.let {entry ->LiveSportsLinksRP44(state,entry.value,{pendingSportsRP44=null},manifestOverrideRP49=if(entry.provider==NuvioTestConfigRP49.PROVIDER) NuvioTestConfigRP49.MANIFEST else null) {stream ->pendingSportsRP44=null;selectSportsRP44(entry,stream)}}
 
 }
 

@@ -28,7 +28,7 @@ import kotlinx.coroutines.CancellationException
 
 /** Manual selection only for Live Sports. Fetches once per opened event, never polls. */
 @Composable
-internal fun LiveSportsLinksRP44(state:AppState,channel:LiveChannel,close:()->Unit,select:(StreamChoice)->Unit) {
+internal fun LiveSportsLinksRP44(state:AppState,channel:LiveChannel,close:()->Unit,manifestOverrideRP49:String?=null,select:(StreamChoice)->Unit) {
     val owner=state.session?.userId to state.activeProfile.id
     val originalOwner=remember {owner}
     var rows by remember(channel.id,channel.type) {mutableStateOf<List<StreamChoice>>(emptyList())}
@@ -37,9 +37,9 @@ internal fun LiveSportsLinksRP44(state:AppState,channel:LiveChannel,close:()->Un
     var retry by remember {mutableIntStateOf(0)}
     val first=remember {FocusRequester()}
     LaunchedEffect(owner) {if(owner!=originalOwner) close()}
-    LaunchedEffect(channel.id,channel.type,retry) {
+    LaunchedEffect(channel.id,channel.type,retry,manifestOverrideRP49) {
         loading=true;failed=false
-        try {rows=LiveRepository().streams(state.calendarLiveManifest("sports"),channel)}
+        try {rows=LiveRepository().streams(manifestOverrideRP49 ?: state.calendarLiveManifest("sports"),channel)}
         catch(e:CancellationException) {throw e} catch(_:Exception) {failed=true;rows=emptyList()}
         finally {loading=false}
     }
@@ -48,7 +48,7 @@ internal fun LiveSportsLinksRP44(state:AppState,channel:LiveChannel,close:()->Un
         BoxWithConstraints(Modifier.fillMaxSize().consumeOpeningPress()) {
             Column(Modifier.align(Alignment.CenterEnd).fillMaxWidth(if(maxWidth<700.dp) .78f else .43f).fillMaxHeight(.9f)
                 .background(Color(0xFC101010),RoundedCornerShape(18.dp)).padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                Text(tr("ENLACES · LIVE SPORTS","LINKS · LIVE SPORTS"),color=Muted,fontSize=12.sp)
+                Text(if(manifestOverrideRP49!=null) "NUVIO TEST · "+tr("ENLACES","LINKS") else tr("ENLACES · LIVE SPORTS","LINKS · LIVE SPORTS"),color=Muted,fontSize=12.sp)
                 Text(channel.name,color=Color.White,fontSize=22.sp)
                 Text(tr("Elige la fuente que quieres reproducir.","Choose a source to play."),color=Muted,fontSize=13.sp)
                 if(loading) Text(tr("Cargando enlaces…","Loading links…"),color=Color.White)

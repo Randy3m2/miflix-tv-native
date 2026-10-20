@@ -2059,10 +2059,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 FocusButton("OK",modifier=Modifier.focusRequester(first)) { playerMenu=null;controlInteraction++ }
             }
         }
-        if(playerMenu=="sports_links") LiveSportsLinksRP44(state,LiveChannel(request.liveChannelId,request.liveType,request.item.title,request.item.backdrop,request.item.overview),{playerMenu=null}) {stream ->
+        if(playerMenu=="sports_links") LiveSportsLinksRP44(state,LiveChannel(request.liveChannelId,request.liveType,request.item.title,request.item.backdrop,request.item.overview),{playerMenu=null},manifestOverrideRP49=if(request.liveProvider==com.miflix.native2.data.NuvioTestConfigRP49.PROVIDER) state.calendarLiveManifest(request.liveProvider) else null) {stream ->
             playerMenu=null;state.openLivePlayer(request.copy(stream=stream,playbackId=java.util.UUID.randomUUID().toString()))
         }
-        sportsTargetRP44?.let {entry ->LiveSportsLinksRP44(state,entry.value,{sportsTargetRP44=null}) {stream ->
+        sportsTargetRP44?.let {entry ->LiveSportsLinksRP44(state,entry.value,{sportsTargetRP44=null},manifestOverrideRP49=if(entry.provider==com.miflix.native2.data.NuvioTestConfigRP49.PROVIDER) state.calendarLiveManifest(entry.provider) else null) {stream ->
             val c=entry.value;sportsTargetRP44=null
             state.openLivePlayer(PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),stream,0,0,0L,live=true,liveChannelId=c.id,liveProvider=entry.provider,liveType=c.type))
         }}
@@ -2090,7 +2090,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 onInteraction={ controlInteraction++ },
                 onPlay={ userPlayback(!player.playWhenReady) },
                 onResize={ resizeMode=if(resizeMode == androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT) androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM else androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT },
-                onMenu={ playerMenu=it }, onLinks={ if(request.live && request.liveProvider=="sports") playerMenu="sports_links" else state.launch { state.playerSources(request,player.currentPosition) } },
+                onMenu={ playerMenu=it }, onLinks={ if(request.live && (request.liveProvider=="sports" || request.liveProvider==com.miflix.native2.data.NuvioTestConfigRP49.PROVIDER)) playerMenu="sports_links" else state.launch { state.playerSources(request,player.currentPosition) } },
                 onSeek={ if(player.isCurrentMediaItemSeekable) { if(state.partyRole==PartyRole.GUEST && state.watchParty?.hostOnlyControls==true) state.partyFollowHost=false;positionMs=it; player.seekTo(it) } }, seekable=player.isCurrentMediaItemSeekable && durationMs>0,
                 party=state.watchParty!=null,onParty={ openPlayerParty() },
                 onChat={ if(state.watchParty==null) openPlayerParty() else playerMenu="party-chat" },

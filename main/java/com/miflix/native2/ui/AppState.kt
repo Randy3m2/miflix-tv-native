@@ -450,6 +450,7 @@ class AppState(context: Context) {
         refreshCalendar()
     }
     fun calendarLiveManifest(kind: String): String = when(kind) {
+        com.miflix.native2.data.NuvioTestConfigRP49.PROVIDER -> com.miflix.native2.data.NuvioTestConfigRP49.MANIFEST
         "iptv", "iptv:do", "iptv:tur", "iptv:mx", "iptv:es", "iptv:us" -> IptvRepository.manifest(kind)
         "sports" -> livePrefs.getString("sports_manifest","https://sportsfree-us2.highfly.to/manifest.json").orEmpty()
         else -> "https://stremio-addon-wheat.vercel.app/manifest.json"

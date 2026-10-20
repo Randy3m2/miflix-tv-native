@@ -8,7 +8,6 @@ data class LiveCategory(val type: String, val id: String, val name: String, val 
 data class LiveChannel(val id: String, val type: String, val name: String, val poster: String?, val description: String, val number: Int = 0,val tvgId: String = "")
 
 class LiveRepository {
-    private fun base(manifest: String) = manifest.trim().removeSuffix("/manifest.json")
     private fun enc(s: String) = URLEncoder.encode(s, "UTF-8").replace("+", "%20")
 
     suspend fun categories(manifest: String): List<LiveCategory> {
@@ -47,7 +46,7 @@ class LiveRepository {
             if (skip > 0 && category.paginated) add("skip=$skip")
         }.joinToString("&")
         val suffix = if (extra.isEmpty()) ".json" else "/$extra.json"
-        val j = JSONObject(Http.text("${base(manifest)}/catalog/${enc(category.type)}/${enc(category.id)}$suffix", timeoutMs = 20000))
+        val j = JSONObject(Http.text(LiveManifestUrlRP49.resource(manifest,"catalog/${enc(category.type)}/${enc(category.id)}$suffix"), timeoutMs = 20000))
         val rows = j.optJSONArray("metas") ?: return emptyList()
         return (0 until rows.length()).map { i ->
             val m = rows.getJSONObject(i)
@@ -58,7 +57,7 @@ class LiveRepository {
 
     suspend fun streams(manifest: String, channel: LiveChannel): List<StreamChoice> {
         if(IptvRepository.isPlaylist(manifest)) return IptvRepository.streams(channel,manifest)
-        val j = JSONObject(Http.text("${base(manifest)}/stream/${enc(channel.type)}/${enc(channel.id)}.json", timeoutMs = 25000))
+        val j = JSONObject(Http.text(LiveManifestUrlRP49.resource(manifest,"stream/${enc(channel.type)}/${enc(channel.id)}.json"), timeoutMs = 25000))
         val rows = j.optJSONArray("streams") ?: return emptyList()
         return (0 until rows.length()).mapNotNull { i ->
             val s = rows.getJSONObject(i)

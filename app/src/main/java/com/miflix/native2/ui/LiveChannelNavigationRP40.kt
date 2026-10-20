@@ -27,7 +27,7 @@ internal object LiveChannelNavigationRP40 {
         val snapshot=matching(state,request) ?: return
         val index=snapshot.rows.indexOfFirst {it.provider==request.liveProvider && it.value.id==request.liveChannelId}
         val target=snapshot.rows.getOrNull(index+direction) ?: return
-        if(target.provider=="sports") {chooseSports?.invoke(target);return}
+        if(target.provider=="sports" || target.provider==NuvioTestConfigRP49.PROVIDER) {chooseSports?.invoke(target);return}
         val profile=owner(state)
         try {
             val stream=LiveRepository().streams(state.calendarLiveManifest(target.provider),target.value).firstOrNull()

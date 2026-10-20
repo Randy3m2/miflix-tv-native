@@ -36,13 +36,15 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.delay
 
 @Composable
-internal fun CustomChannelsPanelRP45(state:AppState,close:()->Unit) {
+internal fun CustomChannelsPanelRP45(state:AppState,initialEditRP48:CustomChannelRP45?=null,close:()->Unit) {
     val context=LocalContext.current.applicationContext
     val owner=CustomChannelsRP45.owner(state)
     var revision by remember(owner) {mutableIntStateOf(0)}
-    val rows=remember(owner,revision) {CustomChannelsRP45.list(context,owner)}
-    var adding by remember(owner) {mutableStateOf(false)}
-    var editing by remember(owner) {mutableStateOf<CustomChannelRP45?>(null)}
+    val sharedRevisionRP48 by CustomChannelsRP45.changesRP48.collectAsState()
+    var actionsRP48 by remember(owner) {mutableStateOf<CustomChannelRP45?>(null)}
+    val rows=remember(owner,revision,sharedRevisionRP48) {CustomChannelsRP45.list(context,owner)}
+    var adding by remember(owner,initialEditRP48?.id) {mutableStateOf(initialEditRP48!=null)}
+    var editing by remember(owner,initialEditRP48?.id) {mutableStateOf(initialEditRP48)}
     val first=remember {FocusRequester()}
     val dismiss={if(adding) {adding=false;editing=null} else close()}
     PlayerMenuDialog(onDismissRequest=dismiss,fullScreen=true) {
@@ -68,7 +70,7 @@ internal fun CustomChannelsPanelRP45(state:AppState,close:()->Unit) {
                         items(rows,key={it.id}) {channel ->
                             var focused by remember {mutableStateOf(false)}
                             val play={if(state.partyRole!=PartyRole.GUEST && !state.kidsMode) {close();state.openLivePlayer(CustomChannelsRP45.request(channel))}}
-                            val edit={editing=channel;adding=true}
+                            val edit={actionsRP48=channel}
                             Column(Modifier.fillMaxWidth().onFocusChanged {focused=it.isFocused}.focusable().tvPlaybackClick(play,edit).clickable(onClick=play)
                                 .background(if(focused) Color(0xFF292929) else Color(0xFF181818),RoundedCornerShape(12.dp))
                                 .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(12.dp)).padding(15.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
@@ -82,6 +84,8 @@ internal fun CustomChannelsPanelRP45(state:AppState,close:()->Unit) {
             }
         }
     }
+    actionsRP48?.let {channel ->CustomChannelActionsRP48(state,channel,{editing=channel;adding=true;actionsRP48=null}) {actionsRP48=null}}
+
 }
 
 @Composable

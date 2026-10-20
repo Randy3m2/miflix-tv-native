@@ -105,9 +105,13 @@ private val StreamingTiles = listOf(
         "https://cdn.jsdelivr.net/gh/luckynumb3rs/stremio-perfect-setup/collections/streaming/cover/hbo-max.png",
         "https://cdn.jsdelivr.net/gh/luckynumb3rs/stremio-perfect-setup/collections/streaming/focused/hbo-max.gif"
     ),
+    CollectionTile("paramount", "Paramount+",
+        "file:///android_asset/streaming_rp48/paramount-plus.png",
+        "file:///android_asset/streaming_rp48/paramount-plus.gif"),
+    CollectionTile("amcplus", "AMC+", ""),
     CollectionTile("hulu", "Hulu",
-        "https://cdn.jsdelivr.net/gh/luckynumb3rs/stremio-perfect-setup/collections/streaming/cover/hulu.png",
-        "https://cdn.jsdelivr.net/gh/luckynumb3rs/stremio-perfect-setup/collections/streaming/focused/hulu.gif"),
+        "file:///android_asset/streaming_rp48/hulu.png",
+        "file:///android_asset/streaming_rp48/hulu.gif"),
     CollectionTile("crunchyroll", "Crunchyroll",
         "https://cdn.jsdelivr.net/gh/luckynumb3rs/stremio-perfect-setup/collections/streaming/cover/crunchyroll.png",
         "https://cdn.jsdelivr.net/gh/luckynumb3rs/stremio-perfect-setup/collections/streaming/focused/crunchyroll.gif")

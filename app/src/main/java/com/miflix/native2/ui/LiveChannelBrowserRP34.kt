@@ -78,10 +78,17 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     var retry by remember {mutableIntStateOf(0)}
     val pageCache=remember {mutableMapOf<String,Pair<List<BrowserChannelRP34>,Boolean>>()}
     val revision=LiveLibrary.revision
-    val favorites=remember(revision,state.session?.userId,state.activeProfile.id) {LiveLibrary.favorites(context,state)}
+    val customRevisionRP48 by CustomChannelsRP45.changesRP48.collectAsState()
+    val localOwnerRP48=CustomChannelsRP45.owner(state)
+    val localIdsRP48=remember(localOwnerRP48,customRevisionRP48) {CustomChannelsRP45.list(context,localOwnerRP48).map {it.id}.toSet()}
+    var customManageRP48 by remember(localOwnerRP48) {mutableStateOf<CustomChannelRP45?>(null)}
+    val favorites=remember(revision,customRevisionRP48,state.session?.userId,state.activeProfile.id) {LiveLibrary.favorites(context,state).filter {it.provider!=CustomChannelsRP45.provider || it.channel.id in localIdsRP48}}
     val group=categories.firstOrNull {it.key==selected}
     LaunchedEffect(retry) {
         loading=true;message="";catalogWarningRP39="";categories=emptyList();selected=""
+        val localCategoryRP48=BrowserCategoryRP34(CustomChannelsRP45.provider,CustomChannelsRP45.categoryRP48(),"")
+        categories=listOf(localCategoryRP48)
+        if(initialProvider==CustomChannelsRP45.provider) {selected=localCategoryRP48.key;loading=false}
         val providers=listOf(if(initialProvider=="sports") "sports" else "nauta")
         val found=coroutineScope {providers.map {provider ->async {
             try {permits.withPermit {
@@ -90,10 +97,11 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                 catalog.map {BrowserCategoryRP34(provider,it,if(provider=="nauta") "Nauta" else if(provider=="sports") tr("Deportes","Sports") else IptvRepository.sources[provider]?.first.orEmpty())}
             }} catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
         }}.awaitAll().flatten()}
-        categories=(found+IptvRepository.sources.map {(provider,source) ->
+        categories=(found+localCategoryRP48+IptvRepository.sources.map {(provider,source) ->
             BrowserCategoryRP34(provider,LiveCategory("tv","iptv:all","IPTV · "+source.first,paginated=true,searchable=true),"")
         }).distinctBy {it.key}
         selected=if(restoredRP40?.category?.value?.id=="favorites") "favorites" else categories.firstOrNull {it.key==restoredRP40?.category?.key}?.key
+            ?: categories.firstOrNull {initialProvider==CustomChannelsRP45.provider && it.provider==CustomChannelsRP45.provider}?.key
             ?: categories.firstOrNull {it.provider==current?.liveProvider && current?.liveProvider in IptvRepository.sources}?.key
             ?: categories.firstOrNull {isMostViewedRP37(it.value)}?.key ?: categories.firstOrNull()?.key ?: "favorites"
         categoryListRP40.scrollToItem((categories.indexOfFirst {it.key==selected}+1).coerceAtLeast(0))
@@ -113,12 +121,18 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                 else tr("No se pudieron cargar las categorías de TV.","Could not load TV categories.")
         }
     }
-    LaunchedEffect(selected,search) {
+    LaunchedEffect(selected,search,if(group?.provider==CustomChannelsRP45.provider || selected=="favorites") customRevisionRP48 else 0L) {
         generation++;resolving=false;more=false;channels=emptyList();offset=0;message=""
         if(selected.isBlank()) return@LaunchedEffect
         if(selected=="favorites") {loading=false;return@LaunchedEffect}
         val c=group ?: return@LaunchedEffect
         loading=true
+        if(c.provider==CustomChannelsRP45.provider) {
+            channels=CustomChannelsRP45.channelsRP48(context,localOwnerRP48).map {BrowserChannelRP34(CustomChannelsRP45.provider,it)}
+            offset=channels.size;loading=false
+            if(channels.isEmpty()) message=tr("Agrega canales desde Others → Mis canales.","Add channels from Others → My channels.")
+            return@LaunchedEffect
+        }
         try {
             val restored=restoredRP40
             if(restorePendingRP40 && restored!=null && c.key==restored.category.key && search==restored.search) {
@@ -231,7 +245,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                             val favorite=favorites.any {it.provider==entry.provider && it.channel.id==entry.value.id}
                             BrowserChannelRowRP34(entry.value,entry.value.number.takeIf {it>0} ?: (displayed.indexOf(entry)+1),favorite,
                                 playing=entry.provider==current?.liveProvider && entry.value.id==current?.liveChannelId,
-                                click={tune(entry)},hold={if(entry.provider=="sports") tune(entry) else LiveLibrary.toggle(context,state,entry.provider,entry.value)},
+                                click={tune(entry)},hold={if(entry.provider=="sports") tune(entry) else if(entry.provider==CustomChannelsRP45.provider) customManageRP48=CustomChannelsRP45.findRP48(context,localOwnerRP48,entry.value.id) else LiveLibrary.toggle(context,state,entry.provider,entry.value)},
                                 modifier=Modifier.then(if(entry==displayed.firstOrNull()) Modifier.focusRequester(firstChannel) else Modifier)
                                     .then(if(entry.provider==current?.liveProvider && entry.value.id==current?.liveChannelId) Modifier.focusRequester(playingChannelFocus) else Modifier).onPreviewKeyEvent {event ->
                                     if(event.nativeKeyEvent.keyCode==android.view.KeyEvent.KEYCODE_DPAD_LEFT) {if(event.type==KeyEventType.KeyDown) runCatching {first.requestFocus()};true} else false
@@ -257,11 +271,12 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                             }
                         }
                     }
-                    Text(if(group?.provider=="sports") tr("OK / Mantén OK · Enlaces    Atrás · Cerrar","OK / Hold OK · Links    Back · Close") else tr("Mantén OK · ♥ Favorito    Atrás · Cerrar","Hold OK · ♥ Favorite    Back · Close"),color=Muted,fontSize=10.sp)
+                    Text(if(group?.provider==CustomChannelsRP45.provider) tr("OK · Reproducir    Mantén OK · Opciones","OK · Play    Hold OK · Options") else if(group?.provider=="sports") tr("OK / Mantén OK · Enlaces    Atrás · Cerrar","OK / Hold OK · Links    Back · Close") else tr("Mantén OK · ♥ Favorito    Atrás · Cerrar","Hold OK · ♥ Favorite    Back · Close"),color=Muted,fontSize=10.sp)
                 }
             }
         }
     }
+    customManageRP48?.let {channel ->CustomChannelManageRP48(state,channel) {customManageRP48=null}}
     pendingSportsRP44?.let {entry ->LiveSportsLinksRP44(state,entry.value,{pendingSportsRP44=null}) {stream ->pendingSportsRP44=null;selectSportsRP44(entry,stream)}}
 
 }

@@ -33,6 +33,8 @@ private data class TVChannelRP32(val provider:String,val channel:LiveChannel) {
 internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
     val ownerRP46="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
     val context=LocalContext.current
+    val customRevisionRP48 by CustomChannelsRP45.changesRP48.collectAsState()
+    var customManageRP48 by remember(ownerRP46) {mutableStateOf<CustomChannelRP45?>(null)}
     val repo=remember {LiveRepository()}
     val scope=rememberCoroutineScope()
     val permits=remember {Semaphore(4)}
@@ -56,6 +58,12 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
         val requested=active
         if(reset) {offsets.clear();finished.clear();rows=emptyList()}
         busy=true;message=""
+        if(requested.any {it.provider==CustomChannelsRP45.provider}) {
+            rows=CustomChannelsRP45.channelsRP48(context,ownerRP46).map {TVChannelRP32(CustomChannelsRP45.provider,it)}
+            more=false;busy=false
+            if(rows.isEmpty()) message=tr("Agrega canales desde Others → Mis canales.","Add channels from Others → My channels.")
+            return
+        }
         try {
             var failed=0
             val batches=coroutineScope {requested.filter {it.key !in finished}.map {group ->async {
@@ -90,7 +98,7 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
             try {permits.withPermit {repo.categories(manifest(provider)).map {TVGroupRP32(provider,it)}}}
             catch(e:CancellationException) {throw e} catch(_:Exception) {failures++;emptyList()}
         }}.awaitAll().flatten()}
-        groups=loaded+IptvRepository.sources.map {(provider,source) ->
+        groups=loaded+TVGroupRP32(CustomChannelsRP45.provider,CustomChannelsRP45.categoryRP48())+IptvRepository.sources.map {(provider,source) ->
             TVGroupRP32(provider,LiveCategory("tv","iptv:all","IPTV · "+source.first,paginated=true,searchable=true))
         }
         val savedRP46=LiveHubMemoryRP46.category(ownerRP46,"tv")
@@ -98,7 +106,7 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
         busy=false
         if(failures>0) message=tr("Algunas fuentes no están disponibles.","Some sources are unavailable.")
     }
-    LaunchedEffect(active,query) {
+    LaunchedEffect(active,query,if(active.any {it.provider==CustomChannelsRP45.provider}) customRevisionRP48 else 0L) {
         generation++;chosen=null;links=emptyList()
         if(selected.isNotBlank()) LiveHubMemoryRP46.category(ownerRP46,"tv",selected)
         if(groups.isEmpty()) return@LaunchedEffect
@@ -117,6 +125,10 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
     fun openChannel(entry:TVChannelRP32) {
         if(busy) return
         if(state.partyRole==PartyRole.GUEST) {message=tr("El host elige el canal.","The host chooses the channel.");return}
+        if(entry.provider==CustomChannelsRP45.provider) {
+            CustomChannelsRP45.findRP48(context,ownerRP46,entry.channel.id)?.let {if(!state.kidsMode) state.openLivePlayer(CustomChannelsRP45.request(it))}
+            return
+        }
         val stamp=generation
         scope.launch {
             busy=true
@@ -142,7 +154,8 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
             items(visible,key={it.key}) {entry ->
                 val revision=LiveLibrary.revision
                 val favorite=remember(revision,state.activeProfile.id,state.session?.userId,entry.key) {LiveLibrary.favorites(context,state).any {it.provider==entry.provider && it.channel.id==entry.channel.id}}
-                LiveChannelTile(entry.channel,entry.channel.number.takeIf {it>0} ?: (rows.indexOf(entry)+1),favorite,{openChannel(entry)}) {LiveLibrary.toggle(context,state,entry.provider,entry.channel)}
+                if(entry.provider==CustomChannelsRP45.provider) HubEventCardRP41(entry.channel.name,null,tr("CANAL PERSONAL · Mantén OK: opciones","PERSONAL CHANNEL · Hold OK: options"),onHoldRP48={customManageRP48=CustomChannelsRP45.findRP48(context,ownerRP46,entry.channel.id)}) {openChannel(entry)}
+                else LiveChannelTile(entry.channel,entry.channel.number.takeIf {it>0} ?: (rows.indexOf(entry)+1),favorite,{openChannel(entry)}) {LiveLibrary.toggle(context,state,entry.provider,entry.channel)}
             }
             if(more && !busy) item(span={GridItemSpan(maxLineSpan)}) {FocusButton(tr("Cargar más canales","Load more channels")) {scope.launch {page(false)}}}
         }
@@ -154,4 +167,6 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
             androidx.compose.foundation.lazy.LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp)) {items(links) {stream ->FocusButton(stream.name+" · "+stream.title) {chosen?.let {play(it,stream)}}}}
         }
     }
+    customManageRP48?.let {channel ->CustomChannelManageRP48(state,channel) {customManageRP48=null}}
+
 }

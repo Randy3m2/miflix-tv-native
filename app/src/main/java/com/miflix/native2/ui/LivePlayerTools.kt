@@ -55,6 +55,7 @@ fun LiveChannelPicker(state: AppState, initialProvider: String, select: (PlayerR
 
 @Composable
 fun MultiViewScreen(state: AppState) {
+    val customContextRP48=LocalContext.current
     val players=remember { MultiPlayerPool() }
     DisposableEffect(players) { onDispose { players.releaseAll() } }
     var selected by remember { mutableStateOf<String?>(null) }
@@ -170,7 +171,10 @@ fun MultiViewScreen(state: AppState) {
         else MultiViewSourceDialog(state,target,choose={ stream ->
             val i=state.multiViewRequests.indexOfFirst {it.playbackId==target.playbackId}
             if(i>=0) {
-                val replacement=target.copy(stream=stream,playbackId=java.util.UUID.randomUUID().toString())
+                val replacement=if(target.liveProvider==CustomChannelsRP45.provider) {
+                    CustomChannelsRP45.findRP48(customContextRP48,CustomChannelsRP45.owner(state),target.liveChannelId)?.let {CustomChannelsRP45.request(it)}
+                        ?: target.copy(stream=stream,playbackId=java.util.UUID.randomUUID().toString())
+                } else target.copy(stream=stream,playbackId=java.util.UUID.randomUUID().toString())
                 players.release(target.playbackId)
                 state.multiViewRequests[i]=replacement
                 if(sound==target.playbackId) sound=replacement.playbackId
@@ -201,6 +205,7 @@ fun MultiViewScreen(state: AppState) {
 @Composable
 private fun MultiViewSourceDialog(state: AppState,req: PlayerRequest,choose: (com.miflix.native2.model.StreamChoice) -> Unit,close: () -> Unit) {
     val repo=remember {LiveRepository()}
+    val customContextRP48=LocalContext.current
     var rows by remember(req.playbackId) {mutableStateOf<List<com.miflix.native2.model.StreamChoice>>(emptyList())}
     var loading by remember {mutableStateOf(true)}
     var message by remember {mutableStateOf("")}
@@ -212,7 +217,9 @@ private fun MultiViewSourceDialog(state: AppState,req: PlayerRequest,choose: (co
         loading=true;message=""
         try {
             val provider=req.liveProvider.ifBlank {state.liveProviderTab}
-            rows=repo.streams(state.calendarLiveManifest(provider),LiveChannel(req.liveChannelId,req.liveType.ifBlank {"tv"},req.item.title,req.item.poster,req.item.overview))
+            rows=if(provider==CustomChannelsRP45.provider) {
+                listOfNotNull(CustomChannelsRP45.findRP48(customContextRP48,CustomChannelsRP45.owner(state),req.liveChannelId)?.let {CustomChannelsRP45.request(it).stream})
+            } else repo.streams(state.calendarLiveManifest(provider),LiveChannel(req.liveChannelId,req.liveType.ifBlank {"tv"},req.item.title,req.item.poster,req.item.overview))
             if(rows.isEmpty()) message=tr("El proveedor no devolvió fuentes alternativas.","The provider returned no alternative sources.")
         } catch(e: CancellationException) {throw e} catch(e: Exception) {message=e.message ?: tr("No se pudieron cargar las fuentes.","Could not load sources.")}
         finally {loading=false}

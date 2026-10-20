@@ -7,11 +7,18 @@ import com.miflix.native2.model.StreamChoice
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URI
+import kotlinx.coroutines.flow.MutableStateFlow
+import com.miflix.native2.data.LiveCategory
+import com.miflix.native2.data.LiveChannel
 
 internal data class CustomChannelRP45(val id:String,val name:String,val url:String)
 /** Device-local storage, explicitly scoped to account and profile. Stream tokens never enter Supabase. */
 internal object CustomChannelsRP45 {
     const val provider="custom:rp45"
+    val changesRP48=MutableStateFlow(0L)
+    fun categoryRP48()=LiveCategory("tv","custom-rp48","Others")
+    fun channelsRP48(context:Context,owner:String)=list(context,owner).map {LiveChannel(it.id,"tv",it.name,null,tr("Canal personal","Personal channel"))}
+    fun findRP48(context:Context,owner:String,id:String)=list(context,owner).firstOrNull {it.id==id}
     fun owner(state:AppState)="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
     private fun prefs(context:Context)=context.getSharedPreferences("brunio_custom_channels_rp45",Context.MODE_PRIVATE)
     @Synchronized fun list(context:Context,owner:String):List<CustomChannelRP45> = try {
@@ -35,7 +42,9 @@ internal object CustomChannelsRP45 {
     @Synchronized fun remove(context:Context,owner:String,id:String)=write(context,owner,list(context,owner).filter {it.id!=id})
     private fun write(context:Context,owner:String,rows:List<CustomChannelRP45>):Boolean {
         val array=JSONArray();rows.forEach {array.put(JSONObject().put("id",it.id).put("name",it.name).put("url",it.url))}
-        return prefs(context).edit().putString(owner,array.toString()).commit()
+        val saved=prefs(context).edit().putString(owner,array.toString()).commit()
+        if(saved) changesRP48.value=changesRP48.value+1
+        return saved
     }
     fun request(channel:CustomChannelRP45):PlayerRequest {
         val path=runCatching {URI(channel.url).path.orEmpty().lowercase(java.util.Locale.ROOT)}.getOrDefault("")

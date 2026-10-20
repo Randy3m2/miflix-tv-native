@@ -149,6 +149,10 @@ private fun HubTileRP41(board:ImageBitmap,index:Int,label:String,modifier:Modifi
 private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier) {
     val repo=remember {LiveRepository()};val scope=rememberCoroutineScope()
     val ownerRP46="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
+    val contextRP48=LocalContext.current
+    val customRevisionRP48 by CustomChannelsRP45.changesRP48.collectAsState()
+    val customRowsRP48=remember(ownerRP46,customRevisionRP48,section) {if(section=="others") CustomChannelsRP45.list(contextRP48,ownerRP46) else emptyList()}
+    var customManageRP48 by remember(ownerRP46) {mutableStateOf<CustomChannelRP45?>(null)}
     val manifest=state.calendarLiveManifest("sports")
     var categories by remember {mutableStateOf<List<LiveCategory>>(emptyList())}
     var selected by remember {mutableStateOf<LiveCategory?>(null)}
@@ -266,8 +270,13 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier) {
         if(nautaWarningRP42.isNotBlank()) Text(nautaWarningRP42,color=Muted,fontSize=12.sp)
         if(message.isNotBlank()) {Text(message,color=Muted);FocusButton(tr("Reintentar","Retry")) {retry++}}
         LazyVerticalGrid(GridCells.Adaptive(240.dp),Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(6.dp,6.dp,6.dp,30.dp)) {
+            items(customRowsRP48,key={"custom:"+it.id}) {channel ->
+                HubEventCardRP41(channel.name,null,tr("CANAL PERSONAL · Mantén OK: opciones","PERSONAL CHANNEL · Hold OK: options"),onHoldRP48={customManageRP48=channel}) {
+                    if(state.partyRole!=PartyRole.GUEST && !state.kidsMode) state.openLivePlayer(CustomChannelsRP45.request(channel))
+                }
+            }
             items(displayedRP42,key={it.key}) {event ->HubEventCardRP41(event.channel.name,event.channel.poster,when {event.provider=="nauta"->if(f1ChannelRP42(event.channel.name)) "Nauta · F1" else "Nauta · DAZN";event.provider in IptvRepository.sources->"IPTV · "+IptvRepository.sources[event.provider]?.first.orEmpty();else->event.channel.description}) {tune(event)}}
-            if(!loading && displayedRP42.isEmpty() && message.isBlank()) item(span={GridItemSpan(maxLineSpan)}) {Text(tr("No hay eventos publicados ahora.","No events published right now."),color=Muted)}
+            if(!loading && displayedRP42.isEmpty() && customRowsRP48.isEmpty() && message.isBlank()) item(span={GridItemSpan(maxLineSpan)}) {Text(tr("No hay eventos publicados ahora.","No events published right now."),color=Muted)}
             if(more && !loading) item(span={GridItemSpan(maxLineSpan)}) {FocusButton(tr("Cargar más","Load more")) {
                 val c=selected
                 if(c!=null) scope.launch {
@@ -291,16 +300,18 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier) {
             }}
         }
     }
+    customManageRP48?.let {channel ->CustomChannelManageRP48(state,channel) {customManageRP48=null}}
+
 }
 
 @Composable
-internal fun HubEventCardRP41(title:String,poster:String?,subtitle:String,click:()->Unit) {
+internal fun HubEventCardRP41(title:String,poster:String?,subtitle:String,onHoldRP48:(()->Unit)?=null,click:()->Unit) {
     var focused by remember(title) {mutableStateOf(false)}
     val scale by animateFloatAsState(if(focused) 1.015f else 1f,label="Event focus")
     Column(Modifier.fillMaxWidth().height(194.dp).graphicsLayer {scaleX=scale;scaleY=scale}
         .clip(RoundedCornerShape(13.dp)).background(Brush.verticalGradient(listOf(Color(0xFF242424),Color(0xFF101010))))
         .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(13.dp))
-        .onFocusChanged {focused=it.isFocused}.focusable().tvPlaybackClick(click,click).clickable(onClick=click)) {
+        .onFocusChanged {focused=it.isFocused}.focusable().tvPlaybackClick(click,onHoldRP48 ?: click).clickable(onClick=click)) {
         Box(Modifier.fillMaxWidth().weight(1f).background(Brush.verticalGradient(listOf(Color(0xFF17283C),Color.Black))),contentAlignment=Alignment.Center) {
             if(!poster.isNullOrBlank()) AsyncImage(poster,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
             else Text(title,color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(14.dp),maxLines=2)

@@ -1643,6 +1643,8 @@ class AppState(context: Context) {
         "apple" to listOf(350),
         "hbo" to listOf(1899, 384),
         "hulu" to listOf(15),
+        "paramount" to listOf(531,582),
+        "amcplus" to listOf(526,528),
         "crunchyroll" to listOf(283)
     )
 

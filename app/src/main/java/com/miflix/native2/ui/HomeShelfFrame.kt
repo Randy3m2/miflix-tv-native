@@ -27,12 +27,17 @@ internal fun HomeShelfFrame(index:Int,scroll:LazyListState,modifier:Modifier=Mod
     val returning=LocalHomeReturnFocus.current
     val frameScope=rememberCoroutineScope()
     val motion=LocalHomeShelfMotion.current ?: remember(scroll) {HomeShelfMotion(frameScope)}
+    val rowFocus=remember {FocusRequester()}
+    DisposableEffect(motion,index,rowFocus) {
+        motion.register(index,rowFocus)
+        onDispose {motion.unregister(index,rowFocus)}
+    }
     LaunchedEffect(active,index,returning?.pending) {
         if(active && returning?.pending==null) {
             motion.align(scroll,index)
         }
     }
-    BoxWithConstraints(modifier.padding(vertical=8.dp).onFocusChanged {active=it.hasFocus}.focusGroup()) {
+    BoxWithConstraints(modifier.padding(vertical=8.dp).focusRequester(rowFocus).onFocusChanged {active=it.hasFocus;motion.focusChanged(index,it.hasFocus)}.focusGroup()) {
         val cardHeight=(maxHeight-64.dp).coerceIn(124.dp,188.dp)
         CompositionLocalProvider(LocalHomeShelfPaging provides true,LocalHomeCardRowHeight provides cardHeight) {content()}
     }

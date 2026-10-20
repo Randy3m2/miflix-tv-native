@@ -21,8 +21,8 @@ android {
         applicationId 'com.miflix.native2'
         minSdk 23
         targetSdk 36
-        versionCode 22162
-        versionName '2.0.0-rp58'
+        versionCode 22163
+        versionName '2.0.0-rp59'
 
         buildConfigField 'String', 'SUPABASE_URL', '"https://iwvhigqxsvvgyzdygiqa.supabase.co"'
         buildConfigField 'String', 'SUPABASE_KEY', '"sb_publishable_TdzEQXtDadVMKhSLVe0ihw_EAQ4iNsd"'

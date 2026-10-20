@@ -45,6 +45,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.window.Dialog
@@ -214,7 +216,14 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
             // HomeShelfFrame aligns the full group. Child focus must not scroll away its heading.
             override fun calculateScrollDistance(offset: Float,size: Float,containerSize: Float): Float = 0f
         }) {
-            LazyColumn(Modifier.fillMaxSize().smoothVerticalDpad { !scroll.isScrollInProgress }.focusRequester(contentFocus).focusGroup(),state=scroll,contentPadding=PaddingValues(0.dp)) {
+            LazyColumn(Modifier.fillMaxSize().smoothVerticalDpad { !scroll.isScrollInProgress }
+                .onPreviewKeyEvent { event ->
+                    if(event.type==KeyEventType.KeyDown && homeReturn.pending==null) when(event.key) {
+                        Key.DirectionDown -> shelfMotion.move(scroll,1)
+                        Key.DirectionUp -> shelfMotion.move(scroll,-1)
+                        else -> false
+                    } else false
+                }.focusRequester(contentFocus).focusGroup(),state=scroll,contentPadding=PaddingValues(0.dp)) {
                 var shelfIndex=0
                 val homeSections=mutableListOf<HomeSection>()
                 fun shelf(key:String,content:@Composable ()->Unit) {homeSections.add(HomeSection(key,content))}

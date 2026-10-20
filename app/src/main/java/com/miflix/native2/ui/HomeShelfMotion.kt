@@ -1,9 +1,12 @@
 package com.miflix.native2.ui
 
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
-import com.miflix.native2.data.SoftScrollIntegrator
+import androidx.compose.ui.focus.FocusRequester
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -11,48 +14,89 @@ import kotlin.math.abs
 
 internal val LocalHomeShelfMotion=staticCompositionLocalOf<HomeShelfMotion?> {null}
 
-/** One running scroll loop; focus changes only retarget it, without restarting its frame clock. */
+/** RP59: one owner for vertical keys, scrolling and focus. Horizontal focus stays native. */
 internal class HomeShelfMotion(private val scope:CoroutineScope) {
+    private val requesters=mutableMapOf<Int,FocusRequester>()
+    private val focused=mutableSetOf<Int>()
     private var target:Int?=null
     private var running:Job?=null
     private var generation=0L
-    private val motion=SoftScrollIntegrator()
+    private var navigating=false
+
+    fun register(index:Int,requester:FocusRequester) {requesters[index]=requester}
+    fun unregister(index:Int,requester:FocusRequester) {
+        if(requesters[index]===requester) requesters.remove(index)
+        focused.remove(index)
+    }
+    fun focusChanged(index:Int,active:Boolean) {
+        if(active) focused.add(index) else focused.remove(index)
+    }
     fun reset() {
-        generation++;target=null;running?.cancel();running=null;motion.reset()
+        generation++;target=null;navigating=false;running?.cancel();running=null
+    }
+    /** Consume only vertical arrows while Home content owns focus. Top edge returns to header. */
+    fun move(scroll:LazyListState,direction:Int):Boolean {
+        val current=if(navigating) target else focused.firstOrNull()
+        if(current==null) return false
+        val next=current+direction
+        if(next<0) {
+            // Do not hand Up to a stale row while the first row is still approaching.
+            if(navigating || 0 !in focused) {start(scroll,0,requestFocus=true);return true}
+            reset();return false
+        }
+        if(next>=scroll.layoutInfo.totalItemsCount) return true
+        start(scroll,next,requestFocus=true,direction=direction)
+        return true
     }
     fun align(scroll:LazyListState,index:Int) {
-        target=index
-        if(running?.isActive==true) return
+        // A newly focused child must not cancel an arrow movement already in flight.
+        if(navigating || (running?.isActive==true && target==index)) return
+        start(scroll,index,requestFocus=false)
+    }
+    private fun start(scroll:LazyListState,index:Int,requestFocus:Boolean,direction:Int=0,hops:Int=0) {
+        generation++
         val epoch=generation
+        running?.cancel()
+        target=index;navigating=requestFocus
         running=scope.launch {
             try {
                 scroll.scroll {
-                    var previous=0L
-                    while(target!=null && generation==epoch) {
-                        val now=withFrameNanos {it}
-                        val dt=if(previous==0L) 1f/60f else (now-previous)/1_000_000_000f
-                        previous=now
-                        val indexNow=target ?: break
+                    var previous=0f
+                    // Finite ease-out: no spring tail or repeated one-pixel alignment after each row.
+                    animate(0f,1f,animationSpec=tween(210,easing=LinearOutSlowInEasing)) {fraction,_ ->
                         val layout=scroll.layoutInfo
-                        if(indexNow !in 0 until layout.totalItemsCount) break
                         val visible=layout.visibleItemsInfo
-                        val row=visible.firstOrNull {it.index==indexNow}
-                        // Home items all occupy one viewport: estimate only until the target is measured.
-                        val reference=visible.firstOrNull() ?: continue
-                        val distance=row?.offset?.toFloat() ?: (reference.offset+(indexNow-reference.index)*reference.size).toFloat()
-                        if(abs(distance)<.6f && abs(motion.velocity())<8f) {
-                            scrollBy(distance)
-                            break
+                        val row=visible.firstOrNull {it.index==index}
+                        val reference=visible.firstOrNull()
+                        if(reference!=null) {
+                            val distance=row?.offset?.toFloat() ?: 
+                                (reference.offset+(index-reference.index)*reference.size).toFloat()
+                            val remaining=1f-previous
+                            if(remaining>0f) scrollBy(distance*((fraction-previous)/remaining).coerceIn(0f,1f))
                         }
-                        val viewport=(layout.viewportEndOffset-layout.viewportStartOffset).toFloat()
-                        val delta=motion.step(distance,dt,viewport)
-                        val consumed=scrollBy(delta)
-                        val atBound=(delta>0 && !scroll.canScrollForward) || (delta<0 && !scroll.canScrollBackward)
-                        if(atBound && abs(delta-consumed)>.6f) break
+                        previous=fraction
+                    }
+                    // Correct only rounding; never perform a second animated scroll.
+                    scroll.layoutInfo.visibleItemsInfo.firstOrNull {it.index==index}?.let {
+                        if(abs(it.offset)<3) scrollBy(it.offset.toFloat())
+                    }
+                }
+                if(requestFocus) {
+                    // Request only the destination row after its slots are measured, never artwork.
+                    repeat(3) {
+                        withFrameNanos { }
+                        if(epoch!=generation) return@launch
+                        if(runCatching {requesters[index]?.requestFocus() ?: false}.getOrDefault(false)) return@launch
+                    }
+                    // An empty informational shelf has no focusable children; skip it in the same direction.
+                    val next=index+direction
+                    if(direction!=0 && hops<scroll.layoutInfo.totalItemsCount &&
+                        next in 0 until scroll.layoutInfo.totalItemsCount && epoch==generation) {
+                        start(scroll,next,requestFocus=true,direction=direction,hops=hops+1)
                     }
                 }
             } finally {
-                if(generation==epoch) {running=null;motion.reset()}
+                if(epoch==generation) {running=null;navigating=false}
             }
         }
     }

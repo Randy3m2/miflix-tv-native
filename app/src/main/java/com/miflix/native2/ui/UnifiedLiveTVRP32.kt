@@ -14,6 +14,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.tv.material3.Text
 import com.miflix.native2.data.*
+import com.miflix.native2.model.PartyRole
 import com.miflix.native2.model.MediaSummary
 import com.miflix.native2.model.StreamChoice
 import kotlinx.coroutines.*
@@ -30,6 +31,7 @@ private data class TVChannelRP32(val provider:String,val channel:LiveChannel) {
 /** A single browse surface. Original provider/id survives for favorites and playback. */
 @Composable
 internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
+    val ownerRP46="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
     val context=LocalContext.current
     val repo=remember {LiveRepository()}
     val scope=rememberCoroutineScope()
@@ -91,12 +93,14 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
         groups=loaded+IptvRepository.sources.map {(provider,source) ->
             TVGroupRP32(provider,LiveCategory("tv","iptv:all","IPTV · "+source.first,paginated=true,searchable=true))
         }
-        selected=groups.firstOrNull {isMostViewedRP37(it.category)}?.key ?: groups.firstOrNull()?.key.orEmpty()
+        val savedRP46=LiveHubMemoryRP46.category(ownerRP46,"tv")
+        selected=groups.firstOrNull {it.key==savedRP46}?.key ?: groups.firstOrNull {isMostViewedRP37(it.category)}?.key ?: groups.firstOrNull()?.key.orEmpty()
         busy=false
         if(failures>0) message=tr("Algunas fuentes no están disponibles.","Some sources are unavailable.")
     }
     LaunchedEffect(active,query) {
         generation++;chosen=null;links=emptyList()
+        if(selected.isNotBlank()) LiveHubMemoryRP46.category(ownerRP46,"tv",selected)
         if(groups.isEmpty()) return@LaunchedEffect
         if(query.isNotBlank()) delay(350)
         page(true)
@@ -112,6 +116,7 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
     }
     fun openChannel(entry:TVChannelRP32) {
         if(busy) return
+        if(state.partyRole==PartyRole.GUEST) {message=tr("El host elige el canal.","The host chooses the channel.");return}
         val stamp=generation
         scope.launch {
             busy=true
@@ -126,14 +131,14 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
     Column(modifier.fillMaxWidth().padding(top=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
         Text(tr("CATEGORÍAS","CATEGORIES"),color=Muted)
         LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp),contentPadding=PaddingValues(horizontal=4.dp,vertical=4.dp)) {
-            items(groups,key={it.key}) {g ->FocusButton(g.category.name,primary=selected==g.key) {selected=g.key}}
+            items(groups,key={it.key}) {g ->HubCategoryChipRP42(g.category.name,selected==g.key) {selected=g.key}}
         }
         NativeTextField(query,{query=it;state.liveSearch=it},tr("Buscar canales","Search channels"),modifier=Modifier.fillMaxWidth())
         if(busy) Text(tr("Cargando canales…","Loading channels…"),color=Color.White)
         if(message.isNotBlank()) Text(message,color=Color.White)
         if(!busy && groups.isEmpty()) FocusButton(tr("Reintentar","Retry")) {retry++}
         val visible=rows.filter {query.isBlank() || IptvPlaylist.searchKey(it.channel.name).contains(IptvPlaylist.searchKey(query)) || it.channel.number.toString()==query.trim()}
-        LazyVerticalGrid(GridCells.Adaptive(180.dp),modifier=Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(start=4.dp,end=4.dp,top=6.dp,bottom=48.dp)) {
+        LazyVerticalGrid(GridCells.Adaptive(210.dp),modifier=Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(start=4.dp,end=4.dp,top=6.dp,bottom=48.dp)) {
             items(visible,key={it.key}) {entry ->
                 val revision=LiveLibrary.revision
                 val favorite=remember(revision,state.activeProfile.id,state.session?.userId,entry.key) {LiveLibrary.favorites(context,state).any {it.provider==entry.provider && it.channel.id==entry.channel.id}}

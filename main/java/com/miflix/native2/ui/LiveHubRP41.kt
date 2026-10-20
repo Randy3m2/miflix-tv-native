@@ -55,18 +55,15 @@ private val hubCatalogRP41=PlaybackLinkCache<String,List<LiveCategory>>(4) {Syst
 internal fun LiveHubRP41(state:AppState) {
     val context=LocalContext.current
     val owner="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
-    var section by remember(owner) {mutableStateOf("hub")}
-    var busy by remember {mutableStateOf(false)}
-    var error by remember {mutableStateOf("")}
-    val scope=rememberCoroutineScope()
-    var opening by remember {mutableStateOf<Job?>(null)}
+    var section by remember(owner) {mutableStateOf(LiveHubMemoryRP46.section(owner))}
     var customChannelsRP45 by remember(owner) {mutableStateOf(false)}
     var configuring by remember {mutableStateOf(false)}
     var revision by remember {mutableIntStateOf(0)}
     val first=remember {FocusRequester()}
     val contentFocusRP44=remember {FocusRequester()}
-    fun back() {opening?.cancel();busy=false;error="";section="hub"}
-    BackHandler {if(section!="hub" || busy) back() else state.screen=Screen.HOME}
+    fun changeSectionRP46(value:String) {LiveHubMemoryRP46.section(owner,value);section=value}
+    fun back() {changeSectionRP46("hub")}
+    BackHandler {if(section!="hub") back() else state.screen=Screen.HOME}
     LaunchedEffect(section) {if(section=="hub") {withFrameNanos {};runCatching {first.requestFocus()}}}
     Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal=14.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Sidebar(Screen.LIVE_TV,state.activeProfile.name,{state.screen=it},state.unreadNoticeCount,state.activeProfile,
@@ -74,36 +71,28 @@ internal fun LiveHubRP41(state:AppState) {
         Column(Modifier.weight(1f).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
             FocusButton("‹",horizontalPadding=14.dp) {if(section=="hub") state.screen=Screen.HOME else back()}
-            Text(if(section=="hub") tr("En Vivo","Live") else when(section) {"basketball"->"NBA · Basketball";"baseball"->"MLB · Baseball";"football"->"NFL · American Football";"soccer"->tr("Fútbol","Football");"f1"->"F1";"lidom"->"LIDOM";else->"Others"},color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
+            Text(if(section=="hub") tr("En Vivo","Live") else when(section) {"basketball"->"NBA · Basketball";"baseball"->"MLB · Baseball";"football"->"NFL · American Football";"soccer"->tr("Fútbol","Football");"f1"->"F1";"lidom"->"LIDOM";"tv"->tr("Canales de TV","TV Channels");else->"Others"},color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
             if(section=="others") {
                 FocusButton(tr("Mis canales","My channels")) {customChannelsRP45=true}
                 FocusButton(tr("Configurar deportes","Sports settings")) {configuring=true}
             }
         }
-        if(busy) Text(tr("Abriendo canal…","Opening channel…"),color=Muted)
-        if(error.isNotBlank()) Text(error,color=Color.White,fontSize=12.sp)
         if(section=="hub") {
             val board=ImageBitmap.imageResource(R.drawable.live_hub_board_rp41)
             BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().focusRequester(contentFocusRP44).focusGroup()) {
-            val gridWidth=maxWidth
-            Column(Modifier.width(gridWidth).fillMaxHeight().align(Alignment.Center),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            val aspectRP46=467f/292f
+            val gapRP46=12.dp
+            val tileWidthRP46=minOf((maxWidth-48.dp-gapRP46*2)/3,(maxHeight-gapRP46*2)/3*aspectRP46)
+            val tileHeightRP46=tileWidthRP46/aspectRP46
+            Column(Modifier.width(tileWidthRP46*3+gapRP46*2).height(tileHeightRP46*3+gapRP46*2).align(Alignment.Center),verticalArrangement=Arrangement.spacedBy(gapRP46)) {
                 repeat(3) {row ->
-                    Row(Modifier.weight(1f).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                    Row(Modifier.height(tileHeightRP46).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(gapRP46)) {
                         repeat(3) {col ->
                             val index=row*3+col;val key=liveHubKeysRP41[index]
                             HubTileRP41(board,index,key,Modifier.weight(1f).fillMaxHeight().then(if(index==0) Modifier.focusRequester(first) else Modifier)) {
-                                if(!busy) {
-                                    error=""
-                                    when(key) {
-                                        "scores"->state.showLiveScoresRP11=true
-                                        "tv"->{busy=true;opening=scope.launch {
-                                            try {LiveHubPlaybackRP41.startTV(context,state)}
-                                            catch(e:CancellationException) {throw e}
-                                            catch(_:Exception) {error=tr("No se pudo abrir TV. Vuelve a intentarlo.","Could not open TV. Try again.")}
-                                            finally {busy=false}
-                                        }}
-                                        else->section=key
-                                    }
+                                when(key) {
+                                    "scores"->state.showLiveScoresRP11=true
+                                    else->changeSectionRP46(key)
                                 }
                             }
                         }
@@ -111,7 +100,8 @@ internal fun LiveHubRP41(state:AppState) {
                 }
             }
             }
-        } else if(section=="lidom") HubLidomRP41(state,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())
+        } else if(section=="tv") key(owner) {UnifiedLiveTVRP32(state,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())}
+        else if(section=="lidom") HubLidomRP41(state,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())
         else key(section,revision) {HubSportsRP41(state,section,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())}
     }
     }
@@ -143,7 +133,7 @@ private fun HubTileRP41(board:ImageBitmap,index:Int,label:String,modifier:Modifi
         .clip(RoundedCornerShape(13.dp)).border(if(focused) 2.dp else 1.dp,if(focused) Color.White else Color(0xFF263245),RoundedCornerShape(13.dp))
         .semantics {contentDescription=label}.onFocusChanged {focused=it.isFocused}.focusable().tvClick(click).clickable(onClick=click)) {
         Canvas(Modifier.fillMaxSize()) {
-            drawImage(board,srcOffset=IntOffset(xs[index%3],ys[index/3]),srcSize=IntSize(467,if(index/3==2) 292 else 308),dstSize=IntSize(size.width.toInt(),size.height.toInt()))
+            drawImage(board,srcOffset=IntOffset(xs[index%3],ys[index/3]+if(index/3==2) 0 else 8),srcSize=IntSize(467,292),dstSize=IntSize(size.width.toInt(),size.height.toInt()))
             if(focused) drawRect(Color.White.copy(alpha=.07f))
         }
     }
@@ -152,6 +142,7 @@ private fun HubTileRP41(board:ImageBitmap,index:Int,label:String,modifier:Modifi
 @Composable
 private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier) {
     val repo=remember {LiveRepository()};val scope=rememberCoroutineScope()
+    val ownerRP46="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
     val manifest=state.calendarLiveManifest("sports")
     var categories by remember {mutableStateOf<List<LiveCategory>>(emptyList())}
     var selected by remember {mutableStateOf<LiveCategory?>(null)}
@@ -207,13 +198,15 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier) {
         try {
             val all=hubCatalogRP41.get(manifest) ?: repo.categories(manifest).also {hubCatalogRP41.put(manifest,it)}
             categories=all.filter {liveSportGroupRP41(it)==section && (section!="others" || !liveAggregateRP41(it))}
-            selected=categories.firstOrNull()
+            val savedRP46=LiveHubMemoryRP46.category(ownerRP46,section)
+            selected=categories.firstOrNull {it.type+":"+it.id+":"+it.genre.orEmpty()==savedRP46} ?: categories.firstOrNull()
             if(categories.isEmpty()) message=tr("No hay categorías publicadas para este deporte.","No categories published for this sport.")
         } catch(e:CancellationException) {throw e} catch(_:Exception) {message=tr("La fuente de deportes no respondió.","Sports source did not respond.")}
         finally {loading=false}
     }
     LaunchedEffect(selected) {
         generation++;val c=selected ?: return@LaunchedEffect
+        LiveHubMemoryRP46.category(ownerRP46,section,c.type+":"+c.id+":"+c.genre.orEmpty())
         loading=true;events=emptyList();message="";more=false;offset=0
         try {
             offsetsRP41.clear();pendingRP41.clear()
@@ -380,7 +373,7 @@ private fun HubLidomRP41(state:AppState,modifier:Modifier) {
 }
 
 @Composable
-private fun HubCategoryChipRP42(label:String,selected:Boolean,click:()->Unit) {
+internal fun HubCategoryChipRP42(label:String,selected:Boolean,click:()->Unit) {
     var focused by remember {mutableStateOf(false)}
     Row(Modifier.clip(RoundedCornerShape(18.dp)).background(if(selected) Color(0xFF303030) else Color(0xFF161616))
         .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else if(selected) Color(0xFF727272) else Color(0xFF2A2A2A),RoundedCornerShape(18.dp))

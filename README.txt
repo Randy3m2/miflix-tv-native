@@ -1,8 +1,106 @@
-BruniO RP54 — Tirso TV artwork patch
+BruniO RP55 (22159) — aplicar sobre RP54 conservando rutas.
 
-Aplicar sobre RP54 con sus correcciones previas, conservando las rutas.
-94 imágenes de series/personajes para canales 24/7, incluyendo Los Simpson y El Chavo.
-Dragon Ball Z y Dragon Ball Z Op.2 permanecen intactos.
-Solo cambian las imágenes de estos canales: enlaces, nombres, categorías y orden se conservan.
-No modifica Películas, Series, reproductor, Kotlin ni configuración de versión.
-Imágenes locales; fuentes en SOURCES.csv. No se generó APK ni se probó en TV.
+Live TV: al soltar OK, menos de 750 ms reproduce; 750–1749 ms alterna favoritos; desde 1750 ms abre opciones.
+El menú incluye Agregar/Quitar de favoritos (Add/Remove from Favorites).
+No se ejecuta ninguna acción a los 750 ms mientras se mantiene OK. Repeticiones y eventos cancelados no activan acciones adicionales.
+Incluye las correcciones anteriores de imports y String no nulo.
+Incluye 94 imágenes locales para canales 24/7. Ambos Dragon Ball Z permanecen intactos.
+No cambia Películas ni Series fuera de Live TV, ni enlaces/categorías de canales.
+Revisión estática realizada; sin compilar ni generar APK. Falta validar los tiempos con el control de la TV.
+
+Fuentes de imágenes:
+channel_number,channel_name,image_title,source_page,image_url
+1,Los Simpson 24/7,The Simpsons,https://www.tvmaze.com/shows/83/the-simpsons,https://static.tvmaze.com/uploads/images/medium_portrait/637/1594614.jpg
+2,El Chavo del 8,El Chavo del Ocho,https://www.tvmaze.com/shows/24307/el-chavo-del-ocho,https://static.tvmaze.com/uploads/images/medium_portrait/92/230988.jpg
+3,El Chavo del 8 HD,El Chavo del Ocho,https://www.tvmaze.com/shows/24307/el-chavo-del-ocho,https://static.tvmaze.com/uploads/images/medium_portrait/92/230988.jpg
+42,Series Comedia 24/7,Friends,https://www.tvmaze.com/shows/431/friends,https://static.tvmaze.com/uploads/images/medium_portrait/41/104565.jpg
+43,Dragon Ball 24/7,Dragon Ball,https://www.tvmaze.com/shows/2102/dragon-ball,https://static.tvmaze.com/uploads/images/medium_portrait/436/1091415.jpg
+46,Dragon Ball Super 24/7,Dragon Ball Super,https://www.tvmaze.com/shows/2368/dragon-ball-super,https://static.tvmaze.com/uploads/images/medium_portrait/498/1247253.jpg
+47,Dragon Ball GT 24/7,Dragon Ball GT,https://www.tvmaze.com/shows/2104/dragon-ball-gt,https://static.tvmaze.com/uploads/images/medium_portrait/412/1030119.jpg
+48,Game of Thrones 24/7,Game of Thrones,https://www.tvmaze.com/shows/82/game-of-thrones,https://static.tvmaze.com/uploads/images/medium_portrait/498/1245274.jpg
+49,Malcom HD 24/7,Malcolm in the Middle,https://www.tvmaze.com/shows/568/malcolm-in-the-middle,https://static.tvmaze.com/uploads/images/medium_portrait/549/1373492.jpg
+50,Two And a Half Men 24/7,Two and a Half Men,https://www.tvmaze.com/shows/130/two-and-a-half-men,https://static.tvmaze.com/uploads/images/medium_portrait/118/296850.jpg
+51,Tom y Jerry,The New Tom & Jerry Show,https://www.tvmaze.com/shows/18963/the-new-tom-jerry-show,https://static.tvmaze.com/uploads/images/medium_portrait/637/1594273.jpg
+52,Bob Esponja,SpongeBob SquarePants,https://www.tvmaze.com/shows/713/spongebob-squarepants,https://static.tvmaze.com/uploads/images/medium_portrait/594/1486607.jpg
+53,Friends 24/7,Friends,https://www.tvmaze.com/shows/431/friends,https://static.tvmaze.com/uploads/images/medium_portrait/41/104565.jpg
+54,Chapulin Colorado 24/7,El Chapulín Colorado,https://www.tvmaze.com/shows/24308/el-chapulin-colorado,https://static.tvmaze.com/uploads/images/medium_portrait/92/230990.jpg
+55,Looney Tunes 24/7,Looney Tunes,https://www.tvmaze.com/shows/4533/looney-tunes,https://static.tvmaze.com/uploads/images/medium_portrait/629/1573702.jpg
+56,Pokemon 24/7,Pokémon,https://www.tvmaze.com/shows/590/pokemon,https://static.tvmaze.com/uploads/images/medium_portrait/630/1576025.jpg
+57,Naruto 24/7,Naruto,https://www.tvmaze.com/shows/495/naruto,https://static.tvmaze.com/uploads/images/medium_portrait/3/9744.jpg
+58,La Pantera Rosa 24/7,The Pink Panther Show,https://www.tvmaze.com/shows/6966/the-pink-panther-show,https://static.tvmaze.com/uploads/images/medium_portrait/26/65474.jpg
+59,Alf 24/7,ALF,https://www.tvmaze.com/shows/848/alf,https://static.tvmaze.com/uploads/images/medium_portrait/6/15848.jpg
+60,Los Expedientes Secretos X 24/7,The X-Files,https://www.tvmaze.com/shows/430/the-x-files,https://static.tvmaze.com/uploads/images/medium_portrait/501/1253511.jpg
+61,Hey Arnold 24/7,Hey Arnold!,https://www.tvmaze.com/shows/6482/hey-arnold,https://static.tvmaze.com/uploads/images/medium_portrait/24/61868.jpg
+62,Smallville 24/7,Smallville,https://www.tvmaze.com/shows/435/smallville,https://static.tvmaze.com/uploads/images/medium_portrait/79/199609.jpg
+63,Super Campeones 24/7,Captain Tsubasa,https://www.tvmaze.com/shows/4223/captain-tsubasa,https://static.tvmaze.com/uploads/images/medium_portrait/485/1213495.jpg
+64,Caballeros del Zodiaco 24/7,Saint Seiya,https://www.tvmaze.com/shows/4517/saint-seiya,https://static.tvmaze.com/uploads/images/medium_portrait/20/52044.jpg
+65,Las Chicas Super Poderosas 24/7,The Powerpuff Girls,https://www.tvmaze.com/shows/1955/the-powerpuff-girls,https://static.tvmaze.com/uploads/images/medium_portrait/11/27896.jpg
+66,Los 3 Chiflados 24/7,The Three Stooges,https://en.wikipedia.org/api/rest_v1/page/summary/The_Three_Stooges,https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a2/Three_Stooges_1937.jpg/330px-Three_Stooges_1937.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail
+67,El Gallo Claudio 24/7,Foghorn Leghorn,https://en.wikipedia.org/api/rest_v1/page/summary/Foghorn_Leghorn,https://upload.wikimedia.org/wikipedia/en/a/a0/Foghorn_Leghorn.png?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled
+68,The Big Bang Theory 24/7,The Big Bang Theory,https://www.tvmaze.com/shows/66/the-big-bang-theory,https://static.tvmaze.com/uploads/images/medium_portrait/173/433868.jpg
+69,Los Picapiedras 24/7,The Flintstones,https://www.tvmaze.com/shows/2143/the-flintstones,https://static.tvmaze.com/uploads/images/medium_portrait/11/29907.jpg
+70,Scooby Doo 24/7,"Scooby-Doo, Where Are You!",https://www.tvmaze.com/shows/53331/scooby-doo-where-are-you,https://static.tvmaze.com/uploads/images/medium_portrait/528/1320376.jpg
+71,Family Guy (Padre de Familia) 24/7,Family Guy,https://www.tvmaze.com/shows/84/family-guy,https://static.tvmaze.com/uploads/images/medium_portrait/609/1523259.jpg
+72,Caso Cerrado 24/7,Caso Cerrado: Edición Estelar,https://www.tvmaze.com/shows/8231/caso-cerrado-edicion-estelar,https://static.tvmaze.com/uploads/images/medium_portrait/29/74520.jpg
+73,Chespirito 24/7,Chespirito (programa de televisión),https://es.wikipedia.org/api/rest_v1/page/summary/Chespirito_%28programa_de_televisi%C3%B3n%29,https://thumb.wikimedia.org/wikipedia/commons/thumb/6/68/Logo_Chespirito.jpeg/330px-Logo_Chespirito.jpeg?utm_source=es.wikipedia.org&utm_campaign=api&utm_content=thumbnail
+74,One Punch Man 24/7,One-Punch Man,https://www.tvmaze.com/shows/4201/one-punch-man,https://static.tvmaze.com/uploads/images/medium_portrait/598/1496471.jpg
+75,Dinosuarios 24/7,Dinosaurs,https://www.tvmaze.com/shows/5987/dinosaurs,https://static.tvmaze.com/uploads/images/medium_portrait/402/1006153.jpg
+76,El Coyote y el Correcaminos 24/7,Wile E. Coyote and the Road Runner,https://en.wikipedia.org/api/rest_v1/page/summary/Wile_E._Coyote_and_the_Road_Runner,https://thumb.wikimedia.org/wikipedia/en/thumb/8/88/Tobeepornottobeep.jpg/330px-Tobeepornottobeep.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail
+77,Ranma 1/2 24/7,Ranma ½,https://www.tvmaze.com/shows/2072/ranma-12,https://static.tvmaze.com/uploads/images/medium_portrait/11/28765.jpg
+78,Elementary 24/7,Elementary,https://www.tvmaze.com/shows/133/elementary,https://static.tvmaze.com/uploads/images/medium_portrait/195/488201.jpg
+79,Coraje el Perro Cobarde 24/7,Courage the Cowardly Dog,https://www.tvmaze.com/shows/1956/courage-the-cowardly-dog,https://static.tvmaze.com/uploads/images/medium_portrait/609/1523655.jpg
+80,El Principe del Rap 24/7,The Fresh Prince of Bel-Air,https://www.tvmaze.com/shows/582/the-fresh-prince-of-bel-air,https://static.tvmaze.com/uploads/images/medium_portrait/4/11889.jpg
+81,Doraemon 24/7,Doraemon,https://www.tvmaze.com/shows/59118/doraemon,https://static.tvmaze.com/uploads/images/medium_portrait/403/1007659.jpg
+82,Sakura Card Captor 24/7,Cardcaptor Sakura,https://www.tvmaze.com/shows/7608/cardcaptor-sakura,https://static.tvmaze.com/uploads/images/medium_portrait/28/70118.jpg
+83,Patoaventuras 24/7,DuckTales,https://www.tvmaze.com/shows/4295/ducktales,https://static.tvmaze.com/uploads/images/medium_portrait/62/156739.jpg
+84,Yu-Gi-Oh! 24/7,Yu-Gi-Oh! Duel Monsters,https://www.tvmaze.com/shows/4099/yu-gi-oh-duel-monsters,https://static.tvmaze.com/uploads/images/medium_portrait/19/49898.jpg
+85,Nosotros Los Guapos 24/7,Nosotros los guapos,https://www.tvmaze.com/shows/29975/nosotros-los-guapos,https://static.tvmaze.com/uploads/images/medium_portrait/118/297254.jpg
+86,"Ed, Edd y Eddy 24/7","Ed, Edd n' Eddy",https://www.tvmaze.com/shows/6428/ed-edd-n-eddy,https://static.tvmaze.com/uploads/images/medium_portrait/24/61412.jpg
+87,Las Aventuras de Tom Sawyer 24/7,The Adventures of Tom Sawyer,https://www.tvmaze.com/shows/1762/the-adventures-of-tom-sawyer,https://static.tvmaze.com/uploads/images/medium_portrait/367/918178.jpg
+88,Los Pitufos 24/7,The Smurfs,https://www.tvmaze.com/shows/4583/the-smurfs,https://static.tvmaze.com/uploads/images/medium_portrait/20/52251.jpg
+89,Peppa Pig 24/7,Peppa Pig,https://www.tvmaze.com/shows/4972/peppa-pig,https://static.tvmaze.com/uploads/images/medium_portrait/569/1423757.jpg
+90,Mr.Bean 24/7,Mr. Bean,https://www.tvmaze.com/shows/1719/mr-bean,https://static.tvmaze.com/uploads/images/medium_portrait/45/113952.jpg
+91,La Casa de los Dibujos 24/7,Drawn Together,https://www.tvmaze.com/shows/1518/drawn-together,https://static.tvmaze.com/uploads/images/medium_portrait/8/21274.jpg
+92,Los Chicos del Barrio 24/7,Codename: Kids Next Door,https://www.tvmaze.com/shows/7302/codename-kids-next-door,https://static.tvmaze.com/uploads/images/medium_portrait/258/646993.jpg
+93,Hercules 24/7,Hercules: The Legendary Journeys,https://www.tvmaze.com/shows/905/hercules-the-legendary-journeys,https://static.tvmaze.com/uploads/images/medium_portrait/6/16007.jpg
+94,Los Pinguinos de Madagascar 24/7,The Penguins of Madagascar,https://www.tvmaze.com/shows/4037/the-penguins-of-madagascar,https://static.tvmaze.com/uploads/images/medium_portrait/19/49604.jpg
+95,Yogui 24/7,The Yogi Bear Show,https://www.tvmaze.com/shows/5755/the-yogi-bear-show,https://static.tvmaze.com/uploads/images/medium_portrait/22/57393.jpg
+96,Pinky y Cerebro 24/7,Pinky and the Brain,https://www.tvmaze.com/shows/5067/pinky-and-the-brain,https://static.tvmaze.com/uploads/images/medium_portrait/21/54340.jpg
+97,Duelo Xiaolin 24/7,Xiaolin Showdown,https://www.tvmaze.com/shows/5949/xiaolin-showdown,https://static.tvmaze.com/uploads/images/medium_portrait/23/58621.jpg
+98,TrollHunters 24/7,Trollhunters: Tales of Arcadia,https://www.tvmaze.com/shows/21892/trollhunters-tales-of-arcadia,https://static.tvmaze.com/uploads/images/medium_portrait/78/197449.jpg
+99,Animniacs 24/7,Animaniacs,https://www.tvmaze.com/shows/6806/animaniacs,https://static.tvmaze.com/uploads/images/medium_portrait/25/64454.jpg
+100,Doug 24/7,Doug,https://www.tvmaze.com/shows/6308/doug,https://static.tvmaze.com/uploads/images/medium_portrait/24/60457.jpg
+101,Garfield 24/7,Garfield and Friends,https://www.tvmaze.com/shows/6452/garfield-and-friends,https://static.tvmaze.com/uploads/images/medium_portrait/24/61750.jpg
+102,Johnny Bravo 24/7,Johnny Bravo,https://www.tvmaze.com/shows/3932/johnny-bravo,https://static.tvmaze.com/uploads/images/medium_portrait/19/48986.jpg
+103,El Pato Darkwing 24/7,Darkwing Duck,https://www.tvmaze.com/shows/5309/darkwing-duck,https://static.tvmaze.com/uploads/images/medium_portrait/22/55234.jpg
+104,Samurai X 24/7,Rurouni Kenshin: Meiji Kenkaku Romantan,https://www.tvmaze.com/shows/1906/rurouni-kenshin-meiji-kenkaku-romantan,https://static.tvmaze.com/uploads/images/medium_portrait/11/27683.jpg
+105,Ragrats 24/7,Rugrats,https://www.tvmaze.com/shows/421/rugrats,https://static.tvmaze.com/uploads/images/medium_portrait/402/1007439.jpg
+106,Malcolm 24/7,Malcolm in the Middle,https://www.tvmaze.com/shows/568/malcolm-in-the-middle,https://static.tvmaze.com/uploads/images/medium_portrait/549/1373492.jpg
+107,Rugrats Crecidos 24/7,All Grown Up!,https://www.tvmaze.com/shows/12510/all-grown-up,https://static.tvmaze.com/uploads/images/medium_portrait/494/1235112.jpg
+108,Calabozos y Dragones 24/7,Dungeons & Dragons,https://www.tvmaze.com/shows/1129/dungeons-dragons,https://static.tvmaze.com/uploads/images/medium_portrait/152/380755.jpg
+109,BayBlade 24/7,Beyblade,https://www.tvmaze.com/shows/4072/beyblade,https://static.tvmaze.com/uploads/images/medium_portrait/253/634524.jpg
+110,El Pajaro Loco 24/7,The Woody Woodpecker Show,https://www.tvmaze.com/shows/6882/the-woody-woodpecker-show,https://static.tvmaze.com/uploads/images/medium_portrait/25/64879.jpg
+111,Cantiflas 24/7,Cantinflas,https://en.wikipedia.org/api/rest_v1/page/summary/Cantinflas,https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a0/Cantinflas_en_1967_%28cropped%29.webp/330px-Cantinflas_en_1967_%28cropped%29.webp?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail
+112,Breaking Bad 24/7,Breaking Bad,https://www.tvmaze.com/shows/169/breaking-bad,https://static.tvmaze.com/uploads/images/medium_portrait/501/1253519.jpg
+113,Los Vengadores Unidos 24/7,Marvel's Avengers Assemble,https://www.tvmaze.com/shows/2540/marvels-avengers-assemble,https://static.tvmaze.com/uploads/images/medium_portrait/399/998602.jpg
+114,Max Steel 24/7,Max Steel,https://www.tvmaze.com/shows/19133/max-steel,https://static.tvmaze.com/uploads/images/medium_portrait/585/1464459.jpg
+115,Le temes a la oscuridad 24/7,Are You Afraid of the Dark?,https://www.tvmaze.com/shows/1805/are-you-afraid-of-the-dark,https://static.tvmaze.com/uploads/images/medium_portrait/494/1235411.jpg
+116,Neon Genesis Evangelion 24/7,Neon Genesis Evangelion,https://www.tvmaze.com/shows/1925/neon-genesis-evangelion,https://static.tvmaze.com/uploads/images/medium_portrait/11/27792.jpg
+117,Spider-Man 24/7,Spider-Man,https://www.tvmaze.com/shows/1611/spider-man,https://static.tvmaze.com/uploads/images/medium_portrait/8/21945.jpg
+118,Futurama 24/7,Futurama,https://www.tvmaze.com/shows/538/futurama,https://static.tvmaze.com/uploads/images/medium_portrait/633/1584696.jpg
+119,La Vaca y el Pollito 24/7,Cow and Chicken,https://www.tvmaze.com/shows/12813/cow-and-chicken,https://static.tvmaze.com/uploads/images/medium_portrait/43/109704.jpg
+120,Iron Man 24/7,Iron Man,https://www.tvmaze.com/shows/4243/iron-man,https://static.tvmaze.com/uploads/images/medium_portrait/20/50854.jpg
+121,Patrulla Canina 24/7,Paw Patrol,https://www.tvmaze.com/shows/894/paw-patrol,https://static.tvmaze.com/uploads/images/medium_portrait/6/15988.jpg
+122,La Familia Monster 24/7,The Munsters,https://www.tvmaze.com/shows/3884/the-munsters,https://static.tvmaze.com/uploads/images/medium_portrait/19/48683.jpg
+123,Gres Anatomy 24/7,Grey's Anatomy,https://www.tvmaze.com/shows/67/greys-anatomy,https://static.tvmaze.com/uploads/images/medium_portrait/644/1611931.jpg
+124,Los Años Maravillosos 24/7,The Wonder Years,https://www.tvmaze.com/shows/1294/the-wonder-years,https://static.tvmaze.com/uploads/images/medium_portrait/62/155340.jpg
+125,El Conde  Patula 24/7,Count Duckula,https://www.tvmaze.com/shows/9486/count-duckula,https://static.tvmaze.com/uploads/images/medium_portrait/33/83062.jpg
+126,Mazinger Z 24/7,Mazinger Z,https://www.tvmaze.com/shows/19577/mazinger-z,https://static.tvmaze.com/uploads/images/medium_portrait/69/172587.jpg
+127,Fear The Walking Dead 24/7,Fear the Walking Dead,https://www.tvmaze.com/shows/1824/fear-the-walking-dead,https://static.tvmaze.com/uploads/images/medium_portrait/479/1198360.jpg
+128,Dr. House 24/7,House,https://www.tvmaze.com/shows/118/house,https://static.tvmaze.com/uploads/images/medium_portrait/357/894990.jpg
+129,South Park 24/7,South Park,https://www.tvmaze.com/shows/112/south-park,https://static.tvmaze.com/uploads/images/medium_portrait/641/1604427.jpg
+130,Celebrity Deathmatch (EN) 24/7,Celebrity Deathmatch,https://www.tvmaze.com/shows/8362/celebrity-deathmatch,https://static.tvmaze.com/uploads/images/medium_portrait/30/75006.jpg
+131,La Hora Pico 24/7,La hora pico,https://www.tvmaze.com/shows/94051/la-hora-pico,https://static.tvmaze.com/uploads/images/medium_portrait/640/1600161.jpg
+132,Sailor Moon 24/7,Bishoujo Senshi Sailor Moon,https://www.tvmaze.com/shows/5476/bishoujo-senshi-sailor-moon,https://static.tvmaze.com/uploads/images/medium_portrait/291/728726.jpg
+133,Supernatural 24/7,Supernatural,https://www.tvmaze.com/shows/19/supernatural,https://static.tvmaze.com/uploads/images/medium_portrait/445/1114097.jpg
+134,Happy Tree Friends 24/7,Happy Tree Friends,https://www.tvmaze.com/shows/2555/happy-tree-friends,https://static.tvmaze.com/uploads/images/medium_portrait/13/34300.jpg

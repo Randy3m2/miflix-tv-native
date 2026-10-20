@@ -296,7 +296,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                             }
                         }
                     }
-                    Text(if(group?.provider==CustomChannelsRP45.provider) tr("OK · Reproducir    Mantén OK · Opciones","OK · Play    Hold OK · Options") else if(group?.provider=="sports" || group?.provider==NuvioTestConfigRP49.PROVIDER) tr("OK / Mantén OK · Enlaces    Atrás · Cerrar","OK / Hold OK · Links    Back · Close") else tr("Mantén OK · ♥ Favorito    Atrás · Cerrar","Hold OK · ♥ Favorite    Back · Close"),color=Muted,fontSize=10.sp)
+                    Text(tr("OK · Reproducir   0.75–1.75 s · ♥ Favorito   ≥1.75 s · Opciones", "OK · Play   0.75–1.75 s · ♥ Favorite   ≥1.75 s · Options"),color=Muted,fontSize=10.sp)
                 }
             }
         }
@@ -340,7 +340,7 @@ private fun BrowserChannelRowRP34(channel:LiveChannel,number:Int,favorite:Boolea
     var focused by remember(channel.id) {mutableStateOf(false)}
     Row(modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(if(focused) Color(0xFF292929) else Color.Transparent)
         .border(if(focused) 1.dp else 0.dp,if(focused) Color.White else Color.Transparent,RoundedCornerShape(8.dp))
-        .onFocusChanged {focused=it.isFocused}.focusable().tvChannelTimedClickRP54(click,favoriteHold,optionsHold).padding(horizontal=10.dp,vertical=9.dp),
+        .onFocusChanged {focused=it.isFocused}.tvChannelTimedClickRP54(click,favoriteHold,optionsHold).focusable().padding(horizontal=10.dp,vertical=9.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
         Box(Modifier.size(40.dp),contentAlignment=Alignment.Center) {
             if(channel.poster!=null) AsyncImage(channel.poster,null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)

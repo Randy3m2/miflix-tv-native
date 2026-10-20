@@ -153,6 +153,9 @@ private fun lidomMoveDate(value:String,days:Int):String {
 @Composable
 internal fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTeam,close:()->Unit,settings:()->Unit,onSplitSelect:((PlayerRequest)->Unit)?=null) {
     var splitMode by remember {mutableStateOf(false)}
+    var showYoutubeQRRP61 by remember(team.id) {mutableStateOf(false)}
+    var sourceRevisionRP61 by remember(team.id) {mutableIntStateOf(0)}
+    val savedSourcesRP61=remember(team.id,repo,sourceRevisionRP61) {repo.sources(team.id)}
     val scope=rememberCoroutineScope();var busy by remember {mutableStateOf(false)};var error by remember {mutableStateOf("")}
     var selected by remember {mutableStateOf<LidomSource?>(null)};var candidates by remember {mutableStateOf<List<com.miflix.native2.model.StreamChoice>>(emptyList())}
     var youtube by remember {mutableStateOf<LidomSource?>(null)}
@@ -171,13 +174,21 @@ internal fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTea
         if(onSplitSelect==null) item {
             FocusButton(if(splitMode) tr("SplitScreen activado · elige una fuente","SplitScreen on · choose a source") else tr("Abrir en SplitScreen","Open in SplitScreen"),primary=splitMode) {splitMode=!splitMode}
         }
-        val sources=repo.sources(team.id)
+        item {
+            FocusButton(tr("+ Fuente por QR","+ Source by QR"),modifier=Modifier.fillMaxWidth()) {showYoutubeQRRP61=true}
+        }
+        val sources=savedSourcesRP61
         if(sources.isEmpty()) item {Text(tr("No hay fuentes. Agrega una en configuración.","No sources. Add one in settings."),color=Muted)}
         items(sources,key={it.id}) {source ->
             FocusButton(source.name+(if(repo.last(team.id)==source.id) " · ✓ "+tr("Última funcional","Last working") else ""),modifier=Modifier.fillMaxWidth(),) {
                 if(!busy) {
                     error="";candidates=emptyList();selected=source
-                    if(source.kind=="YOUTUBE") youtube=source
+                    if(source.kind=="YOUTUBE") {
+                        val id=LidomRepository.youtubeId(source.url)
+                        if(id==null) youtube=source
+                        else if(onSplitSelect!=null || splitMode) play(source,com.miflix.native2.model.StreamChoice("YouTube","https://www.youtube.com/watch?v=$id",source.name,addonName="LIDOM"))
+                        else video=LidomYoutubeSelection(team.id,source.id,id)
+                    }
                     else scope.launch {busy=true;try {
                         candidates=repo.resolve(source,state.calendarLiveManifest("nauta"))
                         if(candidates.isEmpty()) error=tr("No se encontró una señal compatible en tus canales. Agrega una URL autorizada en configuración o elige otra fuente.","No compatible signal found in your channels. Add an authorized URL in settings or try another source.")
@@ -191,6 +202,7 @@ internal fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTea
         items(candidates.indices.toList(),key={"choice:$it"}) {index -> val stream=candidates[index];FocusButton("▶ ${index+1} · "+stream.name+" · "+stream.title,modifier=Modifier.fillMaxWidth()) {selected?.let {play(it,stream)}}}
         item {FocusButton(tr("Agregar / editar fuentes","Add / edit sources"),modifier=Modifier.fillMaxWidth(),onClick=settings)}
     }
+    if(showYoutubeQRRP61) LidomYoutubeQRSheetRP61(state,repo,team,{sourceRevisionRP61++}) {showYoutubeQRRP61=false}
     youtube?.let {source -> LidomYoutubeChooser(repo,source,onPlay={id ->
         youtube=null
         if(onSplitSelect!=null || splitMode) play(source,com.miflix.native2.model.StreamChoice("YouTube","https://www.youtube.com/watch?v=$id",source.name,addonName="LIDOM"))

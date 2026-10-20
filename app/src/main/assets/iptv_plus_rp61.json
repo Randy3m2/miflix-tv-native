@@ -1,0 +1,6043 @@
+[
+  {
+    "number": 1,
+    "name": "ENT Channel",
+    "url": "https://cdn.40mediagroup.com/live/c7eds/ENT_Channel/SA_LIVE_hls_enc/tracks-v1a1/mono.ts.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 2,
+    "name": "ENT Movies",
+    "url": "https://cdn.40mediagroup.com/live/c7eds/ENT_Movies/SA_LIVE_hls_enc/master.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 3,
+    "name": "ENT Drama",
+    "url": "https://cdn.40mediagroup.com/live/c7eds/ENT_Drama/SA_LIVE_hls_enc/master.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 4,
+    "name": "ENT Classics",
+    "url": "https://cdn.40mediagroup.com/live/c7eds/ENT_Classics/SA_LIVE_hls_enc/master.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 5,
+    "name": "ENT Life",
+    "url": "https://cdn.40mediagroup.com/live/c7eds/ENT_Life/SA_LIVE_hls_enc/master.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 6,
+    "name": "ENT Extreme",
+    "url": "https://cdn.40mediagroup.com/live/c7eds/Totalmusic_Concerts/SA_LIVE_hls_enc/master.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 7,
+    "name": "ENT Comedy",
+    "url": "https://cdn.40mediagroup.com/live/c7eds/Totalmusic_Dance/SA_LIVE_hls_enc/master.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 8,
+    "name": "ENT Family",
+    "url": "https://cdn.40mediagroup.com/live/c7eds/ENT_Family/SA_LIVE_hls_enc/tracks-v1a1/mono.ts.m3u8",
+    "category": "Infantiles",
+    "logo": ""
+  },
+  {
+    "number": 9,
+    "name": "AMC HD",
+    "url": "http://45.185.11.126:8000/play/a06s/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 10,
+    "name": "AXN HD",
+    "url": "http://45.185.11.126:8000/play/a0ao/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 11,
+    "name": "Adult Swim HD",
+    "url": "http://45.185.11.126:8000/play/a06m/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 12,
+    "name": "Animal Planet HD",
+    "url": "http://45.185.11.126:8000/play/a09k/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/animal-planet-ar.png"
+  },
+  {
+    "number": 13,
+    "name": "BIS HD",
+    "url": "http://45.185.11.126:8000/play/a07w/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 14,
+    "name": "BM&C HD",
+    "url": "http://45.185.11.126:8000/play/a06i/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 15,
+    "name": "Band News HD",
+    "url": "http://45.185.11.126:8000/play/a076/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 16,
+    "name": "Band Sports HD",
+    "url": "http://45.185.11.126:8000/play/a05o/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 17,
+    "name": "CNN International HD",
+    "url": "http://45.185.11.126:8000/play/a0ap/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 18,
+    "name": "Canal Brasil HD",
+    "url": "http://45.185.11.126:8000/play/a06x/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 19,
+    "name": "Canal Sony HD",
+    "url": "http://45.185.11.126:8000/play/a0an/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 20,
+    "name": "Canal UOL HD",
+    "url": "http://45.185.11.126:8000/play/a0a4/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 21,
+    "name": "Canção Nova HD",
+    "url": "http://45.185.11.126:8000/play/a0bq/index.m3u8",
+    "category": "Religión",
+    "logo": ""
+  },
+  {
+    "number": 22,
+    "name": "Cartoon Network HD",
+    "url": "http://45.185.11.126:8000/play/a087/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/cartoon-network-ar.png"
+  },
+  {
+    "number": 23,
+    "name": "Cartoonito HD",
+    "url": "http://45.185.11.126:8000/play/a0ae/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/cartoonito-lam.png"
+  },
+  {
+    "number": 24,
+    "name": "Cinemax HD",
+    "url": "http://45.185.11.126:8000/play/a081/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 25,
+    "name": "Claro TV+ 4K",
+    "url": "http://45.185.11.126:8000/play/a06f/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 26,
+    "name": "Combate HD",
+    "url": "http://45.185.11.126:8000/play/a073/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 27,
+    "name": "DUMDUM HD",
+    "url": "http://45.185.11.126:8000/play/a078/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 28,
+    "name": "Disc. Home & Health HD",
+    "url": "http://45.185.11.126:8000/play/a07y/index.m3u8",
+    "category": "General",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-home-and-health-ar.png"
+  },
+  {
+    "number": 29,
+    "name": "Discovery Channel HD",
+    "url": "http://45.185.11.126:8000/play/a0ac/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-channel-ar.png"
+  },
+  {
+    "number": 30,
+    "name": "Discovery Kids HD",
+    "url": "http://45.185.11.126:8000/play/a0ad/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-kids-ar.png"
+  },
+  {
+    "number": 31,
+    "name": "Discovery Science HD",
+    "url": "http://45.185.11.126:8000/play/a077/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 32,
+    "name": "Discovery Theater HD",
+    "url": "http://45.185.11.126:8000/play/a085/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-theater-hd-ar.png"
+  },
+  {
+    "number": 33,
+    "name": "Discovery Turbo HD",
+    "url": "http://45.185.11.126:8000/play/a07z/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-turbo-ar.png"
+  },
+  {
+    "number": 34,
+    "name": "Discovery World HD",
+    "url": "http://45.185.11.126:8000/play/a086/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-world-hd-ar.png"
+  },
+  {
+    "number": 35,
+    "name": "ESPN 4 HD",
+    "url": "http://45.185.11.126:8000/play/a05m/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-4-lam.png"
+  },
+  {
+    "number": 36,
+    "name": "ESPN 5 HD",
+    "url": "http://45.185.11.126:8000/play/a05n/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-5-lam.png"
+  },
+  {
+    "number": 37,
+    "name": "ESPN 6 HD",
+    "url": "http://45.185.11.126:8000/play/a084/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-6-lam.png"
+  },
+  {
+    "number": 38,
+    "name": "Food Network HD",
+    "url": "http://45.185.11.126:8000/play/a06j/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 39,
+    "name": "GE TV HD",
+    "url": "http://45.185.11.126:8000/play/a08v/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 40,
+    "name": "GNT HD",
+    "url": "http://45.185.11.126:8000/play/a079/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 41,
+    "name": "GloboNews HD",
+    "url": "http://45.185.11.126:8000/play/a08d/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 42,
+    "name": "Globoplay Novelas HD",
+    "url": "http://45.185.11.126:8000/play/a06w/index.m3u8",
+    "category": "Novelas",
+    "logo": ""
+  },
+  {
+    "number": 43,
+    "name": "Gloob HD",
+    "url": "http://45.185.11.126:8000/play/a07v/index.m3u8",
+    "category": "Infantiles",
+    "logo": ""
+  },
+  {
+    "number": 44,
+    "name": "Gloobinho HD",
+    "url": "http://45.185.11.126:8000/play/a071/index.m3u8",
+    "category": "Infantiles",
+    "logo": ""
+  },
+  {
+    "number": 45,
+    "name": "HBO Family HD",
+    "url": "http://45.185.11.126:8000/play/a08q/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 46,
+    "name": "HBO HD",
+    "url": "http://45.185.11.126:8000/play/a08n/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 47,
+    "name": "HBO MUNDI HD",
+    "url": "http://45.185.11.126:8000/play/a082/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 48,
+    "name": "HBO POP HD",
+    "url": "http://45.185.11.126:8000/play/a08s/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 49,
+    "name": "HBO Signature HD",
+    "url": "http://45.185.11.126:8000/play/a08r/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 50,
+    "name": "HBO XTREME HD",
+    "url": "http://45.185.11.126:8000/play/a083/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 51,
+    "name": "HBO+ HD",
+    "url": "http://45.185.11.126:8000/play/a08p/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 52,
+    "name": "HBO2 HD",
+    "url": "http://45.185.11.126:8000/play/a08o/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 53,
+    "name": "HGTV HD",
+    "url": "http://45.185.11.126:8000/play/a074/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 54,
+    "name": "History HD",
+    "url": "http://45.185.11.126:8000/play/a0al/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/history-channel-ar.png"
+  },
+  {
+    "number": 55,
+    "name": "ID HD",
+    "url": "http://45.185.11.126:8000/play/a089/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 56,
+    "name": "JP News HD",
+    "url": "http://45.185.11.126:8000/play/a0a1/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 57,
+    "name": "Lifetime HD",
+    "url": "http://45.185.11.126:8000/play/a06l/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 58,
+    "name": "Megapix HD",
+    "url": "http://45.185.11.126:8000/play/a057/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 59,
+    "name": "Modo Viagem HD",
+    "url": "http://45.185.11.126:8000/play/a07u/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 60,
+    "name": "Multishow HD",
+    "url": "http://45.185.11.126:8000/play/a07a/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 61,
+    "name": "OFF HD",
+    "url": "http://45.185.11.126:8000/play/a07t/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 62,
+    "name": "Paramount+ 4",
+    "url": "http://45.185.11.126:8000/play/a0aq/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 63,
+    "name": "Playboy TV HD",
+    "url": "http://45.185.11.126:8000/play/a09n/index.m3u8",
+    "category": "Adultos",
+    "logo": ""
+  },
+  {
+    "number": 64,
+    "name": "Premiere 2 HD",
+    "url": "http://45.185.11.126:8000/play/a06h/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 65,
+    "name": "Premiere 3 HD",
+    "url": "http://45.185.11.126:8000/play/a0av/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 66,
+    "name": "Premiere 4 HD",
+    "url": "http://45.185.11.126:8000/play/a07b/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 67,
+    "name": "Premiere 5 HD",
+    "url": "http://45.185.11.126:8000/play/a07c/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 68,
+    "name": "Premiere 6 HD",
+    "url": "http://45.185.11.126:8000/play/a05j/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 69,
+    "name": "Premiere 7 HD",
+    "url": "http://45.185.11.126:8000/play/a05k/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 70,
+    "name": "Premiere 8 HD",
+    "url": "http://45.185.11.126:8000/play/a05l/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 71,
+    "name": "Premiere Clubes HD",
+    "url": "http://45.185.11.126:8000/play/a06g/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 72,
+    "name": "Record News HD",
+    "url": "http://45.185.11.126:8000/play/a0a2/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 73,
+    "name": "SBT News HD",
+    "url": "http://45.185.11.126:8000/play/a0a7/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 74,
+    "name": "Sexy Hot HD",
+    "url": "http://45.185.11.126:8000/play/a09o/index.m3u8",
+    "category": "Adultos",
+    "logo": ""
+  },
+  {
+    "number": 75,
+    "name": "Space HD",
+    "url": "http://45.185.11.126:8000/play/a08b/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 76,
+    "name": "Studio Universal HD",
+    "url": "http://45.185.11.126:8000/play/a06o/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 77,
+    "name": "TIMES | EXCLUSIVO CNBC",
+    "url": "http://45.185.11.126:8000/play/a0a5/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 78,
+    "name": "TLC HD",
+    "url": "http://45.185.11.126:8000/play/a0aa/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 79,
+    "name": "TNT Novelas HD",
+    "url": "http://45.185.11.126:8000/play/a088/index.m3u8",
+    "category": "Novelas",
+    "logo": ""
+  },
+  {
+    "number": 80,
+    "name": "TNT Series HD",
+    "url": "http://45.185.11.126:8000/play/a08a/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 81,
+    "name": "TV Aparecida HD",
+    "url": "http://45.185.11.126:8000/play/a0bs/index.m3u8",
+    "category": "Religión",
+    "logo": ""
+  },
+  {
+    "number": 82,
+    "name": "TV Rá Tim Bum HD",
+    "url": "http://45.185.11.126:8000/play/a080/index.m3u8",
+    "category": "Infantiles",
+    "logo": ""
+  },
+  {
+    "number": 83,
+    "name": "Telecine Action HD",
+    "url": "http://45.185.11.126:8000/play/a058/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 84,
+    "name": "Telecine Cult HD",
+    "url": "http://45.185.11.126:8000/play/a05a/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 85,
+    "name": "Telecine Fun HD",
+    "url": "http://45.185.11.126:8000/play/a059/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 86,
+    "name": "Telecine Pipoca HD",
+    "url": "http://45.185.11.126:8000/play/a08g/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 87,
+    "name": "Telecine Premium HD",
+    "url": "http://45.185.11.126:8000/play/a08e/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 88,
+    "name": "Telecine Touch HD",
+    "url": "http://45.185.11.126:8000/play/a08f/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 89,
+    "name": "Trace Brasil HD",
+    "url": "http://45.185.11.126:8000/play/a08l/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 90,
+    "name": "Travel Food & Drinks HD",
+    "url": "http://45.185.11.126:8000/play/a07x/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 91,
+    "name": "USA HD",
+    "url": "http://45.185.11.126:8000/play/a06k/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 92,
+    "name": "Universal Premiere HD",
+    "url": "http://45.185.11.126:8000/play/a08m/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 93,
+    "name": "Universal Reality HD Opción 1",
+    "url": "http://45.185.11.126:8000/play/a08c/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 94,
+    "name": "Universal TV HD",
+    "url": "http://45.185.11.126:8000/play/a0af/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 95,
+    "name": "Warner Channel HD",
+    "url": "http://45.185.11.126:8000/play/a0am/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 96,
+    "name": "Woohoo HD",
+    "url": "http://45.185.11.126:8000/play/a075/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 97,
+    "name": "sportv HD",
+    "url": "http://45.185.11.126:8000/play/a05g/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 98,
+    "name": "sportv2 HD",
+    "url": "http://45.185.11.126:8000/play/a05f/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 99,
+    "name": "sportv3 HD",
+    "url": "http://45.185.11.126:8000/play/a06v/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 100,
+    "name": "Canal 4 Posadas | AR",
+    "url": "http://190.128.214.97:64333/play/a06l/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 101,
+    "name": "Corrientes TV | AR",
+    "url": "http://190.128.214.97:64333/play/a06n/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 102,
+    "name": "Dismar TV | PY",
+    "url": "http://190.128.214.97:64333/play/a06p/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 103,
+    "name": "Music Top | AR",
+    "url": "http://190.128.214.97:64333/play/a06o/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 104,
+    "name": "Tv Aire Paraguay | PY",
+    "url": "http://190.128.214.97:64333/play/a05y/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 105,
+    "name": "2ENC1 - CINECANAL",
+    "url": "http://190.128.214.97:64333/play/a03e/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 106,
+    "name": "2ENC2 - SPACE HD",
+    "url": "http://190.128.214.97:64333/play/a03f/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 107,
+    "name": "2ENC3 - FX",
+    "url": "http://190.128.214.97:64333/play/a03h/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 108,
+    "name": "2ENC4 - STAR CHANNEL",
+    "url": "http://190.128.214.97:64333/play/a03g/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 109,
+    "name": "2ENC5 - LAS ESTRELLAS",
+    "url": "http://190.128.214.97:64333/play/a038/index.m3u8",
+    "category": "General",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/mexico/las-estrellas-mx.png"
+  },
+  {
+    "number": 110,
+    "name": "5TV Corrientes",
+    "url": "http://190.128.214.97:64333/play/a00f/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 111,
+    "name": "A24 PY",
+    "url": "http://190.128.214.97:64333/play/a04e/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 112,
+    "name": "AGR",
+    "url": "http://190.128.214.97:64333/play/a00l/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 113,
+    "name": "AMERICA PARAGUAY HD",
+    "url": "http://190.128.214.97:64333/play/a04d/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 114,
+    "name": "AXN Latin America - p",
+    "url": "http://190.128.214.97:64333/play/a071/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 115,
+    "name": "BRASIL - TVE | BR",
+    "url": "http://190.128.214.97:64333/play/a06i/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 116,
+    "name": "BRUNO MASSI TV",
+    "url": "http://190.128.214.97:64333/play/a00o/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 117,
+    "name": "C9N HD",
+    "url": "http://190.128.214.97:64333/play/a003/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 118,
+    "name": "CANAL PRO",
+    "url": "http://190.128.214.97:64333/play/a00u/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 119,
+    "name": "COSMOS HD SRT",
+    "url": "http://190.128.214.97:64333/play/a05b/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 120,
+    "name": "Cnn Esp",
+    "url": "http://190.128.214.97:64333/play/a03k/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 121,
+    "name": "E10 Cartoon Network",
+    "url": "http://190.128.214.97:64333/play/a01v/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/cartoon-network-ar.png"
+  },
+  {
+    "number": 122,
+    "name": "E16 HBO",
+    "url": "http://190.128.214.97:64333/play/a01e/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 123,
+    "name": "E20 Discovery kids",
+    "url": "http://190.128.214.97:64333/play/a01h/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-kids-ar.png"
+  },
+  {
+    "number": 124,
+    "name": "E24 TYC SPORT",
+    "url": "http://190.128.214.97:64333/play/a01l/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 125,
+    "name": "E3 NOTICIAS PARAGUAY HD PILAR",
+    "url": "http://190.128.214.97:64333/play/a01o/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 126,
+    "name": "E4 ESPN CO",
+    "url": "http://190.128.214.97:64333/play/a01p/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-lam.png"
+  },
+  {
+    "number": 127,
+    "name": "E40 TV HD",
+    "url": "http://190.128.214.97:64333/play/a04z/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 128,
+    "name": "EDUCANAL HD",
+    "url": "http://190.128.214.97:64333/play/a011/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 129,
+    "name": "ENC1. DISNEY CHANNEL",
+    "url": "http://190.128.214.97:64333/play/a02g/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/disney-channel-ar.png"
+  },
+  {
+    "number": 130,
+    "name": "ENC2 - ESPN 2 CO.",
+    "url": "http://190.128.214.97:64333/play/a02h/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 131,
+    "name": "ENC3 - ESPN PREMIUM",
+    "url": "http://190.128.214.97:64333/play/a02i/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-premium-lam.png"
+  },
+  {
+    "number": 132,
+    "name": "ENC4 - FOX SPORTS",
+    "url": "http://190.128.214.97:64333/play/a02l/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/fox-sports-lam.png"
+  },
+  {
+    "number": 133,
+    "name": "ENC5 - ESPN 7",
+    "url": "http://190.128.214.97:64333/play/a039/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-7-lam.png"
+  },
+  {
+    "number": 134,
+    "name": "ENC6 - DISCOVERY CHANNEL",
+    "url": "http://190.128.214.97:64333/play/a03a/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-channel-ar.png"
+  },
+  {
+    "number": 135,
+    "name": "ENC7 - TNT SPORT HD",
+    "url": "http://190.128.214.97:64333/play/a03c/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 136,
+    "name": "ENC8 - TNT HD",
+    "url": "http://190.128.214.97:64333/play/a03d/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 137,
+    "name": "ESPN 2 Opción 1",
+    "url": "http://190.128.214.97:64333/play/a03b/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-2-lam.png"
+  },
+  {
+    "number": 138,
+    "name": "GEN",
+    "url": "http://190.128.214.97:64333/play/a001/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 139,
+    "name": "H1E2 ANIMAL PLANET",
+    "url": "http://190.128.214.97:64333/play/a01n/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/animal-planet-ar.png"
+  },
+  {
+    "number": 140,
+    "name": "H3E1 - NATIONAL GEOGRAPHIC",
+    "url": "http://190.128.214.97:64333/play/a01u/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/national-geographic-ar.png"
+  },
+  {
+    "number": 141,
+    "name": "HBO2 HD Opción 1",
+    "url": "http://190.128.214.97:64333/play/a077/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 142,
+    "name": "HEI",
+    "url": "http://190.128.214.97:64333/play/a075/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 143,
+    "name": "L2E1 TELEMUNDO",
+    "url": "http://190.128.214.97:64333/play/a01f/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 144,
+    "name": "L3E1 ESPN 3",
+    "url": "http://190.128.214.97:64333/play/a01i/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-3-lam.png"
+  },
+  {
+    "number": 145,
+    "name": "L3E2 - ESPN 5",
+    "url": "http://190.128.214.97:64333/play/a01j/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-5-lam.png"
+  },
+  {
+    "number": 146,
+    "name": "LA TELE HD ASUNCION",
+    "url": "http://190.128.214.97:64333/play/a03i/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 147,
+    "name": "MEGA TV",
+    "url": "http://190.128.214.97:64333/play/a00t/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 148,
+    "name": "MEIO NORTE",
+    "url": "http://190.128.214.97:64333/play/a023/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 149,
+    "name": "MI TV",
+    "url": "http://190.128.214.97:64333/play/a02w/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 150,
+    "name": "Monumental Hd Asu",
+    "url": "http://190.128.214.97:64333/play/a046/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 151,
+    "name": "NANDE JARA NEE",
+    "url": "http://190.128.214.97:64333/play/a024/index.m3u8",
+    "category": "Religión",
+    "logo": ""
+  },
+  {
+    "number": 152,
+    "name": "NANDUTI HD",
+    "url": "http://190.128.214.97:64333/play/a02d/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 153,
+    "name": "NOTICIAS PARAGUAY HD ASU",
+    "url": "http://190.128.214.97:64333/play/a047/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 154,
+    "name": "PARAGUAY TV",
+    "url": "http://190.128.214.97:64333/play/a00c/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 155,
+    "name": "PARAGUAY TV Asuncion",
+    "url": "http://190.128.214.97:64333/play/a06y/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 156,
+    "name": "PARAVISION HD",
+    "url": "http://190.128.214.97:64333/play/a005/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 157,
+    "name": "PILAR TV HD",
+    "url": "http://190.128.214.97:64333/play/a021/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 158,
+    "name": "POPU TV",
+    "url": "http://190.128.214.97:64333/play/a030/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 159,
+    "name": "PRODUCTIVA TV",
+    "url": "http://190.128.214.97:64333/play/a04i/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 160,
+    "name": "RADIO NACIONAL ASU",
+    "url": "http://190.128.214.97:64333/play/a070/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 161,
+    "name": "RADIO SUR TV HD",
+    "url": "http://190.128.214.97:64333/play/a022/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 162,
+    "name": "RCC HD",
+    "url": "http://190.128.214.97:64333/play/a02e/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 163,
+    "name": "RCN+",
+    "url": "http://190.128.214.97:64333/play/a04v/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 164,
+    "name": "RED DIGITAL SAN PEDRO",
+    "url": "http://190.128.214.97:64333/play/a06c/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 165,
+    "name": "REGIONAL TV",
+    "url": "http://190.128.214.97:64333/play/a05o/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 166,
+    "name": "REPUBLICA FM TV",
+    "url": "http://190.128.214.97:64333/play/a05c/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 167,
+    "name": "RQP HD",
+    "url": "http://190.128.214.97:64333/play/a04j/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 168,
+    "name": "Rally tv",
+    "url": "http://190.128.214.97:64333/play/a05s/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 169,
+    "name": "SNT ASUNCION",
+    "url": "http://190.128.214.97:64333/play/a04f/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 170,
+    "name": "SNT SRT",
+    "url": "http://190.128.214.97:64333/play/a002/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 171,
+    "name": "SUR TV HD",
+    "url": "http://190.128.214.97:64333/play/a004/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 172,
+    "name": "Studio Universal Opción 1",
+    "url": "http://190.128.214.97:64333/play/a03j/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 173,
+    "name": "TELEFUTURO ASU HD",
+    "url": "http://190.128.214.97:64333/play/a074/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 174,
+    "name": "TELEFUTURO HD PILAR",
+    "url": "http://190.128.214.97:64333/play/a00e/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 175,
+    "name": "TRECE PY HD ASU",
+    "url": "http://190.128.214.97:64333/play/a049/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 176,
+    "name": "TRECE PY SRT",
+    "url": "http://190.128.214.97:64333/play/a04p/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 177,
+    "name": "TV CHAQUENHA",
+    "url": "http://190.128.214.97:64333/play/a04n/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 178,
+    "name": "UNICANAL HD ASU",
+    "url": "http://190.128.214.97:64333/play/a04a/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 179,
+    "name": "UNION TV",
+    "url": "http://190.128.214.97:64333/play/a02z/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 180,
+    "name": "URBANA TV HD",
+    "url": "http://190.128.214.97:64333/play/a04k/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 181,
+    "name": "VENUS RADIO TV",
+    "url": "http://190.128.214.97:64333/play/a02v/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 182,
+    "name": "VISION TV HD",
+    "url": "http://190.128.214.97:64333/play/a00n/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 183,
+    "name": "z - AN24",
+    "url": "http://190.128.214.97:64333/play/a03o/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 184,
+    "name": "z - DW en Español",
+    "url": "http://190.128.214.97:64333/play/a03l/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 185,
+    "name": "UNICANAL SRT",
+    "url": "http://190.128.214.97:64333/play/a04r/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 186,
+    "name": "13 C",
+    "url": "http://45.173.231.22:8000/play/a01r/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 187,
+    "name": "24 HORAS",
+    "url": "http://45.173.231.22:8000/play/a0ak/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 188,
+    "name": "A&E HD",
+    "url": "http://45.173.231.22:8000/play/a085/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 189,
+    "name": "A&E HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a02a/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 190,
+    "name": "AE Mundo",
+    "url": "http://45.173.231.22:8000/play/a090/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 191,
+    "name": "AMC HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a08f/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 192,
+    "name": "AMC HD Opción 2",
+    "url": "http://45.173.231.22:8000/play/a02f/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 193,
+    "name": "AMC Series",
+    "url": "http://45.173.231.22:8000/play/a0ct/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 194,
+    "name": "ATV",
+    "url": "http://45.173.231.22:8000/play/a09u/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 195,
+    "name": "ATV Opción 1",
+    "url": "http://45.173.231.22:8000/play/a04j/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 196,
+    "name": "AXN",
+    "url": "http://45.173.231.22:8000/play/a09j/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 197,
+    "name": "AXN Opción 1",
+    "url": "http://45.173.231.22:8000/play/a04w/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 198,
+    "name": "AXN HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a065/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 199,
+    "name": "Adult Swim Opción 1",
+    "url": "http://45.173.231.22:8000/play/a01o/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 200,
+    "name": "America TV",
+    "url": "http://45.173.231.22:8000/play/a04h/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 201,
+    "name": "America TV PY",
+    "url": "http://45.173.231.22:8000/play/a04o/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 202,
+    "name": "Animal Planet",
+    "url": "http://45.173.231.22:8000/play/a05f/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/animal-planet-ar.png"
+  },
+  {
+    "number": 203,
+    "name": "Animal Planet Opción 1",
+    "url": "http://45.173.231.22:8000/play/a08r/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/animal-planet-ar.png"
+  },
+  {
+    "number": 204,
+    "name": "Animal Planet HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a05w/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/animal-planet-ar.png"
+  },
+  {
+    "number": 205,
+    "name": "Antena 3",
+    "url": "http://45.173.231.22:8000/play/a09y/index.m3u8",
+    "category": "España",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/spain/antena-3-es.png"
+  },
+  {
+    "number": 206,
+    "name": "Atres Series",
+    "url": "http://45.173.231.22:8000/play/a08c/index.m3u8",
+    "category": "España",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/spain/atreseries-es.png"
+  },
+  {
+    "number": 207,
+    "name": "BETHEL TV",
+    "url": "http://45.173.231.22:8000/play/a05h/index.m3u8",
+    "category": "Religión",
+    "logo": ""
+  },
+  {
+    "number": 208,
+    "name": "Baby First",
+    "url": "http://45.173.231.22:8000/play/a0b8/index.m3u8",
+    "category": "Infantiles",
+    "logo": ""
+  },
+  {
+    "number": 209,
+    "name": "Baby TV",
+    "url": "http://45.173.231.22:8000/play/a014/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/baby-tv-ar.png"
+  },
+  {
+    "number": 210,
+    "name": "C9N",
+    "url": "http://45.173.231.22:8000/play/a00h/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 211,
+    "name": "CANAL 13 Opción 1",
+    "url": "http://45.173.231.22:8000/play/a0ac/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 212,
+    "name": "CHV",
+    "url": "http://45.173.231.22:8000/play/a0ab/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 213,
+    "name": "CHV HD",
+    "url": "http://45.173.231.22:8000/play/a06m/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 214,
+    "name": "CNN Chile",
+    "url": "http://45.173.231.22:8000/play/a0ay/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 215,
+    "name": "CNN Espanol",
+    "url": "http://45.173.231.22:8000/play/a0a7/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 216,
+    "name": "CNN Español",
+    "url": "http://45.173.231.22:8000/play/a016/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 217,
+    "name": "Canal 13 Opción 2",
+    "url": "http://45.173.231.22:8000/play/a08h/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 218,
+    "name": "Canal 13 HD",
+    "url": "http://45.173.231.22:8000/play/a083/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 219,
+    "name": "Canal 13 HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a027/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 220,
+    "name": "Canal 24 Horas",
+    "url": "http://45.173.231.22:8000/play/a06x/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 221,
+    "name": "Canal Caracol",
+    "url": "http://45.173.231.22:8000/play/a009/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 222,
+    "name": "Canal Claro",
+    "url": "http://45.173.231.22:8000/play/a04c/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 223,
+    "name": "Canal Institucional",
+    "url": "http://45.173.231.22:8000/play/a00d/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 224,
+    "name": "Canal Las Estrellas",
+    "url": "http://45.173.231.22:8000/play/a094/index.m3u8",
+    "category": "General",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/mexico/las-estrellas-mx.png"
+  },
+  {
+    "number": 225,
+    "name": "Canal RCN",
+    "url": "http://45.173.231.22:8000/play/a00a/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 226,
+    "name": "Canal Uno",
+    "url": "http://45.173.231.22:8000/play/a007/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 227,
+    "name": "Canal del Congreso",
+    "url": "http://45.173.231.22:8000/play/a00e/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 228,
+    "name": "Capital",
+    "url": "http://45.173.231.22:8000/play/a00p/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 229,
+    "name": "Cartoon Network Opción 1",
+    "url": "http://45.173.231.22:8000/play/a0b1/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/cartoon-network-ar.png"
+  },
+  {
+    "number": 230,
+    "name": "Cartoon Network HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a0ch/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/cartoon-network-ar.png"
+  },
+  {
+    "number": 231,
+    "name": "Cinecanal Opción 1",
+    "url": "http://45.173.231.22:8000/play/a0au/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 232,
+    "name": "Cinecanal Opción 2",
+    "url": "http://45.173.231.22:8000/play/a05i/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 233,
+    "name": "Cinecanal HD",
+    "url": "http://45.173.231.22:8000/play/a061/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 234,
+    "name": "Cinemax",
+    "url": "http://45.173.231.22:8000/play/a04u/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 235,
+    "name": "Cinemax Opción 1",
+    "url": "http://45.173.231.22:8000/play/a017/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 236,
+    "name": "City TV",
+    "url": "http://45.173.231.22:8000/play/a00o/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 237,
+    "name": "Claro Cinema",
+    "url": "http://45.173.231.22:8000/play/a055/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 238,
+    "name": "Claro Sports",
+    "url": "http://45.173.231.22:8000/play/a0b3/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 239,
+    "name": "Comedy Central HD",
+    "url": "http://45.173.231.22:8000/play/a086/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 240,
+    "name": "Comedy Central HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a02b/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 241,
+    "name": "DAYSTAR",
+    "url": "http://45.173.231.22:8000/play/a0cs/index.m3u8",
+    "category": "Religión",
+    "logo": ""
+  },
+  {
+    "number": 242,
+    "name": "DHE HD",
+    "url": "http://45.173.231.22:8000/play/a071/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 243,
+    "name": "DW Español",
+    "url": "http://45.173.231.22:8000/play/a0a5/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 244,
+    "name": "De Película",
+    "url": "http://45.173.231.22:8000/play/a07j/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 245,
+    "name": "Discovery Channel",
+    "url": "http://45.173.231.22:8000/play/a08q/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-channel-ar.png"
+  },
+  {
+    "number": 246,
+    "name": "Discovery Channel Opción 1",
+    "url": "http://45.173.231.22:8000/play/a0cl/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-channel-ar.png"
+  },
+  {
+    "number": 247,
+    "name": "Discovery Channel HD",
+    "url": "http://45.173.231.22:8000/play/a05x/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-channel-ar.png"
+  },
+  {
+    "number": 248,
+    "name": "Discovery H&H",
+    "url": "http://45.173.231.22:8000/play/a09k/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-home-and-health-ar.png"
+  },
+  {
+    "number": 249,
+    "name": "Discovery Kids",
+    "url": "http://45.173.231.22:8000/play/a0a6/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-kids-ar.png"
+  },
+  {
+    "number": 250,
+    "name": "Discovery Kids Opción 1",
+    "url": "http://45.173.231.22:8000/play/a0cm/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-kids-ar.png"
+  },
+  {
+    "number": 251,
+    "name": "Discovery Science",
+    "url": "http://45.173.231.22:8000/play/a01f/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 252,
+    "name": "Discovery Theater HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a06k/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-theater-hd-ar.png"
+  },
+  {
+    "number": 253,
+    "name": "Discovery Turbo",
+    "url": "http://45.173.231.22:8000/play/a01a/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-turbo-ar.png"
+  },
+  {
+    "number": 254,
+    "name": "Discovery Turbo Opción 1",
+    "url": "http://45.173.231.22:8000/play/a057/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-turbo-ar.png"
+  },
+  {
+    "number": 255,
+    "name": "Discovery World HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a08l/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-world-hd-ar.png"
+  },
+  {
+    "number": 256,
+    "name": "Discovery World HD Opción 2",
+    "url": "http://45.173.231.22:8000/play/a02h/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-world-hd-ar.png"
+  },
+  {
+    "number": 257,
+    "name": "Disney Channel Opción 1",
+    "url": "http://45.173.231.22:8000/play/a08p/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/disney-channel-ar.png"
+  },
+  {
+    "number": 258,
+    "name": "Disney Channel HD",
+    "url": "http://45.173.231.22:8000/play/a068/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/disney-channel-ar.png"
+  },
+  {
+    "number": 259,
+    "name": "Disney Jr",
+    "url": "http://45.173.231.22:8000/play/a0aj/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/disney-jr-ar.png"
+  },
+  {
+    "number": 260,
+    "name": "Disney Jr.",
+    "url": "http://45.173.231.22:8000/play/a019/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/disney-jr-ar.png"
+  },
+  {
+    "number": 261,
+    "name": "Distrito Comedia",
+    "url": "http://45.173.231.22:8000/play/a0d3/index.m3u8",
+    "category": "Series",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/distrito-comedia-lam.png"
+  },
+  {
+    "number": 262,
+    "name": "E Entertainment",
+    "url": "http://45.173.231.22:8000/play/a08t/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 263,
+    "name": "E! Entertainment TV",
+    "url": "http://45.173.231.22:8000/play/a01g/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 264,
+    "name": "ECDF SD",
+    "url": "http://45.173.231.22:8000/play/a00q/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 265,
+    "name": "ESPN",
+    "url": "http://45.173.231.22:8000/play/a08w/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-lam.png"
+  },
+  {
+    "number": 266,
+    "name": "ESPN Opción 1",
+    "url": "http://45.173.231.22:8000/play/a00i/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-lam.png"
+  },
+  {
+    "number": 267,
+    "name": "ESPN 2 Opción 2",
+    "url": "http://45.173.231.22:8000/play/a08v/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-2-lam.png"
+  },
+  {
+    "number": 268,
+    "name": "ESPN 2 Opción 3",
+    "url": "http://45.173.231.22:8000/play/a0cu/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-2-lam.png"
+  },
+  {
+    "number": 269,
+    "name": "ESPN 2 Opción 4",
+    "url": "http://45.173.231.22:8000/play/a0am/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-2-lam.png"
+  },
+  {
+    "number": 270,
+    "name": "ESPN 2 HD",
+    "url": "http://45.173.231.22:8000/play/a08a/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-2-lam.png"
+  },
+  {
+    "number": 271,
+    "name": "ESPN 2 HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a06p/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-2-lam.png"
+  },
+  {
+    "number": 272,
+    "name": "ESPN 3 Opción 1",
+    "url": "http://45.173.231.22:8000/play/a059/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-3-lam.png"
+  },
+  {
+    "number": 273,
+    "name": "ESPN 3 HD",
+    "url": "http://45.173.231.22:8000/play/a02k/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-3-lam.png"
+  },
+  {
+    "number": 274,
+    "name": "ESPN 3 HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a08n/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-3-lam.png"
+  },
+  {
+    "number": 275,
+    "name": "ESPN 4 HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a06a/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-4-lam.png"
+  },
+  {
+    "number": 276,
+    "name": "ESPN 5",
+    "url": "http://45.173.231.22:8000/play/a0a4/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-5-lam.png"
+  },
+  {
+    "number": 277,
+    "name": "ESPN 5 Opción 1",
+    "url": "http://45.173.231.22:8000/play/a04k/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-5-lam.png"
+  },
+  {
+    "number": 278,
+    "name": "ESPN 5 HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a08b/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-5-lam.png"
+  },
+  {
+    "number": 279,
+    "name": "ESPN 5 HD Opción 2",
+    "url": "http://45.173.231.22:8000/play/a02e/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-5-lam.png"
+  },
+  {
+    "number": 280,
+    "name": "ESPN 6",
+    "url": "http://45.173.231.22:8000/play/a096/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-6-lam.png"
+  },
+  {
+    "number": 281,
+    "name": "ESPN 6 HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a028/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-6-lam.png"
+  },
+  {
+    "number": 282,
+    "name": "ESPN 7",
+    "url": "http://45.173.231.22:8000/play/a0cn/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-7-lam.png"
+  },
+  {
+    "number": 283,
+    "name": "ESPN 7 Opción 1",
+    "url": "http://45.173.231.22:8000/play/a095/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-7-lam.png"
+  },
+  {
+    "number": 284,
+    "name": "ESPN 7 HD",
+    "url": "http://45.173.231.22:8000/play/a062/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-7-lam.png"
+  },
+  {
+    "number": 285,
+    "name": "ESPN HD",
+    "url": "http://45.173.231.22:8000/play/a06y/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-lam.png"
+  },
+  {
+    "number": 286,
+    "name": "ESPN Premium Opción 1",
+    "url": "http://45.173.231.22:8000/play/a0ae/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-premium-lam.png"
+  },
+  {
+    "number": 287,
+    "name": "ESPN Premium HD",
+    "url": "http://45.173.231.22:8000/play/a072/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-premium-lam.png"
+  },
+  {
+    "number": 288,
+    "name": "EWTN",
+    "url": "http://45.173.231.22:8000/play/a01l/index.m3u8",
+    "category": "Religión",
+    "logo": ""
+  },
+  {
+    "number": 289,
+    "name": "Ecuador TV",
+    "url": "http://45.173.231.22:8000/play/a00w/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 290,
+    "name": "Ecuador TV Opción 1",
+    "url": "http://45.173.231.22:8000/play/a04p/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 291,
+    "name": "Ecuavisa",
+    "url": "http://45.173.231.22:8000/play/a00u/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 292,
+    "name": "Ecuavisa Opción 1",
+    "url": "http://45.173.231.22:8000/play/a00b/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 293,
+    "name": "El Gourmet",
+    "url": "http://45.173.231.22:8000/play/a09r/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 294,
+    "name": "El Gourmet HD",
+    "url": "http://45.173.231.22:8000/play/a02c/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 295,
+    "name": "El Gourmet HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a087/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 296,
+    "name": "El Trece",
+    "url": "http://45.173.231.22:8000/play/a09x/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 297,
+    "name": "Enlace",
+    "url": "http://45.173.231.22:8000/play/a01n/index.m3u8",
+    "category": "Religión",
+    "logo": ""
+  },
+  {
+    "number": 298,
+    "name": "Enlace Opción 1",
+    "url": "http://45.173.231.22:8000/play/a0b6/index.m3u8",
+    "category": "Religión",
+    "logo": ""
+  },
+  {
+    "number": 299,
+    "name": "Esne",
+    "url": "http://45.173.231.22:8000/play/a058/index.m3u8",
+    "category": "Religión",
+    "logo": ""
+  },
+  {
+    "number": 300,
+    "name": "Europa Europa",
+    "url": "http://45.173.231.22:8000/play/a0d1/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 301,
+    "name": "FX",
+    "url": "http://45.173.231.22:8000/play/a09l/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 302,
+    "name": "FX Opción 1",
+    "url": "http://45.173.231.22:8000/play/a04y/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 303,
+    "name": "FX HD",
+    "url": "http://45.173.231.22:8000/play/a06b/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 304,
+    "name": "France 24",
+    "url": "http://45.173.231.22:8000/play/a0a3/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 305,
+    "name": "France 24 Opción 1",
+    "url": "http://45.173.231.22:8000/play/a04b/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 306,
+    "name": "GamaTV",
+    "url": "http://45.173.231.22:8000/play/a04q/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 307,
+    "name": "Gamavisión",
+    "url": "http://45.173.231.22:8000/play/a00x/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 308,
+    "name": "Global",
+    "url": "http://45.173.231.22:8000/play/a09w/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 309,
+    "name": "Golden",
+    "url": "http://45.173.231.22:8000/play/a0cz/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 310,
+    "name": "Golden Edge",
+    "url": "http://45.173.231.22:8000/play/a0cy/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 311,
+    "name": "Golden HD",
+    "url": "http://45.173.231.22:8000/play/a0cp/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 312,
+    "name": "Golf Channel",
+    "url": "http://45.173.231.22:8000/play/a0cv/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 313,
+    "name": "HBO 2 Opción 1",
+    "url": "http://45.173.231.22:8000/play/a0af/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 314,
+    "name": "HBO Family Opción 1",
+    "url": "http://45.173.231.22:8000/play/a0ai/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 315,
+    "name": "HBO Family HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a073/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 316,
+    "name": "HBO HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a08k/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 317,
+    "name": "HBO Mundi Opción 1",
+    "url": "http://45.173.231.22:8000/play/a0a1/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 318,
+    "name": "HBO POP HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a06q/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 319,
+    "name": "HBO Plus Opción 1",
+    "url": "http://45.173.231.22:8000/play/a0d2/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 320,
+    "name": "HBO Plus Opción 2",
+    "url": "http://45.173.231.22:8000/play/a0ag/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 321,
+    "name": "HBO Signature Opción 1",
+    "url": "http://45.173.231.22:8000/play/a0a0/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 322,
+    "name": "HBO Xtreme HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a074/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 323,
+    "name": "HBO Xtreme SD",
+    "url": "http://45.173.231.22:8000/play/a0ah/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 324,
+    "name": "HEI HD",
+    "url": "http://45.173.231.22:8000/play/a089/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 325,
+    "name": "HGTV",
+    "url": "http://45.173.231.22:8000/play/a01j/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 326,
+    "name": "HTV",
+    "url": "http://45.173.231.22:8000/play/a0d6/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 327,
+    "name": "History 2",
+    "url": "http://45.173.231.22:8000/play/a0cq/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 328,
+    "name": "History Channel",
+    "url": "http://45.173.231.22:8000/play/a0at/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/history-channel-ar.png"
+  },
+  {
+    "number": 329,
+    "name": "History Channel Opción 1",
+    "url": "http://45.173.231.22:8000/play/a0co/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/history-channel-ar.png"
+  },
+  {
+    "number": 330,
+    "name": "History Channel HD",
+    "url": "http://45.173.231.22:8000/play/a05y/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/history-channel-ar.png"
+  },
+  {
+    "number": 331,
+    "name": "Home and Health",
+    "url": "http://45.173.231.22:8000/play/a04f/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-home-and-health-ar.png"
+  },
+  {
+    "number": 332,
+    "name": "ID",
+    "url": "http://45.173.231.22:8000/play/a04a/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 333,
+    "name": "ID HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a066/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 334,
+    "name": "Kanal D Drama",
+    "url": "http://45.173.231.22:8000/play/a0cf/index.m3u8",
+    "category": "Novelas",
+    "logo": ""
+  },
+  {
+    "number": 335,
+    "name": "La Red",
+    "url": "http://45.173.231.22:8000/play/a06w/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 336,
+    "name": "La Red Opción 1",
+    "url": "http://45.173.231.22:8000/play/a0a8/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 337,
+    "name": "La Tele",
+    "url": "http://45.173.231.22:8000/play/a05b/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 338,
+    "name": "Latina",
+    "url": "http://45.173.231.22:8000/play/a04g/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 339,
+    "name": "Lifetime",
+    "url": "http://45.173.231.22:8000/play/a01m/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 340,
+    "name": "Lifetime Opción 1",
+    "url": "http://45.173.231.22:8000/play/a0b9/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 341,
+    "name": "MEGA HD",
+    "url": "http://45.173.231.22:8000/play/a06s/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 342,
+    "name": "MTV",
+    "url": "http://45.173.231.22:8000/play/a0aw/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 343,
+    "name": "MTV HD",
+    "url": "http://45.173.231.22:8000/play/a08o/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 344,
+    "name": "MTV HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a02l/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 345,
+    "name": "Mega",
+    "url": "http://45.173.231.22:8000/play/a0aa/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 346,
+    "name": "NPY",
+    "url": "http://45.173.231.22:8000/play/a00j/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 347,
+    "name": "Nat Geo HD",
+    "url": "http://45.173.231.22:8000/play/a05z/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/national-geographic-ar.png"
+  },
+  {
+    "number": 348,
+    "name": "National Geographic",
+    "url": "http://45.173.231.22:8000/play/a0as/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/national-geographic-ar.png"
+  },
+  {
+    "number": 349,
+    "name": "Nick Jr Opción 1",
+    "url": "http://45.173.231.22:8000/play/a056/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/nick-jr-ar.png"
+  },
+  {
+    "number": 350,
+    "name": "Nickelodeon Opción 1",
+    "url": "http://45.173.231.22:8000/play/a0ar/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/nickelodeon-ar.png"
+  },
+  {
+    "number": 351,
+    "name": "Nickelodeon HD",
+    "url": "http://45.173.231.22:8000/play/a06r/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/nickelodeon-ar.png"
+  },
+  {
+    "number": 352,
+    "name": "Nuestra Tele",
+    "url": "http://45.173.231.22:8000/play/a0cr/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 353,
+    "name": "OROMAR TV",
+    "url": "http://45.173.231.22:8000/play/a0d5/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 354,
+    "name": "PARAVISION",
+    "url": "http://45.173.231.22:8000/play/a00g/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 355,
+    "name": "POPU TV Opción 1",
+    "url": "http://45.173.231.22:8000/play/a08e/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 356,
+    "name": "Panamericana",
+    "url": "http://45.173.231.22:8000/play/a09t/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 357,
+    "name": "Panamericana TV",
+    "url": "http://45.173.231.22:8000/play/a04i/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 358,
+    "name": "ParaguayTV",
+    "url": "http://45.173.231.22:8000/play/a04r/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 359,
+    "name": "Pasiones HD",
+    "url": "http://45.173.231.22:8000/play/a06n/index.m3u8",
+    "category": "Novelas",
+    "logo": ""
+  },
+  {
+    "number": 360,
+    "name": "Playboy HD",
+    "url": "http://45.173.231.22:8000/play/a07z/index.m3u8",
+    "category": "Adultos",
+    "logo": ""
+  },
+  {
+    "number": 361,
+    "name": "Playboy HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a01t/index.m3u8",
+    "category": "Adultos",
+    "logo": ""
+  },
+  {
+    "number": 362,
+    "name": "RCN Novelas",
+    "url": "http://45.173.231.22:8000/play/a049/index.m3u8",
+    "category": "Novelas",
+    "logo": ""
+  },
+  {
+    "number": 363,
+    "name": "RPP",
+    "url": "http://45.173.231.22:8000/play/a09v/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 364,
+    "name": "RTS Opción 1",
+    "url": "http://45.173.231.22:8000/play/a010/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 365,
+    "name": "RTS Opción 2",
+    "url": "http://45.173.231.22:8000/play/a052/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 366,
+    "name": "RTU",
+    "url": "http://45.173.231.22:8000/play/a0d4/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 367,
+    "name": "STAR CHANNEL Opción 1",
+    "url": "http://45.173.231.22:8000/play/a09o/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 368,
+    "name": "SURTV",
+    "url": "http://45.173.231.22:8000/play/a00k/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 369,
+    "name": "Senal Colombia",
+    "url": "http://45.173.231.22:8000/play/a00f/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 370,
+    "name": "Sin Limites",
+    "url": "http://45.173.231.22:8000/play/a04n/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 371,
+    "name": "Sony",
+    "url": "http://45.173.231.22:8000/play/a09m/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 372,
+    "name": "Sony HD",
+    "url": "http://45.173.231.22:8000/play/a063/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 373,
+    "name": "Sony Movies",
+    "url": "http://45.173.231.22:8000/play/a0cg/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 374,
+    "name": "Space Opción 1",
+    "url": "http://45.173.231.22:8000/play/a04x/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 375,
+    "name": "Space HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a067/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 376,
+    "name": "Star Channel HD",
+    "url": "http://45.173.231.22:8000/play/a06c/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 377,
+    "name": "Studio Universal Opción 2",
+    "url": "http://45.173.231.22:8000/play/a0al/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 378,
+    "name": "Sun Channel HD",
+    "url": "http://45.173.231.22:8000/play/a075/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 379,
+    "name": "TC",
+    "url": "http://45.173.231.22:8000/play/a07a/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 380,
+    "name": "TC Televisión",
+    "url": "http://45.173.231.22:8000/play/a00y/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 381,
+    "name": "TCM Opción 1",
+    "url": "http://45.173.231.22:8000/play/a0b0/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 382,
+    "name": "TCM Opción 2",
+    "url": "http://45.173.231.22:8000/play/a0d0/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 383,
+    "name": "TLC",
+    "url": "http://45.173.231.22:8000/play/a092/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 384,
+    "name": "TNT Opción 1",
+    "url": "http://45.173.231.22:8000/play/a0b2/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 385,
+    "name": "TNT HD",
+    "url": "http://45.173.231.22:8000/play/a060/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 386,
+    "name": "TNT Novelas Opción 1",
+    "url": "http://45.173.231.22:8000/play/a04d/index.m3u8",
+    "category": "Novelas",
+    "logo": ""
+  },
+  {
+    "number": 387,
+    "name": "TNT Novelas HD Opción 1",
+    "url": "http://45.173.231.22:8000/play/a02j/index.m3u8",
+    "category": "Novelas",
+    "logo": ""
+  },
+  {
+    "number": 388,
+    "name": "TNT SPORTS Opción 1",
+    "url": "http://45.173.231.22:8000/play/a081/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 389,
+    "name": "TNT SPORTS Opción 2",
+    "url": "http://45.173.231.22:8000/play/a020/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 390,
+    "name": "TNT Series HD",
+    "url": "http://45.173.231.22:8000/play/a08g/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 391,
+    "name": "TNT Sports Opción 3",
+    "url": "http://45.173.231.22:8000/play/a08z/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 392,
+    "name": "TNT Sports Premium",
+    "url": "http://45.173.231.22:8000/play/a0ad/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 393,
+    "name": "TNT Sports Premium SD",
+    "url": "http://45.173.231.22:8000/play/a06f/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 394,
+    "name": "TRO",
+    "url": "http://45.173.231.22:8000/play/a00m/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 395,
+    "name": "TV Peru SD",
+    "url": "http://45.173.231.22:8000/play/a04l/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 396,
+    "name": "TV+",
+    "url": "http://45.173.231.22:8000/play/a06u/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 397,
+    "name": "TVE",
+    "url": "http://45.173.231.22:8000/play/a0b7/index.m3u8",
+    "category": "España",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/spain/tve-1-es.png"
+  },
+  {
+    "number": 398,
+    "name": "TVN HD",
+    "url": "http://45.173.231.22:8000/play/a06l/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 399,
+    "name": "Teleamazonas",
+    "url": "http://45.173.231.22:8000/play/a00c/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 400,
+    "name": "Teleamazonas Opción 1",
+    "url": "http://45.173.231.22:8000/play/a00v/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 401,
+    "name": "Teleantioquia",
+    "url": "http://45.173.231.22:8000/play/a04z/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 402,
+    "name": "Telecafe",
+    "url": "http://45.173.231.22:8000/play/a05c/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 403,
+    "name": "Telecaribe",
+    "url": "http://45.173.231.22:8000/play/a05a/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 404,
+    "name": "Telefe",
+    "url": "http://45.173.231.22:8000/play/a053/index.m3u8",
+    "category": "General",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/telefe-ar.png"
+  },
+  {
+    "number": 405,
+    "name": "Teleislas",
+    "url": "http://45.173.231.22:8000/play/a00n/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 406,
+    "name": "Telemundo",
+    "url": "http://45.173.231.22:8000/play/a01h/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 407,
+    "name": "Telemundo Opción 1",
+    "url": "http://45.173.231.22:8000/play/a097/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 408,
+    "name": "Telepacifico",
+    "url": "http://45.173.231.22:8000/play/a051/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 409,
+    "name": "Televicentro",
+    "url": "http://45.173.231.22:8000/play/a00z/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 410,
+    "name": "Tlnovelas",
+    "url": "http://45.173.231.22:8000/play/a07i/index.m3u8",
+    "category": "Novelas",
+    "logo": ""
+  },
+  {
+    "number": 411,
+    "name": "Tooncast",
+    "url": "http://45.173.231.22:8000/play/a01i/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/tooncast-ar.png"
+  },
+  {
+    "number": 412,
+    "name": "Trece",
+    "url": "http://45.173.231.22:8000/play/a05d/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 413,
+    "name": "TyC",
+    "url": "http://45.173.231.22:8000/play/a08y/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/tyc-sports-ar.png"
+  },
+  {
+    "number": 414,
+    "name": "UNIVERSAL CHANNEL HD",
+    "url": "http://45.173.231.22:8000/play/a02d/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 415,
+    "name": "USA",
+    "url": "http://45.173.231.22:8000/play/a0cx/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 416,
+    "name": "USA SD",
+    "url": "http://45.173.231.22:8000/play/a0ba/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 417,
+    "name": "Universal",
+    "url": "http://45.173.231.22:8000/play/a09s/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 418,
+    "name": "Universal Cinema SD",
+    "url": "http://45.173.231.22:8000/play/a0ao/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 419,
+    "name": "Universal Comedy SD",
+    "url": "http://45.173.231.22:8000/play/a0ap/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 420,
+    "name": "Universal Premiere SD",
+    "url": "http://45.173.231.22:8000/play/a0an/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 421,
+    "name": "Via X",
+    "url": "http://45.173.231.22:8000/play/a0cj/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 422,
+    "name": "Via X Esports",
+    "url": "http://45.173.231.22:8000/play/a0cw/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 423,
+    "name": "ViaX",
+    "url": "http://45.173.231.22:8000/play/a093/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 424,
+    "name": "Warner Channel",
+    "url": "http://45.173.231.22:8000/play/a09q/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 425,
+    "name": "Warner TV HD",
+    "url": "http://45.173.231.22:8000/play/a064/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 426,
+    "name": "Willax",
+    "url": "http://45.173.231.22:8000/play/a04e/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 427,
+    "name": "Win",
+    "url": "http://45.173.231.22:8000/play/a050/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 428,
+    "name": "Zona Latina",
+    "url": "http://45.173.231.22:8000/play/a0ax/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 429,
+    "name": "Zona Latina Opción 1",
+    "url": "http://45.173.231.22:8000/play/a0ci/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 430,
+    "name": "Zoom",
+    "url": "http://45.173.231.22:8000/play/a00l/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 431,
+    "name": "13 C Opción 1",
+    "url": "http://45.188.229.33:8000/play/a11y/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 432,
+    "name": "24 HORAS Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0u1/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 433,
+    "name": "A&E",
+    "url": "http://45.188.229.33:8000/play/a1al/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 434,
+    "name": "A&E HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1b7/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 435,
+    "name": "A&E HD Opción 3",
+    "url": "http://45.188.229.33:8000/play/a12j/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 436,
+    "name": "AE Mundo Opción 1",
+    "url": "http://45.188.229.33:8000/play/a18v/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 437,
+    "name": "AM Continental",
+    "url": "http://45.188.229.33:8000/play/a1dv/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 438,
+    "name": "AMC",
+    "url": "http://45.188.229.33:8000/play/a1jn/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 439,
+    "name": "AMC HD Opción 3",
+    "url": "http://45.188.229.33:8000/play/a12p/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 440,
+    "name": "ATV Opción 2",
+    "url": "http://45.188.229.33:8000/play/a0wz/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 441,
+    "name": "ATV Opción 3",
+    "url": "http://45.188.229.33:8000/play/a0v5/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 442,
+    "name": "AXN Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1kr/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 443,
+    "name": "AXN Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1ak/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 444,
+    "name": "AXN Opción 4",
+    "url": "http://45.188.229.33:8000/play/a1ji/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 445,
+    "name": "AXN HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1b4/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 446,
+    "name": "AXN HD Opción 3",
+    "url": "http://45.188.229.33:8000/play/a10b/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 447,
+    "name": "Adult Swim Opción 2",
+    "url": "http://45.188.229.33:8000/play/a11w/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 448,
+    "name": "Adult swim Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1d6/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 449,
+    "name": "Adult swim HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1dp/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 450,
+    "name": "America TV Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1k7/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 451,
+    "name": "America TV Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1a4/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 452,
+    "name": "America TV Opción 3",
+    "url": "http://45.188.229.33:8000/play/a0v3/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 453,
+    "name": "America TV HD",
+    "url": "http://45.188.229.33:8000/play/a1au/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 454,
+    "name": "America TV PY Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0v9/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 455,
+    "name": "Animal Planet Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1jx/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/animal-planet-ar.png"
+  },
+  {
+    "number": 456,
+    "name": "Animal Planet Opción 3",
+    "url": "http://45.188.229.33:8000/play/a102/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/animal-planet-ar.png"
+  },
+  {
+    "number": 457,
+    "name": "Antena 3 Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0x3/index.m3u8",
+    "category": "España",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/spain/antena-3-es.png"
+  },
+  {
+    "number": 458,
+    "name": "Atres Series Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1em/index.m3u8",
+    "category": "España",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/spain/atreseries-es.png"
+  },
+  {
+    "number": 459,
+    "name": "BBC News",
+    "url": "http://45.188.229.33:8000/play/a1e9/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 460,
+    "name": "BETHEL TV Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0zl/index.m3u8",
+    "category": "Religión",
+    "logo": ""
+  },
+  {
+    "number": 461,
+    "name": "Baby TV Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0nv/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/baby-tv-ar.png"
+  },
+  {
+    "number": 462,
+    "name": "C9N Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0vo/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 463,
+    "name": "CANAL 13 Opción 3",
+    "url": "http://45.188.229.33:8000/play/a0tt/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 464,
+    "name": "CHV Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0ts/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 465,
+    "name": "CHV HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a135/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 466,
+    "name": "CNN Espanol Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1l8/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 467,
+    "name": "CNN Espanol Opción 2",
+    "url": "http://45.188.229.33:8000/play/a0to/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 468,
+    "name": "CNN Español OpciÃ³n 1",
+    "url": "http://45.188.229.33:8000/play/a11h/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 469,
+    "name": "CNN en Español",
+    "url": "http://45.188.229.33:8000/play/a1at/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 470,
+    "name": "Canal 13 HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a12g/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 471,
+    "name": "Canal 24 Horas Opción 1",
+    "url": "http://45.188.229.33:8000/play/a13g/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 472,
+    "name": "Canal Caracol Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1iq/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 473,
+    "name": "Canal Caracol Opción 2",
+    "url": "http://45.188.229.33:8000/play/a0vh/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 474,
+    "name": "Canal Claro Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0uy/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 475,
+    "name": "Canal Las Estrellas Opción 1",
+    "url": "http://45.188.229.33:8000/play/a18z/index.m3u8",
+    "category": "General",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/mexico/las-estrellas-mx.png"
+  },
+  {
+    "number": 476,
+    "name": "Canal RCN Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0vi/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 477,
+    "name": "Canal TUVES",
+    "url": "http://45.188.229.33:8000/play/a1le/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 478,
+    "name": "Canal Uno Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0vf/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 479,
+    "name": "Canal de la Ciudad",
+    "url": "http://45.188.229.33:8000/play/a1cn/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 480,
+    "name": "Capital Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0vw/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 481,
+    "name": "Cartoon Network Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1d1/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/cartoon-network-ar.png"
+  },
+  {
+    "number": 482,
+    "name": "Cartoon Network HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1de/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/cartoon-network-ar.png"
+  },
+  {
+    "number": 483,
+    "name": "Cartoon Network HD Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1j1/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/cartoon-network-ar.png"
+  },
+  {
+    "number": 484,
+    "name": "Cartoonito Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1jp/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/cartoonito-lam.png"
+  },
+  {
+    "number": 485,
+    "name": "Cinecanal Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1cr/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 486,
+    "name": "Cinecanal HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1dl/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 487,
+    "name": "Cinecanal HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a107/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 488,
+    "name": "Cinemax Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1jk/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 489,
+    "name": "Cinemax Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1jh/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 490,
+    "name": "Cinemax Opción 4",
+    "url": "http://45.188.229.33:8000/play/a1ag/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 491,
+    "name": "Cinemax Opción 5",
+    "url": "http://45.188.229.33:8000/play/a0w0/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 492,
+    "name": "City TV Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0vv/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 493,
+    "name": "Claro Cinema Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0wb/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 494,
+    "name": "Classic Rock Roll",
+    "url": "http://45.188.229.33:8000/play/a1jc/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 495,
+    "name": "Clover",
+    "url": "http://45.188.229.33:8000/play/a1ka/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 496,
+    "name": "Comedy Central Opción 1",
+    "url": "http://45.188.229.33:8000/play/a12k/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 497,
+    "name": "Comedy Central HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1ej/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 498,
+    "name": "DAYSTAR Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1f1/index.m3u8",
+    "category": "Religión",
+    "logo": ""
+  },
+  {
+    "number": 499,
+    "name": "DHE",
+    "url": "http://45.188.229.33:8000/play/a13k/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 500,
+    "name": "DSports 2 HD",
+    "url": "http://45.188.229.33:8000/play/a1ix/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/dsports2-lam.png"
+  },
+  {
+    "number": 501,
+    "name": "DSports HD",
+    "url": "http://45.188.229.33:8000/play/a1iw/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/dsports-lam.png"
+  },
+  {
+    "number": 502,
+    "name": "DW Español OpciÃ³n 1",
+    "url": "http://45.188.229.33:8000/play/a0xb/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 503,
+    "name": "De Pelicula",
+    "url": "http://45.188.229.33:8000/play/a1j2/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 504,
+    "name": "De Pelicula Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1ec/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 505,
+    "name": "DeporTV",
+    "url": "http://45.188.229.33:8000/play/a1cq/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 506,
+    "name": "Discovery Channel Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1da/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-channel-ar.png"
+  },
+  {
+    "number": 507,
+    "name": "Discovery Channel Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1jw/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-channel-ar.png"
+  },
+  {
+    "number": 508,
+    "name": "Discovery Channel HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a103/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-channel-ar.png"
+  },
+  {
+    "number": 509,
+    "name": "Discovery Channel HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1ds/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-channel-ar.png"
+  },
+  {
+    "number": 510,
+    "name": "Discovery H&H Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1ks/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-home-and-health-ar.png"
+  },
+  {
+    "number": 511,
+    "name": "Discovery H&H Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1d7/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-home-and-health-ar.png"
+  },
+  {
+    "number": 512,
+    "name": "Discovery H&H HD",
+    "url": "http://45.188.229.33:8000/play/a1dr/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-home-and-health-ar.png"
+  },
+  {
+    "number": 513,
+    "name": "Discovery Kids Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1d2/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-kids-ar.png"
+  },
+  {
+    "number": 514,
+    "name": "Discovery Kids Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1kk/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-kids-ar.png"
+  },
+  {
+    "number": 515,
+    "name": "Discovery Science Opción 1",
+    "url": "http://45.188.229.33:8000/play/a11n/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 516,
+    "name": "Discovery Theater HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a133/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-theater-hd-ar.png"
+  },
+  {
+    "number": 517,
+    "name": "Discovery Turbo Opción 2",
+    "url": "http://45.188.229.33:8000/play/a0wd/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-turbo-ar.png"
+  },
+  {
+    "number": 518,
+    "name": "Discovery Turbo Opción 3",
+    "url": "http://45.188.229.33:8000/play/a11j/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-turbo-ar.png"
+  },
+  {
+    "number": 519,
+    "name": "Discovery World HD Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1ep/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-world-hd-ar.png"
+  },
+  {
+    "number": 520,
+    "name": "Discovery World HD Opción 4",
+    "url": "http://45.188.229.33:8000/play/a12s/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-world-hd-ar.png"
+  },
+  {
+    "number": 521,
+    "name": "Disney Channel Opción 2",
+    "url": "http://45.188.229.33:8000/play/a18n/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/disney-channel-ar.png"
+  },
+  {
+    "number": 522,
+    "name": "Disney Channel HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a10e/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/disney-channel-ar.png"
+  },
+  {
+    "number": 523,
+    "name": "Disney Jr Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1l7/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/disney-jr-ar.png"
+  },
+  {
+    "number": 524,
+    "name": "Disney Jr Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1kn/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/disney-jr-ar.png"
+  },
+  {
+    "number": 525,
+    "name": "Disney Junior Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1am/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/disney-jr-ar.png"
+  },
+  {
+    "number": 526,
+    "name": "Disney Junior Opción 2",
+    "url": "http://45.188.229.33:8000/play/a0k4/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/disney-jr-ar.png"
+  },
+  {
+    "number": 527,
+    "name": "Distrito Comedia Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1hn/index.m3u8",
+    "category": "Series",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/distrito-comedia-lam.png"
+  },
+  {
+    "number": 528,
+    "name": "Distrito Comedia Opción 2",
+    "url": "http://45.188.229.33:8000/play/a0y8/index.m3u8",
+    "category": "Series",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/distrito-comedia-lam.png"
+  },
+  {
+    "number": 529,
+    "name": "E! Entertainment",
+    "url": "http://45.188.229.33:8000/play/a1ap/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 530,
+    "name": "E! Entertainment TV Opción 1",
+    "url": "http://45.188.229.33:8000/play/a11o/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 531,
+    "name": "ECDF SD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1je/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 532,
+    "name": "ECDF SD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a0vx/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 533,
+    "name": "ESPN Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1jz/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-lam.png"
+  },
+  {
+    "number": 534,
+    "name": "ESPN Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1jj/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-lam.png"
+  },
+  {
+    "number": 535,
+    "name": "ESPN Opción 4",
+    "url": "http://45.188.229.33:8000/play/a1ac/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-lam.png"
+  },
+  {
+    "number": 536,
+    "name": "ESPN Opción 5",
+    "url": "http://45.188.229.33:8000/play/a18s/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-lam.png"
+  },
+  {
+    "number": 537,
+    "name": "ESPN Opción 6",
+    "url": "http://45.188.229.33:8000/play/a0vp/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-lam.png"
+  },
+  {
+    "number": 538,
+    "name": "ESPN 2 Opción 5",
+    "url": "http://45.188.229.33:8000/play/a1ko/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-2-lam.png"
+  },
+  {
+    "number": 539,
+    "name": "ESPN 2 Opción 6",
+    "url": "http://45.188.229.33:8000/play/a1ke/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-2-lam.png"
+  },
+  {
+    "number": 540,
+    "name": "ESPN 2 Opción 7",
+    "url": "http://45.188.229.33:8000/play/a1ab/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-2-lam.png"
+  },
+  {
+    "number": 541,
+    "name": "ESPN 2 Opción 8",
+    "url": "http://45.188.229.33:8000/play/a18r/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-2-lam.png"
+  },
+  {
+    "number": 542,
+    "name": "ESPN 2 HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1jq/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-2-lam.png"
+  },
+  {
+    "number": 543,
+    "name": "ESPN 2 HD Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1ay/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-2-lam.png"
+  },
+  {
+    "number": 544,
+    "name": "ESPN 2 HD Opción 4",
+    "url": "http://45.188.229.33:8000/play/a138/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-2-lam.png"
+  },
+  {
+    "number": 545,
+    "name": "ESPN 3 Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1ad/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-3-lam.png"
+  },
+  {
+    "number": 546,
+    "name": "ESPN 3 Opción 3",
+    "url": "http://45.188.229.33:8000/play/a0wf/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-3-lam.png"
+  },
+  {
+    "number": 547,
+    "name": "ESPN 3 HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1b0/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-3-lam.png"
+  },
+  {
+    "number": 548,
+    "name": "ESPN 3 HD Opción 3",
+    "url": "http://45.188.229.33:8000/play/a12v/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-3-lam.png"
+  },
+  {
+    "number": 549,
+    "name": "ESPN 4 HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1dg/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-4-lam.png"
+  },
+  {
+    "number": 550,
+    "name": "ESPN 4 HD Opción 3",
+    "url": "http://45.188.229.33:8000/play/a10g/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-4-lam.png"
+  },
+  {
+    "number": 551,
+    "name": "ESPN 5 Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1kz/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-5-lam.png"
+  },
+  {
+    "number": 552,
+    "name": "ESPN 5 Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1k9/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-5-lam.png"
+  },
+  {
+    "number": 553,
+    "name": "ESPN 5 Opción 4",
+    "url": "http://45.188.229.33:8000/play/a1jy/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-5-lam.png"
+  },
+  {
+    "number": 554,
+    "name": "ESPN 5 HD Opción 3",
+    "url": "http://45.188.229.33:8000/play/a12n/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-5-lam.png"
+  },
+  {
+    "number": 555,
+    "name": "ESPN 6 Opción 1",
+    "url": "http://45.188.229.33:8000/play/a191/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-6-lam.png"
+  },
+  {
+    "number": 556,
+    "name": "ESPN 6 HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a12h/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-6-lam.png"
+  },
+  {
+    "number": 557,
+    "name": "ESPN 7 Opción 2",
+    "url": "http://45.188.229.33:8000/play/a190/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-7-lam.png"
+  },
+  {
+    "number": 558,
+    "name": "ESPN 7 HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1j0/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-7-lam.png"
+  },
+  {
+    "number": 559,
+    "name": "ESPN HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1az/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-lam.png"
+  },
+  {
+    "number": 560,
+    "name": "ESPN HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a13h/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-lam.png"
+  },
+  {
+    "number": 561,
+    "name": "ESPN Premium Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1l4/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-premium-lam.png"
+  },
+  {
+    "number": 562,
+    "name": "ESPN Premium Opción 3",
+    "url": "http://45.188.229.33:8000/play/a0tv/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-premium-lam.png"
+  },
+  {
+    "number": 563,
+    "name": "ESPN Premium HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1di/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-premium-lam.png"
+  },
+  {
+    "number": 564,
+    "name": "ESPN Premium HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a13l/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-premium-lam.png"
+  },
+  {
+    "number": 565,
+    "name": "EWTN Opción 1",
+    "url": "http://45.188.229.33:8000/play/a11t/index.m3u8",
+    "category": "Religión",
+    "logo": ""
+  },
+  {
+    "number": 566,
+    "name": "Ecuador TV Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1gq/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 567,
+    "name": "Ecuador TV Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1gl/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 568,
+    "name": "Ecuador TV Opción 4",
+    "url": "http://45.188.229.33:8000/play/a0va/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 569,
+    "name": "Ecuavisa Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1gj/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 570,
+    "name": "Ecuavisa Opción 3",
+    "url": "http://45.188.229.33:8000/play/a0vj/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 571,
+    "name": "El Canal de las Estrellas",
+    "url": "http://45.188.229.33:8000/play/a1d8/index.m3u8",
+    "category": "General",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/mexico/las-estrellas-mx.png"
+  },
+  {
+    "number": 572,
+    "name": "El Gourmet Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1d5/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 573,
+    "name": "El Gourmet HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a12l/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 574,
+    "name": "El Trece Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0x2/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 575,
+    "name": "Enlace Opción 2",
+    "url": "http://45.188.229.33:8000/play/a11v/index.m3u8",
+    "category": "Religión",
+    "logo": ""
+  },
+  {
+    "number": 576,
+    "name": "Esne Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0we/index.m3u8",
+    "category": "Religión",
+    "logo": ""
+  },
+  {
+    "number": 577,
+    "name": "Europa Europa Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1d4/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 578,
+    "name": "Europa Europa Opción 2",
+    "url": "http://45.188.229.33:8000/play/a0y3/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 579,
+    "name": "Eventos HD",
+    "url": "http://45.188.229.33:8000/play/a1dc/index.m3u8",
+    "category": "Deportes",
+    "logo": "file:///android_asset/tirso_logos/184.png"
+  },
+  {
+    "number": 580,
+    "name": "Exitosa TV",
+    "url": "http://45.188.229.33:8000/play/a1f6/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 581,
+    "name": "FX Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1hx/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 582,
+    "name": "FX Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1hw/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 583,
+    "name": "FX HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a10h/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 584,
+    "name": "Film&Arts",
+    "url": "http://45.188.229.33:8000/play/a0xr/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 585,
+    "name": "Fox Sports",
+    "url": "http://45.188.229.33:8000/play/a1cp/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/fox-sports-lam.png"
+  },
+  {
+    "number": 586,
+    "name": "Fox Sports 2 Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1ae/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/fox-sports-2-lam.png"
+  },
+  {
+    "number": 587,
+    "name": "Fox Sports 2 HD",
+    "url": "http://45.188.229.33:8000/play/a1b1/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/fox-sports-2-lam.png"
+  },
+  {
+    "number": 588,
+    "name": "Fox Sports HD",
+    "url": "http://45.188.229.33:8000/play/a1dh/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/fox-sports-lam.png"
+  },
+  {
+    "number": 589,
+    "name": "France 24 Opción 2",
+    "url": "http://45.188.229.33:8000/play/a0x8/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 590,
+    "name": "France 24 Opción 3",
+    "url": "http://45.188.229.33:8000/play/a0ux/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 591,
+    "name": "GamaTV Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1il/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 592,
+    "name": "GamaTV Opción 2",
+    "url": "http://45.188.229.33:8000/play/a0vb/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 593,
+    "name": "Gamavisión OpciÃ³n 1",
+    "url": "http://45.188.229.33:8000/play/a1it/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 594,
+    "name": "Gamavisión OpciÃ³n 2",
+    "url": "http://45.188.229.33:8000/play/a1gm/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 595,
+    "name": "Global Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0x1/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 596,
+    "name": "Golden Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0y1/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 597,
+    "name": "Golden Edge Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0y0/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 598,
+    "name": "Golden HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0xm/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 599,
+    "name": "Golf Channel Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0xx/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 600,
+    "name": "HBO Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1cx/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 601,
+    "name": "HBO Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1jg/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 602,
+    "name": "HBO 2 Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1cz/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 603,
+    "name": "HBO Family Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1d0/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 604,
+    "name": "HBO Family Opción 3",
+    "url": "http://45.188.229.33:8000/play/a0tz/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 605,
+    "name": "HBO Family HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a13m/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 606,
+    "name": "HBO HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a12r/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 607,
+    "name": "HBO Mundi Opción 2",
+    "url": "http://45.188.229.33:8000/play/a0x6/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 608,
+    "name": "HBO POP HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a139/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 609,
+    "name": "HBO Plus Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1cy/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 610,
+    "name": "HBO Plus Opción 4",
+    "url": "http://45.188.229.33:8000/play/a1km/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 611,
+    "name": "HBO Plus Opción 5",
+    "url": "http://45.188.229.33:8000/play/a1kf/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 612,
+    "name": "HBO Plus Opción 6",
+    "url": "http://45.188.229.33:8000/play/a0y5/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 613,
+    "name": "HBO Signature Opción 2",
+    "url": "http://45.188.229.33:8000/play/a0x5/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 614,
+    "name": "HBO Xtreme HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a13n/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 615,
+    "name": "HBO Xtreme SD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1lc/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 616,
+    "name": "HBO Xtreme SD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1la/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 617,
+    "name": "HBO Xtreme SD Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1l6/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 618,
+    "name": "HBO Xtreme SD Opción 4",
+    "url": "http://45.188.229.33:8000/play/a0ty/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 619,
+    "name": "HEI HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1ek/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 620,
+    "name": "HGTV Opción 1",
+    "url": "http://45.188.229.33:8000/play/a11r/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 621,
+    "name": "HOLA TV HD",
+    "url": "http://45.188.229.33:8000/play/a1im/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 622,
+    "name": "HTV Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0xu/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 623,
+    "name": "History 2 Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0xn/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 624,
+    "name": "History Channel Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1aq/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/history-channel-ar.png"
+  },
+  {
+    "number": 625,
+    "name": "History Channel HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a104/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/history-channel-ar.png"
+  },
+  {
+    "number": 626,
+    "name": "Home and Health Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0v1/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-home-and-health-ar.png"
+  },
+  {
+    "number": 627,
+    "name": "ID Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0uw/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 628,
+    "name": "ID HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a10c/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 629,
+    "name": "La Red Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1l9/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 630,
+    "name": "La Red Opción 3",
+    "url": "http://45.188.229.33:8000/play/a13f/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 631,
+    "name": "La Red Opción 4",
+    "url": "http://45.188.229.33:8000/play/a0tp/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 632,
+    "name": "La Tele Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0wh/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 633,
+    "name": "Las Estrellas HD",
+    "url": "http://45.188.229.33:8000/play/a1j3/index.m3u8",
+    "category": "General",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/mexico/las-estrellas-mx.png"
+  },
+  {
+    "number": 634,
+    "name": "Latina Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0v2/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 635,
+    "name": "Lifetime Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1cw/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 636,
+    "name": "Lifetime Opción 3",
+    "url": "http://45.188.229.33:8000/play/a19a/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 637,
+    "name": "MEGA HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a13b/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 638,
+    "name": "MTV Opción 1",
+    "url": "http://45.188.229.33:8000/play/a12w/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 639,
+    "name": "MTV HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1ju/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 640,
+    "name": "MTV HD Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1eq/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 641,
+    "name": "MTV 00",
+    "url": "http://45.188.229.33:8000/play/a1as/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 642,
+    "name": "Mega Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0tr/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 643,
+    "name": "Mitre AM790",
+    "url": "http://45.188.229.33:8000/play/a1dt/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 644,
+    "name": "Movistar Deportes",
+    "url": "http://45.188.229.33:8000/play/a1f3/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 645,
+    "name": "Movistar Informa",
+    "url": "http://45.188.229.33:8000/play/a1ew/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 646,
+    "name": "Más Chic",
+    "url": "http://45.188.229.33:8000/play/a0xt/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 647,
+    "name": "NPY Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0vq/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 648,
+    "name": "NTN24",
+    "url": "http://45.188.229.33:8000/play/a0xv/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 649,
+    "name": "Nat Geo Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1ar/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/national-geographic-ar.png"
+  },
+  {
+    "number": 650,
+    "name": "Nat Geo Opción 2",
+    "url": "http://45.188.229.33:8000/play/a105/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/national-geographic-ar.png"
+  },
+  {
+    "number": 651,
+    "name": "Nat Geo HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1iz/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/national-geographic-ar.png"
+  },
+  {
+    "number": 652,
+    "name": "Nat Geo HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1b5/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/national-geographic-ar.png"
+  },
+  {
+    "number": 653,
+    "name": "Nick Jr Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1d3/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/nick-jr-ar.png"
+  },
+  {
+    "number": 654,
+    "name": "Nick Jr Opción 3",
+    "url": "http://45.188.229.33:8000/play/a0wc/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/nick-jr-ar.png"
+  },
+  {
+    "number": 655,
+    "name": "Nick Jr.",
+    "url": "http://45.188.229.33:8000/play/a1ky/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/nick-jr-ar.png"
+  },
+  {
+    "number": 656,
+    "name": "Nick Music",
+    "url": "http://45.188.229.33:8000/play/a0xp/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 657,
+    "name": "Nickelodeon Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1an/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/nickelodeon-ar.png"
+  },
+  {
+    "number": 658,
+    "name": "Nickelodeon HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a13a/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/nickelodeon-ar.png"
+  },
+  {
+    "number": 659,
+    "name": "Nuestra Tele Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0xo/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 660,
+    "name": "OROMAR TV Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1ki/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 661,
+    "name": "OROMAR TV Opción 2",
+    "url": "http://45.188.229.33:8000/play/a0yb/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 662,
+    "name": "PARAVISION Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0vn/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 663,
+    "name": "POPU TV Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1eo/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 664,
+    "name": "Panamericana Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0wy/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 665,
+    "name": "ParaguayTV Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1hu/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 666,
+    "name": "ParaguayTV Opción 2",
+    "url": "http://45.188.229.33:8000/play/a0vc/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 667,
+    "name": "Pasiones HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a136/index.m3u8",
+    "category": "Novelas",
+    "logo": ""
+  },
+  {
+    "number": 668,
+    "name": "Playboy HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1jm/index.m3u8",
+    "category": "Adultos",
+    "logo": ""
+  },
+  {
+    "number": 669,
+    "name": "Playboy HD Opción 3",
+    "url": "http://45.188.229.33:8000/play/a122/index.m3u8",
+    "category": "Adultos",
+    "logo": ""
+  },
+  {
+    "number": 670,
+    "name": "Plim Plim TV",
+    "url": "http://45.188.229.33:8000/play/a1kq/index.m3u8",
+    "category": "Infantiles",
+    "logo": ""
+  },
+  {
+    "number": 671,
+    "name": "Plus TV Life",
+    "url": "http://45.188.229.33:8000/play/a1f4/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 672,
+    "name": "RCN Novelas Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1k8/index.m3u8",
+    "category": "Novelas",
+    "logo": ""
+  },
+  {
+    "number": 673,
+    "name": "RCN Novelas Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1k5/index.m3u8",
+    "category": "Novelas",
+    "logo": ""
+  },
+  {
+    "number": 674,
+    "name": "RCN Novelas Opción 3",
+    "url": "http://45.188.229.33:8000/play/a0uv/index.m3u8",
+    "category": "Novelas",
+    "logo": ""
+  },
+  {
+    "number": 675,
+    "name": "RPP Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1e8/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 676,
+    "name": "RPP Opción 2",
+    "url": "http://45.188.229.33:8000/play/a0x0/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 677,
+    "name": "RT en Español",
+    "url": "http://45.188.229.33:8000/play/a1co/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 678,
+    "name": "RTS Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1iu/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 679,
+    "name": "RTS Opción 4",
+    "url": "http://45.188.229.33:8000/play/a0w8/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 680,
+    "name": "RTU Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1kh/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 681,
+    "name": "RTU Opción 2",
+    "url": "http://45.188.229.33:8000/play/a0y9/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 682,
+    "name": "SONY Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1ah/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 683,
+    "name": "STAR CHANNEL Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1ku/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 684,
+    "name": "SURTV Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1ii/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 685,
+    "name": "SURTV Opción 2",
+    "url": "http://45.188.229.33:8000/play/a0vr/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 686,
+    "name": "Salsa y Merengue",
+    "url": "http://45.188.229.33:8000/play/a1jd/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 687,
+    "name": "Senal Colombia Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0vm/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 688,
+    "name": "Sextreme",
+    "url": "http://45.188.229.33:8000/play/a1kp/index.m3u8",
+    "category": "Adultos",
+    "logo": ""
+  },
+  {
+    "number": 689,
+    "name": "Sony Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1kt/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 690,
+    "name": "Sony Opción 3",
+    "url": "http://45.188.229.33:8000/play/a0w1/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 691,
+    "name": "Sony HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1b2/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 692,
+    "name": "Sony HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a109/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 693,
+    "name": "Sony Movies Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1jo/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 694,
+    "name": "Sony Movies HD",
+    "url": "http://45.188.229.33:8000/play/a1b9/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 695,
+    "name": "Space Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1hy/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 696,
+    "name": "Space Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1hv/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 697,
+    "name": "Space HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1ik/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 698,
+    "name": "Space HD Opción 3",
+    "url": "http://45.188.229.33:8000/play/a10d/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 699,
+    "name": "Star Channel Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1ct/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 700,
+    "name": "Star Channel HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1dj/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 701,
+    "name": "Star Channel HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a10i/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 702,
+    "name": "Studio Universal Opción 3",
+    "url": "http://45.188.229.33:8000/play/a0u2/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 703,
+    "name": "Sun Channel HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a13o/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 704,
+    "name": "TC Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1ir/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 705,
+    "name": "TC Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1is/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 706,
+    "name": "TC Opción 3",
+    "url": "http://45.188.229.33:8000/play/a0vg/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 707,
+    "name": "TC Televisión OpciÃ³n 1",
+    "url": "http://45.188.229.33:8000/play/a1gn/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 708,
+    "name": "TCM Opción 3",
+    "url": "http://45.188.229.33:8000/play/a0y2/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 709,
+    "name": "TLC Opción 1",
+    "url": "http://45.188.229.33:8000/play/a18x/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 710,
+    "name": "TLC Opción 2",
+    "url": "http://45.188.229.33:8000/play/a11m/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 711,
+    "name": "TLNovelas Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1d9/index.m3u8",
+    "category": "Novelas",
+    "logo": ""
+  },
+  {
+    "number": 712,
+    "name": "TN",
+    "url": "http://45.188.229.33:8000/play/a1a3/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 713,
+    "name": "TN HD",
+    "url": "http://45.188.229.33:8000/play/a1ax/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 714,
+    "name": "TNT Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1kv/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 715,
+    "name": "TNT Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1cs/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 716,
+    "name": "TNT HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1dn/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 717,
+    "name": "TNT HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a106/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 718,
+    "name": "TNT Novelas Opción 2",
+    "url": "http://45.188.229.33:8000/play/a12u/index.m3u8",
+    "category": "Novelas",
+    "logo": ""
+  },
+  {
+    "number": 719,
+    "name": "TNT Novelas Opción 3",
+    "url": "http://45.188.229.33:8000/play/a0uz/index.m3u8",
+    "category": "Novelas",
+    "logo": ""
+  },
+  {
+    "number": 720,
+    "name": "TNT Novelas HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1dq/index.m3u8",
+    "category": "Novelas",
+    "logo": ""
+  },
+  {
+    "number": 721,
+    "name": "TNT Novelas HD Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1jt/index.m3u8",
+    "category": "Novelas",
+    "logo": ""
+  },
+  {
+    "number": 722,
+    "name": "TNT SPORTS Opción 4",
+    "url": "http://45.188.229.33:8000/play/a129/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 723,
+    "name": "TNT Series Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1cv/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 724,
+    "name": "TNT Series HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1do/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 725,
+    "name": "TNT Series HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1js/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 726,
+    "name": "TNT Series HD Opción 3",
+    "url": "http://45.188.229.33:8000/play/a12q/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 727,
+    "name": "TNT Sports Opción 5",
+    "url": "http://45.188.229.33:8000/play/a1k1/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 728,
+    "name": "TNT Sports Premium Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0tu/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 729,
+    "name": "TNT Sports Premiun HD",
+    "url": "http://45.188.229.33:8000/play/a137/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 730,
+    "name": "TRO Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0vt/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 731,
+    "name": "TV Peru SD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0v7/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 732,
+    "name": "TV Publica",
+    "url": "http://45.188.229.33:8000/play/a1a2/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 733,
+    "name": "TV Publica HD",
+    "url": "http://45.188.229.33:8000/play/a1av/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 734,
+    "name": "TV+ Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1dw/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 735,
+    "name": "TVE Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1db/index.m3u8",
+    "category": "España",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/spain/tve-1-es.png"
+  },
+  {
+    "number": 736,
+    "name": "TVN Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0tq/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 737,
+    "name": "TVN HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a134/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 738,
+    "name": "Teen Nick",
+    "url": "http://45.188.229.33:8000/play/a0xq/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/teen-nick-us.png"
+  },
+  {
+    "number": 739,
+    "name": "Teleamazonas Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1gk/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 740,
+    "name": "Teleamazonas Opción 3",
+    "url": "http://45.188.229.33:8000/play/a0vk/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 741,
+    "name": "Teleantioquia Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1ll/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 742,
+    "name": "Teleantioquia Opción 2",
+    "url": "http://45.188.229.33:8000/play/a0w5/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 743,
+    "name": "Telecafe Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0wi/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 744,
+    "name": "Telecaribe Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0wg/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 745,
+    "name": "Telefe Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0w9/index.m3u8",
+    "category": "General",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/telefe-ar.png"
+  },
+  {
+    "number": 746,
+    "name": "Telefe HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1dm/index.m3u8",
+    "category": "General",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/telefe-ar.png"
+  },
+  {
+    "number": 747,
+    "name": "Telefe HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1cl/index.m3u8",
+    "category": "General",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/telefe-ar.png"
+  },
+  {
+    "number": 748,
+    "name": "Teleislas Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0vu/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 749,
+    "name": "Telemundo Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1k3/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 750,
+    "name": "Telemundo Opción 3",
+    "url": "http://45.188.229.33:8000/play/a1jl/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 751,
+    "name": "Telemundo Opción 4",
+    "url": "http://45.188.229.33:8000/play/a11p/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 752,
+    "name": "Telepacifico Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0w7/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 753,
+    "name": "Telesur",
+    "url": "http://45.188.229.33:8000/play/a1f9/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 754,
+    "name": "Televicentro Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1go/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 755,
+    "name": "Televicentro Opción 2",
+    "url": "http://45.188.229.33:8000/play/a11d/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 756,
+    "name": "The History Channel HD",
+    "url": "http://45.188.229.33:8000/play/a1b6/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/history-channel-ar.png"
+  },
+  {
+    "number": 757,
+    "name": "Tlnovelas Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1ea/index.m3u8",
+    "category": "Novelas",
+    "logo": ""
+  },
+  {
+    "number": 758,
+    "name": "Tooncast Opción 1",
+    "url": "http://45.188.229.33:8000/play/a11q/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/tooncast-ar.png"
+  },
+  {
+    "number": 759,
+    "name": "Trece Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0wj/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 760,
+    "name": "TyC Opción 1",
+    "url": "http://45.188.229.33:8000/play/a18u/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/tyc-sports-ar.png"
+  },
+  {
+    "number": 761,
+    "name": "UNIVERSAL CHANNEL HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a12m/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 762,
+    "name": "USA Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0xz/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 763,
+    "name": "Universal Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1kx/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 764,
+    "name": "Universal Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1aj/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 765,
+    "name": "Universal Cinema SD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1lj/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 766,
+    "name": "Universal HD",
+    "url": "http://45.188.229.33:8000/play/a1b8/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 767,
+    "name": "Universal Premiere SD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0u4/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 768,
+    "name": "Venus",
+    "url": "http://45.188.229.33:8000/play/a1k2/index.m3u8",
+    "category": "Adultos",
+    "logo": ""
+  },
+  {
+    "number": 769,
+    "name": "Venus Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0y7/index.m3u8",
+    "category": "Adultos",
+    "logo": ""
+  },
+  {
+    "number": 770,
+    "name": "Via X Esports Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0xy/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 771,
+    "name": "ViaX Opción 1",
+    "url": "http://45.188.229.33:8000/play/a18y/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 772,
+    "name": "Warner Opción 1",
+    "url": "http://45.188.229.33:8000/play/a18o/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 773,
+    "name": "Warner Channel Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1kw/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 774,
+    "name": "Warner Channel Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1ai/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 775,
+    "name": "Warner Channel HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1b3/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 776,
+    "name": "Warner TV HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1in/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 777,
+    "name": "Warner TV HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a10a/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 778,
+    "name": "Willax Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1f7/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 779,
+    "name": "Willax Opción 2",
+    "url": "http://45.188.229.33:8000/play/a0v0/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 780,
+    "name": "Win Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0w6/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 781,
+    "name": "Zoom Opción 1",
+    "url": "http://45.188.229.33:8000/play/a0vs/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 782,
+    "name": "el nueve HD",
+    "url": "http://45.188.229.33:8000/play/a1aw/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 783,
+    "name": "el nueve HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1a5/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 784,
+    "name": "el trece HD Opción 1",
+    "url": "http://45.188.229.33:8000/play/a1dk/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 785,
+    "name": "el trece HD Opción 2",
+    "url": "http://45.188.229.33:8000/play/a1cm/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 786,
+    "name": "A&E Opción 1",
+    "url": "http://158.172.155.130:8000/play/a0dg/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 787,
+    "name": "A&E HD Opción 4",
+    "url": "http://158.172.155.130:8000/play/a0dz/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 788,
+    "name": "AMC Opción 1",
+    "url": "http://158.172.155.130:8000/play/a00p/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 789,
+    "name": "AXN HD Opción 4",
+    "url": "http://158.172.155.130:8000/play/a0dw/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 790,
+    "name": "AXN-OK",
+    "url": "http://158.172.155.130:8000/play/a0df/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 791,
+    "name": "Adult swim HD-AR",
+    "url": "http://158.172.155.130:8000/play/a0as/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 792,
+    "name": "America TV Opción 4",
+    "url": "http://158.172.155.130:8000/play/a0d5/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 793,
+    "name": "Bolivia Tv HD",
+    "url": "http://158.172.155.130:8000/play/a0e4/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 794,
+    "name": "Bolivision HD",
+    "url": "http://158.172.155.130:8000/play/a0e8/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 795,
+    "name": "CNN en Español OpciÃ³n 1",
+    "url": "http://158.172.155.130:8000/play/a0do/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 796,
+    "name": "Cadena A HD",
+    "url": "http://158.172.155.130:8000/play/a0e9/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 797,
+    "name": "Cartoon Network HD Opción 4",
+    "url": "http://158.172.155.130:8000/play/a0ak/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/cartoon-network-ar.png"
+  },
+  {
+    "number": 798,
+    "name": "Cartoon Network-AR",
+    "url": "http://158.172.155.130:8000/play/a0a9/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/cartoon-network-ar.png"
+  },
+  {
+    "number": 799,
+    "name": "Cinecanal HD-AR-OK",
+    "url": "http://158.172.155.130:8000/play/a0ap/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 800,
+    "name": "Cinecanal-AR",
+    "url": "http://158.172.155.130:8000/play/a09z/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 801,
+    "name": "Cinemax-OK",
+    "url": "http://158.172.155.130:8000/play/a0db/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 802,
+    "name": "Comedy Central Opción 2",
+    "url": "http://158.172.155.130:8000/play/a00f/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 803,
+    "name": "DTV",
+    "url": "http://158.172.155.130:8000/play/a0ea/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 804,
+    "name": "DeporTV-AR",
+    "url": "http://158.172.155.130:8000/play/a09y/index.m3u8",
+    "category": "Deportes",
+    "logo": ""
+  },
+  {
+    "number": 805,
+    "name": "Discovery Channel-AR",
+    "url": "http://158.172.155.130:8000/play/a0ag/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-channel-ar.png"
+  },
+  {
+    "number": 806,
+    "name": "Discovery H&H Opción 3",
+    "url": "http://158.172.155.130:8000/play/a00t/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-home-and-health-ar.png"
+  },
+  {
+    "number": 807,
+    "name": "Discovery H&H HD Opción 1",
+    "url": "http://158.172.155.130:8000/play/a0au/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-home-and-health-ar.png"
+  },
+  {
+    "number": 808,
+    "name": "Discovery HD-AR-OK",
+    "url": "http://158.172.155.130:8000/play/a0av/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 809,
+    "name": "Discovery Kids-AR",
+    "url": "http://158.172.155.130:8000/play/a0aa/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/discovery-kids-ar.png"
+  },
+  {
+    "number": 810,
+    "name": "Discovery Science Opción 2",
+    "url": "http://158.172.155.130:8000/play/a00j/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 811,
+    "name": "Disney Channel - OK",
+    "url": "http://158.172.155.130:8000/play/a00c/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/disney-channel-ar.png"
+  },
+  {
+    "number": 812,
+    "name": "Disney Junior Opción 3",
+    "url": "http://158.172.155.130:8000/play/a0dh/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/disney-jr-ar.png"
+  },
+  {
+    "number": 813,
+    "name": "E! Entertainment Opción 1",
+    "url": "http://158.172.155.130:8000/play/a0dk/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 814,
+    "name": "ESPN Opción 7",
+    "url": "http://158.172.155.130:8000/play/a0d8/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-lam.png"
+  },
+  {
+    "number": 815,
+    "name": "ESPN 2 Opción 9",
+    "url": "http://158.172.155.130:8000/play/a0d7/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-2-lam.png"
+  },
+  {
+    "number": 816,
+    "name": "ESPN 2 HD-OK",
+    "url": "http://158.172.155.130:8000/play/a0dq/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-2-lam.png"
+  },
+  {
+    "number": 817,
+    "name": "ESPN 3 Opción 4",
+    "url": "http://158.172.155.130:8000/play/a0d9/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-3-lam.png"
+  },
+  {
+    "number": 818,
+    "name": "ESPN 3 HD-OK",
+    "url": "http://158.172.155.130:8000/play/a0ds/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-3-lam.png"
+  },
+  {
+    "number": 819,
+    "name": "ESPN 4 HD-AR-OK",
+    "url": "http://158.172.155.130:8000/play/a0am/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-4-lam.png"
+  },
+  {
+    "number": 820,
+    "name": "ESPN HD-OK",
+    "url": "http://158.172.155.130:8000/play/a0dr/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-lam.png"
+  },
+  {
+    "number": 821,
+    "name": "ESPN Premium HD-AR",
+    "url": "http://158.172.155.130:8000/play/a0ao/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/espn-premium-lam.png"
+  },
+  {
+    "number": 822,
+    "name": "El Gourmet-AR",
+    "url": "http://158.172.155.130:8000/play/a0ac/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 823,
+    "name": "Encuentro",
+    "url": "http://158.172.155.130:8000/play/a00n/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 824,
+    "name": "FX-OK",
+    "url": "http://158.172.155.130:8000/play/a005/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 825,
+    "name": "Fox Sports 2 Opción 2",
+    "url": "http://158.172.155.130:8000/play/a0da/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/fox-sports-2-lam.png"
+  },
+  {
+    "number": 826,
+    "name": "Fox Sports 2 HD Opción 1",
+    "url": "http://158.172.155.130:8000/play/a0dt/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/fox-sports-2-lam.png"
+  },
+  {
+    "number": 827,
+    "name": "Fox Sports HD-AR",
+    "url": "http://158.172.155.130:8000/play/a0an/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/fox-sports-lam.png"
+  },
+  {
+    "number": 828,
+    "name": "Fox Sports-AR-AR",
+    "url": "http://158.172.155.130:8000/play/a09x/index.m3u8",
+    "category": "Deportes",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/fox-sports-lam.png"
+  },
+  {
+    "number": 829,
+    "name": "Giga Vision HD",
+    "url": "http://158.172.155.130:8000/play/a0e7/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 830,
+    "name": "HBO Opción 3",
+    "url": "http://158.172.155.130:8000/play/a00g/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 831,
+    "name": "HBO 2-AR-OK",
+    "url": "http://158.172.155.130:8000/play/a0a7/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 832,
+    "name": "HBO Family-AR-OK",
+    "url": "http://158.172.155.130:8000/play/a0a8/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 833,
+    "name": "HBO POP Opción 1",
+    "url": "http://158.172.155.130:8000/play/a007/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 834,
+    "name": "HBO Plus-AR",
+    "url": "http://158.172.155.130:8000/play/a0a6/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 835,
+    "name": "HBO Xtreme Opción 1",
+    "url": "http://158.172.155.130:8000/play/a00e/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 836,
+    "name": "HTV Opción 2",
+    "url": "http://158.172.155.130:8000/play/a00b/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 837,
+    "name": "History 2-OK",
+    "url": "http://158.172.155.130:8000/play/a008/index.m3u8",
+    "category": "Cultura",
+    "logo": ""
+  },
+  {
+    "number": 838,
+    "name": "History Channel Opción 3",
+    "url": "http://158.172.155.130:8000/play/a0dl/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/history-channel-ar.png"
+  },
+  {
+    "number": 839,
+    "name": "Lifetime-OK",
+    "url": "http://158.172.155.130:8000/play/a00l/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 840,
+    "name": "MTV Opción 2",
+    "url": "http://158.172.155.130:8000/play/a009/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 841,
+    "name": "MTV 00 OpciÃ³n 1",
+    "url": "http://158.172.155.130:8000/play/a0dn/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 842,
+    "name": "Nat Geo Opción 3",
+    "url": "http://158.172.155.130:8000/play/a0dm/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/national-geographic-ar.png"
+  },
+  {
+    "number": 843,
+    "name": "Nat Geo HD Opción 3",
+    "url": "http://158.172.155.130:8000/play/a0dx/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/national-geographic-ar.png"
+  },
+  {
+    "number": 844,
+    "name": "Nick Jr-AR-OK",
+    "url": "http://158.172.155.130:8000/play/a0ab/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/nick-jr-ar.png"
+  },
+  {
+    "number": 845,
+    "name": "Nickelodeon Opción 3",
+    "url": "http://158.172.155.130:8000/play/a0di/index.m3u8",
+    "category": "Infantiles",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/nickelodeon-ar.png"
+  },
+  {
+    "number": 846,
+    "name": "PAT",
+    "url": "http://158.172.155.130:8000/play/a0e6/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 847,
+    "name": "Paramount-OK",
+    "url": "http://158.172.155.130:8000/play/a006/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 848,
+    "name": "Quiero Musica",
+    "url": "http://158.172.155.130:8000/play/a00a/index.m3u8",
+    "category": "Música",
+    "logo": ""
+  },
+  {
+    "number": 849,
+    "name": "Red Uno SCZ HD",
+    "url": "http://158.172.155.130:8000/play/a0e5/index.m3u8",
+    "category": "General",
+    "logo": ""
+  },
+  {
+    "number": 850,
+    "name": "SONY - OK",
+    "url": "http://158.172.155.130:8000/play/a0dc/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 851,
+    "name": "Sony HD Opción 3",
+    "url": "http://158.172.155.130:8000/play/a0du/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 852,
+    "name": "Space Opción 4",
+    "url": "http://158.172.155.130:8000/play/a00o/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 853,
+    "name": "Space HD-ok",
+    "url": "http://158.172.155.130:8000/play/a00s/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 854,
+    "name": "TCM Opción 4",
+    "url": "http://158.172.155.130:8000/play/a00r/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 855,
+    "name": "TN HD Opción 1",
+    "url": "http://158.172.155.130:8000/play/a0dp/index.m3u8",
+    "category": "Noticias",
+    "logo": ""
+  },
+  {
+    "number": 856,
+    "name": "TNT Opción 4",
+    "url": "http://158.172.155.130:8000/play/a0a0/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 857,
+    "name": "TNT HD-OK",
+    "url": "http://158.172.155.130:8000/play/a00i/index.m3u8",
+    "category": "Cine",
+    "logo": ""
+  },
+  {
+    "number": 858,
+    "name": "Telefe HD Opción 3",
+    "url": "http://158.172.155.130:8000/play/a00h/index.m3u8",
+    "category": "General",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/telefe-ar.png"
+  },
+  {
+    "number": 859,
+    "name": "The History Channel HD Opción 1",
+    "url": "http://158.172.155.130:8000/play/a0dy/index.m3u8",
+    "category": "Cultura",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/history-channel-ar.png"
+  },
+  {
+    "number": 860,
+    "name": "Universal Opción 3",
+    "url": "http://158.172.155.130:8000/play/a0de/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 861,
+    "name": "Universal HD Opción 1",
+    "url": "http://158.172.155.130:8000/play/a0e0/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 862,
+    "name": "Warner Channel Opción 3",
+    "url": "http://158.172.155.130:8000/play/a0dd/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  },
+  {
+    "number": 863,
+    "name": "Warner Channel HD Opción 2",
+    "url": "http://158.172.155.130:8000/play/a0dv/index.m3u8",
+    "category": "Series",
+    "logo": ""
+  }
+]

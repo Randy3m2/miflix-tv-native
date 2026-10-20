@@ -29,6 +29,13 @@ internal object LiveChannelNavigationRP40 {
         val target=snapshot.rows.getOrNull(index+direction) ?: return
         if(target.provider=="sports" || target.provider==NuvioTestConfigRP49.PROVIDER) {chooseSports?.invoke(target);return}
         val profile=owner(state)
+        if(target.provider==CustomChannelsRP45.provider) {
+            val channel=CustomChannelsRP45.findForStateRP61(state,target.value.id) ?: return
+            val next=CustomChannelsRP45.request(channel)
+            hiddenPlaybackId=next.playbackId
+            state.openLivePlayer(next)
+            return
+        }
         try {
             val stream=LiveRepository().streams(state.calendarLiveManifest(target.provider),target.value).firstOrNull()
                 ?: error("No playable links")

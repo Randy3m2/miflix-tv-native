@@ -107,8 +107,17 @@ internal class LidomRepository(private val context:Context, owner:String) {
         }
     }
 
+    private val youtubeChannelsRP61=mutableMapOf<String,String>()
     suspend fun videos(source:LidomSource):List<LidomVideo> {
-        val channel=LidomUrlPolicy.channelId(source.url) ?: return emptyList()
+        val channel=LidomUrlPolicy.channelId(source.url) ?: youtubeChannelsRP61[source.url] ?: run {
+            if(!youtubeChannel(source.url)) return emptyList()
+            val page=Http.text(source.url,timeoutMs=15000)
+            val found=Regex("\"(?:channelId|externalId)\"\\s*:\\s*\"(UC[A-Za-z0-9_-]{22})\"").find(page)?.groupValues?.get(1)
+                ?: Regex("youtube.com/channel/(UC[A-Za-z0-9_-]{22})").find(page)?.groupValues?.get(1)
+                ?: return emptyList()
+            youtubeChannelsRP61[source.url]=found
+            found
+        }
         val text=Http.text("https://www.youtube.com/feeds/videos.xml?channel_id=$channel",timeoutMs=15000)
         val parser=android.util.Xml.newPullParser();parser.setInput(text.reader());val rows=mutableListOf<LidomVideo>();var id="";var title="";var entry=false
         while(parser.eventType!=org.xmlpull.v1.XmlPullParser.END_DOCUMENT) {

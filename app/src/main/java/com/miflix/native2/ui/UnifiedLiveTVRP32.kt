@@ -34,6 +34,7 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
     val ownerRP46="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
     val context=LocalContext.current
     val customRevisionRP48 by CustomChannelsRP45.changesRP48.collectAsState()
+    var showM3URP61 by remember(ownerRP46) {mutableStateOf(false)}
     var customManageRP48 by remember(ownerRP46) {mutableStateOf<CustomChannelRP45?>(null)}
     val repo=remember {LiveRepository()}
     val scope=rememberCoroutineScope()
@@ -60,13 +61,9 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
         busy=true;message=""
         if(requested.any {it.provider==CustomChannelsRP45.provider}) {
             val category=active.firstOrNull()?.category?.id.orEmpty()
-            val all=CustomChannelsRP45.list(context,ownerRP46)
-            val filtered=when {
-                category=="tirso:Todos" -> all.filter {it.id.startsWith("magma:rp51:")}
-                category.startsWith("tirso:") -> all.filter {it.id.startsWith("magma:rp51:") && it.category==category.removePrefix("tirso:")}
-                else -> all.filterNot {it.id.startsWith("magma:rp51:")}
-            }
-            rows=filtered.map {TVChannelRP32(CustomChannelsRP45.provider,LiveChannel(it.id,"tv",it.name,it.logo,"Tirso TV",number=it.number))}
+            val all=CustomChannelsRP45.list(context,ownerRP46,true)
+            val filtered=all.filter {CustomChannelsRP45.matchesRP61(it,category)}
+            rows=filtered.map {TVChannelRP32(CustomChannelsRP45.provider,LiveChannel(it.id,"tv",it.name,it.logo,CustomChannelsRP45.sourceRP61(it),number=it.number))}
             more=false;busy=false
             if(rows.isEmpty()) message=tr("No hay canales en esta categoría.","No channels in this category.")
             return
@@ -97,7 +94,7 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
             else if(rows.isEmpty()) message=tr("No se encontraron canales en esta selección.","No channels found in this selection.")
         } finally {if(stamp==generation) busy=false}
     }
-    LaunchedEffect(retry) {
+    LaunchedEffect(retry,customRevisionRP48) {
         busy=true;message="";groups=emptyList()
         val providers=listOf("nauta")
         var failures=0
@@ -106,7 +103,7 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
             catch(e:CancellationException) {throw e} catch(_:Exception) {failures++;emptyList()}
         }}.awaitAll().flatten()}
         groups=loaded+listOf(TVGroupRP32(CustomChannelsRP45.provider,CustomChannelsRP45.categoryRP48()))+
-            CustomChannelsRP45.categoriesRP51().map {TVGroupRP32(CustomChannelsRP45.provider,it)}+
+            (CustomChannelsRP45.categoriesRP51()+CustomChannelsRP45.categoriesRP61()+M3UListsRP61.categories(context,ownerRP46)).map {TVGroupRP32(CustomChannelsRP45.provider,it)}+
             IptvRepository.sources.map {(provider,source) ->
             TVGroupRP32(provider,LiveCategory("tv","iptv:all","IPTV · "+source.first,paginated=true,searchable=true))
         }
@@ -135,7 +132,12 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
         if(busy) return
         if(state.partyRole==PartyRole.GUEST) {message=tr("El host elige el canal.","The host chooses the channel.");return}
         if(entry.provider==CustomChannelsRP45.provider) {
-            CustomChannelsRP45.findRP48(context,ownerRP46,entry.channel.id)?.let {if(!state.kidsMode) state.openLivePlayer(CustomChannelsRP45.request(it))}
+            CustomChannelsRP45.findRP48(context,ownerRP46,entry.channel.id)?.let {channel ->if(!state.kidsMode) {
+                active.firstOrNull()?.let {g ->LiveChannelNavigationRP40.save(state,LiveBrowseSnapshotRP40(
+                    BrowserCategoryRP34(g.provider,g.category,CustomChannelsRP45.sourceRP61(channel)),
+                    rows.map {BrowserChannelRP34(it.provider,it.channel)},query,rows.size,false))}
+                state.openLivePlayer(CustomChannelsRP45.request(channel))
+            }}
             return
         }
         val stamp=generation
@@ -155,6 +157,7 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
             items(groups,key={it.key}) {g ->HubCategoryChipRP42(g.category.name,selected==g.key) {selected=g.key}}
         }
         NativeTextField(query,{query=it;state.liveSearch=it},tr("Buscar canales","Search channels"),modifier=Modifier.fillMaxWidth())
+        if(!state.kidsMode && state.partyRole!=PartyRole.GUEST) FocusButton(tr("+ Añadir lista M3U por QR","+ Add M3U playlist by QR")) {showM3URP61=true}
         if(busy) Text(tr("Cargando canales…","Loading channels…"),color=Color.White)
         if(message.isNotBlank()) Text(message,color=Color.White)
         if(!busy && groups.isEmpty()) FocusButton(tr("Reintentar","Retry")) {retry++}
@@ -169,6 +172,7 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
             if(more && !busy) item(span={GridItemSpan(maxLineSpan)}) {FocusButton(tr("Cargar más canales","Load more channels")) {scope.launch {page(false)}}}
         }
     }
+    if(showM3URP61) M3UListsPanelRP61(state) {showM3URP61=false}
     if(links.isNotEmpty()) Dialog(onDismissRequest={links=emptyList();chosen=null},properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Column(Modifier.fillMaxSize().background(Bg).padding(30.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Text(chosen?.channel?.name.orEmpty(),color=Color.White)

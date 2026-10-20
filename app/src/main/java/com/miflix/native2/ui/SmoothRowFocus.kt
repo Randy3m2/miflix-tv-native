@@ -30,35 +30,42 @@ internal fun Modifier.smoothHorizontalDpad(canRepeat: () -> Boolean = {true}): M
 internal fun Modifier.smoothVerticalDpad(canRepeat: () -> Boolean = {true}): Modifier = composed {
     val gate=remember {com.miflix.native2.data.VerticalRepeatGate()}
     this.onFocusChanged {if(!it.hasFocus) gate.reset()}.onPreviewKeyEvent {event ->
-        gate.consume(event.nativeKeyEvent.keyCode,event.type==KeyEventType.KeyDown,event.type==KeyEventType.KeyUp,
-            event.nativeKeyEvent.repeatCount,event.nativeKeyEvent.eventTime,!canRepeat())
+        val vertical=event.nativeKeyEvent.keyCode==19 || event.nativeKeyEvent.keyCode==20
+        if(vertical && event.type==KeyEventType.KeyDown && !canRepeat()) true
+        else gate.consume(event.nativeKeyEvent.keyCode,event.type==KeyEventType.KeyDown,event.type==KeyEventType.KeyUp,
+            event.nativeKeyEvent.repeatCount,event.nativeKeyEvent.eventTime,false)
     }
 }
 
-/** Commit the row's focus before scrolling its lazy children. Never cancel off-screen entry. */
+/** Snapshot the saved card before native vertical focus search can choose a neighbour. */
 internal fun Modifier.firstCardOnDown(
     row: androidx.compose.foundation.lazy.LazyListState,
-    first: androidx.compose.ui.focus.FocusRequester
+    first: androidx.compose.ui.focus.FocusRequester,
+    restoreIndex: () -> Int = {0},
+    restoreFocus: (Int) -> androidx.compose.ui.focus.FocusRequester? = {if(it==0) first else null}
 ): Modifier = composed {
     var active by remember {androidx.compose.runtime.mutableStateOf(false)}
-    var enteredDown by remember {androidx.compose.runtime.mutableStateOf(false)}
-    androidx.compose.runtime.LaunchedEffect(active,enteredDown) {
-        if(!active || !enteredDown) return@LaunchedEffect
+    var enteredVertical by remember {androidx.compose.runtime.mutableStateOf(false)}
+    var entryIndex by remember {androidx.compose.runtime.mutableIntStateOf(0)}
+    val currentIndex by androidx.compose.runtime.rememberUpdatedState(restoreIndex)
+    val currentFocus by androidx.compose.runtime.rememberUpdatedState(restoreFocus)
+    androidx.compose.runtime.LaunchedEffect(active,enteredVertical) {
+        if(!active || !enteredVertical) return@LaunchedEffect
+        val index=entryIndex.coerceIn(0,(row.layoutInfo.totalItemsCount-1).coerceAtLeast(0))
         try {
-            if(row.firstVisibleItemIndex!=0 || row.firstVisibleItemScrollOffset!=0) row.scrollToItem(0)
-            // The focused row is now retained by LazyColumn. Wait for its first card to attach.
-            for(attempt in 0 until 3) {
+            if(index !in row.layoutInfo.visibleItemsInfo.map {it.index}) row.scrollToItem(index)
+            for(attempt in 0 until 4) {
                 androidx.compose.runtime.withFrameNanos { }
-                if(!active || !enteredDown) break
-                if(runCatching {first.requestFocus()}.getOrDefault(false)) break
+                if(!active || !enteredVertical) break
+                if(runCatching {currentFocus(index)?.requestFocus() ?: false}.getOrDefault(false)) break
             }
-        } finally {enteredDown=false}
+        } finally {enteredVertical=false}
     }
     this.onFocusChanged {active=it.hasFocus}.focusProperties {
         onEnter = {
-            enteredDown=requestedFocusDirection==androidx.compose.ui.focus.FocusDirection.Down
-            // Let focus search finish, including beyond-bounds layout. Cancelling here can
-            // dispose this row before a scroll/requestFocus coroutine ever gets to run.
+            val vertical=requestedFocusDirection==androidx.compose.ui.focus.FocusDirection.Down ||
+                requestedFocusDirection==androidx.compose.ui.focus.FocusDirection.Up
+            if(vertical) {entryIndex=currentIndex().coerceAtLeast(0);enteredVertical=true}
         }
     }.focusGroup()
 }

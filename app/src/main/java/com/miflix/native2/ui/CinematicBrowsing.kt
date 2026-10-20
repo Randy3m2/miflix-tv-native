@@ -91,6 +91,7 @@ internal fun SpotlightRail(
     val bring=remember { BringIntoViewRequester() }
     val railScroll=androidx.compose.foundation.lazy.rememberLazyListState()
     val firstCard=remember {FocusRequester()}
+    val cardFocusRP61=remember {mutableMapOf<String,FocusRequester>()}
     LaunchedEffect(selectedId,active) { settledId=null;if(active && !simple) { delay(3000);settledId=selectedId } }
     LaunchedEffect(active) { if(active && !homeShelf) { delay(50); bring.bringIntoView() } }
     val infoVisibility by animateFloatAsState(if(active && settledId==selectedId) 1f else 0f,tween(150),label="railInfo")
@@ -108,11 +109,16 @@ internal fun SpotlightRail(
             maxLines=1,overflow=TextOverflow.Ellipsis,
             modifier=Modifier.padding(start=40.dp,end=40.dp,bottom=8.dp))
         CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalSpec,LocalHorizontalFocusAnchor provides horizontalAnchor) {
-        LazyRow(Modifier.fillMaxWidth().height(cardRowHeight).smoothHorizontalDpad { !railScroll.isScrollInProgress }.firstCardOnDown(railScroll,firstCard),state=railScroll,contentPadding=PaddingValues(horizontal=34.dp,vertical=6.dp)) {
+        LazyRow(Modifier.fillMaxWidth().height(cardRowHeight).smoothHorizontalDpad { !railScroll.isScrollInProgress }.firstCardOnDown(railScroll,firstCard,restoreIndex={rows.indexOfFirst {it.cloudId==selectedId}.coerceAtLeast(0)},restoreFocus={index -> rows.getOrNull(index)?.let {cardFocusRP61[it.cloudId]}}),state=railScroll,contentPadding=PaddingValues(horizontal=34.dp,vertical=6.dp)) {
             items(rows,key={it.cloudId},contentType={"spotlight"}) { item ->
+                val cardFocus=remember(item.cloudId) {FocusRequester()}
+                DisposableEffect(item.cloudId,cardFocus) {
+                    cardFocusRP61[item.cloudId]=cardFocus
+                    onDispose {if(cardFocusRP61[item.cloudId]===cardFocus) cardFocusRP61.remove(item.cloudId)}
+                }
                 SpotlightCard(item,expanded=active && selectedId==item.cloudId && settledId==item.cloudId,landscape=landscape,showTitle=showTitle,
                     progress=progressFor(item),rank=if(ranked) rows.indexOf(item)+1 else null,
-                    awardLabel=if(awardLabels) com.miflix.native2.data.AwardSelections.label(item.id,item.type,tr("es","en")=="es",awardYear) else null,modifier=(if(item.cloudId==rows.first().cloudId) Modifier.focusRequester(firstCard) else Modifier).then(homeReturnFocus("media:$title:${item.cloudId}")),
+                    awardLabel=if(awardLabels) com.miflix.native2.data.AwardSelections.label(item.id,item.type,tr("es","en")=="es",awardYear) else null,modifier=Modifier.focusRequester(cardFocus).then(homeReturnFocus("media:$title:${item.cloudId}")),
                     onFocused={selectedId=item.cloudId;publishPreview?.invoke(item)},onLongClick=hold?.let {action -> {action(item)}},onClick={onClick(item)})
             }
             if(homeShelf && more!=null) item(key="shelf_more") {

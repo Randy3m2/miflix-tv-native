@@ -219,7 +219,8 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
             override fun calculateScrollDistance(offset: Float,size: Float,containerSize: Float): Float {
                 if(size<=0f || containerSize<=0f) return 0f
                 val anchor=minOf(verticalAnchorPx,(containerSize-size).coerceAtLeast(0f))
-                return offset-anchor
+                val distance=offset-anchor
+                return if(kotlin.math.abs(distance)<1f) 0f else distance*.55f
             }
         }) {
             LazyColumn(Modifier.fillMaxSize().smoothVerticalDpad { !scroll.isScrollInProgress }.focusRequester(contentFocus).focusGroup(),state=scroll,contentPadding=PaddingValues(0.dp)) {
@@ -463,17 +464,24 @@ private fun CollectionRail(title: String, rows: List<CollectionTile>, onClick: (
     val shelfKey=LocalHomeShelfKey.current
     val railScroll=rememberLazyListState()
     val firstCard=remember {FocusRequester()}
+    var selectedTileRP61 by androidx.compose.runtime.saveable.rememberSaveable(title) {mutableStateOf(rows.firstOrNull()?.id)}
+    val tileFocusRP61=remember {mutableMapOf<String,FocusRequester>()}
     Column(Modifier.fillMaxWidth().height(208.dp)) {
         Text(title, color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 40.dp,end=40.dp, bottom = 8.dp))
         HomeHorizontalRail {
         LazyRow(
-            modifier=Modifier.fillMaxWidth().padding(horizontal=32.dp).clipToBounds().smoothHorizontalDpad().firstCardOnDown(railScroll,firstCard),
+            modifier=Modifier.fillMaxWidth().padding(horizontal=32.dp).clipToBounds().smoothHorizontalDpad().firstCardOnDown(railScroll,firstCard,restoreIndex={rows.indexOfFirst {it.id==selectedTileRP61}.coerceAtLeast(0)},restoreFocus={index ->rows.getOrNull(index)?.let {tileFocusRP61[it.id]}}),
             state=railScroll,
             contentPadding = PaddingValues(horizontal=8.dp,vertical=8.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             items(rows, key = { it.id }) { tile ->
-                Box((if(tile.id==rows.firstOrNull()?.id) Modifier.focusRequester(firstCard) else Modifier).then(homeReturnFocus("collection:$title:${tile.id}"))) {
+                val tileFocus=remember(tile.id) {FocusRequester()}
+                DisposableEffect(tile.id,tileFocus) {
+                    tileFocusRP61[tile.id]=tileFocus
+                    onDispose {if(tileFocusRP61[tile.id]===tileFocus) tileFocusRP61.remove(tile.id)}
+                }
+                Box(Modifier.focusRequester(tileFocus).onFocusChanged {if(it.hasFocus) selectedTileRP61=tile.id}.then(homeReturnFocus("collection:$title:${tile.id}"))) {
                     CollectionCard(tile) { onClick(tile) }
                 }
             }

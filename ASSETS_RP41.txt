@@ -1,0 +1,5 @@
+Tarjetas: imagen de referencia suministrada por el usuario image(20261020-011234).png. Se conserva el tablero original y se selecciona cada región al dibujar en Compose; no se añade una dependencia gráfica.
+TNT Sports UK: https://commons.wikimedia.org/wiki/File:TNT_Sports_(2023).svg
+TBS: https://commons.wikimedia.org/wiki/File:TBS_logo_2016.svg
+SVG convertidos a Android VectorDrawable conservando los trazados y proporciones. Marcas pertenecientes a sus titulares; no se implica afiliación.
+Logos de equipos LIDOM: recursos existentes del proyecto.

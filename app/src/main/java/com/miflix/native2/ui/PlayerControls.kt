@@ -59,8 +59,8 @@ internal fun CompactPlayerControls(
     var focusedLabel by remember { mutableStateOf("") }
     Box(Modifier.fillMaxSize()) {
         Row(Modifier.align(Alignment.TopEnd).padding(top=20.dp,end=24.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            PlayerIconButton("score",tr("PIN Live score","PIN Live score"),onInteraction=onInteraction,onClick=onScores,onLabel={focusedLabel=it})
-            PlayerIconButton("info",tr("Información técnica","Playback info"),onInteraction=onInteraction,onClick=onInfo,onLabel={ focusedLabel=it })
+            PlayerIconButton("score",tr("PIN Live score","PIN Live score"),modifier=if(request.live) Modifier.focusRequester(playFocus) else Modifier,onInteraction=onInteraction,onClick=onScores,onLabel={focusedLabel=it})
+            if(!request.live) PlayerIconButton("info",tr("Información técnica","Playback info"),onInteraction=onInteraction,onClick=onInfo,onLabel={ focusedLabel=it })
             if(!request.live && seekable) PlayerIconButton("moment",tr("Grabar momento","Mark a moment"),onInteraction=onInteraction,onClick=onMoment,onLabel={ focusedLabel=it })
             PlayerIconButton("pip",tr("Ventana flotante","Picture in Picture"),onInteraction=onInteraction,onClick=onPip,onLabel={ focusedLabel=it })
             if(request.live) PlayerIconButton("grid",if(request.liveProvider=="lidom") tr("SplitScreen · LIDOM","SplitScreen · LIDOM") else tr("Hasta 4 canales","Up to 4 channels"),onInteraction=onInteraction,onClick=onMultiView,onLabel={ focusedLabel=it })
@@ -81,9 +81,9 @@ internal fun CompactPlayerControls(
             Text(if(request.item.type=="series") "S${request.season} E${request.episode} · ${request.stream.name}" else request.stream.name,
                 color=Color(0xFFBBBBBB),fontSize=12.sp,lineHeight=15.sp,maxLines=1)
             Text(focusedLabel,color=Color.White,fontSize=12.sp,lineHeight=16.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,modifier=Modifier.fillMaxWidth().height(18.dp))
-            PlayerSeekBar(position,duration,seekable,seekFocus,playFocus,onInteraction,onSeek)
+            if(!request.live) PlayerSeekBar(position,duration,seekable,seekFocus,playFocus,onInteraction,onSeek)
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                PlayerIconButton(if(paused) "play" else "pause",if(paused) tr("Reproducir","Play") else tr("Pausar","Pause"),Modifier.focusRequester(playFocus).focusProperties { up=seekFocus },onInteraction,onPlay,onLabel={ focusedLabel=it })
+                if(!request.live) PlayerIconButton(if(paused) "play" else "pause",if(paused) tr("Reproducir","Play") else tr("Pausar","Pause"),Modifier.focusRequester(playFocus).focusProperties { up=seekFocus },onInteraction,onPlay,onLabel={ focusedLabel=it })
                 if(request.item.type=="series" && !request.live) {
                     PlayerIconButton("next",tr("Siguiente episodio","Next episode"),onInteraction=onInteraction,onClick=onNext,onLabel={ focusedLabel=it },enabled=nextAvailable)
                     PlayerIconButton("episodes",tr("Episodios","Episodes"),onInteraction=onInteraction,onClick=onEpisodes,onLabel={ focusedLabel=it })
@@ -91,14 +91,13 @@ internal fun CompactPlayerControls(
                 if(request.live && previousChannelVisible) PlayerIconButton("previous",
                     tr("Canal anterior","Previous channel")+previousChannelName.takeIf {it.isNotBlank()}?.let {" · $it"}.orEmpty(),
                     onInteraction=onInteraction,onClick=onPreviousChannel,onLabel={focusedLabel=it},enabled=previousChannelAvailable)
-                if(request.live) PlayerIconButton("episodes",if(request.liveProvider=="lidom") tr("Fuentes del equipo","Team sources") else tr("Canales","Channels"),onInteraction=onInteraction,onClick=onEpisodes,onLabel={ focusedLabel=it })
-                PlayerIconButton("cc",tr("Subtítulos","Subtitles"),onInteraction=onInteraction,onClick={onMenu("subtitles")},onLabel={ focusedLabel=it })
-                PlayerIconButton("audio",tr("Pista de audio","Audio track"),onInteraction=onInteraction,onClick={onMenu("audio")},onLabel={ focusedLabel=it })
-                PlayerIconButton("links",tr("Enlaces de reproducción","Playback links"),onInteraction=onInteraction,onClick=onLinks,onLabel={ focusedLabel=it })
+                if(!request.live) PlayerIconButton("cc",tr("Subtítulos","Subtitles"),onInteraction=onInteraction,onClick={onMenu("subtitles")},onLabel={ focusedLabel=it })
+                if(!request.live) PlayerIconButton("audio",tr("Pista de audio","Audio track"),onInteraction=onInteraction,onClick={onMenu("audio")},onLabel={ focusedLabel=it })
+                if(!request.live) PlayerIconButton("links",tr("Enlaces de reproducción","Playback links"),onInteraction=onInteraction,onClick=onLinks,onLabel={ focusedLabel=it })
                 PlayerIconButton("party","Friends & Party",onInteraction=onInteraction,onClick=onParty,onLabel={ focusedLabel=it })
                 PlayerIconButton("chat",tr("Chat del Party","Party chat"),onInteraction=onInteraction,onClick=onChat,onLabel={ focusedLabel=it })
                 PlayerIconButton("reactions",tr("Emojis · Mantén pulsado para frases","Emojis · Hold for phrases"),onInteraction=onInteraction,onClick=onQuickReactions,onLongClick=onReactions,onLabel={ focusedLabel=it })
-                PlayerIconButton("queue",tr("Cola","Queue"),onInteraction=onInteraction,onClick=onQueue,onLabel={ focusedLabel=it })
+                if(!request.live) PlayerIconButton("queue",tr("Cola","Queue"),onInteraction=onInteraction,onClick=onQueue,onLabel={ focusedLabel=it })
                 Spacer(Modifier.weight(1f))
                 Text(if(duration>0) "${tr("Termina","Ends")} " + java.text.SimpleDateFormat("HH:mm",java.util.Locale.getDefault()).format(java.util.Date(System.currentTimeMillis()+((duration-position).coerceAtLeast(0)/speed.coerceAtLeast(0.1f)).toLong())) else if(request.liveProvider=="lidom") tr("TRANSMISIÓN","STREAM") else if(request.live) tr("EN VIVO","LIVE") else playbackTime(position),
                     color=Color.White,fontSize=14.sp,lineHeight=18.sp)

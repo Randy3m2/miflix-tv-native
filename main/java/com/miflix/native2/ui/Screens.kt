@@ -1439,7 +1439,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var quickReactions by remember(request.playbackId) { mutableStateOf(false) }
     var firstFrame by remember(request.playbackId) {mutableStateOf(false)}
     var hadPlaybackError by remember(request.playbackId) {mutableStateOf(false)}
-    var controlsVisible by remember(request.playbackId) { mutableStateOf(!LiveChannelNavigationRP40.startHidden(request)) }
+    var controlsVisible by remember(request.playbackId) { mutableStateOf(!request.live && !LiveChannelNavigationRP40.startHidden(request)) }
     var controlInteraction by remember { mutableStateOf(0) }
     val channelMenuScopeRP34=rememberCoroutineScope()
     var channelStepJobRP40 by remember {mutableStateOf<kotlinx.coroutines.Job?>(null)}
@@ -1746,7 +1746,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 updateScreenAwake()
             }
 
-            override fun onRenderedFirstFrame() {if(!firstFrame) state.rememberSuccessfulPlaybackRP16(request);state.recordSuccessfulLiveChannel(request);state.socialPlaybackStarted(request,player.currentPosition,player.duration);if(!firstFrame) state.markLidomSourceWorking(request);firstFrame=true;state.finishPlaybackLoading(request.playbackId)}
+            override fun onRenderedFirstFrame() {if(!firstFrame) state.rememberSuccessfulPlaybackRP16(request);state.recordSuccessfulLiveChannel(request);if(!firstFrame) LiveHubPlaybackRP41.remember(context,state,request);state.socialPlaybackStarted(request,player.currentPosition,player.duration);if(!firstFrame) state.markLidomSourceWorking(request);firstFrame=true;state.finishPlaybackLoading(request.playbackId)}
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if(playbackState==Player.STATE_READY) state.socialPlaybackReady(request,player.currentPosition,player.duration)
                 if (playbackState == Player.STATE_ENDED) {
@@ -1879,6 +1879,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         if (quickReactions) { quickReactions=false;controlsVisible=true;controlInteraction++ }
         else if (playerMenu != null) {if(playerMenu in listOf("audio","subtitles","timing")) state.localExtras.rememberTracks(state.localExtrasScope(),request.item,player,timingMs);playerMenu = null}
         else if (showEpisodes) { showEpisodes=false; if(episodesResumeAfterClose) player.play() }
+        else if(request.live) {parkCurrentPlayback();state.miniPlayer=false;state.playerRequest=null;state.screen=Screen.LIVE_TV}
         else if (paused && !pauseInfoDismissed) {
             pauseSynopsis = false; pauseInfoDismissed = true
             controlsVisible = true; controlInteraction++;requestExit()
@@ -1894,6 +1895,16 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         else if(code in listOf(android.view.KeyEvent.KEYCODE_VOLUME_UP,android.view.KeyEvent.KEYCODE_VOLUME_DOWN,android.view.KeyEvent.KEYCODE_VOLUME_MUTE)) false
         else if (dismissKey == code) {
             if (event.type == KeyEventType.KeyUp) dismissKey = null
+            true
+        } else if(request.live && (!controlsVisible || surfaceFocusedRP34) &&
+            code in listOf(android.view.KeyEvent.KEYCODE_DPAD_CENTER,android.view.KeyEvent.KEYCODE_ENTER,android.view.KeyEvent.KEYCODE_NUMPAD_ENTER) &&
+            !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu==null && state.sourceSelection==null) {
+            if(event.type==KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount==0) {
+                dismissKey=code;pauseInfoDismissed=true;pauseSynopsis=false;controlsVisible=false
+                playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else "channels"
+            }
+            true
+        } else if(request.live && code in listOf(android.view.KeyEvent.KEYCODE_MEDIA_PAUSE,android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)) {
             true
         } else if(request.live && firstFrame && !controlsVisible &&
             code in listOf(android.view.KeyEvent.KEYCODE_DPAD_UP,android.view.KeyEvent.KEYCODE_DPAD_DOWN) &&
@@ -1971,7 +1982,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             modifier=Modifier.align(Alignment.TopStart).padding(start=28.dp,top=24.dp))
         if(mini) {
             Row(Modifier.align(Alignment.BottomCenter).background(Color(0xEE171717)).padding(6.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                FocusButton(if(paused) "▶" else "Ⅱ",horizontalPadding=12.dp) { userPlayback(!player.playWhenReady) }
+                if(!request.live) FocusButton(if(paused) "▶" else "Ⅱ",horizontalPadding=12.dp) { userPlayback(!player.playWhenReady) }
                 FocusButton(tr("Ampliar","Expand"),horizontalPadding=14.dp) { state.launch {
                     if(!request.live) { state.open(request.item);if(request.season>1) state.loadSeason(request.season) }
                     if(state.playerRequest?.playbackId==request.playbackId) {

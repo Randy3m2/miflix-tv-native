@@ -38,7 +38,10 @@ import kotlinx.coroutines.delay
 import android.content.Context
 
 @Composable
-fun LiveScreen(state: AppState) {
+fun LiveScreen(state:AppState) = LiveHubRP41(state)
+
+@Composable
+private fun LegacyLiveScreenRP41(state: AppState) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { context.getSharedPreferences("miflix_live", Context.MODE_PRIVATE) }
     val repo = remember { LiveRepository() }

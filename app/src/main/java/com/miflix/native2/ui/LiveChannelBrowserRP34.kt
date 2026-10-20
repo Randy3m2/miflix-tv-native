@@ -304,16 +304,22 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     customManageRP48?.let {channel ->CustomChannelManageRP48(state,channel) {customManageRP48=null}}
     genericOptionsRP54?.let {entry ->
         val isFav=LiveLibrary.favorites(context,state).any {it.provider==entry.provider && it.channel.id==entry.value.id}
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest={genericOptionsRP54=null},
-            title={androidx.compose.material3.Text(entry.value.name)},
-            text={androidx.compose.material3.Text(if(isFav) "Remove from Favorites" else "Add to Favorites")},
-            confirmButton={androidx.compose.material3.TextButton(onClick={
-                LiveLibrary.toggle(context,state,entry.provider,entry.value)
-                genericOptionsRP54=null
-            }) {androidx.compose.material3.Text(if(isFav) "Remove from Favorites" else "Add to Favorites")}},
-            dismissButton={androidx.compose.material3.TextButton(onClick={genericOptionsRP54=null}) {androidx.compose.material3.Text("Close")}}
-        )
+        PlayerMenuDialog(onDismissRequest={genericOptionsRP54=null},fullScreen=true) {
+            BoxWithConstraints(Modifier.fillMaxSize().consumeOpeningPress()) {
+                Column(Modifier.align(Alignment.CenterEnd)
+                    .fillMaxWidth(if(maxWidth<700.dp) .8f else .4f)
+                    .background(Color(0xFC101010),RoundedCornerShape(18.dp))
+                    .padding(24.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+                    Text(entry.value.name,color=Color.White,fontSize=23.sp)
+                    FocusButton(tr(if(isFav) "Quitar de favoritos" else "Agregar a favoritos",
+                        if(isFav) "Remove from Favorites" else "Add to Favorites"),modifier=Modifier.fillMaxWidth()) {
+                        LiveLibrary.toggle(context,state,entry.provider,entry.value)
+                        genericOptionsRP54=null
+                    }
+                    FocusButton(tr("Cerrar","Close"),modifier=Modifier.fillMaxWidth()) {genericOptionsRP54=null}
+                }
+            }
+        }
     }
     pendingSportsRP44?.let {entry ->LiveSportsLinksRP44(state,entry.value,{pendingSportsRP44=null},manifestOverrideRP49=if(entry.provider==NuvioTestConfigRP49.PROVIDER) NuvioTestConfigRP49.MANIFEST else null) {stream ->pendingSportsRP44=null;selectSportsRP44(entry,stream)}}
 

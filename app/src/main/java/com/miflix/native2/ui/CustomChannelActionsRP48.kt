@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 import com.miflix.native2.model.PartyRole
-import com.miflix.native2.model.LiveChannel
+import com.miflix.native2.data.LiveChannel
 
 @Composable
 internal fun CustomChannelManageRP48(state:AppState,channel:CustomChannelRP45,close:()->Unit) {

@@ -6,6 +6,11 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -45,10 +50,11 @@ private object ProfileArtCacheRP56 {
 @Composable
 internal fun ProfilePickerRP56(
     state: AppState, picking: Boolean, onSelect: (Profile) -> Unit,
-    onManage: () -> Unit, onBack: () -> Unit
+    onManage: () -> Unit, onEdit: (Profile) -> Unit, onBack: () -> Unit
 ) {
     BackHandler(onBack = onBack)
     val first = remember { FocusRequester() }
+    var selectedProfile by remember { mutableStateOf(state.profiles.firstOrNull()?.id) }
     val locale = state.tmdb.language
     var titles by remember(locale) { mutableStateOf(
         if (ProfileArtCacheRP56.language == locale) ProfileArtCacheRP56.titles else emptyList()
@@ -92,8 +98,8 @@ internal fun ProfilePickerRP56(
         }
     }
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black).clipToBounds()) {
-        val avatarSize = ((maxHeight.value - 166f) / state.profiles.size.coerceIn(4, 6) - 12f)
-            .coerceIn(52f, 82f).dp
+        val avatarSize = ((maxHeight.value - 174f - state.profiles.size * 20f) / (state.profiles.size.coerceAtLeast(4) * 1.36f + 1f))
+            .coerceIn(46f, 68f).dp
         Box(Modifier.align(Alignment.CenterEnd).fillMaxWidth(.76f).fillMaxHeight()) {
             Crossfade(targetState = current?.backdrop, animationSpec = tween(1100), label = "profileArtwork") { url ->
                 if (url != null) AsyncImage(url, null,
@@ -109,37 +115,68 @@ internal fun ProfilePickerRP56(
             .68f to Color(0x68000000), 1f to Color(0x10000000))))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
             0f to Color(0x55000000), .55f to Color.Transparent, 1f to Color(0xD9000000))))
-        Column(Modifier.fillMaxHeight().fillMaxWidth(.48f).padding(start = 48.dp, top = 24.dp, bottom = 18.dp)) {
-            Text("BruniO", color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.Black)
+        Column(Modifier.fillMaxHeight().fillMaxWidth(.48f).padding(start = 22.dp, top = 20.dp, bottom = 16.dp)) {
+            Text("BruniO", modifier = Modifier.padding(start = 44.dp), color = Color.White, fontSize = 29.sp, fontWeight = FontWeight.Black)
             Text(if (picking) tr("Preparando tu perfil…", "Preparing your profile…")
-                else tr("Elige un perfil", "Choose a profile"), color = Color(0xFFB6B6B6), fontSize = 14.sp)
+                else tr("Elige un perfil", "Choose a profile"), modifier = Modifier.padding(start = 44.dp), color = Color(0xFFB6B6B6), fontSize = 12.sp)
             Spacer(Modifier.height(16.dp))
             LazyColumn(Modifier.weight(1f).fillMaxWidth(),
                 contentPadding = PaddingValues(vertical = 5.dp, horizontal = 5.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(state.profiles, key = { it.id }) { profile ->
-                    var focused by remember(profile.id) { mutableStateOf(false) }
-                    val scale by animateFloatAsState(if (focused) 1.07f else 1f, tween(160), label = "profileAvatar")
-                    Row(Modifier.fillMaxWidth()
-                        .then(if (profile.id == state.profiles.firstOrNull()?.id) Modifier.focusRequester(first) else Modifier)
-                        .onFocusChanged { focused = it.isFocused }
-                        .tvClick { if (!picking) onSelect(profile) }
-                        .clickable { if (!picking) onSelect(profile) },
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                        Box(Modifier.graphicsLayer { scaleX = scale; scaleY = scale }
-                            .border(if (focused) 2.dp else 0.dp, if (focused) Color.White else Color.Transparent,
-                                RoundedCornerShape(14.dp)).padding(4.dp)) {
-                            ProfileAvatar(profile, Modifier.size(avatarSize))
+                    val selected = selectedProfile == profile.id
+                    val scale by animateFloatAsState(if (selected) 1.33f else 1f, tween(180), label = "profileAvatar")
+                    Row(Modifier.fillMaxWidth().height(avatarSize * 1.36f + 8.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.width(40.dp), contentAlignment = Alignment.Center) {
+                            if (selected) {
+                                var editFocused by remember { mutableStateOf(false) }
+                                Box(Modifier.size(32.dp)
+                                    .background(if (editFocused) Color(0xFF303030) else Color.Transparent, RoundedCornerShape(6.dp))
+                                    .onFocusChanged { editFocused = it.isFocused }
+                                    .semantics { contentDescription = tr("Editar perfil", "Edit profile") }
+                                    .tvClick { onEdit(profile) }.clickable { onEdit(profile) }.padding(7.dp)) {
+                                    Canvas(Modifier.fillMaxSize()) {
+                                        val w = size.width; val h = size.height
+                                        drawLine(Color.White, Offset(w*.18f,h*.78f), Offset(w*.75f,h*.21f), 2.dp.toPx(), StrokeCap.Round)
+                                        drawLine(Color.White, Offset(w*.31f,h*.9f), Offset(w*.87f,h*.34f), 2.dp.toPx(), StrokeCap.Round)
+                                        drawLine(Color.White, Offset(w*.75f,h*.21f), Offset(w*.87f,h*.34f), 2.dp.toPx(), StrokeCap.Round)
+                                        drawLine(Color.White, Offset(w*.18f,h*.78f), Offset(w*.14f,h*.94f), 2.dp.toPx(), StrokeCap.Round)
+                                    }
+                                }
+                            }
                         }
-                        Text(profile.name, color = if (focused) Color.White else Color(0xFFAAAAAA),
-                            fontSize = if (focused) 23.sp else 17.sp,
-                            fontWeight = if (focused) FontWeight.Bold else FontWeight.Normal,
+                        Box(Modifier.width(avatarSize * 1.36f + 10.dp), contentAlignment = Alignment.Center) {
+                            Box(Modifier
+                                .then(if (profile.id == state.profiles.firstOrNull()?.id) Modifier.focusRequester(first) else Modifier)
+                                .onFocusChanged { if (it.isFocused) selectedProfile = profile.id }
+                                .tvClick { if (!picking) onSelect(profile) }
+                                .clickable { if (!picking) onSelect(profile) }
+                                .graphicsLayer { scaleX = scale; scaleY = scale }
+                                .border(if (selected) 1.5.dp else 0.dp, if (selected) Color.White else Color.Transparent,
+                                    RoundedCornerShape(8.dp)).padding(3.dp)) {
+                                ProfileAvatar(profile, Modifier.size(avatarSize))
+                            }
+                        }
+                        if (selected) Text(profile.name, modifier = Modifier.padding(start = 16.dp),
+                            color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Bold,
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 item {
-                    FocusButton(tr("＋ Agregar / administrar", "＋ Add / manage profiles")) { onManage() }
+                    var addFocused by remember { mutableStateOf(false) }
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Spacer(Modifier.width(40.dp))
+                        Box(Modifier.width(avatarSize * 1.36f + 10.dp), contentAlignment = Alignment.Center) {
+                            Box(Modifier.size(avatarSize).border(if (addFocused) 2.dp else 1.dp,
+                                if (addFocused) Color.White else Color(0xFF888888), RoundedCornerShape(7.dp))
+                                .onFocusChanged { addFocused = it.isFocused; if (it.isFocused) selectedProfile = null }
+                                .semantics { contentDescription = tr("Agregar perfil", "Add profile") }
+                                .tvClick { onManage() }.clickable { onManage() }, contentAlignment = Alignment.Center) {
+                                Text("+", color = if (addFocused) Color.White else Color(0xFF999999), fontSize = 29.sp)
+                            }
+                        }
+                    }
                 }
             }
         }

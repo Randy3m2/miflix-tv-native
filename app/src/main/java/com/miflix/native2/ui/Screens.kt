@@ -1343,7 +1343,8 @@ fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
                     picking = true
                     state.launch { try { state.selectProfile(profile) } finally { picking = false } }
                 }
-            }, onManage = { managing = true }, onBack = onBack)
+            }, onManage = { managing = true },
+            onEdit = { profile -> managing = true; editingAvatar = profile }, onBack = onBack)
         return
     }
     BackHandler { if(managing) managing=false else onBack() }

@@ -154,7 +154,7 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
             items(visible,key={it.key}) {entry ->
                 val revision=LiveLibrary.revision
                 val favorite=remember(revision,state.activeProfile.id,state.session?.userId,entry.key) {LiveLibrary.favorites(context,state).any {it.provider==entry.provider && it.channel.id==entry.channel.id}}
-                if(entry.provider==CustomChannelsRP45.provider) HubEventCardRP41(entry.channel.name,null,tr("CANAL PERSONAL · Mantén OK: opciones","PERSONAL CHANNEL · Hold OK: options"),onHoldRP48={customManageRP48=CustomChannelsRP45.findRP48(context,ownerRP46,entry.channel.id)}) {openChannel(entry)}
+                if(entry.provider==CustomChannelsRP45.provider) HubEventCardRP41(entry.channel.number.takeIf {it>0}?.let {"$it · ${entry.channel.name}"} ?: entry.channel.name,entry.channel.poster,tr("EN VIVO · Mantén OK: opciones","LIVE · Hold OK: options"),onHoldRP48={customManageRP48=CustomChannelsRP45.findRP48(context,ownerRP46,entry.channel.id)},logoRP50=true) {openChannel(entry)}
                 else LiveChannelTile(entry.channel,entry.channel.number.takeIf {it>0} ?: (rows.indexOf(entry)+1),favorite,{openChannel(entry)}) {LiveLibrary.toggle(context,state,entry.provider,entry.channel)}
             }
             if(more && !busy) item(span={GridItemSpan(maxLineSpan)}) {FocusButton(tr("Cargar más canales","Load more channels")) {scope.launch {page(false)}}}

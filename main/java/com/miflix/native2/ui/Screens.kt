@@ -1908,7 +1908,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu==null && state.sourceSelection==null) {
             if(event.type==KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount==0) {
                 dismissKey=code;pauseInfoDismissed=true;pauseSynopsis=false;controlsVisible=false
-                playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else if(request.liveProvider==CustomChannelsRP45.provider) "custom_channels" else "channels"
+                playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else "channels"
             }
             true
         } else if(request.live && code in listOf(android.view.KeyEvent.KEYCODE_MEDIA_PAUSE,android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)) {
@@ -1930,7 +1930,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             code==android.view.KeyEvent.KEYCODE_DPAD_RIGHT && event.type==KeyEventType.KeyDown &&
             !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu==null && state.sourceSelection==null) {
             dismissKey=code;pauseInfoDismissed=true;pauseSynopsis=false;controlsVisible=false
-            playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else if(request.liveProvider==CustomChannelsRP45.provider) "custom_channels" else "channels"
+            playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else "channels"
             true
         } else if (event.type == KeyEventType.KeyDown && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu == null && !quickReactions && state.sourceSelection == null) {
             val wasHidden = !controlsVisible
@@ -2098,7 +2098,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 onQuickReactions={ if(state.watchParty==null) openPlayerParty() else { quickReactions=true;controlsVisible=false;controlInteraction++ } },onClose={ requestExit() }, onMaximize={ maximized=!maximized },
                 nextAvailable=(randomMode || upcoming!=null) && state.partyRole!=PartyRole.GUEST,
                 onNext={cancelAutoplay=true;state.launch {state.socialAction {if(randomMode) state.playRandomEpisode(request.item) else upcoming?.let {state.playNext(request,it)} } }},
-                onEpisodes={ if(request.liveProvider=="lidom") state.showLidomSources(request) else if(request.live) playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else if(request.liveProvider==CustomChannelsRP45.provider) "custom_channels" else "channels" else { episodesResumeAfterClose=false;showEpisodes=true } },onQueue={ showQueue=true },
+                onEpisodes={ if(request.liveProvider=="lidom") state.showLidomSources(request) else if(request.live) playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else "channels" else { episodesResumeAfterClose=false;showEpisodes=true } },onQueue={ showQueue=true },
                 onMoment={momentNotice=false;showMomentComposer=true},onInfo={ playerMenu="info" },onPip={ parkCurrentPlayback();playerMenu=null;controlsVisible=false;state.miniPlayer=true;state.screen=Screen.HOME },
                 onScores={state.showLiveScoresRP11=true},
                 channelFavoriteRP36={if(request.live) LiveFavoriteRP36(state,request) {controlInteraction++}},

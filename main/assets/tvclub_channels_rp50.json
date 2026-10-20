@@ -1,0 +1,1602 @@
+[
+  {
+    "number": 1,
+    "name": "Canal 1",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/1.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 2,
+    "name": "Canal 2",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/2.m3u8",
+    "manifestAvailable": false,
+    "status": 520,
+    "logo": ""
+  },
+  {
+    "number": 3,
+    "name": "Canal 3",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/3.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 4,
+    "name": "Canal 4",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/4.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 5,
+    "name": "AE",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/5.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 6,
+    "name": "Eventos2",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/6.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 7,
+    "name": "Canal 7",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/7.m3u8",
+    "manifestAvailable": false,
+    "status": 520,
+    "logo": ""
+  },
+  {
+    "number": 8,
+    "name": "Canal 8",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/8.m3u8",
+    "manifestAvailable": false,
+    "status": 520,
+    "logo": ""
+  },
+  {
+    "number": 9,
+    "name": "APlus",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/9.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 10,
+    "name": "Canal 10",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/10.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 11,
+    "name": "Canal 11",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/11.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 12,
+    "name": "Canal 12",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/12.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 13,
+    "name": "Canal 13",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/13.m3u8",
+    "manifestAvailable": false,
+    "status": 520,
+    "logo": ""
+  },
+  {
+    "number": 14,
+    "name": "A3Cine",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/14.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 15,
+    "name": "Canal 15",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/15.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 16,
+    "name": "Canal 16",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/16.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 17,
+    "name": "A3SSeries",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/17.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/spain/atreseries-es.png"
+  },
+  {
+    "number": 18,
+    "name": "Canal 18",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/18.m3u8",
+    "manifestAvailable": false,
+    "status": 520,
+    "logo": ""
+  },
+  {
+    "number": 19,
+    "name": "Canal 19",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/19.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 20,
+    "name": "ADN40",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/20.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 21,
+    "name": "Canal 21",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/21.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 22,
+    "name": "Canal 22",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/22.m3u8",
+    "manifestAvailable": false,
+    "status": 520,
+    "logo": ""
+  },
+  {
+    "number": 23,
+    "name": "Canal 23",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/23.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 24,
+    "name": "Canal 24",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/24.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 25,
+    "name": "Canal 25",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/25.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 26,
+    "name": "Canal 26",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/26.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 27,
+    "name": "Canal 27",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/27.m3u8",
+    "manifestAvailable": false,
+    "status": 500,
+    "logo": ""
+  },
+  {
+    "number": 28,
+    "name": "Alf",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/28.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+  },
+  {
+    "number": 29,
+    "name": "Canal 29",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/29.m3u8",
+    "manifestAvailable": false,
+    "status": 520,
+    "logo": ""
+  },
+  {
+    "number": 30,
+    "name": "Canal 30",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/30.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 31,
+    "name": "Canal 31",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/31.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 32,
+    "name": "AMC ES",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/32.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 33,
+    "name": "Canal 33",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/33.m3u8",
+    "manifestAvailable": false,
+    "status": 0,
+    "logo": ""
+  },
+  {
+    "number": 34,
+    "name": "Canal 34",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/34.m3u8",
+    "manifestAvailable": false,
+    "status": 0,
+    "logo": ""
+  },
+  {
+    "number": 35,
+    "name": "Canal 35",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/35.m3u8",
+    "manifestAvailable": false,
+    "status": 0,
+    "logo": ""
+  },
+  {
+    "number": 36,
+    "name": "Canal 36",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/36.m3u8",
+    "manifestAvailable": false,
+    "status": 0,
+    "logo": ""
+  },
+  {
+    "number": 37,
+    "name": "Canal 37",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/37.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 38,
+    "name": "Canal 38",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/38.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 39,
+    "name": "Canal 39",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/39.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 40,
+    "name": "Canal 40",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/40.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 41,
+    "name": "AnimalPlanet",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/41.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/animal-planet-ar.png"
+  },
+  {
+    "number": 42,
+    "name": "AnimalPlanet HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/42.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/animal-planet-ar.png"
+  },
+  {
+    "number": 43,
+    "name": "Animaniacs",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/43.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+  },
+  {
+    "number": 44,
+    "name": "Canal 44",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/44.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 45,
+    "name": "Antena3",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/45.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/spain/antena-3-es.png"
+  },
+  {
+    "number": 46,
+    "name": "Canal 46",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/46.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 47,
+    "name": "Canal 47",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/47.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 48,
+    "name": "Canal 48",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/48.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 49,
+    "name": "Canal 49",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/49.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 50,
+    "name": "Canal 50",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/50.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 51,
+    "name": "Canal 51",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/51.m3u8",
+    "manifestAvailable": false,
+    "status": 520,
+    "logo": ""
+  },
+  {
+    "number": 52,
+    "name": "Canal 52",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/52.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 53,
+    "name": "Canal 53",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/53.m3u8",
+    "manifestAvailable": false,
+    "status": 520,
+    "logo": ""
+  },
+  {
+    "number": 54,
+    "name": "Canal 54",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/54.m3u8",
+    "manifestAvailable": false,
+    "status": 520,
+    "logo": ""
+  },
+  {
+    "number": 55,
+    "name": "Canal 55",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/55.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 56,
+    "name": "Canal 56",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/56.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 57,
+    "name": "Canal 57",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/57.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 58,
+    "name": "AXN HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/58.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 59,
+    "name": "AXN ES HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/59.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 60,
+    "name": "Canal 60",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/60.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 61,
+    "name": "AXNWhite HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/61.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 62,
+    "name": "Canal 62",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/62.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 63,
+    "name": "AzCinema",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/63.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 64,
+    "name": "AzClic",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/64.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 65,
+    "name": "Canal 65",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/65.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 66,
+    "name": "AzCorazon",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/66.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 67,
+    "name": "Canal 67",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/67.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 68,
+    "name": "AzCorazon HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/68.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 69,
+    "name": "Canal 69",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/69.m3u8",
+    "manifestAvailable": false,
+    "status": 520,
+    "logo": ""
+  },
+  {
+    "number": 70,
+    "name": "AzMundo HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/70.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 71,
+    "name": "Azteca7",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/71.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 72,
+    "name": "Azteca7",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/72.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 73,
+    "name": "Canal 73",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/73.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 74,
+    "name": "Canal 74",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/74.m3u8",
+    "manifestAvailable": false,
+    "status": 520,
+    "logo": ""
+  },
+  {
+    "number": 75,
+    "name": "Canal 75",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/75.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 76,
+    "name": "Azteca13",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/76.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 77,
+    "name": "Canal 77",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/77.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 78,
+    "name": "Azteca1 HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/78.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 79,
+    "name": "BabyTV",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/79.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/baby-tv-ar.png"
+  },
+  {
+    "number": 80,
+    "name": "Canal 80",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/80.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 81,
+    "name": "Canal 81",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/81.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 82,
+    "name": "Canal 82",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/82.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 83,
+    "name": "Bandamax",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/83.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 84,
+    "name": "Canal 84",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/84.m3u8",
+    "manifestAvailable": false,
+    "status": 520,
+    "logo": ""
+  },
+  {
+    "number": 85,
+    "name": "247 Bayblade",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/85.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+  },
+  {
+    "number": 86,
+    "name": "Canal 86",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/86.m3u8",
+    "manifestAvailable": false,
+    "status": 520,
+    "logo": ""
+  },
+  {
+    "number": 87,
+    "name": "Canal 87",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/87.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 88,
+    "name": "BeinSports",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/88.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 89,
+    "name": "BeinSports",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/89.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 90,
+    "name": "BeinSportsN",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/90.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 91,
+    "name": "BeinSportsN",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/91.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 92,
+    "name": "BitMe",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/92.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 93,
+    "name": "Canal 93",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/93.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 94,
+    "name": "Canal 94",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/94.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 95,
+    "name": "Canal 95",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/95.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 96,
+    "name": "BobEsponja",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/96.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+  },
+  {
+    "number": 97,
+    "name": "Canal 97",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/97.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 98,
+    "name": "Canal 98",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/98.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 99,
+    "name": "Canal 99",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/99.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 100,
+    "name": "CaballerosDelZodiaco",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/100.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+  },
+  {
+    "number": 101,
+    "name": "Canal 101",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/101.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 102,
+    "name": "Canal 102",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/102.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 103,
+    "name": "247 CalabozosYDragones",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/103.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+  },
+  {
+    "number": 104,
+    "name": "Canal 104",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/104.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 105,
+    "name": "Canal 105",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/105.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 106,
+    "name": "Canal5",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/106.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 107,
+    "name": "Canal5 LD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/107.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 108,
+    "name": "Canal5 HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/108.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 109,
+    "name": "HO Canal5",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/109.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 110,
+    "name": "Canal 110",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/110.m3u8",
+    "manifestAvailable": false,
+    "status": 520,
+    "logo": ""
+  },
+  {
+    "number": 111,
+    "name": "Canal 111",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/111.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 112,
+    "name": "Canal 112",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/112.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 113,
+    "name": "Canal 113",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/113.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 114,
+    "name": "CanaldelasEstrellas",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/114.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 115,
+    "name": "Canal 115",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/115.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 116,
+    "name": "Canal 116",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/116.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 117,
+    "name": "Canal 117",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/117.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 118,
+    "name": "CanaldelasEstrellas",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/118.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/mexico/las-estrellas-mx.png"
+  },
+  {
+    "number": 119,
+    "name": "Canal 119",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/119.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 120,
+    "name": "Canal 120",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/120.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 121,
+    "name": "Toros",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/121.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 122,
+    "name": "Canal 122",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/122.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 123,
+    "name": "Cantinflas",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/123.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+  },
+  {
+    "number": 124,
+    "name": "Canal 124",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/124.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 125,
+    "name": "Canal 125",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/125.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 126,
+    "name": "Caracol",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/126.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 127,
+    "name": "CaracolInternacional",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/127.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 128,
+    "name": "CartoonNetwork",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/128.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/cartoon-network-ar.png"
+  },
+  {
+    "number": 129,
+    "name": "Canal 129",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/129.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 130,
+    "name": "Canal 130",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/130.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 131,
+    "name": "Canal 131",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/131.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 132,
+    "name": "CartoonNetwork HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/132.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/argentina/cartoon-network-ar.png"
+  },
+  {
+    "number": 133,
+    "name": "Canal 133",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/133.m3u8",
+    "manifestAvailable": false,
+    "status": 520,
+    "logo": ""
+  },
+  {
+    "number": 134,
+    "name": "Boomerang",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/134.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/world-latin-america/cartoonito-lam.png"
+  },
+  {
+    "number": 135,
+    "name": "Canal 135",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/135.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 136,
+    "name": "Canal 136",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/136.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 137,
+    "name": "Boomerang HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/137.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 138,
+    "name": "CasoCerrado",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/138.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+  },
+  {
+    "number": 139,
+    "name": "Canal 139",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/139.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 140,
+    "name": "Canal 140",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/140.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 141,
+    "name": "Canal 141",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/141.m3u8",
+    "manifestAvailable": false,
+    "status": 520,
+    "logo": ""
+  },
+  {
+    "number": 142,
+    "name": "Canal 142",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/142.m3u8",
+    "manifestAvailable": false,
+    "status": 520,
+    "logo": ""
+  },
+  {
+    "number": 143,
+    "name": "CDFPremium HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/143.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 144,
+    "name": "Canal 144",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/144.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 145,
+    "name": "Canal 145",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/145.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 146,
+    "name": "Canal 146",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/146.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 147,
+    "name": "Canal 147",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/147.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 148,
+    "name": "Canal 148",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/148.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 149,
+    "name": "Canal 149",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/149.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 150,
+    "name": "Canal 150",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/150.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 151,
+    "name": "Canal 151",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/151.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 152,
+    "name": "ChapulinColorado",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/152.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+  },
+  {
+    "number": 153,
+    "name": "Chespirito",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/153.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/24-7/neon1-247.png"
+  },
+  {
+    "number": 154,
+    "name": "Canal 154",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/154.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 155,
+    "name": "CH CHV",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/155.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/chile/chilevision-de-culto-cl.png"
+  },
+  {
+    "number": 156,
+    "name": "Canal 156",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/156.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 157,
+    "name": "Cine247 Accion",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/157.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+  },
+  {
+    "number": 158,
+    "name": "Cine247 Accion HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/158.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+  },
+  {
+    "number": 159,
+    "name": "Cine247 Accion Sagas",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/159.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 160,
+    "name": "Cine247 Accion Sagas HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/160.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+  },
+  {
+    "number": 161,
+    "name": "Cine247 Comedia",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/161.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+  },
+  {
+    "number": 162,
+    "name": "Cine247 Comedia HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/162.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+  },
+  {
+    "number": 163,
+    "name": "Cine247 Comedia 2",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/163.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+  },
+  {
+    "number": 164,
+    "name": "Cine247 Comedia 2 HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/164.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+  },
+  {
+    "number": 165,
+    "name": "Cine247 Ficcion",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/165.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 166,
+    "name": "Cine247 Ficcion 2",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/166.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+  },
+  {
+    "number": 167,
+    "name": "Cine247 Ficcion 2 HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/167.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+  },
+  {
+    "number": 168,
+    "name": "Cine247 Ficcion HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/168.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+  },
+  {
+    "number": 169,
+    "name": "Cine247 Infantil",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/169.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+  },
+  {
+    "number": 170,
+    "name": "Cine247 Infantil HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/170.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+  },
+  {
+    "number": 171,
+    "name": "Cine247 Infantil Sagas",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/171.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+  },
+  {
+    "number": 172,
+    "name": "Cine247 Infantil Sagas HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/172.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 173,
+    "name": "CineLatino",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/173.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 174,
+    "name": "Canal 174",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/174.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 175,
+    "name": "Canal 175",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/175.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 176,
+    "name": "247 Marvel",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/176.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+  },
+  {
+    "number": 177,
+    "name": "247 Marvel HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/177.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+  },
+  {
+    "number": 178,
+    "name": "Cine247 Romance",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/178.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+  },
+  {
+    "number": 179,
+    "name": "Cine247 Romance HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/179.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+  },
+  {
+    "number": 180,
+    "name": "Cine247 Terror",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/180.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 181,
+    "name": "Cine247 Terror HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/181.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+  },
+  {
+    "number": 182,
+    "name": "Canal 182",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/182.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 183,
+    "name": "Cine247 Zombies",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/183.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+  },
+  {
+    "number": 184,
+    "name": "Cine247 Zombies HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/184.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/misc/movies/cinema1.png"
+  },
+  {
+    "number": 185,
+    "name": "Cinecanal",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/185.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 186,
+    "name": "Canal 186",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/186.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 187,
+    "name": "Canal 187",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/187.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 188,
+    "name": "Cinecanal HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/188.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 189,
+    "name": "Canal 189",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/189.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 190,
+    "name": "Cinemax",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/190.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 191,
+    "name": "Canal 191",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/191.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 192,
+    "name": "Canal 192",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/192.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 193,
+    "name": "Canal 193",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/193.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 194,
+    "name": "Canal 194",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/194.m3u8",
+    "manifestAvailable": false,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 195,
+    "name": "Canal 195",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/195.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 196,
+    "name": "Cinemax HD",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/196.m3u8",
+    "manifestAvailable": true,
+    "status": 200,
+    "logo": ""
+  },
+  {
+    "number": 197,
+    "name": "Canal 197",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/197.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 198,
+    "name": "Canal 198",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/198.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 199,
+    "name": "Canal 199",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/199.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  },
+  {
+    "number": 200,
+    "name": "Canal 200",
+    "url": "https://m3u.tvcluboficial.com/free/ReachBot/Kip/200.m3u8",
+    "manifestAvailable": false,
+    "status": 400,
+    "logo": ""
+  }
+]

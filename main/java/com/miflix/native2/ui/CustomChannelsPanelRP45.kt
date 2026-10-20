@@ -27,6 +27,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 import com.miflix.native2.data.CustomChannelServerRP45
+import com.miflix.native2.data.ChannelMetadataRP50
+import coil3.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import com.miflix.native2.data.LocalCastServer
 import com.miflix.native2.model.PartyRole
 import java.net.Inet4Address
@@ -66,7 +69,7 @@ internal fun CustomChannelsPanelRP45(state:AppState,initialEditRP48:CustomChanne
                     FocusButton(tr("+ Agregar canal por QR","+ Add channel by QR"),modifier=Modifier.fillMaxWidth().focusRequester(first)) {adding=true}
                     LaunchedEffect(Unit) {withFrameNanos {};runCatching {first.requestFocus()}}
                     LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp),contentPadding=PaddingValues(3.dp)) {
-                        if(rows.isEmpty()) item {Text(tr("Escanea el QR con tu celular, escribe el nombre y pega la URL del stream. TV y celular deben estar en la misma red.","Scan the QR on your phone, enter a name and paste the stream URL. TV and phone must be on the same network."),color=Muted,fontSize=14.sp)}
+                        if(rows.isEmpty()) item {Text(tr("Escanea el QR con tu celular, pega la URL del stream; el nombre es opcional. TV y celular deben estar en la misma red.","Scan the QR on your phone, paste the stream URL; the name is optional. TV and phone must be on the same network."),color=Muted,fontSize=14.sp)}
                         items(rows,key={it.id}) {channel ->
                             var focused by remember {mutableStateOf(false)}
                             val play={if(state.partyRole!=PartyRole.GUEST && !state.kidsMode) {close();state.openLivePlayer(CustomChannelsRP45.request(channel))}}
@@ -74,8 +77,11 @@ internal fun CustomChannelsPanelRP45(state:AppState,initialEditRP48:CustomChanne
                             Column(Modifier.fillMaxWidth().onFocusChanged {focused=it.isFocused}.focusable().tvPlaybackClick(play,edit).clickable(onClick=play)
                                 .background(if(focused) Color(0xFF292929) else Color(0xFF181818),RoundedCornerShape(12.dp))
                                 .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(12.dp)).padding(15.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-                                Text(channel.name,color=Color.White,fontSize=16.sp,fontWeight=FontWeight.Bold)
-                                Text(tr("CANAL PERSONAL · EN VIVO","PERSONAL CHANNEL · LIVE"),color=Muted,fontSize=10.sp)
+                                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                                    AsyncImage(channel.logo,channel.name,Modifier.size(48.dp),contentScale=ContentScale.Fit)
+                                    Text(CustomChannelsRP45.labelRP50(channel),color=Color.White,fontSize=16.sp,fontWeight=FontWeight.Bold)
+                                }
+                                Text(tr("OTHERS · EN VIVO","OTHERS · LIVE"),color=Muted,fontSize=10.sp)
                             }
                         }
                     }
@@ -114,11 +120,12 @@ private fun CustomChannelPairingRP45(state:AppState,editing:CustomChannelRP45?,s
             if(endpoint==null) message=tr("Conecta la TV a Wi-Fi o Ethernet.","Connect the TV to Wi-Fi or Ethernet.")
             else {
                 server=CustomChannelServerRP45(endpoint.address as Inet4Address,endpoint.prefixLength,editing?.name.orEmpty(),editing?.url.orEmpty()) {name,url ->
+                    val detectedRP50=ChannelMetadataRP50.resolve(url,name)
                     val latch=CountDownLatch(1);val accepted=AtomicBoolean(false)
                     main.post {
                         try {
                             if(alive.get() && state.appForeground && CustomChannelsRP45.owner(state)==owner && !state.kidsMode && state.partyRole!=PartyRole.GUEST) {
-                                accepted.set(CustomChannelsRP45.save(context,owner,editing?.id,name,url))
+                                accepted.set(CustomChannelsRP45.save(context,owner,editing?.id,detectedRP50.name,url))
                                 if(accepted.get()) {currentSaved();message=tr("✓ Canal guardado. Pulsa Volver para verlo.","✓ Channel saved. Press Back to see it.")}
                             }
                         } finally {latch.countDown()}
@@ -132,7 +139,7 @@ private fun CustomChannelPairingRP45(state:AppState,editing:CustomChannelRP45?,s
     }
     Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState()),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp)) {
         Text(if(editing==null) tr("Agregar canal","Add channel") else tr("Editar canal","Edit channel"),color=Color.White,fontSize=22.sp)
-        Text(tr("Escanea el QR en la misma red que tu TV. Escribe el nombre y pega la URL del stream.","Scan the QR on the same network as your TV. Enter a name and paste the stream URL."),color=Muted,fontSize=13.sp)
+        Text(tr("Escanea el QR en la misma red que tu TV. Pega la URL; deja el nombre vacío para detectarlo.","Scan the QR on the same network as your TV. Paste the URL; leave the name blank to detect it."),color=Muted,fontSize=13.sp)
         receiver?.let {server ->
             if(now<server.until) {QrCode(server.url,180.dp);Text(tr("QR válido por ","QR valid for ")+((server.until-now)/1000).coerceAtLeast(0)+"s",color=Muted,fontSize=12.sp)}
             else Text(tr("QR vencido. Genera uno nuevo.","QR expired. Generate a new one."),color=Muted)

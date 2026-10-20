@@ -7,7 +7,7 @@ import java.security.MessageDigest;
 import java.util.*;
 import java.util.concurrent.*;
 
-/** A short-lived, same-LAN form. Does not fetch streams, proxy traffic or contact the cloud. */
+/** Short-lived LAN form. The save callback may inspect a playlist for its name; no video proxy. */
 public final class CustomChannelServerRP45 implements AutoCloseable {
     public interface Save { boolean save(String name,String url); }
     private final Inet4Address address;
@@ -65,8 +65,8 @@ public final class CustomChannelServerRP45 implements AutoCloseable {
         Map<String,String> fields=new HashMap<>();for(String part:new String(body,StandardCharsets.UTF_8).split("&")) {int at=part.indexOf('=');if(at>=0)fields.put(URLDecoder.decode(part.substring(0,at),"UTF-8"),URLDecoder.decode(part.substring(at+1),"UTF-8"));}
         if(!acceptsForm(getBase(),origin,formToken,value(fields,"csrf",""))) {reply(s,403,page("Formulario no válido / Invalid form","Scan the QR on the TV again."));return;}
         String name=value(fields,"name","").trim(),url=value(fields,"url","").trim();
-        if(!valid(name,url)) {reply(s,400,page("Revisa el nombre y la URL / Check name and URL", "Use an HTTP(S) stream URL and a name of up to 80 characters. Return to the previous page to correct it."));return;}
-        if(closed || !save.save(name,url)) {reply(s,409,page("No se pudo guardar / Could not save","Keep the QR open on the TV and try again. The limit is 100 channels per profile."));return;}
+        if(!valid(name.isEmpty()?"Auto":name,url)) {reply(s,400,page("Revisa el nombre y la URL / Check name and URL", "Use an HTTP(S) stream URL and a name of up to 80 characters. Return to the previous page to correct it."));return;}
+        if(closed || !save.save(name,url)) {reply(s,409,page("No se pudo guardar / Could not save","Keep the QR open on the TV and try again. The limit is 100 personal channels per profile; included channels do not count."));return;}
         reply(s,200,page("Canal guardado / Channel saved","Ya aparece en Mis canales en la TV. / Your channel is now available under My channels on the TV."));
     }catch(Exception ignored){/* Do not log stream URLs, tokens or form contents. */}}
     public static boolean acceptsForm(String base,String origin,String expected,String submitted) {
@@ -78,7 +78,7 @@ public final class CustomChannelServerRP45 implements AutoCloseable {
     private static String escape(String text){return text.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace("\"","&quot;").replace("'","&#39;");}
     private static String page(String title,String text){return shell("<h1>"+escape(title)+"</h1><p>"+escape(text)+"</p>");}
     private static String shell(String body){return "<!doctype html><html lang='es'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>BruniO · My channels</title><style>body{margin:0;background:#080808;color:#fff;font:16px system-ui}main{max-width:480px;margin:6vh auto;padding:28px}small,p{color:#aaa;line-height:1.6}h1{font-size:29px}label{display:block;margin-top:22px}input,button{box-sizing:border-box;width:100%;padding:16px;margin-top:9px;border-radius:14px;border:1px solid #444;background:#171717;color:white;font:inherit}button{background:#eee;color:#111;font-weight:700;margin-top:28px}input:focus{outline:2px solid #b4a0d4}</style><main><small>BRUNIO · LIVE</small>"+body+"</main></html>";}
-    private String form(String ticket){return shell("<h1>Tu canal, en BruniO</h1><p>Ponle un nombre y pega el enlace del stream.<br>Name your channel and paste its stream URL.</p><form method='post' action='/save/"+ticket+"'><input type='hidden' name='csrf' value='"+formToken+"'><label>Nombre / Name<input name='name' required maxlength='80' autocomplete='off' value='"+escape(initialName)+"'></label><label>URL del stream / Stream URL<input name='url' type='url' required maxlength='8192' autocomplete='off' placeholder='https://…/live.m3u8' value='"+escape(initialUrl)+"'></label><button>Guardar canal / Save channel</button></form><p>Los enlaces temporales pueden caducar. / Temporary links can expire.</p>");}
+    private String form(String ticket){return shell("<h1>Tu canal, en BruniO</h1><p>Pega el enlace del stream. Deja el nombre vacío para detectarlo.<br>Paste the stream URL. Leave the name blank to detect it.</p><form method='post' action='/save/"+ticket+"'><input type='hidden' name='csrf' value='"+formToken+"'><label>Nombre opcional / Optional name<input name='name' placeholder='Detectar automáticamente / Auto-detect' maxlength='80' autocomplete='off' value='"+escape(initialName)+"'></label><label>URL del stream / Stream URL<input name='url' type='url' required maxlength='8192' autocomplete='off' placeholder='https://…/live.m3u8' value='"+escape(initialUrl)+"'></label><button>Guardar canal / Save channel</button></form><p>Los enlaces temporales pueden caducar. / Temporary links can expire.</p>");}
     private static void reply(Socket s,int status,String html) throws IOException {
         byte[] body=html.getBytes(StandardCharsets.UTF_8);
         String header="HTTP/1.1 "+status+" Response\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: "+body.length+"\r\nConnection: close\r\nCache-Control: no-store\r\nReferrer-Policy: no-referrer\r\nX-Content-Type-Options: nosniff\r\nContent-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'\r\n\r\n";

@@ -88,7 +88,10 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
         loading=true;message="";catalogWarningRP39="";categories=emptyList();selected=""
         val localCategoryRP48=BrowserCategoryRP34(CustomChannelsRP45.provider,CustomChannelsRP45.categoryRP48(),"")
         categories=listOf(localCategoryRP48)
-        if(initialProvider==CustomChannelsRP45.provider) {selected=localCategoryRP48.key;loading=false}
+        if(initialProvider==CustomChannelsRP45.provider) {
+            selected=localCategoryRP48.key;loading=false
+            return@LaunchedEffect
+        }
         val providers=listOf(if(initialProvider==NuvioTestConfigRP49.PROVIDER) NuvioTestConfigRP49.PROVIDER else if(initialProvider=="sports") "sports" else "nauta")
         val found=coroutineScope {providers.map {provider ->async {
             try {permits.withPermit {
@@ -157,7 +160,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     val playing=current?.takeIf {r -> restoredRP40==null && group?.provider==r.liveProvider && search.isBlank() && (group?.value?.genre==null || group?.value?.let {isMostViewedRP37(it)}==true)}?.let {r ->
         BrowserChannelRP34(r.liveProvider,LiveChannel(r.liveChannelId,r.liveType,r.item.title,r.item.backdrop,r.item.overview))
     }
-    val displayed=(if(selected=="favorites") favorites.map {BrowserChannelRP34(it.provider,it.channel)} else listOfNotNull(playing)+channels).distinctBy {it.key}.filter {
+    val displayed=(if(selected=="favorites") favorites.map {BrowserChannelRP34(it.provider,it.channel)} else if(group?.provider==CustomChannelsRP45.provider) channels else listOfNotNull(playing)+channels).distinctBy {it.key}.filter {
         search.isBlank() || IptvPlaylist.searchKey(it.value.name).contains(IptvPlaylist.searchKey(search)) || it.value.number.toString()==search.trim()
     }
     LaunchedEffect(displayed.map {it.key},loading) {

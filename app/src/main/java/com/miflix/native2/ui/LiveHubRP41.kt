@@ -275,7 +275,7 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,openNu
                 HubEventCardRP41("Nuvio Test",null,tr("Repeticiones deportivas · 8 deportes","Sports replays · 8 sports")) {openNuvioRP49()}
             }
             items(customRowsRP48,key={"custom:"+it.id}) {channel ->
-                HubEventCardRP41(channel.name,null,tr("CANAL PERSONAL · Mantén OK: opciones","PERSONAL CHANNEL · Hold OK: options"),onHoldRP48={customManageRP48=channel}) {
+                HubEventCardRP41(CustomChannelsRP45.labelRP50(channel),channel.logo,tr("EN VIVO · Mantén OK: opciones","LIVE · Hold OK: options"),onHoldRP48={customManageRP48=channel},logoRP50=true) {
                     if(state.partyRole!=PartyRole.GUEST && !state.kidsMode) state.openLivePlayer(CustomChannelsRP45.request(channel))
                 }
             }
@@ -309,15 +309,16 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,openNu
 }
 
 @Composable
-internal fun HubEventCardRP41(title:String,poster:String?,subtitle:String,onHoldRP48:(()->Unit)?=null,click:()->Unit) {
+internal fun HubEventCardRP41(title:String,poster:String?,subtitle:String,onHoldRP48:(()->Unit)?=null,logoRP50:Boolean=false,click:()->Unit) {
+    var logoFailedRP50 by remember(poster) {mutableStateOf(false)}
     var focused by remember(title) {mutableStateOf(false)}
     val scale by animateFloatAsState(if(focused) 1.015f else 1f,label="Event focus")
     Column(Modifier.fillMaxWidth().height(194.dp).graphicsLayer {scaleX=scale;scaleY=scale}
         .clip(RoundedCornerShape(13.dp)).background(Brush.verticalGradient(listOf(Color(0xFF242424),Color(0xFF101010))))
         .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(13.dp))
         .onFocusChanged {focused=it.isFocused}.focusable().tvPlaybackClick(click,onHoldRP48 ?: click).clickable(onClick=click)) {
-        Box(Modifier.fillMaxWidth().weight(1f).background(Brush.verticalGradient(listOf(Color(0xFF17283C),Color.Black))),contentAlignment=Alignment.Center) {
-            if(!poster.isNullOrBlank()) AsyncImage(poster,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+        Box(Modifier.fillMaxWidth().weight(1f).background(Brush.verticalGradient(listOf(if(logoRP50) Color(0xFF171717) else Color(0xFF17283C),Color.Black))),contentAlignment=Alignment.Center) {
+            if(!poster.isNullOrBlank() && !logoFailedRP50) AsyncImage(poster,null,Modifier.fillMaxSize().padding(if(logoRP50) 22.dp else 0.dp),contentScale=if(logoRP50) ContentScale.Fit else ContentScale.Crop,onError={logoFailedRP50=true})
             else Text(title,color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(14.dp),maxLines=2)
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0x80000000)))))
         }

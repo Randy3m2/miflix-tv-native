@@ -27,10 +27,10 @@ internal object CustomChannelsRP45 {
         val key=uri.host.orEmpty().lowercase(java.util.Locale.ROOT)+uri.rawPath.orEmpty()
         val direct=index.optJSONObject("urls")?.optString(key).orEmpty()
         val simple=java.text.Normalizer.normalize(name.replace(Regex("\\s+HD$",RegexOption.IGNORE_CASE),"" ).lowercase(java.util.Locale.ROOT),java.text.Normalizer.Form.NFD).replace(Regex("[\\p{M}]"),"").replace(Regex("[^a-z0-9]"),"")
-        return (direct.ifBlank {index.optJSONObject("names")?.optString(simple).orEmpty()}).takeIf {it.startsWith("https://")}
+        return (direct.ifBlank {index.optJSONObject("names")?.optString(simple).orEmpty()}).takeIf {it.startsWith("https://") || it.startsWith("file:///android_asset/")}
     }
     fun categoryRP48()=LiveCategory("tv","custom-rp48","Others")
-    fun categoriesRP51()=listOf("Todos","General","Cine","24/7","Deportes").map {LiveCategory("tv","tirso:"+it,if(it=="Todos") "Tirso TV" else "Tirso TV · "+it)}
+    fun categoriesRP51()=listOf("Todos","General","Cine","24/7","Deportes","Infantiles","España","Cultura").map {LiveCategory("tv","tirso:"+it,if(it=="Todos") "Tirso TV" else it)}
     fun labelRP50(c:CustomChannelRP45)=if(c.number>0) "${c.number} · ${c.name}" else c.name
     fun channelsRP48(context:Context,owner:String)=list(context,owner).map {LiveChannel(it.id,"tv",it.name,it.logo,"Tirso TV",number=it.number)}
     fun findRP48(context:Context,owner:String,id:String)=list(context,owner).firstOrNull {it.id==id}
@@ -42,7 +42,7 @@ internal object CustomChannelsRP45 {
             val a=JSONArray(context.assets.open("tvclub_channels_rp50.json").bufferedReader().use {it.readText()})
             (0 until a.length()).mapNotNull {i ->
                 val o=a.getJSONObject(i);val n=o.optInt("number");val name=o.optString("name");val url=o.optString("url")
-                if(n>0 && CustomChannelServerRP45.valid(name,url)) CustomChannelRP45(FACTORY+n,name,url,n,o.optString("logo").takeIf {it.startsWith("https://") } ?: logoRP50(context,url,name),o.optString("category","General")) else null
+                if(n>0 && CustomChannelServerRP45.valid(name,url)) CustomChannelRP45(FACTORY+n,name,url,n,o.optString("logo").takeIf {it.startsWith("https://") || it.startsWith("file:///android_asset/") } ?: logoRP50(context,url,name),o.optString("category","General")) else null
             }.distinctBy {it.id}.sortedBy {it.number}.also {included=it}
         } catch(_:Exception) {emptyList()}
     }

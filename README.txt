@@ -1,1 +1,1 @@
-Apply on RP53. Moves Tirso TV categories first, then existing Nauta/Sports/IPTV groups, and Others last. Keeps Favorites separate. Version remains RP53. Not compiled.
+RP53 patch: Dragon Ball Z 24/7 custom image at 044.png. Allows local asset logos in CustomChannelsRP45.kt. Apply after RP53 logo packs and category hotfix. Not compiled or device tested. Note: if more recent modifications to CustomChannelsRP45.kt exist, merge the startsWith condition rather than overwrite.

@@ -227,7 +227,7 @@ fun MediaCard(
                 .clip(RoundedCornerShape(18.dp))
                 .background(Color(0xFF1A1A1A))
         ) {
-            AsyncImage(
+            LoadingArtworkRP58(
                 model = if (landscape) item.backdrop ?: item.poster else item.poster ?: item.backdrop,
                 contentDescription = item.title,
                 modifier = Modifier.fillMaxSize(),

@@ -377,20 +377,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
 }
 
 @Composable
-private fun DirectorRail(state: AppState) {
-    Column {
-    Text(tr("Directores","Directors"),color=Color.White,fontSize=24.sp,lineHeight=29.sp,fontWeight=FontWeight.Bold,
-        modifier=Modifier.padding(start=34.dp,top=12.dp,bottom=16.dp))
-    LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=26.dp),contentPadding=PaddingValues(horizontal=8.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
-        items(state.directors,key={it.key}) { group ->
-            FocusButton(if(group.key=="russo") tr("Hermanos Russo","Russo Brothers") else group.title,modifier=homeReturnFocus("director:${group.key}")) {
-                state.launch { state.socialAction { state.openDirector(group) } }
-            }
-        }
-    }
-    Spacer(Modifier.height(24.dp))
-    }
-}
+private fun DirectorRail(state: AppState) = DirectorRailRP58(state)
 
 @Composable
 private fun TopTenHero(rows: List<MediaSummary>, onOpen: (MediaSummary) -> Unit, onFocused: (Boolean) -> Unit = {}, onBackdrop: (String?) -> Unit = {},buttonModifier: Modifier = Modifier,randomChoosing: Boolean=false,onRandom: (() -> Unit)?=null) {

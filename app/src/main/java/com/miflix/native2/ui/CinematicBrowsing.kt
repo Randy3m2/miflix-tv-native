@@ -161,7 +161,7 @@ private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolea
         Box(Modifier.fillMaxSize().graphicsLayer {scaleX=focusScale;scaleY=focusScale}
         .border(if(simple) 3.dp else 2.dp,focusInk,RoundedCornerShape(18.dp))
         .padding(3.dp).clip(RoundedCornerShape(16.dp)).background(Panel)) {
-        AsyncImage(if(showBackdrop) item.backdrop ?: item.poster else item.poster ?: item.backdrop,
+        LoadingArtworkRP58(if(showBackdrop) item.backdrop ?: item.poster else item.poster ?: item.backdrop,
             item.title,Modifier.fillMaxSize(),contentScale=if(simple && !landscape && !expanded) ContentScale.Fit else ContentScale.Crop)
         if(expanded || simple || showTitle || rank!=null || awardLabel!=null) Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xD9050505)))))
         if(expanded || simple || showTitle) Text(item.title,color=Color.White,fontSize=if(simple) 18.sp else if(expanded) 18.sp else 12.sp,lineHeight=if(simple || expanded) 22.sp else 15.sp,

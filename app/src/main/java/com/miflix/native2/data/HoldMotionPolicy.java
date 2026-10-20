@@ -4,8 +4,8 @@ package com.miflix.native2.data;
 public final class HoldMotionPolicy {
     private HoldMotionPolicy() {}
     public static long interval(boolean vertical,boolean scrolling,long heldMs) {
-        if(vertical) return heldMs>=1800 ? (scrolling?170:150) : heldMs>=900 ? (scrolling?210:180) : (scrolling?240:200);
-        return heldMs>=1800 ? (scrolling?120:100) : heldMs>=900 ? (scrolling?150:120) : (scrolling?180:140);
+        if(vertical) return heldMs>=1200 ? 85 : heldMs>=500 ? 115 : 150;
+        return heldMs>=1200 ? 70 : heldMs>=500 ? 90 : 120;
     }
     public static float carriedVelocity(float distance,float velocity) {
         if(Float.isNaN(distance) || Float.isInfinite(distance) || Float.isNaN(velocity) || Float.isInfinite(velocity) || distance*velocity<=0) return 0f;

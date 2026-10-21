@@ -40,12 +40,6 @@ import java.util.UUID
 class AppState(context: Context) {
     init { com.miflix.native2.data.AwardSelections.configure(context.assets.open("awards_catalog.json").bufferedReader().use {it.readText()}) }
     private val appContext=context.applicationContext
-    init {com.miflix.native2.p2p.P2PSettingsRP14.cleanStale(appContext)}
-    internal fun p2pEnabledRP14()=com.miflix.native2.p2p.P2PSettingsRP14.enabled(appContext,localExtrasScope())
-    internal fun saveP2PRP14(value:Boolean) {
-        com.miflix.native2.p2p.P2PSettingsRP14.saveEnabled(appContext,localExtrasScope(),value)
-        playbackLinkCache.clear()
-    }
     internal var focusScorePinRP15:(() -> Unit)?=null
     var showLiveScoresRP11 by mutableStateOf(false)
     var clearingCache by mutableStateOf(false)
@@ -70,7 +64,7 @@ class AppState(context: Context) {
         {lastSourcePrefsRP16.edit().putString("rows",it).apply()})
     private fun lastSourceKeyRP16(item:MediaSummary,season:Int,episode:Int)=LastPlaybackSourceRP16.key(
         localExtrasScope(),item.cloudId,season,episode,
-        org.json.JSONArray(listOf(audioLanguage,streamSizeBytes,p2pEnabledRP14(),nativeSourceEnabled,nativeRevision,
+        org.json.JSONArray(listOf(audioLanguage,secondaryAudioLanguageRP62,streamSizeBytes,nativeSourceEnabled,nativeRevision,
             org.json.JSONArray(streamRepo.manifests()))).toString())
     internal fun rememberSuccessfulPlaybackRP16(req:PlayerRequest) {
         if(req.live || req.momentEndMs>0 || watchParty!=null || playerRequest?.playbackId!=req.playbackId || req.sourceMemoryKeyRP16.isBlank()) return
@@ -370,6 +364,17 @@ class AppState(context: Context) {
         catch(e: CancellationException) {throw e} catch(_: Exception) { /* Cosmetic failure must not interrupt playback. */ }
     }
     var audioLanguage by mutableStateOf(playbackPrefs.getString("audio", "es") ?: "es")
+    private var secondaryAudioRevisionRP62 by mutableIntStateOf(0)
+    private fun secondaryAudioKeyRP62()="secondary_audio_rp62:${localExtrasScope()}"
+    val secondaryAudioLanguageRP62:String get() {
+        secondaryAudioRevisionRP62
+        return playbackPrefs.getString(secondaryAudioKeyRP62(),"").orEmpty().takeUnless {it==audioLanguage}.orEmpty()
+    }
+    fun saveSecondaryAudioRP62(value:String) {
+        require(value in setOf("","es","en","pt","fr"))
+        playbackPrefs.edit().putString(secondaryAudioKeyRP62(),value).apply()
+        secondaryAudioRevisionRP62++;invalidatePlaybackWork()
+    }
     var subtitleLanguage by mutableStateOf(playbackPrefs.getString("subtitle", "es") ?: "es")
     var subtitleColor by mutableStateOf(playbackPrefs.getInt("subtitleColor",android.graphics.Color.WHITE))
     var subtitleScale by mutableStateOf(playbackPrefs.getFloat("subtitleScale",1f).coerceIn(0.8f,1.4f))
@@ -1071,7 +1076,7 @@ class AppState(context: Context) {
         val owner: String?,val profile: String,val cloudId: String,val imdb: String,
         val season: Int,val episode: Int,val year: String,val title: String,
         val manifests: List<String>,val nativeEnabled: Boolean,val nativeVersion: Int,
-        val sizeLimit: Long,val audio: String,val p2p: Boolean
+        val sizeLimit: Long,val audio: String,val secondaryAudio: String
     )
     private val playbackLinkCache=com.miflix.native2.data.PlaybackLinkCache<PlaybackCacheKey,List<StreamChoice>>(12) {
         android.os.SystemClock.elapsedRealtime()
@@ -1079,11 +1084,10 @@ class AppState(context: Context) {
     private val playbackCacheMutex=Mutex()
     private fun playbackCacheKey(item: MediaSummary,imdb: String,season: Int,episode: Int)=PlaybackCacheKey(
         session?.userId,activeProfile.id,item.cloudId,imdb,season,episode,item.year,item.title,
-        streamRepo.manifests().toList(),nativeSourceEnabled,nativeRevision,streamSizeBytes,audioLanguage,p2pEnabledRP14())
+        streamRepo.manifests().toList(),nativeSourceEnabled,nativeRevision,streamSizeBytes,audioLanguage,secondaryAudioLanguageRP62)
     private suspend fun resolvePlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = playbackCacheMutex.withLock {
-        streamRepo.p2pEnabled=p2pEnabledRP14()
         val key=playbackCacheKey(item,imdb,season,episode)
-        playbackLinkCache.get(key)?.let { return@withLock StreamOrdering.sorted(it,audioLanguage,providerOrder=sourceProviderOrderRP2()) }
+        playbackLinkCache.get(key)?.let { return@withLock StreamOrdering.sorted(it,audioLanguage,providerOrder=sourceProviderOrderRP2(),secondaryAudio=secondaryAudioLanguageRP62) }
         val streams=fetchPlaybackSources(item,imdb,season,episode)
         // Cache successful lists only; account/settings changes cannot publish stale results.
         if(streams.isNotEmpty() && key==playbackCacheKey(item,imdb,season,episode)) playbackLinkCache.put(key,streams)
@@ -1094,7 +1098,7 @@ class AppState(context: Context) {
         val native=owner!=null && nativeStore.enabled(owner)
         // Disabled is the default and leaves the existing add-on path unchanged.
         if(!native) return@supervisorScope StreamOrdering.sorted(
-            streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage), audioLanguage,providerOrder=sourceProviderOrderRP2())
+            streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage), audioLanguage,providerOrder=sourceProviderOrderRP2(),secondaryAudio=secondaryAudioLanguageRP62)
         val token=nativeStore.token(owner)
         val addon=async {
             if(streamRepo.manifests().isEmpty()) emptyList() else streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage)
@@ -1108,7 +1112,7 @@ class AppState(context: Context) {
                     try {tmdb.spanishTitle(item).ifBlank {item.title}} catch(e: CancellationException) {throw e} catch(_: Exception) {item.title}
                 else item.title),item.type,item.year,season,episode,streamSizeBytes,audioLanguage) }
         } catch(e: kotlinx.coroutines.TimeoutCancellationException) { failure=tr("Motor nativo: tiempo agotado","Native engine: timed out");emptyList() } catch(e: CancellationException) { throw e } catch(e: Exception) { failure=e.message;emptyList() }
-        val links=StreamOrdering.sorted((addon.await()+builtIn).filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) }, audioLanguage,providerOrder=sourceProviderOrderRP2())
+        val links=StreamOrdering.sorted((addon.await()+builtIn).filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) }, audioLanguage,providerOrder=sourceProviderOrderRP2(),secondaryAudio=secondaryAudioLanguageRP62)
         if(session?.userId==owner) nativeSourceStatus=failure ?: tr("Motor nativo: ","Native engine: ")+builtIn.size+tr(" enlaces disponibles"," available links")
         if(links.isEmpty() && failure!=null) throw IllegalStateException(failure)
         links
@@ -1133,7 +1137,16 @@ class AppState(context: Context) {
     private fun savedAddonOrder(language:String):List<String> {
         addonOrderRevision
         val a=runCatching {org.json.JSONArray(playbackPrefs.getString(addonOrderKey(language),"[]"))}.getOrDefault(org.json.JSONArray())
-        return (0 until a.length()).map {a.optString(it)}.filter {it.length==64}.distinct()
+        val saved=(0 until a.length()).map {a.optString(it)}.filter {it.length==64}.distinct()
+        val migration="mandanguita_order_rp62:${profileAddonScope()}:${AddonPriorityRP2.language(language)}"
+        val id=AddonPriorityRP2.id(BundledAddonsRP12.mandanguita)
+        if(!playbackPrefs.getBoolean(migration,false) && streamRepo.manifests().contains(BundledAddonsRP12.mandanguita)) {
+            val baseline=AddonPriorityRP2.ordered(streamRepo.sourceAddons(),saved,language).map {it.id}.filterNot {it==id}.toMutableList()
+            baseline.add(if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(language)) 0 else minOf(1,baseline.size),id)
+            playbackPrefs.edit().putBoolean(migration,true).putString(addonOrderKey(language),org.json.JSONArray(baseline).toString()).apply()
+            return baseline
+        }
+        return saved
     }
     internal fun orderedSourceAddonsRP2(language:String=audioLanguage):List<InstalledSourceAddonRP2> {
         addonOrderRevision;profileAddonRevision
@@ -1705,6 +1718,15 @@ class AppState(context: Context) {
         restoreProfileSocialLocalRP1()
     }
     suspend fun bootstrap() {
+        if(!playbackPrefs.getBoolean("direct_only_cleanup_rp62",false)) {
+            kotlinx.coroutines.withContext(Dispatchers.IO) {
+                val cleaned=java.io.File(appContext.cacheDir,"p2p-rp14").deleteRecursively()
+                if(cleaned) {
+                    appContext.getSharedPreferences("brunio_p2p",Context.MODE_PRIVATE).edit().clear().apply()
+                    playbackPrefs.edit().putBoolean("direct_only_cleanup_rp62",true).apply()
+                }
+            }
+        }
         if(session==null) loadOfflineProfiles()
         session?.let { s ->
             runCatching { sessionRenewal.valid(s.userId) }
@@ -2639,7 +2661,7 @@ class AppState(context: Context) {
                 resolvePlaybackSources(req.item,remembered.imdb,req.season,req.episode)
             } catch(e:CancellationException) {throw e} catch(_:Exception) {return false}
             if(!stillValid()) return false
-            val candidates=StreamOrdering.fallbackCandidates(fresh,audioLanguage,providerOrder=sourceProviderOrderRP2()).filter {it.url!=req.stream.url}
+            val candidates=StreamOrdering.fallbackCandidates(fresh,audioLanguage,providerOrder=sourceProviderOrderRP2(),secondaryAudio=secondaryAudioLanguageRP62).filter {it.url!=req.stream.url}
             val rows=listOf(req.stream)+candidates
             if(rows.size<2) return false
             sourceFallback=SourceFallbackPlan(remembered.owner,remembered.profile,remembered.generation,rows,
@@ -2712,7 +2734,7 @@ class AppState(context: Context) {
         val targetProgressRP16=progress[progressKeyRP16] ?: progress[item.cloudId]?.takeIf {item.type!="series" || (it.season==season && it.episode==episode)}
         val rememberedRP16=if(selectedStream==null && watchParty==null && (resumeOverride ?: targetProgressRP16?.position ?: 0L)>0L)
             lastSourceRP16.get(memoryKeyRP16)?.takeIf {StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) &&
-                (!it.url.startsWith("brunio-p2p:") || p2pEnabledRP14())} else null
+                runCatching {java.net.URI(it.url).scheme in setOf("http","https")}.getOrDefault(false)} else null
         val streamsJob = async { if(rememberedRP16!=null) listOf(rememberedRP16) else if (selectedStream != null) (listOf(selectedStream)+fallbackStreams).distinctBy {it.url}.filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) } else resolvePlaybackSources(item,imdb,season,episode) }
         val subtitleKey=subtitleKey(item,season,episode)
         if(playbackSubtitleJobs.size>=16 && subtitleKey !in playbackSubtitleJobs) {
@@ -2727,13 +2749,13 @@ class AppState(context: Context) {
             if(!valid()) return@coroutineScope
             val bandwidth=if(adaptiveSource) androidx.media3.exoplayer.upstream.DefaultBandwidthMeter.getSingletonInstance(appContext).bitrateEstimate else 0L
             val seconds=(details?.takeIf {it.summary.cloudId==item.cloudId}?.runtimeMinutes ?: 0)*60
-            val chosen = rememberedRP16 ?: selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2())
+            val chosen = rememberedRP16 ?: selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2(),secondaryAudioLanguageRP62)
                 ?: throw IllegalStateException(if(streamRepo.hasTorrentOnlyResults())
-                    tr("Estos complementos devolvieron torrents. Activa P2P en Settings en una TV con Android 9 o superior.","These add-ons returned torrents. Enable P2P in Settings on a TV with Android 9 or newer.")
+                    tr("Estos complementos solo devolvieron torrents. Se necesitan enlaces directos HTTP/HTTPS.","These add-ons only returned torrents. Direct HTTP/HTTPS links are required.")
                     else tr("No se encontraron enlaces reproducibles","No playable sources found"))
             val automaticFallback=autoplayNextLink && watchParty==null
             val retryRows=if(automaticFallback) {
-                val candidates=StreamOrdering.fallbackCandidates(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2()).filter {it.url!=chosen.url}
+                val candidates=StreamOrdering.fallbackCandidates(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2(),secondaryAudioLanguageRP62).filter {it.url!=chosen.url}
                 val ordered=(listOf(chosen)+candidates).distinctBy {it.url}
                 if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(audioLanguage)) ordered else ordered.take(com.miflix.native2.player.SourceFallbackBudget.MAX_ATTEMPTS)
             } else listOf(chosen)

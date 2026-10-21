@@ -29,7 +29,11 @@ internal object AddonPriorityRP2 {
         }
     }
     fun ordered(installed:List<InstalledSourceAddonRP2>,saved:List<String>,language:String):List<InstalledSourceAddonRP2> {
-        val defaults=installed.distinctBy {it.id}.sortedBy {defaultRank(it,language)}
+        val ranked=installed.distinctBy {it.id}.sortedBy {defaultRank(it,language)}
+        val mandanguita=ranked.firstOrNull {it.id==id(BundledAddonsRP12.mandanguita)}
+        val defaults=ranked.filterNot {it==mandanguita}.toMutableList().apply {
+            if(mandanguita!=null) add(if(StreamLanguagePriority.prefersSpanish(language)) 0 else minOf(1,size),mandanguita)
+        }
         val known=defaults.associateBy {it.id}
         return saved.distinct().mapNotNull {known[it]}+defaults.filter {it.id !in saved}
     }

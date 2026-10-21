@@ -17,7 +17,7 @@ internal object StreamFilters {
             .map { it.groupValues[1].toInt() }.filter { it in 1888..2099 }.lastOrNull()
     }
     internal fun allowsUnknownSize(stream:StreamChoice):Boolean =
-        stream.sourceAddonHost in setOf("addonlatam.duckdns.org","plus.nuvehub.app","mg.homelabx.qzz.io")
+        stream.sourceAddonHost in setOf("addonlatam.duckdns.org","plus.nuvehub.app","mg.homelabx.qzz.io","x.pepo.ar")
     fun allowed(stream: StreamChoice,type: String,movieYear: String?,maxBytes: Long,movieTitle: String? = null): Boolean {
         val bytes=StreamOrdering.bytes(stream)
         // Unknown sizes remain hidden except the explicitly approved direct-link providers.

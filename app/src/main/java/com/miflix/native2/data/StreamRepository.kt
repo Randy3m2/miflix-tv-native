@@ -11,7 +11,6 @@ import java.net.URI
 class StreamRepository internal constructor(initialManifestUrl:String,
     private val fetch:suspend (String,Int)->String) {
     constructor(initialManifestUrl:String):this(initialManifestUrl,{url,timeout ->AddonHttpRP12.text(url,timeout)})
-    var p2pEnabled:Boolean=false
     private val torrentCounts=java.util.concurrent.ConcurrentHashMap<String,Int>()
     fun hasTorrentOnlyResults():Boolean = manifests().any {(torrentCounts[it] ?: 0)>0}
 
@@ -23,7 +22,7 @@ class StreamRepository internal constructor(initialManifestUrl:String,
     private fun label(manifest:String,position:Int):String {
         val host=runCatching {URI(manifest.replace("|","%7C")).host}.getOrNull().orEmpty().ifBlank {"Add-on"}
         val known=when(host) {"peerflix.mov","addon.peerflix.mov"->"Peerflix";"addonlatam.duckdns.org"->"Addon Latam";"mg.homelabx.qzz.io"->"Deepflix";"torrentio.strem.fun"->"Torrentio";else->host}
-        return (metadata[manifest]?.name?.takeIf {it.isNotBlank()} ?: known)+" · "+(position+1)
+        return if(manifest==BundledAddonsRP12.mandanguita) "Mandanguita TV" else (metadata[manifest]?.name?.takeIf {it.isNotBlank()} ?: known)+" · "+(position+1)
     }
     suspend fun inspectSourceAddons() = coroutineScope {
         manifests().map {manifest ->async {info(manifest)}}.awaitAll()
@@ -92,7 +91,7 @@ class StreamRepository internal constructor(initialManifestUrl:String,
                     val unknownSize=if(maxBytes>0) raw.count {StreamOrdering.bytes(it)<=0 && !StreamFilters.allowsUnknownSize(it)} else 0
                     statuses[manifest]="Returned: ${raw.size} · Available: ${accepted.size}"+
                         (if(unknownSize>0) " · Hidden (unknown size): $unknownSize" else "")+
-                        (if((torrentCounts[manifest] ?: 0)>0) " · ${if(p2pEnabled) "P2P" else "P2P required"}: ${torrentCounts[manifest]}" else "")
+                        (if((torrentCounts[manifest] ?: 0)>0) " · Torrents ignored: ${torrentCounts[manifest]}" else "")
                     accepted
                 } catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(e:Exception) {
                     val configured=statuses[manifest]=="Configuration required"
@@ -130,14 +129,7 @@ class StreamRepository internal constructor(initialManifestUrl:String,
             val s = a.optJSONObject(i) ?: return@mapNotNull null
             val rawUrl=s.optString("url").trim()
             val direct=rawUrl.takeIf {it.startsWith("http://") || it.startsWith("https://")}
-            val fileIndex=if(s.has("fileIdx") && !s.isNull("fileIdx")) s.optInt("fileIdx",-1) else null
-            val sources=s.optJSONArray("sources")
-            val trackers=(0 until (sources?.length() ?: 0)).map {sources!!.optString(it)}
-                .filter {it.startsWith("tracker:")}.map {it.removePrefix("tracker:")}
-            val torrent=if(!p2pEnabled || direct!=null) null else
-                com.miflix.native2.p2p.TorrentSpecRP14.create(s.optString("infoHash"),fileIndex,trackers)
-                    ?: com.miflix.native2.p2p.TorrentSpecRP14.fromMagnet(rawUrl,fileIndex)
-            val url=direct ?: torrent?.uri() ?: return@mapNotNull null
+            val url=direct ?: return@mapNotNull null
             val hints = s.optJSONObject("behaviorHints")
             val filename = hints?.optString("filename").orEmpty().ifBlank {s.optString("filename")}
             val videoHash = hints?.optString("videoHash").orEmpty()
@@ -160,7 +152,7 @@ class StreamRepository internal constructor(initialManifestUrl:String,
             val proxy=hints?.optJSONObject("proxyHeaders")?.optJSONObject("request")
             val headers=proxy?.keys()?.asSequence()?.associateWith {proxy.optString(it)} ?: emptyMap()
             StreamChoice(
-                name = s.optString("name", addonName)+(if(torrent!=null) " · P2P" else ""),
+                name = if(manifest==BundledAddonsRP12.mandanguita) "Mandanguita TV" else s.optString("name", addonName),
                 title = listOf(s.optString("title").ifBlank {s.optString("name","Stream")},s.optString("description"))
                     .filter {it.isNotBlank()}.distinct().joinToString("\n"),
                 url = url,

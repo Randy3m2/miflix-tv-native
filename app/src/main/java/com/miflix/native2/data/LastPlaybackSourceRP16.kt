@@ -18,7 +18,7 @@ internal class LastPlaybackSourceRP16(private val read:()->String,private val wr
     fun get(key:String):StreamChoice? = runCatching {
         val row=document().optJSONObject(key)?.optJSONObject("stream") ?: return null
         val url=row.getString("url")
-        if(URI(url).scheme !in setOf("http","https","brunio-p2p")) return null
+        if(URI(url).scheme !in setOf("http","https")) return null
         val headers=row.optJSONObject("headers")
         val subs=row.optJSONArray("subs")
         val audio=row.optJSONArray("audio")
@@ -30,7 +30,7 @@ internal class LastPlaybackSourceRP16(private val read:()->String,private val wr
             subtitles=(0 until (subs?.length() ?: 0)).map {i ->val s=subs!!.getJSONObject(i);SubtitleChoice(s.getString("url"),s.optString("lang"),s.optString("label"),s.optString("source"))})
     }.getOrNull()
     fun save(key:String,s:StreamChoice) {
-        if(s.nativeSource!=null || runCatching {URI(s.url).scheme !in setOf("http","https","brunio-p2p")}.getOrDefault(true)) return
+        if(s.nativeSource!=null || runCatching {URI(s.url).scheme !in setOf("http","https")}.getOrDefault(true)) return
         val row=JSONObject().put("url",s.url).put("name",s.name).put("title",s.title).put("filename",s.filename)
             .put("hash",s.videoHash).put("size",s.videoSize).put("addon",s.addonName).put("source",s.sourceUrl).put("host",s.sourceAddonHost)
             .put("headers",JSONObject(s.requestHeaders)).put("audio",JSONArray(s.audioLanguages))

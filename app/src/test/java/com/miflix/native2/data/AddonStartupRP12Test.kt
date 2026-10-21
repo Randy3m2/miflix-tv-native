@@ -51,17 +51,17 @@ class AddonStartupRP12Test {
   }
   assertTrue(repo.resolve("tt1","movie").isEmpty())
   assertTrue(repo.hasTorrentOnlyResults())
-  assertTrue(repo.status(repo.manifests().first()).contains("P2P required: 1"))
+  assertTrue(repo.status(repo.manifests().first()).contains("Torrents ignored: 1"))
  }
  @Test fun factoryListAndMigrationKeepPersonalAddonsAndRemovals() {
   val factory=BundledAddonsRP12.defaults
-  assertEquals(4,factory.size)
-  assertEquals(listOf("mg.homelabx.qzz.io","addon.peerflix.mov","addonlatam.duckdns.org","torrentio.strem.fun"),factory.map {URI(it).host})
+  assertEquals(5,factory.size)
+  assertEquals(listOf("mg.homelabx.qzz.io","x.pepo.ar","addon.peerflix.mov","addonlatam.duckdns.org","torrentio.strem.fun"),factory.map {URI(it).host})
   val custom="https://my-comet.test/config/manifest.json"
   assertEquals(listOf(custom)+factory,BundledAddonsRP12.effective(listOf(custom)+BundledAddonsRP12.retired.toList()))
   assertFalse(BundledAddonsRP12.effective(emptyList(),setOf(factory[1])).contains(factory[1]))
   val old=BundledAddonsRP12.retired.first()
   assertTrue(BundledAddonsRP12.effective(listOf(old),restored=setOf(old)).contains(old))
-  assertEquals(4,BundledAddonsRP12.effective(factory).size)
+  assertEquals(5,BundledAddonsRP12.effective(factory).size)
  }
 }

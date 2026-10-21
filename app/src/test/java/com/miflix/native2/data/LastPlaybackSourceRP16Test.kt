@@ -21,9 +21,9 @@ class LastPlaybackSourceRP16Test {
         assertNotEquals(key,LastPlaybackSourceRP16.key("a:p1","tv:10",1,3,"es"))
         assertNotEquals(key,LastPlaybackSourceRP16.key("a:p1","tv:10",1,2,"en"))
     }
-    @Test fun p2pUriRetainsHashFileAndTrackers() {
+    @Test fun legacyTorrentSourceIsIgnored() {
         val stream=StreamChoice("P2P","brunio-p2p://0123456789abcdef0123456789abcdef01234567/4?tr=udp%3A%2F%2Ftracker.test%3A80","Latino")
-        store().save("p2p",stream);assertEquals(stream,store().get("p2p"))
+        store().save("p2p",stream);assertNull(store().get("p2p"))
     }
     @Test fun failedSourceIsRemovedWithoutDeletingAnotherTitle() {
         val stream=StreamChoice("A","https://video.test/a","Video")

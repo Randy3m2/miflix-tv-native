@@ -1,8 +1,10 @@
 package com.miflix.native2.data
 
 internal object BundledAddonsRP12 {
+    const val mandanguita="https://x.pepo.ar/d/87ef2eec82a0471a/manifest.json"
     val defaults=listOf(
         "https://mg.homelabx.qzz.io/manifest.json",
+        mandanguita,
         "https://addon.peerflix.mov/enc_BA5dF-BLbNK-zfs2WKyxvMisAWp7d6Unjes1wcDllqEBBOfA_tSEaZWij92R3ru_FxOLx4l1x5pLwZDMqDE-D3P7ko0nWq3csWXP83_qHcSIP6ZL5JFzZ8wv_oEIyAwNaXUYcyPIYRaXv45gKuDsxTtBByuTM-gelpwjclAPPN_jncJQ6X0KweqFjzqcV80i/manifest.json",
         "https://addonlatam.duckdns.org/A0wrYOb7z4LiG5vrhQwcb-g4/manifest.json",
         "https://torrentio.strem.fun/sort=qualitysize%7Clanguage=latino,spanish/manifest.json"

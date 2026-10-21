@@ -10,7 +10,7 @@ class FactoryDeepflixRP21Test {
     }
     @Test fun removalIsRespectedAndOtherDefaultsKeepTheirOrder() {
         assertFalse(BundledAddonsRP12.effective(emptyList(),setOf(deepflix)).contains(deepflix))
-        assertEquals(listOf("addon.peerflix.mov","addonlatam.duckdns.org","torrentio.strem.fun"),
+        assertEquals(listOf("x.pepo.ar","addon.peerflix.mov","addonlatam.duckdns.org","torrentio.strem.fun"),
             BundledAddonsRP12.defaults.filter {it!=deepflix}.map {java.net.URI(it).host})
     }
 }

@@ -220,7 +220,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 if(size<=0f || containerSize<=0f) return 0f
                 val anchor=minOf(verticalAnchorPx,(containerSize-size).coerceAtLeast(0f))
                 val distance=offset-anchor
-                return if(kotlin.math.abs(distance)<1f) 0f else distance*.55f
+                return if(kotlin.math.abs(distance)<1f) 0f else distance*.72f
             }
         }) {
             LazyColumn(Modifier.fillMaxSize().smoothVerticalDpad { !scroll.isScrollInProgress }.focusRequester(contentFocus).focusGroup(),state=scroll,contentPadding=PaddingValues(0.dp)) {
@@ -1026,13 +1026,13 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         }
                     }
                     if(category=="language") item(key="setting-3") {
-                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Audio language";helpDescription="Preferred audio and playback links. Available tracks can also be changed in the player.";helpIndex=3 }) {
+                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Audio language";helpDescription=tr("Idioma principal y secundario de reproducción. El secundario se guarda por perfil y se intenta si no está el principal.","Primary and secondary playback language. The secondary language is saved per profile and tried when the primary is unavailable.");helpIndex=3 }) {
                 Text(tr("Preferencias de reproducción","Playback preferences"),color=Color.White,fontSize=22.sp, lineHeight=26.sp)
                 Text(tr("Auriculares: ajuste estéreo automático al conectarlos a la TV. La sincronización depende también de la TV y los auriculares.","Headphones: automatic stereo adjustment when connected to the TV. Sync also depends on your TV and headphones."),color=Muted,fontSize=14.sp)
                 Text("Audio: ${state.audioLanguage.ifBlank { tr("Automático","Automatic") }}",color=Muted)
                 if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(state.audioLanguage)) {
-                    Text(tr("Enlaces: español latino y de España primero; inglés como alternativa.",
-                        "Links: Latin American and Spain Spanish first; English as fallback."),color=Muted,fontSize=14.sp)
+                    Text(tr("Enlaces: español latino y de España primero; después el idioma secundario seleccionado.",
+                        "Links: Latin American and Spain Spanish first, then the selected secondary language."),color=Muted,fontSize=14.sp)
                     Text(tr("Con BruniO Native activado en Fuentes, también buscamos por el título en español, latino y castellano.","With BruniO Native enabled in Sources, we also search the Spanish title, Latino and Castilian releases."),color=Muted,fontSize=14.sp)
                 }
                 LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(vertical=8.dp)) { item { FlowRow(horizontalArrangement=Arrangement.spacedBy(18.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
@@ -1040,6 +1040,13 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         FocusButton(label,primary=state.audioLanguage==code) { state.savePlaybackPreferences(code,state.subtitleLanguage,state.autoplayNext) }
                     }
                 } } }
+                Text(tr("Idioma secundario · este perfil","Secondary language · this profile"),color=Color.White,fontSize=18.sp)
+                Text(tr("Si el principal no está disponible, intenta este idioma automáticamente. No cambia el idioma de la interfaz.","If the primary language is unavailable, automatically try this language. Does not change the interface language."),color=Muted,fontSize=14.sp)
+                FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    listOf("" to tr("Desactivado","Off"),"es" to "Español", "en" to "English", "pt" to "Português", "fr" to "Français").filter {it.first.isBlank() || it.first!=state.audioLanguage}.forEach {(code,label) ->
+                        FocusButton(label,primary=state.secondaryAudioLanguageRP62==code) {state.saveSecondaryAudioRP62(code)}
+                    }
+                }
                 Spacer(Modifier.height(18.dp))
 
                         }
@@ -1074,20 +1081,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         SettingsTileRC103(tr("Orden de filas de Home","Home row order"),tr("Decide qué aparece primero.","Decide what comes first."),"lists") {showHomeOrder=true}
                         SettingsTileRC103(tr("Mostrar u ocultar filas","Show or hide rows"),tr("Elige qué secciones ver en este perfil.","Choose which sections to see in this profile."),"home") {showHomeVisibility=true}
                     }}
-                    if(category=="playback") item(key="p2p-rp14") {
-                        var p2p by remember(state.localExtrasScope()) {mutableStateOf(state.p2pEnabledRP14())}
-                        var cacheGb by remember {mutableStateOf(com.miflix.native2.p2p.P2PSettingsRP14.cacheGb(context))}
-                        SettingsSectionCard(onFocused={visualHelp=null;helpTitle="P2P";helpDescription=tr("Reproduce torrents desde los complementos. Comparte datos con otros peers mientras el player está abierto. Caché local; sin Supabase. Requiere Android 9+.","Play torrents from add-ons. Exchanges data with peers while the player is open. Local cache; no Supabase. Requires Android 9+.");helpIndex=-1}) {
-                            SettingsTileRC103("P2P · Peerflix / Torrentio",tr("Torrents dentro del reproductor. Android 9+.","Torrents inside the player. Android 9+."),"links",checked=p2p) {
-                                state.saveP2PRP14(!p2p);p2p=state.p2pEnabledRP14()
-                            }
-                            Text(tr("Almacenamiento temporal máximo por archivo. Se borra al cerrar el player. Un archivo mayor requiere aumentar el límite.","Maximum temporary storage per file. Cleared when the player closes. Larger files require a higher limit."),color=Muted)
-                            FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                                listOf(2,4,8,16,32).forEach {gb ->FocusButton("$gb GB",primary=cacheGb==gb) {com.miflix.native2.p2p.P2PSettingsRP14.saveCacheGb(context,gb);cacheGb=gb}}
-                            }
-                            if(!com.miflix.native2.p2p.P2PSettingsRP14.supported()) Text(tr("P2P no está disponible en esta TV. Los enlaces directos siguen disponibles.","P2P is unavailable on this TV. Direct links remain available."),color=Muted)
-                        }
-                    }
+
                     if(category=="playback") item(key="previous-live-channel") {
                         SettingsTileRC103(tr("TV en vivo · Canal anterior","Live TV · Previous channel"),tr("Alterna entre los dos últimos canales reproducidos. Historial por perfil durante esta sesión.","Switch between the last two played channels. Per-profile history for this session."),"previous",checked=state.previousLiveChannelEnabled) {state.savePreviousLiveChannelEnabled(!state.previousLiveChannelEnabled)}
                     }
@@ -1101,7 +1095,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         SettingsTileRC103(tr("Mi universo de cine","My cinema hub"),tr("Explora tus estadísticas de reproducción en esta TV.","Explore your viewing statistics on this TV."),"stats") {showCinemaHub=true}
                     }
                     if(category=="playback") item(key="setting-4") {
-                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Playback link size limit";helpDescription="Choose a maximum file size. Unknown sizes are hidden except Addon Latam, Nuve+ and Deepflix.";helpIndex=4 }) {
+                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Playback link size limit";helpDescription="Choose a maximum file size. Unknown sizes are hidden except Addon Latam, Nuve+, Deepflix and Mandanguita TV.";helpIndex=4 }) {
                 var customLimit by remember(state.streamSizeLimitGb) { mutableStateOf(if(state.streamSizeLimitGb>0) state.streamSizeLimitGb.toString() else "") }
                 Text(tr("Límite de tamaño de enlaces","Playback link size limit"),color=Color.White,fontSize=22.sp,lineHeight=26.sp)
                 Text(if(state.streamSizeLimitGb==0.0) tr("Sin límite","Unlimited") else "${tr("Máximo","Maximum")}: ${state.streamSizeLimitGb} GB",color=Muted)
@@ -1221,7 +1215,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                                 .replace("Configuration required","Requiere configuración")
                                 .replace("Request failed","Falló la consulta")
                                 .replace("Returned:","Recibidos:").replace("Available:","Disponibles:")
-                                .replace("Hidden (unknown size):","Ocultos (sin tamaño):").replace("P2P required:","Requiere motor P2P:") else status,color=Muted,fontSize=12.sp)
+                                .replace("Hidden (unknown size):","Ocultos (sin tamaño):").replace("Torrents ignored:","Torrents omitidos:") else status,color=Muted,fontSize=12.sp)
                         }
                         AddonLimitButtonRP8(state,manifest)
                         FocusButton(tr("Eliminar","Remove"),destructive=true) { state.launch { state.socialAction { state.removeAddonManifest(manifest) } } }
@@ -1514,13 +1508,6 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var countdown by remember(request.playbackId) { mutableStateOf(10) }
     var cancelAutoplay by remember(request.playbackId) { mutableStateOf(false) }
 
-    val torrentPlayback=remember(request.playbackId) {
-        if(!request.live && request.stream.url.startsWith("brunio-p2p://") && state.p2pEnabledRP14())
-            com.miflix.native2.p2p.TorrentPlaybackRP14(java.io.File(context.cacheDir,"p2p-rp14"),
-                com.miflix.native2.p2p.P2PSettingsRP14.cacheGb(context)*1024L*1024*1024) else null
-    }
-    DisposableEffect(torrentPlayback) {onDispose {torrentPlayback?.close()}}
-    LaunchedEffect(torrentPlayback,state.appForeground) {kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {torrentPlayback?.setForeground(state.appForeground)}}
     val player = remember(request.playbackId) {
         val renderers = if(request.live) androidx.media3.exoplayer.DefaultRenderersFactory(context).setEnableDecoderFallback(true)
             else com.miflix.native2.player.TimedTextRenderers(context,timing).setEnableDecoderFallback(true)
@@ -1531,7 +1518,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         ExoPlayer.Builder(context, renderers)
             .apply {if(!request.live) setAudioAttributes(androidx.media3.common.AudioAttributes.Builder().setUsage(androidx.media3.common.C.USAGE_MEDIA).setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MOVIE).build(),true)}
             .setHandleAudioBecomingNoisy(true)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(if(torrentPlayback==null) dataFactory else com.miflix.native2.p2p.P2PDataSourceRP14.Factory(dataFactory,torrentPlayback)))
+            .setMediaSourceFactory(DefaultMediaSourceFactory(dataFactory))
             .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder()
                 .setBufferDurationsMs(15000,50000,1000,1500)
                 .setPrioritizeTimeOverSizeThresholds(true).build())
@@ -1554,9 +1541,12 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
             setMediaItem(builder.build(), request.resumeMs)
             val trackBuilder = TrackSelectionParameters.Builder(context)
-            if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(state.audioLanguage)) {
-                trackBuilder.setPreferredAudioLanguages("es-419", "es-MX", "es-AR", "es-CO", "es-DO", "es-CL", "es-PE", "es-VE", "es-EC", "es-ES", "es", "en")
-            } else trackBuilder.setPreferredAudioLanguage(state.audioLanguage.takeIf { it.isNotBlank() })
+            fun audioCodes(code:String):List<String> = if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(code))
+                listOf("es-419","es-MX","es-AR","es-CO","es-DO","es-CL","es-PE","es-VE","es-EC","es-ES","es")
+                else listOf(code).filter {it.isNotBlank()}
+            val audioPreferences=(audioCodes(state.audioLanguage)+audioCodes(state.secondaryAudioLanguageRP62)+
+                if(state.secondaryAudioLanguageRP62.isBlank() && com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(state.audioLanguage)) listOf("en") else emptyList()).distinct()
+            trackBuilder.setPreferredAudioLanguages(*audioPreferences.toTypedArray())
             if (preferredText != null) trackBuilder.setPreferredTextLanguage(preferredText)
             savedSeriesTracks?.optString("audio")?.takeIf {it.isNotBlank()}?.let {trackBuilder.setPreferredAudioLanguage(it)}
             trackBuilder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT,seriesTextOff)
@@ -1686,7 +1676,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             if(eligible && failure!=null && com.miflix.native2.player.SourceFallbackBudget.sourceFailure(failure.errorCode)) {
                 advanceSourceOrShow(playerFailureDetails(failure))
             } else if(watchdog.shouldAdvance(android.os.SystemClock.elapsedRealtime(),firstFrame,
-                    player.playbackState==Player.STATE_BUFFERING,eligible && torrentPlayback==null)) {
+                    player.playbackState==Player.STATE_BUFFERING,eligible)) {
                 advanceSourceOrShow(if(state.autoplayNextLink) tr("La fuente se quedó cargando. Probando otro enlace.","The source stalled. Trying another link.") else tr("La fuente se quedó cargando. Elige otro enlace manualmente.","The source stalled. Choose another link manually."))
             }
         }
@@ -1736,7 +1726,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                         (0 until group.length).filter {group.isTrackSupported(it)}.map {group.getTrackFormat(it).language.orEmpty().trim().lowercase(java.util.Locale.ROOT)}
                     }
                     val allKnown=languages.isNotEmpty() && languages.all {it.isNotBlank() && it!="und" && it!="mul" && it!="zxx"}
-                    if(allKnown && languages.none {com.miflix.native2.data.StreamLanguagePriority.prefersEnglish(it)}) {
+                    if(allKnown && languages.none {com.miflix.native2.data.StreamLanguagePriority.prefersEnglish(it)} &&
+                        languages.none {com.miflix.native2.data.StreamLanguagePriority.languageMatches(it,state.secondaryAudioLanguageRP62)}) {
                         advanceSourceOrShow(tr("Esta fuente no tiene audio inglés. Probando otra…","This source has no English audio. Trying another…"))
                     }
                 }

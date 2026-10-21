@@ -28,6 +28,26 @@ public final class StreamLanguagePriority {
         String value=normalize(language).trim();
         return value.equals("en") || value.startsWith("en-") || value.equals("eng") || value.equals("english") || value.equals("ingles");
     }
+    public static boolean languageMatches(String actual,String preferred) {
+        String a=normalize(actual).trim(), p=normalize(preferred).trim();
+        if(p.isEmpty() || a.isEmpty()) return false;
+        if(prefersSpanish(p)) return prefersSpanish(a);
+        if(prefersEnglish(p)) return prefersEnglish(a);
+        String base=p.split("-")[0];
+        if(base.equals("pt")) return a.equals("por") || a.equals("portuguese") || a.equals("portugues") || a.equals("pt") || a.startsWith("pt-");
+        if(base.equals("fr")) return a.equals("fra") || a.equals("fre") || a.equals("french") || a.equals("francais") || a.equals("fr") || a.startsWith("fr-");
+        return a.equals(base) || a.startsWith(base+"-");
+    }
+    public static boolean hasAudio(String declaredAudioLanguages,String labels,String preferred) {
+        if(preferred==null || preferred.trim().isEmpty()) return false;
+        if(prefersSpanish(preferred)) return rank(declaredAudioLanguages,labels)==0;
+        if(prefersEnglish(preferred)) return hasEnglishAudio(declaredAudioLanguages,labels);
+        String declared=normalize(declaredAudioLanguages);
+        String evidence=category(declared)!=2 ? declared : audioEvidence(labels);
+        String base=normalize(preferred).split("-")[0];
+        String words=base.equals("pt") ? "pt(?:-br|-pt)?|por|portuguese|portugues" : base.equals("fr") ? "fr(?:-fr|-ca)?|fra|fre|french|francais" : Pattern.quote(base);
+        return Pattern.compile(EDGE+"(?:"+words+")"+END).matcher(evidence).find();
+    }
     private static boolean englishEvidence(String value) {
         return ENGLISH.matcher(value).find() || value.contains("🇺🇸") || value.contains("🇬🇧");
     }

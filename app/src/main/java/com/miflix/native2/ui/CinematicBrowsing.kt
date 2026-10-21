@@ -328,10 +328,11 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
 @Composable
 private fun SearchKey(label: String,modifier: Modifier=Modifier,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
+    val active=actionFocusVisibleRP64(focused)
     Box(modifier.height(28.dp).onFocusChanged {focused=it.isFocused}.focusable().tvClick(onClick).clickable(onClick=onClick)
-        .background(if(focused) Accent else Panel,RoundedCornerShape(6.dp))
-        .border(1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(6.dp)).padding(horizontal=4.dp),
+        .background(if(active) Color.White else Panel,RoundedCornerShape(6.dp))
+        .border(1.dp,if(active) Color.White else PanelBorder,RoundedCornerShape(6.dp)).padding(horizontal=4.dp),
         contentAlignment=Alignment.Center) {
-        Text(label,color=if(focused) FocusInk else Color.White,fontSize=13.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+        Text(label,color=if(active) Color.Black else Color.White,fontSize=13.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
     }
 }

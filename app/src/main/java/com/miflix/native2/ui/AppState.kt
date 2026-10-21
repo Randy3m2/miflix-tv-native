@@ -1332,7 +1332,7 @@ class AppState(context: Context) {
     var activeProfile by mutableStateOf(Profile("default", "Main", primary = true))
     val profiles = mutableStateListOf<Profile>()
     val favorites = mutableStateListOf<String>()
-    var myListLimit by mutableStateOf(16)
+    var myListLimit by mutableStateOf(15)
     var myListLoading by mutableStateOf(false)
     var myListMessage by mutableStateOf("")
     val myListTitles=mutableStateListOf<MediaSummary>()
@@ -1340,7 +1340,7 @@ class AppState(context: Context) {
     private var myListGeneration=0
     private val myListCache=mutableMapOf<String,MediaSummary>()
     suspend fun loadMyListPage(owner: String,ids: List<String>) = coroutineScope {
-        if(myListOwner!=owner) { myListOwner=owner;myListLimit=16;myListCache.clear();myListTitles.clear() }
+        if(myListOwner!=owner) { myListOwner=owner;myListLimit=15;myListCache.clear();myListTitles.clear() }
         val generation=++myListGeneration
         myListLoading=true;myListMessage=""
         val desired=ids.take(myListLimit);val permits=Semaphore(4)

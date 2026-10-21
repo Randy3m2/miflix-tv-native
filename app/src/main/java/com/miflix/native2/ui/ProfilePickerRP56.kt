@@ -131,17 +131,18 @@ internal fun ProfilePickerRP56(
                         Box(Modifier.width(40.dp), contentAlignment = Alignment.Center) {
                             if (selected) {
                                 var editFocused by remember { mutableStateOf(false) }
+                                val editActive=actionFocusVisibleRP64(editFocused)
                                 Box(Modifier.size(32.dp)
-                                    .background(if (editFocused) Color(0xFF303030) else Color.Transparent, RoundedCornerShape(6.dp))
+                                    .background(if (editActive) Color.White else Color.Transparent, RoundedCornerShape(6.dp))
                                     .onFocusChanged { editFocused = it.isFocused }
                                     .semantics { contentDescription = tr("Editar perfil", "Edit profile") }
                                     .tvClick { onEdit(profile) }.clickable { onEdit(profile) }.padding(7.dp)) {
                                     Canvas(Modifier.fillMaxSize()) {
                                         val w = size.width; val h = size.height
-                                        drawLine(Color.White, Offset(w*.18f,h*.78f), Offset(w*.75f,h*.21f), 2.dp.toPx(), StrokeCap.Round)
-                                        drawLine(Color.White, Offset(w*.31f,h*.9f), Offset(w*.87f,h*.34f), 2.dp.toPx(), StrokeCap.Round)
-                                        drawLine(Color.White, Offset(w*.75f,h*.21f), Offset(w*.87f,h*.34f), 2.dp.toPx(), StrokeCap.Round)
-                                        drawLine(Color.White, Offset(w*.18f,h*.78f), Offset(w*.14f,h*.94f), 2.dp.toPx(), StrokeCap.Round)
+                                        drawLine(if(editActive) Color.Black else Color.White, Offset(w*.18f,h*.78f), Offset(w*.75f,h*.21f), 2.dp.toPx(), StrokeCap.Round)
+                                        drawLine(if(editActive) Color.Black else Color.White, Offset(w*.31f,h*.9f), Offset(w*.87f,h*.34f), 2.dp.toPx(), StrokeCap.Round)
+                                        drawLine(if(editActive) Color.Black else Color.White, Offset(w*.75f,h*.21f), Offset(w*.87f,h*.34f), 2.dp.toPx(), StrokeCap.Round)
+                                        drawLine(if(editActive) Color.Black else Color.White, Offset(w*.18f,h*.78f), Offset(w*.14f,h*.94f), 2.dp.toPx(), StrokeCap.Round)
                                     }
                                 }
                             }
@@ -165,15 +166,16 @@ internal fun ProfilePickerRP56(
                 }
                 item {
                     var addFocused by remember { mutableStateOf(false) }
+                    val addActive=actionFocusVisibleRP64(addFocused)
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Spacer(Modifier.width(40.dp))
                         Box(Modifier.width(avatarSize * 1.36f + 10.dp), contentAlignment = Alignment.Center) {
-                            Box(Modifier.size(avatarSize).border(if (addFocused) 2.dp else 1.dp,
-                                if (addFocused) Color.White else Color(0xFF888888), RoundedCornerShape(7.dp))
+                            Box(Modifier.size(avatarSize).background(if(addActive) Color.White else Color.Transparent,RoundedCornerShape(7.dp)).border(if (addActive) 2.dp else 1.dp,
+                                if (addActive) Color.White else Color(0xFF888888), RoundedCornerShape(7.dp))
                                 .onFocusChanged { addFocused = it.isFocused; if (it.isFocused) selectedProfile = null }
                                 .semantics { contentDescription = tr("Agregar perfil", "Add profile") }
                                 .tvClick { onManage() }.clickable { onManage() }, contentAlignment = Alignment.Center) {
-                                Text("+", color = if (addFocused) Color.White else Color(0xFF999999), fontSize = 29.sp)
+                                Text("+", color = if (addActive) Color.Black else Color(0xFF999999), fontSize = 29.sp)
                             }
                         }
                     }

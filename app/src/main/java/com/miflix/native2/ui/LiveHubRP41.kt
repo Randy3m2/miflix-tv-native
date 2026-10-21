@@ -397,15 +397,16 @@ private fun HubLidomRP41(state:AppState,modifier:Modifier) {
 @Composable
 internal fun HubCategoryChipRP42(label:String,selected:Boolean,click:()->Unit) {
     var focused by remember {mutableStateOf(false)}
-    Row(Modifier.clip(RoundedCornerShape(18.dp)).background(if(selected) Color(0xFF303030) else Color(0xFF161616))
+    val active=actionFocusVisibleRP64(focused)
+    Row(Modifier.clip(RoundedCornerShape(18.dp)).background(if(active) Color.White else if(selected) Color(0xFF303030) else Color(0xFF161616))
         .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else if(selected) Color(0xFF727272) else Color(0xFF2A2A2A),RoundedCornerShape(18.dp))
         .onFocusChanged {focused=it.isFocused}.focusable().tvClick(click).clickable(onClick=click).padding(horizontal=16.dp,vertical=12.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(9.dp)) {
         Canvas(Modifier.size(16.dp)) {
             if(label=="M3U") {
-                for(i in 0..2) drawLine(Color.White,androidx.compose.ui.geometry.Offset(0f,size.height*(.2f+i*.3f)),androidx.compose.ui.geometry.Offset(size.width,size.height*(.2f+i*.3f)),strokeWidth=2.dp.toPx())
-            } else drawCircle(if(selected) Color.White else Color(0xFF888888),radius=size.minDimension*.28f)
+                for(i in 0..2) drawLine(if(active) Color.Black else Color.White,androidx.compose.ui.geometry.Offset(0f,size.height*(.2f+i*.3f)),androidx.compose.ui.geometry.Offset(size.width,size.height*(.2f+i*.3f)),strokeWidth=2.dp.toPx())
+            } else drawCircle(if(active) Color.Black else if(selected) Color.White else Color(0xFF888888),radius=size.minDimension*.28f)
         }
-        Text(label,color=Color.White,fontSize=13.sp,fontWeight=if(selected) FontWeight.Bold else FontWeight.Normal)
+        Text(label,color=if(active) Color.Black else Color.White,fontSize=13.sp,fontWeight=if(selected) FontWeight.Bold else FontWeight.Normal)
     }
 }

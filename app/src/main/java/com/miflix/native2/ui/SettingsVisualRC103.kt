@@ -43,10 +43,10 @@ private val SettingsAccentRC103=Accent
 
 /** Code-drawn icons: sharp on TV, no downloads or additional dependency. */
 @Composable
-internal fun SettingsIconRC103(kind:String) {
-    Box(Modifier.size(44.dp).background(SettingsAccentRC103.copy(alpha=0.12f),RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center) {
+internal fun SettingsIconRC103(kind:String,focused:Boolean=false) {
+    Box(Modifier.size(44.dp).background(if(focused) Color(0x14000000) else SettingsAccentRC103.copy(alpha=0.12f),RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center) {
         Canvas(Modifier.size(26.dp)) {
-            val c=SettingsAccentRC103;val w=size.width;val h=size.height;val sw=2.dp.toPx()
+            val c=if(focused) Color.Black else SettingsAccentRC103;val w=size.width;val h=size.height;val sw=2.dp.toPx()
             fun line(x:Float,y:Float,x2:Float,y2:Float)=drawLine(c,Offset(w*x,h*y),Offset(w*x2,h*y2),sw)
             when(kind) {
                 "sleep" -> {drawCircle(c,w*0.34f,center,style=Stroke(sw));line(.5f,.5f,.5f,.25f);line(.5f,.5f,.7f,.6f)}
@@ -92,23 +92,24 @@ internal fun SettingsTileRC103(title:String,description:String,icon:String,modif
     val hoverSource=remember {MutableInteractionSource()}
     val hovered by hoverSource.collectIsHoveredAsState()
     val active=focused || hovered
+    val filled=actionFocusVisibleRP64(focused)
     val help by rememberUpdatedState(LocalSettingsHelpRC103.current)
     val value=if(checked==null) tr("Abrir opciones","Open options") else if(checked) tr("Activado","On") else tr("Desactivado","Off")
     LaunchedEffect(active,title,description,checked,icon) {if(active) help?.invoke(SettingsHelpRC103(title,description,icon,value))}
     val edge by animateColorAsState(if(active) Color.White else if(checked==true) SettingsAccentRC103.copy(alpha=.45f) else PanelBorder,label="settingsEdge")
-    val track by animateColorAsState(if(checked==true) SettingsAccentRC103 else Color(0xFF454545),label="settingsTrack")
+    val track by animateColorAsState(if(filled) Color(0xFF353535) else if(checked==true) SettingsAccentRC103 else Color(0xFF454545),label="settingsTrack")
     val position by animateFloatAsState(if(checked==true) 1f else 0f,label="settingsThumb")
     val shape=RoundedCornerShape(18.dp)
     val interaction=if(checked==null) Modifier.clickable(role=Role.Button,onClick=onClick) else Modifier
         .semantics {stateDescription=if(checked) tr("Activado","On") else tr("Desactivado","Off")}
         .toggleable(value=checked,role=Role.Switch,onValueChange={onClick()})
-    Row(modifier.fillMaxWidth().clip(shape).background(Panel)
+    Row(modifier.fillMaxWidth().clip(shape).background(if(filled) Color.White else Panel)
         .border(if(active) 2.dp else 1.dp,edge,shape).onFocusChanged {focused=it.isFocused}.hoverable(hoverSource).then(interaction).padding(16.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
-        SettingsIconRC103(icon)
+        SettingsIconRC103(icon,filled)
         Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-            Text(title,color=Color.White,fontSize=17.sp,lineHeight=22.sp,fontWeight=FontWeight.SemiBold)
-            Text(description,color=Muted,fontSize=13.sp,lineHeight=18.sp)
+            Text(title,color=if(filled) Color.Black else Color.White,fontSize=17.sp,lineHeight=22.sp,fontWeight=FontWeight.SemiBold)
+            Text(description,color=if(filled) Color(0xFF555555) else Muted,fontSize=13.sp,lineHeight=18.sp)
         }
         if(checked!=null) Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(5.dp)) {
             Canvas(Modifier.size(44.dp,26.dp)) {
@@ -116,8 +117,8 @@ internal fun SettingsTileRC103(title:String,description:String,icon:String,modif
                 val radius=size.height/2-3.dp.toPx()
                 drawCircle(if(checked) Color.White else Color.White,radius,Offset(size.height/2+(size.width-size.height)*position,size.height/2))
             }
-            Text(if(checked) tr("ACTIVO","ON") else tr("INACTIVO","OFF"),color=if(checked) SettingsAccentRC103 else Muted,fontSize=10.sp,fontWeight=FontWeight.Bold)
-        } else Text("›",color=if(active) Color.White else SettingsAccentRC103,fontSize=30.sp)
+            Text(if(checked) tr("ACTIVO","ON") else tr("INACTIVO","OFF"),color=if(filled) Color.Black else if(checked) SettingsAccentRC103 else Muted,fontSize=10.sp,fontWeight=FontWeight.Bold)
+        } else Text("›",color=if(filled) Color.Black else SettingsAccentRC103,fontSize=30.sp)
     }
 }
 

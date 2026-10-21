@@ -141,6 +141,7 @@ fun FocusButton(
     onClick: () -> Unit
 ) {
     var focused by remember { mutableStateOf(false) }
+    val actionFocused=actionFocusVisibleRP64(focused)
     Box(
         modifier
             
@@ -151,14 +152,14 @@ fun FocusButton(
             .focusable()
             .then(if (onLongClick != null) Modifier.tvPlaybackClick(onClick, onLongClick) else Modifier.tvClick(onClick))
             .clickable(onClick = onClick)
-            .background(if (focused) FocusedPanel else if(destructive) Color(0xFF251317) else if(primary) Color(0xFF211D28) else Panel, RoundedCornerShape(50))
-            .border(if (focused) 2.dp else 1.dp, if(focused) Accent else if(destructive) Color(0xFF78404B) else if(primary) Color(0xFF74608D) else PanelBorder, RoundedCornerShape(50))
+            .background(if (actionFocused) Color.White else if(destructive) Color(0xFF251317) else if(primary) Color(0xFF211D28) else Panel, RoundedCornerShape(50))
+            .border(if (actionFocused) 2.dp else 1.dp, if(actionFocused) Color.White else if(destructive) Color(0xFF78404B) else if(primary) Color(0xFF74608D) else PanelBorder, RoundedCornerShape(50))
             .padding(horizontal = horizontalPadding, vertical = if(LocalSimpleHome.current) 16.dp else 12.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text,
-            color = if(destructive) Color(0xFFFFB9C3) else Color.White,
+            color = if(actionFocused) Color.Black else if(destructive) Color(0xFFFFB9C3) else Color.White,
             fontSize = if(LocalSimpleHome.current) 20.sp else 15.sp, lineHeight=if(LocalSimpleHome.current) 25.sp else 20.sp,
             fontWeight = FontWeight.Bold, maxLines=1, overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis
         )
@@ -168,11 +169,12 @@ fun FocusButton(
 @Composable
 fun BackIconButton(onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
+    val actionFocused=actionFocusVisibleRP64(focused)
     Box(Modifier.size(44.dp).semantics { contentDescription=tr("Volver","Back") }.onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick)
-        .clickable(onClick=onClick).background(if(focused) SoftWhite else Color(0x990C111B),RoundedCornerShape(22.dp))
-        .border(if(focused) 2.dp else 1.dp,if(focused) Accent else Color(0x557D8AA3),RoundedCornerShape(22.dp)),
+        .clickable(onClick=onClick).background(if(actionFocused) Color.White else Color(0x990C111B),RoundedCornerShape(22.dp))
+        .border(if(actionFocused) 2.dp else 1.dp,if(actionFocused) Color.White else Color(0x557D8AA3),RoundedCornerShape(22.dp)),
         contentAlignment=Alignment.Center) {
-        Text("‹",color=if(focused) FocusInk else Color.White,fontSize=32.sp, lineHeight=38.sp)
+        Text("‹",color=if(actionFocused) Color.Black else Color.White,fontSize=32.sp, lineHeight=38.sp)
     }
 }
 

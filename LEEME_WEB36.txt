@@ -1,0 +1,22 @@
+BruniO WEB v36 — Cinema UI + integrated player
+
+APLICAR
+Aplicar sobre la web v35 existente. Reemplazar los archivos del ZIP respetando web/ y verification/. Conservar los demás archivos, especialmente style.css, experience.js, live.js, vendor/hls.min.js y las imágenes actuales. Publicar nuevamente el proyecto web en Vercel con su configuración existente.
+Este ZIP no modifica Android TV, SQL, funciones Supabase ni variables de Vercel. No incluye credenciales nuevas ni vídeos de prueba. No se ha desplegado desde este entorno.
+
+DISEÑO
+Barra superior oscura y fija, navegación con hover discreto. Portada cinematográfica, filas de carátulas horizontales 16:9 con flechas, ficha amplia con degradado y botón blanco de reproducir. Las plataformas son tarjetas grandes con imagen de borde a borde, sin padding. Las filas se forman con los títulos y géneros ya cargados, sin consultas adicionales para poblarlas. La vista flotante al pasar el cursor usa imagen y datos disponibles; no reproduce tráileres automáticamente.
+Las fichas y acciones conservan favoritos, temporadas, episodios, reparto, comentarios, compartir y enviar a TV existentes. Interfaz adaptable a PC y móvil y respeto por movimiento reducido.
+
+REPRODUCTOR
+Pantalla completa dentro de la web, controles propios, pausa/play, ±10 segundos, volumen/silencio, progreso y tiempo restante, atajos, subtítulos online existentes + SRT/VTT local, Cast/AirPlay existente, PiP cuando el navegador lo admita. Ajustes de velocidad y selección de audio/calidad únicamente cuando las pistas o niveles son accesibles en el navegador/HLS. Cambiar enlace devuelve al selector. Siguiente episodio busca el próximo estrenado y abre su selector de enlaces, sin adivinar un enlace ni forzar el primer resultado.
+Play in BruniO ahora es la acción principal también en iPhone/iPad; VLC y otros reproductores se conservan como alternativas.
+Conserva las fuentes VOD de TorBox y las fuentes Live HTTPS existentes: no incorpora nuevas fuentes de contenido. No garantiza reproducir todos los MKV/HEVC/DTS/TrueHD, enlaces HTTP, fuentes con DRM, enlaces vencidos o servidores sin CORS. No incluye proxy ni transcodificador.
+
+DATOS
+Se conserva el progreso por cuenta/perfil y la caché ya existente. El vídeo viaja directo al proveedor. No se añadieron temporizadores de consultas a Supabase; las funciones de sincronización previas siguen activas. Los enlaces privados no se guardan en la caché del service worker.
+
+VALIDACIÓN
+Sintaxis JavaScript verificada. Pruebas automatizadas aprobadas: aislamiento de mensajes por origen/iframe/canal/perfil; siguiente episodio; cambio de fuente VOD/Live; caché pública; puente de subtítulos; validación de fuentes; errores de formato/autoplay; motor HLS y limpieza; dispatch Cast/AirPlay; compatibilidad Apple existente.
+En navegador: barra fija al hacer scroll, carátulas 16:9 sin desbordamiento horizontal de página, ficha, versión móvil a 390 px y reproducción de un MP4 público de prueba mediante fixture local aislado. Apertura de subtítulos y ajustes verificada. Datos/fixtures de QA excluidos del ZIP.
+No se validó una sesión real del usuario ni todas sus fuentes, dispositivos Cast/AirPlay o navegadores. La prueba de MP4 no equivale a verificar enlaces TorBox de su cuenta.

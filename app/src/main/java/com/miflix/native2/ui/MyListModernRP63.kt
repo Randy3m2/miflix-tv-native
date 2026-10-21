@@ -106,7 +106,7 @@ private fun MyListCardRP65(item:MediaSummary,posterHeight:androidx.compose.ui.un
     var focused by remember(item.cloudId) {mutableStateOf(false)}
     val preview=LocalBrowsePreview.current
     val scale by androidx.compose.animation.core.animateFloatAsState(
-        targetValue=if(focused) 1.012f else 1f,animationSpec=FastMotion,label="myListCardScale")
+        targetValue=if(focused) 1.012f else 1f,animationSpec=androidx.compose.animation.core.tween<Float>(durationMillis=80,easing=androidx.compose.animation.core.LinearOutSlowInEasing),label="myListCardScale")
     Box(modifier.height(posterHeight)
         .graphicsLayer {scaleX=scale;scaleY=scale}
         .contentFocusBorder(18.dp)

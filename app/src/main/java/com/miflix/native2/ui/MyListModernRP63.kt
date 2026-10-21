@@ -3,17 +3,14 @@ package com.miflix.native2.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
-import coil3.compose.AsyncImage
 import com.miflix.native2.model.MediaSummary
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -68,24 +65,17 @@ internal fun ModernMyListScreenRP63(state:AppState,onBack:()->Unit) {
                         ModernButtonRP63(tr("Más antiguos","Oldest added"),primary=order=="oldest",action={state.myListLimit=15;order="oldest"})
                     }
                     BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.TopCenter) {
-                        val cellWidth=((maxWidth-56.dp)/5).coerceAtLeast(1.dp)
-                        val captionHeight=(82f*LocalDensity.current.fontScale).dp.coerceAtLeast(82.dp)
-                        val posterHeight=minOf(cellWidth*1.5f,(maxHeight-captionHeight-20.dp).coerceAtLeast(48.dp))
+                        val cellWidth=((maxWidth-80.dp)/7).coerceAtLeast(1.dp)
+                        val posterHeight=cellWidth*1.5f
                         val initialLoading=state.myListLoading || (ids.isNotEmpty() && titles.isEmpty() && state.myListMessage.isBlank())
-                        LazyVerticalGrid(GridCells.Fixed(5),state=grid,modifier=Modifier.fillMaxSize().smoothVerticalDpad {!grid.isScrollInProgress},
+                        LazyVerticalGrid(GridCells.Fixed(7),state=grid,modifier=Modifier.fillMaxSize().smoothVerticalDpad {!grid.isScrollInProgress},
                             horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(start=4.dp,end=4.dp,top=6.dp,bottom=14.dp)) {
                             items(visible,key={it.cloudId}) {item ->
-                                MyListCardRP64(item,posterHeight,captionHeight,Modifier.fillMaxWidth().then(homeReturnFocus("mylist:$owner:${item.cloudId}")),
+                                MyListCardRP65(item,posterHeight,Modifier.fillMaxWidth().then(homeReturnFocus("mylist:$owner:${item.cloudId}")),
                                     state.progress[item.cloudId]?.percent,onLongClick={state.titleActions(item)}) {state.launch {state.open(item)}}
                             }
                             if(titles.isEmpty() && initialLoading) items(minOf(15,ids.size),key={"loading:$it"}) {
-                                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0xFF15161B))) {
-                                    Box(Modifier.fillMaxWidth().height(posterHeight).background(Color(0xFF202127)))
-                                    Column(Modifier.fillMaxWidth().height(captionHeight).padding(10.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                                        Box(Modifier.fillMaxWidth(.85f).height(9.dp).background(Color(0xFF2A2C33)))
-                                        Box(Modifier.fillMaxWidth(.55f).height(8.dp).background(Color(0xFF22242A)))
-                                    }
-                                }
+                                Box(Modifier.fillMaxWidth().height(posterHeight).clip(RoundedCornerShape(18.dp)).background(Color(0xFF202127)))
                             }
                             item(span={GridItemSpan(maxLineSpan)}) {
                                 Column(Modifier.fillMaxWidth().padding(vertical=12.dp),verticalArrangement=Arrangement.spacedBy(12.dp),horizontalAlignment=Alignment.CenterHorizontally) {
@@ -109,34 +99,34 @@ internal fun ModernMyListScreenRP63(state:AppState,onBack:()->Unit) {
     }
 }
 
-/** The entire card owns focus, so automatic scrolling includes its title and metadata. */
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+/** Poster-only geometry matches Home; no separate caption panel or letterboxing. */
 @Composable
-private fun MyListCardRP64(item:MediaSummary,posterHeight:androidx.compose.ui.unit.Dp,captionHeight:androidx.compose.ui.unit.Dp,
+private fun MyListCardRP65(item:MediaSummary,posterHeight:androidx.compose.ui.unit.Dp,
     modifier:Modifier=Modifier,progress:Double?,onLongClick:()->Unit,onClick:()->Unit) {
     var focused by remember(item.cloudId) {mutableStateOf(false)}
     val preview=LocalBrowsePreview.current
-    val shape=RoundedCornerShape(14.dp)
-    Column(modifier.onFocusChanged {focused=it.isFocused;if(it.isFocused) preview?.invoke(item)}.focusable()
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue=if(focused) 1.012f else 1f,animationSpec=FastMotion,label="myListCardScale")
+    Box(modifier.height(posterHeight)
+        .graphicsLayer {scaleX=scale;scaleY=scale}
+        .contentFocusBorder(18.dp)
+        .onFocusChanged {focused=it.isFocused;if(it.isFocused) preview?.invoke(item)}.focusable()
         .tvPlaybackClick(onClick,onLongClick).clickable(onClick=onClick)
-        .clip(shape).background(Color(0xFF111216)).border(if(focused) 2.dp else 1.dp,if(focused) Color.White else ModernBorderRP63,shape)) {
-        Box(Modifier.fillMaxWidth().height(posterHeight).background(Color(0xFF0B0C10))) {
-            LoadingArtworkRP58(item.poster ?: item.backdrop,item.title,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
-            observeCardFreshness(item)?.let {CardFreshnessTag(it,Modifier.align(Alignment.TopEnd).padding(5.dp).widthIn(max=130.dp))}
-            progress?.takeIf {it>0.0 && it<100.0}?.let {value ->
-                Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color(0x66555555))) {
-                    Box(Modifier.fillMaxHeight().fillMaxWidth((value/100.0).toFloat().coerceIn(0f,1f)).background(Color.White))
-                }
+        .clip(RoundedCornerShape(18.dp)).background(Color(0xFF1A1A1A))) {
+        LoadingArtworkRP58(item.poster ?: item.backdrop,item.title,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+        Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(
+            0f to Color.Transparent,.52f to Color.Transparent,1f to Color(0xDB000000))))
+        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(horizontal=8.dp,vertical=10.dp),
+            verticalArrangement=Arrangement.spacedBy(4.dp)) {
+            Text(item.title,color=Color.White,fontSize=12.sp,lineHeight=15.sp,fontWeight=FontWeight.Bold,
+                maxLines=2,overflow=TextOverflow.Ellipsis)
+        }
+        observeCardFreshness(item)?.let {CardFreshnessTag(it,Modifier.align(Alignment.TopEnd).padding(5.dp).widthIn(max=130.dp))}
+        progress?.takeIf {it>0.0 && it<100.0}?.let {value ->
+            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color(0x66000000))) {
+                Box(Modifier.fillMaxHeight().fillMaxWidth((value/100.0).toFloat().coerceIn(0f,1f)).background(Color.White))
             }
         }
-        Column(Modifier.fillMaxWidth().height(captionHeight).padding(horizontal=9.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-            Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.CenterStart) {
-                Text(item.title,color=Color.White,fontSize=13.sp,lineHeight=16.sp,fontWeight=FontWeight.SemiBold,
-                    maxLines=if(focused) 1 else 3,softWrap=!focused,overflow=TextOverflow.Ellipsis,
-                    modifier=Modifier.fillMaxWidth().then(if(focused) Modifier.basicMarquee(iterations=Int.MAX_VALUE) else Modifier))
-            }
-            Text(listOf(item.year,if(item.type=="series") tr("Serie","Series") else tr("Película","Movie")).filter {it.isNotBlank()}.joinToString(" · "),
-                color=Muted,fontSize=10.sp,lineHeight=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
-        }
+        if(focused) Box(Modifier.matchParentSize().background(Color(0x0AFFFFFF)))
     }
 }

@@ -113,55 +113,5 @@ fun FriendRecommendationsDialog(state: AppState, owner: String?=null, ownerName:
 }
 
 @Composable
-fun FriendActionsDialog(state: AppState, friend: FriendActivity, close: () -> Unit, onContentOpened: () -> Unit = close) {
-    var recommendations by remember { mutableStateOf(false) }
-    var confirmLeave by remember { mutableStateOf(false) }
-    var busy by remember { mutableStateOf(false) }
-    val first=remember { FocusRequester() }
-    LaunchedEffect(confirmLeave,recommendations) { if(!recommendations) { withFrameNanos { };first.requestFocus() } }
-    val canWatch=friend.online && friend.cloudId.matches(Regex("^tmdb:(movie|series):[0-9]+$"))
-    fun watch() {
-        if(busy) return
-        busy=true
-        onContentOpened()
-        state.launch {try {state.socialAction {state.watchFriendIndependently(friend)}} finally {busy=false} }
-    }
-    PlayerMenuDialog(onDismissRequest={ if(!busy) close() }) {
-        LazyColumn(Modifier.width(520.dp).heightIn(max=510.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-            item { ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(84.dp)) }
-            item { Text("@${friend.nickname}",color=Color.White,fontSize=25.sp) }
-            item { Text(friend.title.ifBlank { if(friend.online) tr("En línea","Online") else tr("Desconectado","Offline") }+
-                (if(friend.season>0 && friend.title.isNotBlank()) " · S${friend.season} E${friend.episode}" else ""),color=Muted) }
-            if(confirmLeave) {
-                item { Text(if(state.partyRole==PartyRole.HOST) tr("Para ver por tu cuenta se cerrará tu party actual. ¿Continuar?","Watching independently will close your current party. Continue?")
-                    else tr("Saldrás de tu party actual para ver por tu cuenta. ¿Continuar?","You will leave your current party to watch independently. Continue?"),color=Color.White) }
-                item { FocusButton(tr("Cancelar","Cancel"),modifier=Modifier.focusRequester(first)) { if(!busy) confirmLeave=false } }
-                item { FocusButton(if(busy) tr("Abriendo…","Opening…") else tr("Continuar","Continue")) { watch() } }
-            } else {
-                item { FocusButton(if(busy) tr("Abriendo…","Opening…") else tr("Ver","Watch"),modifier=Modifier.focusRequester(first)) {
-                    if(!busy) {
-                        if(!canWatch) state.error=tr("Este amigo no está viendo un título disponible ahora.","This friend is not watching an available title right now.")
-                        else if(state.watchParty!=null || state.pendingPartyCode!=null) confirmLeave=true else watch()
-                    }
-                } }
-                item { FocusButton(tr("Ver detalles","View Details")) {
-                    if(!busy) {
-                        if(!friend.cloudId.matches(Regex("^tmdb:(movie|series):[0-9]+$"))) state.error=tr("No hay detalles disponibles para esta actividad.","No title details are available for this activity.")
-                        else {
-                            busy=true
-                            state.launch {try {state.socialAction {
-                                val title=state.tmdb.byCloudId(friend.cloudId) ?: error(tr("Título no disponible","Title unavailable"))
-                                state.open(title)
-                                if(state.selected?.cloudId==title.cloudId && state.screen==Screen.DETAILS) onContentOpened()
-                            }} finally {busy=false} }
-                        }
-                    }
-                } }
-                item { FocusButton(tr("Recomendaciones","Recommendations")) {if(!busy) recommendations=true} }
-                item { FocusButton(tr("Cerrar","Close")) { if(!busy) close() } }
-            }
-            state.error?.let { error -> item { Text(error,color=Color.White,maxLines=3) } }
-        }
-    }
-    if(recommendations) FriendRecommendationsDialog(state,friend.id,friend.nickname) { recommendations=false }
-}
+fun FriendActionsDialog(state:AppState,friend:FriendActivity,close:()->Unit,onContentOpened:()->Unit=close) =
+    ModernFriendActionsRP63(state,friend,close,onContentOpened)

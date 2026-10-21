@@ -41,7 +41,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 
 /** Session cache: rotation and profile focus never poll a backend. */
-private object ProfileArtCacheRP56 {
+internal object ProfileArtCacheRP56 {
     var language = ""
     var fetchedAt = 0L
     var titles: List<MediaSummary> = emptyList()

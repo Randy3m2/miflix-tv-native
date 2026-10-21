@@ -99,7 +99,7 @@ internal fun CompactPlayerControls(
                 PlayerIconButton("reactions",tr("Emojis · Mantén pulsado para frases","Emojis · Hold for phrases"),onInteraction=onInteraction,onClick=onQuickReactions,onLongClick=onReactions,onLabel={ focusedLabel=it })
                 if(!request.live) PlayerIconButton("queue",tr("Cola","Queue"),onInteraction=onInteraction,onClick=onQueue,onLabel={ focusedLabel=it })
                 Spacer(Modifier.weight(1f))
-                Text(if(duration>0) "${tr("Termina","Ends")} " + java.text.SimpleDateFormat("HH:mm",java.util.Locale.getDefault()).format(java.util.Date(System.currentTimeMillis()+((duration-position).coerceAtLeast(0)/speed.coerceAtLeast(0.1f)).toLong())) else if(request.liveProvider=="lidom") tr("TRANSMISIÓN","STREAM") else if(request.live) tr("EN VIVO","LIVE") else playbackTime(position),
+                Text(if(duration>0) "${tr("Finaliza","Ends")} " + com.miflix.native2.player.PlaybackClockRP63.format(System.currentTimeMillis()+((duration-position).coerceAtLeast(0)/speed.coerceAtLeast(0.1f)).toLong()) else if(request.liveProvider=="lidom") tr("TRANSMISIÓN","STREAM") else if(request.live) tr("EN VIVO","LIVE") else playbackTime(position),
                     color=Color.White,fontSize=14.sp,lineHeight=18.sp)
             }
         }

@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP63: My List con 4 tarjetas por fila y carga de 16; perfiles y paneles sociales renovados; Request Access desde amigos; fondos Top 10 al administrar y crear perfiles; hora de finalización en formato de 12 horas." to "RP63: My List with four cards per row and batches of 16; refreshed profiles and social panels; Request Access from friends; Top 10 backgrounds when managing and creating profiles; 12-hour playback end time.",
         "RP62: Mandanguita TV de fábrica para VOD: primera con audio español y segunda en otros idiomas. Idioma secundario por perfil. P2P retirado y navegación vertical un poco más rápida." to "RP62: bundled Mandanguita TV for VOD: first for Spanish audio, second for other languages. Per-profile secondary language. P2P removed and slightly faster vertical browsing.",
         "RP12: búsqueda inicial más ágil en español e inglés; 7 enlaces visibles por add-on y Load more. Fábrica: Peerflix, Addon Latam y Torrentio free." to "RP12: faster initial Spanish/English lookup; 7 visible links per add-on and Load more. Defaults: Peerflix, Addon Latam and free Torrentio.",
         "RP11: PIN Live score NBA, MLB y LIDOM; píldora con logos, movible con mando o arrastre, por perfil y sin Supabase." to "RP11: NBA, MLB and LIDOM live score pin; team-logo pill, movable by remote or drag, per-profile with no Supabase requests.",

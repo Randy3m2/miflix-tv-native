@@ -1320,122 +1320,7 @@ fun PairDeviceScreen(state: AppState, onBack: () -> Unit) {
 }
 
 @Composable
-fun ProfilesScreen(state: AppState, onBack: () -> Unit) {
-    var managing by remember { mutableStateOf(false) }
-    var picking by remember { mutableStateOf(false) }
-    val firstProfile=remember { FocusRequester() }
-    LaunchedEffect(managing) { if(managing) { delay(150); runCatching { firstProfile.requestFocus() } } }
-    var newName by remember { mutableStateOf("") }
-    var inheritMainAddons by remember {mutableStateOf(true)}
-    var newAvatar by remember { mutableStateOf("ai:astronaut") }
-    var editingAvatar by remember { mutableStateOf<Profile?>(null) }
-    var deletingProfile by remember { mutableStateOf<Profile?>(null) }
-    var choosingNewAvatar by remember { mutableStateOf(false) }
-    var renamingProfile by remember { mutableStateOf<Profile?>(null) }
-    var profileName by remember { mutableStateOf("") }
-    if (!managing) {
-        ProfilePickerRP56(state, picking,
-            onSelect = { profile ->
-                if (!picking) {
-                    picking = true
-                    state.launch { try { state.selectProfile(profile) } finally { picking = false } }
-                }
-            }, onManage = { managing = true },
-            onEdit = { profile -> managing = true; editingAvatar = profile }, onBack = onBack)
-        return
-    }
-    BackHandler { if(managing) managing=false else onBack() }
-    Box(Modifier.fillMaxSize().background(Bg)) {
-    ProfileLandscape(state.appForeground)
-    LazyColumn(Modifier.fillMaxSize().padding(horizontal=50.dp),contentPadding=PaddingValues(vertical=32.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
-        item { Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
-            Text(tr("¿Quién está viendo?","Who's watching?"),color=Color.White,fontSize=38.sp, lineHeight=45.sp,fontWeight=FontWeight.Black)
-            Text(if(picking) tr("Preparando tu perfil…","Preparing your profile…") else tr("Tu próxima historia empieza aquí.","Your next story starts here."),color=Muted,fontSize=16.sp,lineHeight=20.sp)
-            FocusButton(if(managing) tr("Listo","Done") else tr("Administrar perfiles","Manage profiles")) { managing=!managing }
-        } }
-        item {
-            LazyRow(horizontalArrangement=Arrangement.spacedBy(20.dp),contentPadding=PaddingValues(8.dp)) {
-                items(state.profiles,key={it.id}) { profile ->
-                    var focused by remember { mutableStateOf(false) }
-                    val avatarScale by animateFloatAsState(if(focused) 1.05f else 1f,tween(160),label="profileFocus")
-                    Column(Modifier.width(180.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(14.dp)) {
-                        Column(Modifier.then(if(profile.id==state.profiles.firstOrNull()?.id) Modifier.focusRequester(firstProfile) else Modifier)
-                            .onFocusChanged { focused=it.isFocused }.focusable()
-                            .tvClick { if(!picking) { picking=true; state.launch { try { state.selectProfile(profile) } finally { picking=false } } } }
-                            .clickable { if(!picking) { picking=true; state.launch { try { state.selectProfile(profile) } finally { picking=false } } } },horizontalAlignment=Alignment.CenterHorizontally) {
-                            Box(Modifier.graphicsLayer { scaleX=avatarScale;scaleY=avatarScale }
-                                .border(if(focused) 3.dp else 0.dp,Color.White,RoundedCornerShape(22.dp)).padding(5.dp)) {
-                                ProfileAvatar(profile,Modifier.size(120.dp))
-                            }
-                            Text(profile.name,color=Color.White,fontSize=17.sp, lineHeight=21.sp)
-                        }
-                        if(managing) {
-                        FocusButton(tr("Cambiar nombre","Rename")) { profileName=profile.name; renamingProfile=profile }
-                        FocusButton(tr("Editar foto","Edit picture")) { editingAvatar=profile }
-                        FocusButton(tr("Subir desde celular","Upload from phone")) { state.launch { state.socialAction { state.startAvatarUpload(profile) } } }
-                        if(state.profiles.size>1 && !profile.isKids && profile.id!=com.miflix.native2.data.KidsContentPolicy.PROFILE_ID) FocusButton(tr("Eliminar perfil","Delete profile")) { deletingProfile=profile }
-                        }
-                    }
-                }
-            }
-        }
-        if(managing) item { Column {
-            Text(tr("Crear perfil","Create profile"),color=Color.White,fontSize=22.sp, lineHeight=26.sp,fontWeight=FontWeight.Bold)
-            Spacer(Modifier.height(18.dp))
-            Row(horizontalArrangement=Arrangement.spacedBy(22.dp),verticalAlignment=Alignment.CenterVertically) {
-                ProfileAvatar(Profile("new",newName,avatarValue=newAvatar),Modifier.size(72.dp))
-                NativeTextField(newName,{newName=it},tr("Nombre del perfil","Profile name"),modifier=Modifier.width(340.dp))
-            }
-            Spacer(Modifier.height(18.dp))
-            Column(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Color(0xff1e2438),Color(0xff111923))),RoundedCornerShape(20.dp)).padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                Text(tr("Sus fuentes, a su manera","Their profile. Their sources."),color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
-                Text(tr("Elige cómo empezará este perfil. Puedes cambiarlo después en Settings.","Choose how this profile starts. You can change it later in Settings."),color=Muted,fontSize=14.sp)
-                FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                    FocusButton(tr("✓ Usar add-ons del principal","✓ Use main profile add-ons"),primary=inheritMainAddons) {inheritMainAddons=true}
-                    FocusButton(tr("Configuración propia","Own configuration"),primary=!inheritMainAddons) {inheritMainAddons=false}
-                }
-                Text(if(inheritMainAddons) tr("Comparte la lista de add-ons del principal.","Uses the main profile's add-on list.") else tr("Empieza sin add-ons. Los que añadas serán solo para este perfil en esta TV.","Starts with no add-ons. Any you add belong to this profile on this TV."),color=if(inheritMainAddons) Accent else Muted,fontSize=13.sp)
-            }
-            Spacer(Modifier.height(22.dp))
-            FlowRow(horizontalArrangement=Arrangement.spacedBy(20.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
-                FocusButton(tr("Elegir avatar","Choose avatar")) { choosingNewAvatar=true }
-                FocusButton(tr("Añadir perfil","Add Profile"),primary=true) { state.launch { state.socialAction { state.createProfile(newName,newAvatar,inheritMainAddons); newName="";inheritMainAddons=true } } }
-            }
-            Spacer(Modifier.height(26.dp))
-            FocusButton(tr("Volver","Back")) { onBack() }
-        } }
-    }
-    }
-    renamingProfile?.let { profile ->
-        Dialog(onDismissRequest={ renamingProfile=null }) {
-            Column(Modifier.width(460.dp).background(Panel,RoundedCornerShape(24.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
-                Text(tr("Nombre del perfil","Profile name"),color=Color.White,fontSize=26.sp,lineHeight=31.sp)
-                NativeTextField(profileName,{profileName=it},tr("Nombre","Name"),modifier=Modifier.fillMaxWidth())
-                Row(horizontalArrangement=Arrangement.spacedBy(16.dp)) {
-                    FocusButton(tr("Guardar","Save")) { state.launch { state.socialAction { state.renameProfile(profile,profileName); renamingProfile=null } } }
-                    FocusButton(tr("Cancelar","Cancel")) { renamingProfile=null }
-                }
-            }
-        }
-    }
-    deletingProfile?.let { profile ->
-        Dialog(onDismissRequest={ deletingProfile=null }) {
-            Column(Modifier.width(420.dp).background(Panel,RoundedCornerShape(24.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-                Text(tr("Eliminar perfil","Delete profile"),color=Color.White,fontSize=26.sp, lineHeight=31.sp)
-                Text(profile.name,color=Color.White,fontSize=20.sp, lineHeight=24.sp)
-                Text(tr("Se eliminarán este perfil, sus favoritos, progreso y puntuaciones. Los demás perfiles se conservan.","This deletes this profile, its favorites, progress and ratings. Other profiles stay unchanged."),color=Muted)
-                FocusButton(tr("Cancelar","Cancel"),primary=true) { deletingProfile=null }
-                FocusButton(tr("Eliminar perfil","Delete profile")) { state.launch { state.socialAction { state.deleteProfile(profile); deletingProfile=null } } }
-            }
-        }
-    }
-    if(choosingNewAvatar) AvatarPickerDialog(newAvatar,hidden=state.hiddenAvatars,remove=state::hideAvatar,restore=state::restoreAvatars,choose={ newAvatar=it; choosingNewAvatar=false },close={ choosingNewAvatar=false })
-    editingAvatar?.let { profile ->
-        AvatarPickerDialog(profile.avatarValue,hidden=state.hiddenAvatars,remove=state::hideAvatar,restore=state::restoreAvatars,choose={ avatar ->
-            state.launch { state.socialAction { state.setProfileAvatar(profile,avatar); editingAvatar=null } }
-        },close={ editingAvatar=null },customUpload={ editingAvatar=null;state.launch { state.socialAction { state.startAvatarUpload(profile) } } })
-    }
-}
+fun ProfilesScreen(state: AppState, onBack: () -> Unit) = ModernProfilesScreenRP63(state,onBack)
 
 @Composable
 fun WatchPartyScreen(state: AppState,onBack: () -> Unit) = PartyLobby(state,onBack)
@@ -2160,7 +2045,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
         }
         if(!momentNotice && !showMomentComposer && paused && !pauseInfoDismissed && !ended && !showEpisodes && !showPartyActions && playerMenu == null && !quickReactions && state.sourceSelection == null) {
-            val clock = android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(clockNow))
+            val clock = com.miflix.native2.player.PlaybackClockRP63.format(clockNow)
             val remaining = (durationMs - positionMs).coerceAtLeast(0L) / 1000
             val remainingText = when {
                 request.live -> tr("En vivo","Live")
@@ -2171,7 +2056,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             Column(Modifier.align(Alignment.BottomEnd).padding(end=35.dp,bottom=100.dp)
                 .background(Color(0xAA000000),RoundedCornerShape(12.dp)).padding(14.dp)) {
                 Text("${tr("Hora","Time")} · $clock",color=Color(0xFFE0E0E0),fontSize=19.sp, lineHeight=23.sp)
-                Text(if(request.live || durationMs <= 0) remainingText else "${tr("Termina a las","Ends at")} · "+android.text.format.DateFormat.getTimeFormat(context).format(java.util.Date(clockNow+((durationMs-positionMs).coerceAtLeast(0)/speed.coerceAtLeast(0.1f)).toLong())),color=Color(0xFFE0E0E0),fontSize=19.sp, lineHeight=23.sp)
+                Text(if(request.live || durationMs <= 0) remainingText else "${tr("Finaliza","Ends")} · "+com.miflix.native2.player.PlaybackClockRP63.format(clockNow+((durationMs-positionMs).coerceAtLeast(0)/speed.coerceAtLeast(0.1f)).toLong()),color=Color(0xFFE0E0E0),fontSize=19.sp, lineHeight=23.sp)
             }
         }
         if(request.momentEndMs<=0 && !ended && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu==null && !quickReactions && state.sourceSelection==null && state.partyRole != PartyRole.GUEST && durationMs > 0) {

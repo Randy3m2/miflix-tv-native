@@ -183,20 +183,7 @@ private fun FriendTile(friend: FriendActivity,modifier: Modifier,onClick: () -> 
 }
 
 @Composable
-internal fun SocialSettingsDialog(state: AppState,close: () -> Unit) {
-    var nick by remember(state.socialIdentityId,state.nickname) { mutableStateOf(state.nickname) }
-    var find by remember { mutableStateOf("") }
-    var phrases by remember { mutableStateOf(state.partyPhrases.joinToString("|")) }
-    Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
-        LazyColumn(Modifier.width(640.dp).heightIn(max=460.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(24.dp)) {
-            item { Text(tr("Perfil social · ","Social profile · ")+state.activeProfile.name,color=Color.White,fontSize=25.sp, lineHeight=30.sp) }
-            item { Column(verticalArrangement=Arrangement.spacedBy(16.dp)) { NativeTextField(nick,{ nick=it },tr("Usuario de este perfil","This profile username")); FocusButton(tr("Guardar nickname","Save nickname")) { state.launch { state.saveNickname(nick) } } } }
-            item { Column(verticalArrangement=Arrangement.spacedBy(16.dp)) { NativeTextField(find,{ find=it },tr("Apodo de tu amigo","Your friend's nickname")); FocusButton(tr("Agregar amigo","Add friend")) { state.launch { state.findAndAddFriend(find) } } } }
-            item { Column(verticalArrangement=Arrangement.spacedBy(16.dp)) { NativeTextField(phrases,{ phrases=it },tr("Frases separadas por |","Phrases separated by |")); FocusButton(tr("Guardar frases","Save phrases")) { state.savePhrases(phrases) } } }
-            item { FocusButton(tr("Cerrar","Close")) { close() } }
-        }
-    }
-}
+internal fun SocialSettingsDialog(state:AppState,close:()->Unit) = ModernSocialSettingsRP63(state,close)
 
 @Composable
 fun AccessRequests(state: AppState) {

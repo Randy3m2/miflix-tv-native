@@ -270,35 +270,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
 }
 
 @Composable
-private fun MyListScreen(state: AppState, onBack: () -> Unit) {
-    val owner="${state.session?.userId}:${state.activeProfile.id}"
-    LaunchedEffect(owner) { runCatching { state.pushCloud() } }
-    var listType by androidx.compose.runtime.saveable.rememberSaveable(owner) {mutableStateOf("all")}
-    var listOrder by androidx.compose.runtime.saveable.rememberSaveable(owner) {mutableStateOf("last_added")}
-    val filteredIds=state.favorites.filter {listType=="all" || it.startsWith("tmdb:$listType:")}
-    val ids=if(listOrder=="oldest") filteredIds.reversed() else filteredIds
-    LaunchedEffect(owner,ids,state.myListLimit) {state.loadMyListPage(owner,ids)}
-    val titles=state.myListTitles.filter {listType=="all" || it.type==listType}
-    CatalogScreen(state,tr("Mi lista","My List"),titles,onBack,header={
-        FlowRow(Modifier.padding(top=14.dp),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-            listOf("all" to tr("Todo","All"),"movie" to tr("Películas","Movies"),"series" to tr("Series","Series")).forEach {(type,label) ->
-                FocusButton(label,primary=listType==type) {state.myListLimit=25;listType=type}
-            }
-            FocusButton(tr("Últimos añadidos","Last Added"),primary=listOrder=="last_added") {state.myListLimit=25;listOrder="last_added"}
-            FocusButton(tr("Más antiguos","Oldest Added"),primary=listOrder=="oldest") {state.myListLimit=25;listOrder="oldest"}
-        }
-    },footer={
-        Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        FocusButton(tr("Actualizar lista","Refresh list")) { state.launch { runCatching { state.pushCloud() }.onFailure { state.myListMessage = it.message ?: "Error" } } }
-        if(state.myListLoading) Text(tr("Cargando…","Loading…"),color=Color.White)
-        else {
-            if(state.myListMessage.isNotBlank()) Text(state.myListMessage,color=Color.White)
-            if(ids.size>state.myListLimit) FeatureActionCard(tr("Cargar más","Load more"),tr("25 títulos más","25 more titles"),modifier=Modifier.widthIn(max=400.dp).fillMaxWidth()) {state.myListLimit+=25}
-            if(state.myListMessage.isNotBlank()) FocusButton(tr("Reintentar","Retry")) { state.launch { state.loadMyListPage(owner,ids) } }
-        }
-        }
-    })
-}
+private fun MyListScreen(state:AppState,onBack:()->Unit) = ModernMyListScreenRP63(state,onBack)
 
 @Composable
 private fun LoadingOverlay(text: String) {

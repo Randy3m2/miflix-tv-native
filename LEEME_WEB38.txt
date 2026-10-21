@@ -1,0 +1,22 @@
+BruniO Web v38 — búsqueda superior, panel de idiomas y Cast VOD
+
+APLICAR SOBRE WEB v37
+Reemplazar los archivos respetando sus rutas web/ y verification/. Conservar cinema.js, audio-state.js, experience.js, live.js, style.css, vendor/ y assets/ de la versión anterior. Redeploy del proyecto actual de Vercel. No hay cambios de SQL, funciones Supabase, variables de entorno ni Android TV. Este parche no ha sido desplegado desde el entorno.
+
+BÚSQUEDA
+El bloque de búsqueda, tipo, filtros y estado sale del catálogo principal. La lupa en la barra superior abre los controles existentes y sus resultados. Usa los mismos inputs, filtros, solicitudes y paginación: no duplica consultas. En móvil, el panel ocupa la pantalla, los filtros se organizan y los resultados usan dos columnas. Cerrar o Escape devuelve el foco a la lupa; los resultados regresan al catálogo sin perder sus acciones. Los avisos de carga/error siguen disponibles.
+
+PLAYER
+Panel Audio / Subtítulos de dos columnas, fondo oscuro neutro, filas seleccionables y marca de la opción activa. Muestra únicamente las pistas reales expuestas por el navegador/HLS. Conserva subtítulos online y carga opcional de SRT/VTT local, en una sección desplegable. Si el navegador no expone audio seleccionable se indica Audio de la fuente, sin inventar idiomas.
+Change Source / Cambiar enlace es visible en la barra, conservando el selector manual actual. Dentro del player integrado vuelve a las fuentes del título/episodio/canal. En una pestaña independiente con identificador de contenido vuelve a su ficha; los enlaces abiertos sin identificador no tienen catálogo desde el cual cambiar fuente.
+Velocidad tiene un panel de puntos con la velocidad activa marcada, inspirado en la referencia. Los controles se reorganizan en pantallas pequeñas.
+
+CAST
+Corrección concreta: el SDK de Google Cast se inicializaba solamente para Live; ahora también para VOD. Los vídeos VOD se envían como BUFFERED con su posición, y Live conserva LIVE. Se selecciona MIME MP4/WebM/HLS según los datos disponibles. Se conserva AirPlay y Remote Playback como alternativas, y pausa local únicamente tras una carga aceptada por el receptor. Los mensajes de Cast/error ya no quedan ocultos por el estado visual de reproducción.
+La corrección no garantiza que cualquier URL sea compatible con un receptor: depende del navegador compatible, HTTPS, red local, permisos y acceso/formato del proveedor. No incorpora un receptor personalizado, conversión, proxy de vídeo ni soporte DRM nuevo.
+
+VALIDACIÓN
+Sintaxis de JavaScript revisada. Pruebas aprobadas de inicialización Cast para VOD, tipo BUFFERED, MIME MP4, posición de reanudación; regresiones Live HLS, validación de fuentes y limpieza, Apple/AirPlay y puente de subtítulos con aislamiento por origen/iframe/canal/perfil.
+En navegador con datos aislados: lupa y filtros, apertura/cierre y restauración del catálogo, búsqueda móvil a 390 px, botón Cambiar enlace y menú Audio/Subtítulos. Se usó un MP4 público de prueba. No se verificó una sesión real, todas las fuentes ni una conexión física Cast/AirPlay. Los fixtures, cuentas y vídeos de prueba no se incluyen.
+
+La selección automática de enlaces no se ha implementado, conforme a la decisión de mantenerla manual.

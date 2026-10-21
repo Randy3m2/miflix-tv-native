@@ -1,0 +1,13 @@
+'use strict';
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const context=vm.createContext({});vm.runInContext(fs.readFileSync(process.argv[2],'utf8'),context);const audio=context.BrunioAudioState;
+const base={metadata:true,nativeCount:null,mozAudio:null,decodedBytes:0,hlsAudio:null,muted:false,volume:1};
+assert.equal(audio(base),'unknown','Missing browser APIs must not falsely declare no audio');
+assert.equal(audio({...base,nativeCount:0}),'absent');assert.equal(audio({...base,hlsAudio:false}),'absent');
+assert.equal(audio({...base,mozAudio:false}),'absent');assert.equal(audio({...base,nativeCount:1}),'available');
+assert.equal(audio({...base,hlsAudio:false,decodedBytes:100}),'available','Decoded audio overrides absent track metadata');
+assert.equal(audio({...base,nativeCount:0,hlsAudio:true}),'available');
+assert.equal(audio({...base,muted:true}),'muted');assert.equal(audio({...base,volume:0}),'muted');
+assert.equal(audio({...base,metadata:false,nativeCount:0}),'unknown','Loading is not absence');
+assert.equal(audio({...base,hlsAudio:false,muted:true}),'absent');
+console.log('PASS: 11 audio state cases; unknown, muted, available and absent remain distinct.');

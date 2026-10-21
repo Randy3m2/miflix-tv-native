@@ -1,0 +1,6 @@
+Recursos de plataformas reutilizados del catálogo de BruniO Android TV existente.
+Netflix, Disney+, Prime Video, Apple TV+, HBO Max y Crunchyroll:
+https://github.com/luckynumb3rs/stremio-perfect-setup/tree/main/collections/streaming
+Copias obtenidas de los mismos enlaces CDN configurados en StreamingTiles (cover/*.png y focused/*.gif).
+Hulu y Paramount+: recursos locales streaming_rp48 del proyecto Android TV proporcionado.
+Las marcas pertenecen a sus respectivos titulares. Estos recursos no implican afiliación ni habilitan acceso a sus servicios.

@@ -1,0 +1,20 @@
+BruniO Web v37 — flechas en la fila + plataformas TV + estado de audio
+
+APLICAR SOBRE WEB v36
+Reemplazar los archivos conservando las rutas web/ y verification/. Mantener todos los demás archivos. Redeploy del proyecto actual en Vercel. No hay SQL, funciones Supabase, nuevas variables de entorno ni cambios en Android TV. No se ha desplegado desde este entorno.
+
+FILAS
+Las flechas SVG blancas y finas están superpuestas en los extremos de las carátulas de la propia fila, sobre un degradado oscuro discreto. Aparecen con hover o foco de teclado; en pantallas táctiles están disponibles junto al desplazamiento táctil. Se ocultan al no existir más contenido en esa dirección. Respetan movimiento reducido. Ya no están junto al título del row. Las plataformas usan el mismo tipo de navegación.
+
+PLATAFORMAS
+Sustituye los logos cuadrados ampliados/recortados por las portadas horizontales que ya usa Android TV. Netflix, Disney+, Prime Video, Apple TV+, HBO Max y Crunchyroll: PNG originales 1280x720 y sus GIF originales. También incluye los recursos existentes de TV para Hulu y Paramount+, utilizados únicamente si el catálogo web ya ofrece esas plataformas; no inventa filtros ni añade plataformas al backend.
+Las imágenes ocupan toda la tarjeta, sin estirar el logotipo ni crear bordes alrededor. La animación se carga al pasar el cursor o enfocar, vuelve a portada al salir y se detiene al ocultar la pestaña. Movimiento reducido mantiene la portada estática. Los GIF son los originales con sus resoluciones originales, no versiones artificialmente ampliadas. Los recursos son locales para evitar depender del CDN al usar la web.
+
+SONIDO
+El icono muestra una X al silenciar o llevar el volumen a cero. Si los metadatos nativos o el motor HLS confirman ausencia de pista de audio, el icono lo indica con descripción específica y se desactiva el control de volumen. Se actualiza al cambiar/cargar una fuente y al recibir pistas HLS.
+La ausencia de APIs NO se interpreta como ausencia de audio. No todos los navegadores exponen las pistas de un archivo MP4/MKV; en esos casos el estado queda sin confirmar. Tampoco se deduce que una pista no existe solo porque contenga silencio, esté cargando o falle un códec. No hay sondeo de Supabase ni descargas adicionales de vídeo para analizar el sonido.
+
+VERIFICACIÓN
+Pruebas aprobadas: 11 estados de audio, motor/validación del player, HLS y su limpieza, compatibilidad Apple existente, aislamiento de mensajes del iframe, siguiente episodio, cambio de fuente y exclusión de enlaces privados en la caché pública. Sintaxis JavaScript revisada.
+En navegador con datos aislados: portadas locales 1280 px, un único GIF al enfocar una plataforma, desplazamiento dentro del row, ausencia de flechas en el encabezado del row, reproducción MP4 de prueba y actualización del icono al silenciar. No se ha probado una cuenta real, todos sus enlaces ni todos los navegadores.
+Los datos y vídeos de prueba no están incluidos. Aproximadamente 7 MB de recursos gráficos en el ZIP; los GIF no se descargan todos al iniciar.

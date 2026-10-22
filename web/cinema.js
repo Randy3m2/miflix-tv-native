@@ -13,7 +13,7 @@ let cinemaRailCleanup=[];
 function closeCinemaHover(){clearTimeout(cinemaHoverTimer);cinemaHover?.remove();cinemaHover=null;}
 function cinemaMetadata(item){return [item.year,item.type==='series'?t('Serie'):t('Película'),item.rating?'★ '+Number(item.rating).toFixed(1):''].filter(Boolean).join(' · ');}
 function cinemaImage(item,cls=''){const image=el('img',undefined,cls);image.src=safeImage(item.backdrop)||safeImage(item.poster)||'';image.alt='';image.onerror=()=>{const fallback=safeImage(item.poster);if(fallback&&image.src!==fallback)image.src=fallback;};image.loading='lazy';image.decoding='async';return image;}
-function cinemaPlay(item){closeCinemaHover();openDetail(item).then(()=>{if(currentDetail?.cloudId===item.cloudId&&$('detail').open)openDownloads(currentDetail);});}
+function cinemaPlay(item){closeCinemaHover();openDetail(item).then(()=>{if(currentDetail?.cloudId===item.cloudId&&$('detail').open)autoPlay46(currentDetail);});}
 function cinemaHoverCard(item,anchor){
  closeCinemaHover();if(!window.matchMedia('(hover:hover) and (min-width:901px)').matches)return;
  cinemaHoverTimer=setTimeout(()=>{
@@ -118,7 +118,7 @@ window.addEventListener('message',async event=>{
   if(!next){nextSeason=details.item?.seasons?.map(s=>Number(s.number)).filter(n=>n>season).sort((a,b)=>a-b)[0];if(nextSeason){const result=await catalog({action:'episodes',cloud:target.cloudId,season:nextSeason,page:1});next=result.episodes?.find(x=>Number(x.episode)===1);nextEpisode=1;}}
   if(activeWebPlayer!==current||session?.user.id!==current.owner||selected()!==current.profile)return;
   if(!next||!next.date||next.date>todayLocal()){toast(cinemaWords('No hay otro episodio estrenado disponible.','No next released episode is available.'));return;}
-  closeBrowserPlayer();await openDetail(details.item||target);if(currentDetail?.cloudId!==target.cloudId)return;$('castSeason').value=String(nextSeason);$('castEpisode').value=String(nextEpisode);openDownloads(currentDetail);
+  closeBrowserPlayer();await openDetail(details.item||target);if(currentDetail?.cloudId!==target.cloudId)return;$('castSeason').value=String(nextSeason);$('castEpisode').value=String(nextEpisode);autoPlay46(currentDetail);
  }catch(error){toast(error.message);}finally{cinemaNextBusy=false;}
 });
 if(items.length)render();

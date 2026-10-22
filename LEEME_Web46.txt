@@ -1,0 +1,70 @@
+BruniO Web v46 — Mandanguita + Deepflix / Autoplay / Friends / Downloads
+
+APLICAR SOBRE WEB v45. Se conservan todas las rutas. Solo web; no APK.
+
+DESPLIEGUE NECESARIO
+1. Subir los archivos de web/ y redesplegar Vercel.
+2. Reemplazar y desplegar supabase/functions/brunio-downloads/index.ts.
+   Requiere los secretos de Supabase y TMDB_TOKEN que ya usaba esta función.
+3. Friends usa las funciones/tablas RP1 de perfiles que ya utiliza Android TV:
+   brunio_rp1_ensure, rp1_miflix_friend_activity_v30,
+   rp1_miflix_friend_recommendations, rp1_brunio_presence_event,
+   y la vista rp1_miflix_friendships. No incluye SQL ni modifica RLS.
+   Si esas funciones no están instaladas, Friends mostrará el error;
+   no mezcla silenciosamente la identidad de dos perfiles.
+
+CAMBIOS
+- VOD web usa SOLO Mandanguita TV (primero) y Deepflix (segundo),
+  tanto en español como en inglés; ignora Comet/Torrentio y configuración
+  anterior de add-ons para esta búsqueda. No cambia el APK ni Live TV.
+- Play resuelve el primer enlace. Fallos de resolución, errores de vídeo
+  o no arrancar en 25 segundos pasan al siguiente, hasta cinco fuentes
+  en total (o las disponibles, si hay menos). Cada resolución tiene un
+  límite de 45 segundos. La lista de fuentes también tiene límite.
+- En cuanto el vídeo reproduce se detiene el cambio automático.
+  No analiza si existe audio: Change Source queda manual.
+- Si el navegador exige otro toque para autorizar Play, no cambia de
+  fuente por esa restricción. Tras cinco fallos abre la selección manual.
+- Elegir enlace conserva reproducción/descarga manual con tarjetas
+  compactas. Sin Refresh Sources ni nombres largos de archivo.
+  Tamaño máximo dentro de Opciones de descarga. Los tamaños no informados
+  de estos dos proveedores se permiten; tamaños conocidos respetan el límite.
+- Botón Descargar dentro del player usa exactamente su URL actual.
+  También se puede preparar una descarga desde la selección manual.
+- Descargar temporada prepara, secuencialmente, un enlace del primer
+  resultado por cada episodio estrenado de la temporada seleccionada.
+  Ofrece enlaces individuales, no ZIP ni descarga forzada de todos los
+  archivos: el navegador puede bloquear descargas múltiples y algunos
+  servidores abren el vídeo en lugar de descargarlo. Los enlaces caducan.
+  Cerrar/cambiar contenido o perfil cancela la preparación pendiente.
+- Friends consulta al entrar y al pulsar Actualizar, sin polling.
+  Tocar un amigo con un VOD válido abre su contenido con fondo y tres
+  opciones: Watch, View details y Recommendations. Sin crear fiesta
+  ni solicitar acceso. No inventa una ficha TMDB para canales en vivo.
+- Presencia por perfil: un evento al empezar, otro al cerrar/terminar;
+  sin heartbeat. Un cierre abrupto de pestaña puede impedir el evento
+  de salida: la presencia tiene una caducidad máxima de cuatro horas.
+- Nuevas consultas de fuentes usan caché de hasta ocho minutos en la web,
+  tres horas en la función; los tickets duran quince minutos.
+  Nunca guarda URLs privadas de reproducción en localStorage ni en caché SW.
+
+VERIFICACIÓN
+- Pruebas Node: reintentos, máximo cinco, fin del autoplay al reproducir,
+  mensajes de otra ventana/perfil rechazados; dos proveedores únicos;
+  enlaces HTTPS, tickets cifrados, límites y tamaño desconocido;
+  presencia de inicio única; selección del primer enlace por episodio.
+- Navegador con datos de prueba: selector compacto, ficha de amigo con
+  tres acciones, Play abre el primer enlace, icono Descargar en player.
+- Mandanguita: manifiesto y respuesta de stream consultados correctamente.
+  Deepflix respondió HTTP 403 desde este entorno; no se puede confirmar
+  aquí su disponibilidad real. No se elude ese rechazo.
+- No se ha desplegado a tu cuenta ni se ha probado una sesión real completa.
+  CORS, caducidad, geobloqueo, formatos y códecs del proveedor/navegador
+  pueden impedir reproducción/descarga. No hay conversión de vídeo.
+
+IMPACTO
+No se añaden consultas periódicas. Cada intento que necesita resolver un
+link hace una llamada a brunio-downloads. Temporada completa hace consultas
+por episodio; se ejecuta solo al pedirla. El vídeo/descarga viaja directo
+al proveedor, no a través de Supabase. La presencia y Friends sí producen
+sus peticiones normales; no se promete cero logs.

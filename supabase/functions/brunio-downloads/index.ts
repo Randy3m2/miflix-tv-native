@@ -3,7 +3,10 @@ const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'au
 const reply=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,'Content-Type':'application/json','Cache-Control':'no-store'}});
 const cache=new Map<string,{at:number;rows:Source[]}>();
 type Source={url:string;provider:string;name:string;filename:string;size:number};
-const defaults=['torrentio.strem.fun','comet.feels.legal','comet.elfhosted.com'];
+const defaults=['x.pepo.ar','mg.homelabx.qzz.io'];
+const factory=['https://x.pepo.ar/d/87ef2eec82a0471a/manifest.json','https://mg.homelabx.qzz.io/manifest.json'];
+const providerName=(host:string)=>host==='x.pepo.ar'?'Mandanguita TV':host==='mg.homelabx.qzz.io'?'Deepflix':host;
+function publicMedia(raw:string){const u=https(raw),h=u.hostname.toLowerCase();if(!h.includes('.')||h.endsWith('.local')||h.endsWith('.localhost')||h.endsWith('.internal')||/^\d+(?:\.\d+){3}$/.test(h)||h.includes(':')||h==='api.torbox.app')throw Error('Invalid public media');return u;}
 function allowedHosts(){return new Set([...defaults,...(Deno.env.get('DOWNLOAD_ADDON_HOSTS')||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean)]);}
 function https(raw:string){const u=new URL(raw);if(u.protocol!=='https:'||u.username||u.password||(u.port&&u.port!=='443'))throw Error('Unsafe URL');return u;}
 // Official domains: https://support.torbox.app/en/articles/12667085-torbox-is-being-blocked-by-my-anti-virus-software
@@ -18,7 +21,7 @@ function sourceSize(row:any){
  const unit=match[2].toLowerCase(),power=unit.startsWith('t')?4:unit.startsWith('g')?3:unit.startsWith('m')?2:1;return Number(match[1].replace(',','.'))*Math.pow(unit.includes('i')?1024:1000,power);
 }
 function sizeLimit(value:unknown){const cap=value===undefined?5:Number(value);if(!Number.isFinite(cap)||cap<0||cap>1000)throw Error('Invalid size limit');return cap*1e9;}
-function withinLimit(size:number,limit:number){return limit===0||(Number.isFinite(size)&&size>0&&size<=limit);}
+function withinLimit(size:number,limit:number){return limit===0||size===0||(Number.isFinite(size)&&size>0&&size<=limit);}
 async function json(response:Response){
  if(!response.ok)throw Error('Upstream unavailable');const reader=response.body?.getReader();if(!reader)throw Error('Empty response');let size=0;const chunks:Uint8Array[]=[];
  try{while(true){const part=await reader.read();if(part.done)break;size+=part.value.length;if(size>2*1024*1024)throw Error('Response too large');chunks.push(part.value);}}finally{await reader.cancel().catch(()=>{});}
@@ -50,7 +53,7 @@ async function finalLink(raw:string,providers:Set<string>){
    return current.href;
   }
   let response:Response;try{response=await fetch(current,{method:'GET',redirect:'manual',signal:AbortSignal.timeout(20000)});}catch{throw new DownloadError('PROVIDER_NETWORK');}
-  await response.body?.cancel();const location=response.headers.get('Location');
+  const contentType=response.headers.get('Content-Type')||'';await response.body?.cancel();if(response.ok&&/video\/|audio\/|application\/(?:octet-stream|vnd.apple.mpegurl|x-mpegurl)/i.test(contentType))return current.href;const location=response.headers.get('Location');
   if(response.status<300||response.status>=400||!location)throw new DownloadError('PROVIDER_HTTP_'+response.status);current=https(new URL(location,current).href);
  }
  throw new DownloadError('LINK_REDIRECT_LIMIT');
@@ -68,15 +71,15 @@ Deno.serve(async(request:Request)=>{
   const stateRows=await json(await fetch(base+'/rest/v1/miflix_user_state?user_id=eq.'+encodeURIComponent(user.id)+'&profile_id=eq.__account__&select=state',{headers,signal:AbortSignal.timeout(10000)}));
   const account=stateRows[0]?.state||{},profile=(account.profiles||[]).find((p:any)=>p.id===input.profile);
   if(!profile||profile.isKids||profile.id==='brunio-kids')return reply({error:en?'Downloads are unavailable for this profile.':'Descargas no disponibles para este perfil.'},403);
-  const setup=account.privateSetup||{},manifests=[...new Set([...(setup.addonManifests||[]),setup.torrentioManifest].filter((x:unknown)=>typeof x==='string'&&x))] as string[];
+  const manifests=factory;
   const valid=manifests.flatMap(raw=>{try{return [addon(raw)];}catch{return [];}}).slice(0,4);
-  if(!valid.length)return reply({error:en?'Configure a supported Comet/Torrentio TorBox add-on in BruniO TV first.':'Configura primero un add-on Comet/Torrentio con TorBox en BruniO TV.'},409);
+  if(!valid.length)return reply({error:en?'No supported sources available.':'No hay fuentes compatibles disponibles.'},409);
   const fingerprint=await digest(valid.map(x=>x.href).sort().join('|')),providers=new Set(valid.map(x=>x.hostname));
   if(input.action==='link'){
    stage='TICKET';const data=await unseal(String(input.ticket||''));
    if(data.owner!==user.id||data.profile!==input.profile||data.fingerprint!==fingerprint||data.expires<Date.now())return reply({error:en?'Links expired. Load sources again.':'Enlaces caducados. Carga las fuentes otra vez.'},410);
    if(!withinLimit(data.size,limit))return reply({error:en?'Source exceeds the size limit or has unknown size.':'La fuente supera el límite o su tamaño es desconocido.'},400);
-   stage='RESOLVE';const url=await finalLink(data.url,providers);return reply({url,filename:data.filename});
+   stage='RESOLVE';const parsed=publicMedia(data.url);const url=torbox(parsed)||providers.has(parsed.hostname)?await finalLink(data.url,providers):parsed.href;return reply({url,filename:data.filename});
   }
   if(input.action!=='sources'||!/^tmdb:(movie|series):[1-9][0-9]{0,8}$/.test(input.cloud||''))return reply({error:'Invalid title'},400);
   const [,kind,id]=input.cloud.split(':'),season=Number(input.season||1),episode=Number(input.episode||1);
@@ -90,9 +93,9 @@ Deno.serve(async(request:Request)=>{
     const u=new URL(manifest.href);u.pathname=u.pathname.slice(0,-'/manifest.json'.length)+'/stream/'+kind+'/'+media+'.json';
     const body=await json(await fetch(u,{signal:AbortSignal.timeout(20000),redirect:'error'}));
     return (body.streams||[]).slice(0,120).flatMap((row:any)=>{
-     const label=String(row.name||'')+' '+String(row.title||'');if(!/\bTB\b|torbox/i.test(label)||/TB\s*Download|\buncached\b/i.test(label))return [];
-     try{const url=https(row.url);if(!torbox(url)&&!providers.has(url.hostname))return [];
-      return [{url:url.href,provider:manifest.hostname,name:clean(row.name||'TorBox',100),filename:clean(row.behaviorHints?.filename||row.title||'Download'),size:sourceSize(row)}];
+     if(row.externalUrl||row.infoHash||row.behaviorHints?.proxyHeaders)return [];
+     try{const url=publicMedia(row.url);
+      return [{url:url.href,provider:providerName(manifest.hostname),name:clean(row.name||providerName(manifest.hostname),100),filename:clean(row.behaviorHints?.filename||row.title||'Download'),size:sourceSize(row)}];
      }catch{return [];}
     }) as Source[];
    }));

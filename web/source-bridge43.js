@@ -2,7 +2,7 @@
 function sourceCurrent43(current,picker){return activeWebPlayer===current&&current.picker43===picker&&session?.user.id===current.owner&&selected()===current.profile;}
 function sourceReply43(current,picker,body){if(sourceCurrent43(current,picker))current.frame.contentWindow.postMessage({brunio:'player-source-list43',channel:current.channel,requestId:picker.id,...body},location.origin);}
 async function openPlayerSources43(current,data){
- const picker={id:String(data.requestId||'').slice(0,100),sources:[],maxGb:downloadMaxGb,busy:false};current.picker43=picker;
+ if(current.auto46){current.auto46=null;++sourceRun46;}const picker={id:String(data.requestId||'').slice(0,100),sources:[],maxGb:downloadMaxGb,busy:false};current.picker43=picker;
  try{
   if(current.target?.live){const channel=current.target.liveChannel;if(!channel)throw Error(language==='en'?'No channel sources available.':'No hay fuentes disponibles para este canal.');
    let streams=channel.streams;if(!streams){const base=liveManifest().replace(/\/manifest\.json(?:\?.*)?$/,'');streams=(await liveFetch(base+'/stream/'+encodeURIComponent(channel.type||'tv')+'/'+encodeURIComponent(channel.id)+'.json',true,30000)).streams||[];}
@@ -12,7 +12,7 @@ async function openPlayerSources43(current,data){
    const result=await api('/functions/v1/brunio-downloads','POST',{action:'sources',maxGb:picker.maxGb,refresh:false,cloud:target.cloudId,profile:current.profile,season:target.season||1,episode:target.episode||1,language});
    picker.sources=(result.sources||[]).slice(0,100).map((s,i)=>({...s,id:String(i)}));
   }
-  sourceReply43(current,picker,{sources:picker.sources.map(s=>({id:s.id,name:String(s.name||'Source').slice(0,180),description:[String(s.provider||''),s.size>0?(s.size/1e9).toFixed(2)+' GB':'',String(s.filename||'').slice(0,240)].filter(Boolean).join(' · ')}))});
+  sourceReply43(current,picker,{sources:picker.sources.map(s=>({id:s.id,name:String(s.name||'Source').slice(0,180),description:[String(s.provider||''),s.size>0?(s.size/1e9).toFixed(2)+' GB':'',''].filter(Boolean).join(' · ')}))});
  }catch(e){sourceReply43(current,picker,{error:e.message});}
 }
 async function selectPlayerSource43(current,data){

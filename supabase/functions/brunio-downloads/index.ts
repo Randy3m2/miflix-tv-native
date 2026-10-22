@@ -74,7 +74,7 @@ Deno.serve(async(request:Request)=>{
   const manifests=factory;
   const valid=manifests.flatMap(raw=>{try{return [addon(raw)];}catch{return [];}}).slice(0,4);
   if(!valid.length)return reply({error:en?'No supported sources available.':'No hay fuentes compatibles disponibles.'},409);
-  const fingerprint=await digest(valid.map(x=>x.href).sort().join('|')),providers=new Set(valid.map(x=>x.hostname));
+  const fingerprint=await digest('factory-v49:'+valid.map(x=>x.href).sort().join('|')),providers=new Set(valid.map(x=>x.hostname));
   if(input.action==='link'){
    stage='TICKET';const data=await unseal(String(input.ticket||''));
    if(data.owner!==user.id||data.profile!==input.profile||data.fingerprint!==fingerprint||data.expires<Date.now())return reply({error:en?'Links expired. Load sources again.':'Enlaces caducados. Carga las fuentes otra vez.'},410);
@@ -87,7 +87,7 @@ Deno.serve(async(request:Request)=>{
   const cacheKey=user.id+':'+fingerprint+':'+input.cloud+':'+season+':'+episode;let rows=cache.get(cacheKey)?.rows;
   if(input.refresh===true||!rows||Date.now()-(cache.get(cacheKey)?.at||0)>3*3600000){
    const details=await tmdb('/'+(kind==='series'?'tv':'movie')+'/'+id+'/external_ids'),imdb=details.imdb_id;
-   if(!/^tt\d+$/.test(imdb||''))return reply({sources:[]});
+   if(!/^tt\d+$/.test(imdb||''))return reply({sourcePolicy:'mandanguita-deepflix-v49',sources:[]});
    const media=kind==='series'?imdb+':'+season+':'+episode:imdb;
    const batches=await Promise.allSettled(valid.map(async manifest=>{
     const u=new URL(manifest.href);u.pathname=u.pathname.slice(0,-'/manifest.json'.length)+'/stream/'+kind+'/'+media+'.json';
@@ -103,7 +103,7 @@ Deno.serve(async(request:Request)=>{
    rows=[...new Map(batches.flatMap(x=>x.status==='fulfilled'?x.value:[]).map(x=>[x.url,x])).values()].slice(0,480);
    if(cache.size>=100)cache.delete(cache.keys().next().value!);cache.set(cacheKey,{at:Date.now(),rows});
   }
-  const sources=await Promise.all(rows.filter(row=>withinLimit(row.size,limit)).slice(0,80).map(async row=>({provider:row.provider,name:row.name,filename:row.filename,size:row.size,ticket:await seal({owner:user.id,profile:input.profile,fingerprint,url:row.url,filename:row.filename,size:row.size,expires:Date.now()+15*60000})})));
-  return reply({sources});
+  const sources=await Promise.all(rows.filter(row=>withinLimit(row.size,limit)).slice(0,80).map(async row=>({providerId:row.provider==='Mandanguita TV'?'mandanguita':'deepflix',provider:row.provider,name:row.name,filename:row.filename,size:row.size,ticket:await seal({owner:user.id,profile:input.profile,fingerprint,url:row.url,filename:row.filename,size:row.size,expires:Date.now()+15*60000})})));
+  return reply({sourcePolicy:'mandanguita-deepflix-v49',sources});
  }catch(error){const code=error instanceof DownloadError?error.code:stage==='TICKET'?'TICKET_INVALID':stage==='RESOLVE'?'LINK_RESOLVE_FAILED':'DOWNLOAD_REQUEST_FAILED';return reply({code,error:(en?'Download could not be prepared. Refresh sources and retry. Code: ':'No se pudo preparar la descarga. Actualiza las fuentes y reintenta. Código: ')+code},502);}
 });

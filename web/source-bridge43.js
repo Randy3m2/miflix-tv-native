@@ -9,8 +9,8 @@ async function openPlayerSources43(current,data){
    picker.sources=streams.slice(0,100).flatMap((s,i)=>{try{return [{id:String(i),name:String(s.name||s.title||'Source '+(i+1)).slice(0,180),url:publicLiveURL(liveCastSource(s)).href}];}catch{return [];}});
   }else{
    const target=current.target;if(!target?.cloudId)throw Error(language==='en'?'No title selected.':'No hay un título seleccionado.');
-   const result=await api('/functions/v1/brunio-downloads','POST',{action:'sources',maxGb:picker.maxGb,refresh:false,cloud:target.cloudId,profile:current.profile,season:target.season||1,episode:target.episode||1,language});
-   picker.sources=(result.sources||[]).slice(0,100).map((s,i)=>({...s,id:String(i)}));
+   const result=await api('/functions/v1/brunio-downloads','POST',{action:'sources',sourcePolicy:sourcePolicy49,maxGb:picker.maxGb,refresh:false,cloud:target.cloudId,profile:current.profile,season:target.season||1,episode:target.episode||1,language});
+   picker.sources=factorySources49(result).slice(0,100).map((s,i)=>({...s,id:String(i)}));
   }
   sourceReply43(current,picker,{sources:picker.sources.map(s=>({id:s.id,name:String(s.name||'Source').slice(0,180),description:[String(s.provider||''),s.size>0?(s.size/1e9).toFixed(2)+' GB':'',''].filter(Boolean).join(' · ')}))});
  }catch(e){sourceReply43(current,picker,{error:e.message});}

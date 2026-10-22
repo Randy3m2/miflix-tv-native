@@ -1,0 +1,28 @@
+BruniO Web v49 — Solo Mandanguita TV y Deepflix para todos
+
+Aplicar sobre Web v48. Respetar las rutas.
+
+OBLIGATORIO: desplegar AMBAS partes
+1. Reemplazar supabase/functions/brunio-downloads/index.ts y desplegar
+   la función brunio-downloads en tu proyecto de Supabase. Subir el archivo
+   a GitHub o redesplegar Vercel por sí solo NO despliega esa función.
+2. Subir web/ y redesplegar Vercel. Recargar la página al terminar.
+
+La función trae Mandanguita TV primero y Deepflix después para todos los
+usuarios/perfiles adultos y ambos idiomas. No usa la configuración previa
+de Torrentio/Comet. La web verifica la política devuelta por el servidor
+y solo acepta los identificadores de esos dos proveedores, también en
+Change Source. Si el servidor es antiguo, muestra que falta actualizar
+brunio-downloads en lugar de enseñar enlaces de otros add-ons.
+Una respuesta antigua se descarta de la caché para poder reintentar tras
+el despliegue. Los tickets anteriores se invalidan por versión de política.
+
+Sin SQL ni cambios de Android TV. No cambia la restricción del perfil Kids.
+Conserva el límite de GB, excepción de tamaño desconocido, logo de carga,
+reintentos, descargas y corrección de Friends de las versiones anteriores.
+
+Verificado: pruebas de servidor con configuración antigua Torrentio en la
+cuenta: solo consulta Mandanguita/Deepflix; prueba de filtro de cliente y
+rechazo de servidor antiguo. No se ha desplegado a tu cuenta. La disponibilidad
+de cada proveedor depende de su servicio; Deepflix devolvió 403 en la
+comprobación anterior y no se presenta como verificado en reproducción real.

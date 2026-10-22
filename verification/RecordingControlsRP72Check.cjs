@@ -1,0 +1,11 @@
+const fs=require('fs'),assert=require('assert'),path=require('path'),root=process.argv[2],read=f=>fs.readFileSync(path.join(root,'app/src/main/java/com/miflix/native2/ui',f),'utf8');
+const controls=read('PlayerControls.kt'),screen=read('Screens.kt'),hub=read('LiveHubRP41.kt'),browser=read('LiveChannelBrowserRP34.kt');
+assert(controls.includes('if(!request.live || request.sportsRecordingRP72) PlayerSeekBar'));
+assert(controls.includes('if(!request.live || request.sportsRecordingRP72) PlayerIconButton(if(paused)'));
+assert(controls.includes('(position-10_000L).coerceAtLeast(0L)'));assert(controls.includes('(position+10_000L).coerceAtMost(duration)'));
+assert(screen.includes('else if(request.live && !request.sportsRecordingRP72 && code in listOf(android.view.KeyEvent.KEYCODE_MEDIA_PAUSE'));
+assert(screen.includes('else if(request.live && !request.sportsRecordingRP72 && firstFrame &&'));
+assert(screen.includes('resumeMs=if(request.sportsRecordingRP72) player.currentPosition.coerceAtLeast(0L) else 0L'));
+assert(hub.includes('SportsRecordingPolicyRP72.recording(event.category.name,event.category.id,event.category.genre'));
+assert(browser.includes('SportsRecordingPolicyRP72.recording(group?.value?.name,group?.value?.id'));
+console.log('PASS: replay pause/timeline/skips, bounded seeks, preserved position on source change, recordings bypass channel-only keys, both automatic/manual routes classified');

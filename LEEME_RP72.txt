@@ -1,0 +1,34 @@
+BruniO Android TV RP72 — Sport Recaps como grabaciones
+Versión 22176 / 2.0.0-rp72. Aplicar SOBRE RP71 respetando las rutas.
+
+- Sport Recaps, Replays, Recordings y sus equivalentes en español se
+  identifican por el nombre/ID de la categoría y los metadatos del evento.
+  La extensión .ts no se usa para asumir que algo es una grabación.
+- Modo grabación: Play/Pausa, barra de progreso, retroceder/adelantar 10 s,
+  selección de audio y subtítulos. Los saltos se habilitan solo si Media3
+  confirma que el enlace permite buscar posiciones y dispone de duración.
+- Los botones físicos Play/Pausa dejan de bloquearse para esas grabaciones.
+  OK, arriba/abajo y derecha no activan la navegación de canales en ellas;
+  se conserva el manejo de controles de reproducción habitual de VOD.
+- Change source permanece disponible y solicita conservar la posición
+  actual al cambiar de enlace de una misma grabación.
+- Mantiene el autoplay hasta cinco fuentes y el selector manual de RP71.
+- Conserva los directos y los canales con su comportamiento actual.
+- Estas grabaciones siguen perteneciendo a Sports/Others; no inventa IDs
+  de TMDB ni las añade como películas o series en Continue Watching.
+
+LÍMITES
+Pausar se puede solicitar desde la app, pero adelantar/retroceder requiere
+soporte del archivo, manifiesto y servidor. Una grabación publicada como
+stream continuo sin duración/índice puede no permitir saltar libremente.
+El comportamiento nuevo corresponde al reproductor principal; no rediseña
+los controles independientes de las casillas de Split Screen.
+
+VERIFICACIÓN
+Compilada y probada la política Java de identificación: recaps/replays,
+español, mayúsculas, IDs camelCase y exclusión de eventos Live: pasó.
+Comprobaciones de integración de controles, límites de los saltos, posición
+al cambiar de fuente y rutas automática/manual: pasaron.
+Analizador sintáctico Kotlin sin errores nuevos respecto a RP71; esto no
+sustituye la compilación Android. Falta compilar en CI y probar en TV.
+No se generó APK. Sin SQL, Supabase ni Vercel.

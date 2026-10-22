@@ -240,7 +240,7 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,openNa
     fun playRP44(event:HubEventRP41,stream:StreamChoice,automatic:List<StreamChoice> = emptyList()) {
         val c=event.channel
         LiveChannelNavigationRP40.save(state,LiveBrowseSnapshotRP40(BrowserCategoryRP34(event.provider,event.category,"Sports"),displayedRP42.filter {it.provider==event.provider && it.category==event.category}.map {BrowserChannelRP34(it.provider,it.channel)},offset=offsetsRP41[event.category] ?: offset,more=event.category in pendingRP41))
-        val request=PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),stream,0,0,0L,live=true,liveChannelId=c.id,liveProvider=event.provider,liveType=c.type,returnScreen=Screen.LIVE_TV)
+        val request=PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),stream,0,0,0L,live=true,liveChannelId=c.id,liveProvider=event.provider,liveType=c.type,returnScreen=Screen.LIVE_TV,sportsRecordingRP72=event.provider=="sports" && SportsRecordingPolicyRP72.recording(event.category.name,event.category.id,event.category.genre,c.name,c.description))
         state.openLivePlayer(if(automatic.isEmpty()) request else state.sportsRequestRP71(request,automatic))
     }
     pendingRP44?.let {event ->LiveSportsLinksRP44(state,event.channel,{pendingRP44=null}) {stream ->pendingRP44=null;playRP44(event,stream)}}
@@ -258,7 +258,7 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,openNa
                 if(event.provider=="sports") {playRP44(event,stream,streams);return@launch}
                 val c=event.channel
                 LiveChannelNavigationRP40.save(state,LiveBrowseSnapshotRP40(BrowserCategoryRP34(event.provider,event.category,if(event.provider=="nauta") "Nauta" else "Sports"),displayedRP42.filter {it.provider==event.provider && it.category==event.category}.map {BrowserChannelRP34(it.provider,it.channel)},offset=if(event.provider=="sports") offsetsRP41[event.category] ?: offset else displayedRP42.count {it.provider==event.provider && it.category==event.category},more=event.provider=="sports" && event.category in pendingRP41))
-                state.openLivePlayer(PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),stream,0,0,0L,live=true,liveChannelId=c.id,liveProvider=event.provider,liveType=c.type,returnScreen=Screen.LIVE_TV))
+                state.openLivePlayer(PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),stream,0,0,0L,live=true,liveChannelId=c.id,liveProvider=event.provider,liveType=c.type,returnScreen=Screen.LIVE_TV,sportsRecordingRP72=event.provider=="sports" && SportsRecordingPolicyRP72.recording(event.category.name,event.category.id,event.category.genre,c.name,c.description)))
             } catch(e:CancellationException) {throw e} catch(_:Exception) {message=tr("Este evento no devolvió un enlace reproducible.","This event returned no playable link.")}
             finally {resolving=false}
         }

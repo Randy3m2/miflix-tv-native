@@ -1336,7 +1336,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var quickReactions by remember(request.playbackId) { mutableStateOf(false) }
     var firstFrame by remember(request.playbackId) {mutableStateOf(false)}
     var hadPlaybackError by remember(request.playbackId) {mutableStateOf(false)}
-    var controlsVisible by remember(request.playbackId) { mutableStateOf(!request.live && !LiveChannelNavigationRP40.startHidden(request)) }
+    var controlsVisible by remember(request.playbackId) { mutableStateOf((!request.live || request.sportsRecordingRP72) && !LiveChannelNavigationRP40.startHidden(request)) }
     var controlInteraction by remember { mutableStateOf(0) }
     val channelMenuScopeRP34=rememberCoroutineScope()
     var channelStepJobRP40 by remember {mutableStateOf<kotlinx.coroutines.Job?>(null)}
@@ -1806,7 +1806,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         else if (dismissKey == code) {
             if (event.type == KeyEventType.KeyUp) dismissKey = null
             true
-        } else if(request.live && (!controlsVisible || surfaceFocusedRP34) &&
+        } else if(request.live && !request.sportsRecordingRP72 && (!controlsVisible || surfaceFocusedRP34) &&
             code in listOf(android.view.KeyEvent.KEYCODE_DPAD_CENTER,android.view.KeyEvent.KEYCODE_ENTER,android.view.KeyEvent.KEYCODE_NUMPAD_ENTER) &&
             !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu==null && state.sourceSelection==null) {
             if(event.type==KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount==0) {
@@ -1814,9 +1814,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else "channels"
             }
             true
-        } else if(request.live && code in listOf(android.view.KeyEvent.KEYCODE_MEDIA_PAUSE,android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)) {
+        } else if(request.live && !request.sportsRecordingRP72 && code in listOf(android.view.KeyEvent.KEYCODE_MEDIA_PAUSE,android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)) {
             true
-        } else if(request.live && firstFrame && !controlsVisible &&
+        } else if(request.live && !request.sportsRecordingRP72 && firstFrame && !controlsVisible &&
             code in listOf(android.view.KeyEvent.KEYCODE_DPAD_UP,android.view.KeyEvent.KEYCODE_DPAD_DOWN) &&
             !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu==null &&
             playbackError==null && state.sourceSelection==null) {
@@ -1829,7 +1829,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 }
             }
             true
-        } else if(request.live && firstFrame && (!controlsVisible || surfaceFocusedRP34) &&
+        } else if(request.live && !request.sportsRecordingRP72 && firstFrame && (!controlsVisible || surfaceFocusedRP34) &&
             code==android.view.KeyEvent.KEYCODE_DPAD_RIGHT && event.type==KeyEventType.KeyDown &&
             !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu==null && state.sourceSelection==null) {
             dismissKey=code;pauseInfoDismissed=true;pauseSynopsis=false;controlsVisible=false
@@ -1964,7 +1964,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }
         if(playerMenu=="sports_links") {LaunchedEffect(request.playbackId) {state.sportsStartedRP71(request)}}
         if(playerMenu=="sports_links") LiveSportsLinksRP44(state,LiveChannel(request.liveChannelId,request.liveType,request.item.title,request.item.backdrop,request.item.overview),{playerMenu=null},manifestOverrideRP49=if(request.liveProvider==com.miflix.native2.data.NuvioTestConfigRP49.PROVIDER) state.calendarLiveManifest(request.liveProvider) else null) {stream ->
-            playerMenu=null;state.openLivePlayer(request.copy(stream=stream,playbackId=java.util.UUID.randomUUID().toString(),sportsLinksRP71=emptyList(),sportsOwnerRP71=""))
+            playerMenu=null;state.openLivePlayer(request.copy(stream=stream,resumeMs=if(request.sportsRecordingRP72) player.currentPosition.coerceAtLeast(0L) else 0L,playbackId=java.util.UUID.randomUUID().toString(),sportsLinksRP71=emptyList(),sportsOwnerRP71=""))
         }
         sportsTargetRP44?.let {entry ->LiveSportsLinksRP44(state,entry.value,{sportsTargetRP44=null},manifestOverrideRP49=if(entry.provider==com.miflix.native2.data.NuvioTestConfigRP49.PROVIDER) state.calendarLiveManifest(entry.provider) else null) {stream ->
             val c=entry.value;sportsTargetRP44=null
@@ -1987,7 +1987,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         if((firstFrame || hadPlaybackError) && controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !showEpisodes && !showPartyActions && !ended) {
             CompactPlayerControls(request, paused, positionMs, durationMs, speed, maximized, playFocus,
                 badgePlayerRP26=player,
-                previousChannelVisible=request.live && state.previousLiveChannelEnabled,
+                previousChannelVisible=request.live && !request.sportsRecordingRP72 && state.previousLiveChannelEnabled,
                 previousChannelAvailable=state.previousLiveChannel(request)!=null && state.partyRole!=PartyRole.GUEST,
                 previousChannelName=state.previousLiveChannel(request)?.item?.title.orEmpty(),
                 onPreviousChannel={controlInteraction++;state.returnToPreviousLiveChannel(request)},

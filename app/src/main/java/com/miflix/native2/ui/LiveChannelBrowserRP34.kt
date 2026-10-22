@@ -199,7 +199,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
         val c=entry.value
         val activeCategory=group ?: BrowserCategoryRP34(entry.provider,LiveCategory(c.type,"sports","Sports"),"Sports")
         LiveChannelNavigationRP40.save(state,LiveBrowseSnapshotRP40(activeCategory,displayed,search,offset,more,channelList.firstVisibleItemIndex,channelList.firstVisibleItemScrollOffset))
-        select(PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),stream,0,0,0L,live=true,liveChannelId=c.id,liveProvider=entry.provider,liveType=c.type))
+        select(PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),stream,0,0,0L,live=true,liveChannelId=c.id,liveProvider=entry.provider,liveType=c.type,sportsRecordingRP72=entry.provider=="sports" && SportsRecordingPolicyRP72.recording(group?.value?.name,group?.value?.id,group?.value?.genre,c.name,c.description)))
     }
     fun tune(entry:BrowserChannelRP34) {
         if(resolving) return
@@ -225,7 +225,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                 val activeCategory=group ?: BrowserCategoryRP34(entry.provider,LiveCategory(entry.value.type,"favorites","Favorites"),"")
                 LiveChannelNavigationRP40.save(state,LiveBrowseSnapshotRP40(activeCategory,displayed,search,offset,more,channelList.firstVisibleItemIndex,channelList.firstVisibleItemScrollOffset))
                 val req=PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),stream,0,0,0L,
-                    live=true,liveChannelId=c.id,liveProvider=entry.provider,liveType=c.type)
+                    live=true,liveChannelId=c.id,liveProvider=entry.provider,liveType=c.type,sportsRecordingRP72=entry.provider=="sports" && SportsRecordingPolicyRP72.recording(group?.value?.name,group?.value?.id,group?.value?.genre,c.name,c.description))
                 select(if(entry.provider=="sports") state.sportsRequestRP71(req,streams) else req)
             } catch(e:CancellationException) {throw e} catch(_:Exception) {if(stamp==generation) message=tr("No se pudo abrir el canal. Prueba otro.","Could not open the channel. Try another.")}
             finally {if(stamp==generation) resolving=false}

@@ -1581,9 +1581,10 @@ class AppState(context: Context) {
     }
     fun openLivePlayer(req: PlayerRequest) {
         require(!kidsMode) {tr("TV en vivo no está disponible en Kids.","Live TV is not available in Kids.") }
+        val playback=if(req.liveProvider=="sports" && com.miflix.native2.data.SportsRecordingPolicyRP72.recording(req.liveChannelId,req.item.title,req.item.overview)) req.copy(sportsRecordingRP72=true) else req
         invalidatePlaybackWork()
         if(req.liveProvider.isNotBlank() && req.liveProvider!="lidom" && liveProviderTab!=req.liveProvider) { liveProviderTab=req.liveProvider;liveCategoryId=null }
-        miniPlayer=false;selected=req.item;playerRequest=req;screen=Screen.PLAYER
+        miniPlayer=false;selected=playback.item;playerRequest=playback;screen=Screen.PLAYER
     }
     fun beginMultiView(req: PlayerRequest) {
         require(!kidsMode) {"Multiview is not available in Kids."}
@@ -3351,7 +3352,8 @@ data class PlayerRequest(
     val sourceMemoryKeyRP16: String = "",
     val sportsLinksRP71: List<StreamChoice> = emptyList(),
     val sportsAttemptRP71: Int = 0,
-    val sportsOwnerRP71: String = ""
+    val sportsOwnerRP71: String = "",
+    val sportsRecordingRP72: Boolean = false
 )
 
 data class SourceSelection(

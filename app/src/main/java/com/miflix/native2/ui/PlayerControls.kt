@@ -59,7 +59,7 @@ internal fun CompactPlayerControls(
     var focusedLabel by remember { mutableStateOf("") }
     Box(Modifier.fillMaxSize()) {
         Row(Modifier.align(Alignment.TopEnd).padding(top=20.dp,end=24.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            PlayerIconButton("score",tr("PIN Live score","PIN Live score"),modifier=if(request.live) Modifier.focusRequester(playFocus) else Modifier,onInteraction=onInteraction,onClick=onScores,onLabel={focusedLabel=it})
+            PlayerIconButton("score",tr("PIN Live score","PIN Live score"),modifier=if(request.live && !request.sportsRecordingRP72) Modifier.focusRequester(playFocus) else Modifier,onInteraction=onInteraction,onClick=onScores,onLabel={focusedLabel=it})
             if(!request.live) PlayerIconButton("info",tr("Información técnica","Playback info"),onInteraction=onInteraction,onClick=onInfo,onLabel={ focusedLabel=it })
             if(!request.live && seekable) PlayerIconButton("moment",tr("Grabar momento","Mark a moment"),onInteraction=onInteraction,onClick=onMoment,onLabel={ focusedLabel=it })
             PlayerIconButton("pip",tr("Ventana flotante","Picture in Picture"),onInteraction=onInteraction,onClick=onPip,onLabel={ focusedLabel=it })
@@ -81,25 +81,27 @@ internal fun CompactPlayerControls(
             Text(if(request.item.type=="series") "S${request.season} E${request.episode} · ${request.stream.name}" else request.stream.name,
                 color=Color(0xFFBBBBBB),fontSize=12.sp,lineHeight=15.sp,maxLines=1)
             Text(focusedLabel,color=Color.White,fontSize=12.sp,lineHeight=16.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,modifier=Modifier.fillMaxWidth().height(18.dp))
-            if(!request.live) PlayerSeekBar(position,duration,seekable,seekFocus,playFocus,onInteraction,onSeek)
+            if(!request.live || request.sportsRecordingRP72) PlayerSeekBar(position,duration,seekable,seekFocus,playFocus,onInteraction,onSeek)
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                if(!request.live) PlayerIconButton(if(paused) "play" else "pause",if(paused) tr("Reproducir","Play") else tr("Pausar","Pause"),Modifier.focusRequester(playFocus).focusProperties { up=seekFocus },onInteraction,onPlay,onLabel={ focusedLabel=it })
+                if(request.sportsRecordingRP72) PlayerIconButton("rewind",tr("Retroceder 10 segundos","Back 10 seconds"),onInteraction=onInteraction,onClick={onSeek((position-10_000L).coerceAtLeast(0L))},onLabel={focusedLabel=it},enabled=seekable)
+                if(!request.live || request.sportsRecordingRP72) PlayerIconButton(if(paused) "play" else "pause",if(paused) tr("Reproducir","Play") else tr("Pausar","Pause"),Modifier.focusRequester(playFocus).focusProperties { up=seekFocus },onInteraction,onPlay,onLabel={ focusedLabel=it })
+                if(request.sportsRecordingRP72) PlayerIconButton("forward",tr("Adelantar 10 segundos","Forward 10 seconds"),onInteraction=onInteraction,onClick={onSeek((position+10_000L).coerceAtMost(duration))},onLabel={focusedLabel=it},enabled=seekable)
                 if(request.item.type=="series" && !request.live) {
                     PlayerIconButton("next",tr("Siguiente episodio","Next episode"),onInteraction=onInteraction,onClick=onNext,onLabel={ focusedLabel=it },enabled=nextAvailable)
                     PlayerIconButton("episodes",tr("Episodios","Episodes"),onInteraction=onInteraction,onClick=onEpisodes,onLabel={ focusedLabel=it })
                 }
-                if(request.live && previousChannelVisible) PlayerIconButton("previous",
+                if(request.live && !request.sportsRecordingRP72 && previousChannelVisible) PlayerIconButton("previous",
                     tr("Canal anterior","Previous channel")+previousChannelName.takeIf {it.isNotBlank()}?.let {" · $it"}.orEmpty(),
                     onInteraction=onInteraction,onClick=onPreviousChannel,onLabel={focusedLabel=it},enabled=previousChannelAvailable)
-                if(!request.live) PlayerIconButton("cc",tr("Subtítulos","Subtitles"),onInteraction=onInteraction,onClick={onMenu("subtitles")},onLabel={ focusedLabel=it })
-                if(!request.live) PlayerIconButton("audio",tr("Pista de audio","Audio track"),onInteraction=onInteraction,onClick={onMenu("audio")},onLabel={ focusedLabel=it })
+                if(!request.live || request.sportsRecordingRP72) PlayerIconButton("cc",tr("Subtítulos","Subtitles"),onInteraction=onInteraction,onClick={onMenu("subtitles")},onLabel={ focusedLabel=it })
+                if(!request.live || request.sportsRecordingRP72) PlayerIconButton("audio",tr("Pista de audio","Audio track"),onInteraction=onInteraction,onClick={onMenu("audio")},onLabel={ focusedLabel=it })
                 if(!request.live || (request.liveProvider=="sports" || request.liveProvider==com.miflix.native2.data.NuvioTestConfigRP49.PROVIDER)) PlayerIconButton("links",if(request.liveProvider=="sports") tr("Cambiar fuente","Change source") else tr("Enlaces de reproducción","Playback links"),onInteraction=onInteraction,onClick=onLinks,onLabel={ focusedLabel=it })
                 PlayerIconButton("party","Friends & Party",onInteraction=onInteraction,onClick=onParty,onLabel={ focusedLabel=it })
                 PlayerIconButton("chat",tr("Chat del Party","Party chat"),onInteraction=onInteraction,onClick=onChat,onLabel={ focusedLabel=it })
                 PlayerIconButton("reactions",tr("Emojis · Mantén pulsado para frases","Emojis · Hold for phrases"),onInteraction=onInteraction,onClick=onQuickReactions,onLongClick=onReactions,onLabel={ focusedLabel=it })
                 if(!request.live) PlayerIconButton("queue",tr("Cola","Queue"),onInteraction=onInteraction,onClick=onQueue,onLabel={ focusedLabel=it })
                 Spacer(Modifier.weight(1f))
-                Text(if(duration>0) "${tr("Finaliza","Ends")} " + com.miflix.native2.player.PlaybackClockRP63.format(System.currentTimeMillis()+((duration-position).coerceAtLeast(0)/speed.coerceAtLeast(0.1f)).toLong()) else if(request.liveProvider=="lidom") tr("TRANSMISIÓN","STREAM") else if(request.live) tr("EN VIVO","LIVE") else playbackTime(position),
+                Text(if(duration>0) "${tr("Finaliza","Ends")} " + com.miflix.native2.player.PlaybackClockRP63.format(System.currentTimeMillis()+((duration-position).coerceAtLeast(0)/speed.coerceAtLeast(0.1f)).toLong()) else if(request.liveProvider=="lidom") tr("TRANSMISIÓN","STREAM") else if(request.sportsRecordingRP72) tr("GRABACIÓN","RECORDING") else if(request.live) tr("EN VIVO","LIVE") else playbackTime(position),
                     color=Color.White,fontSize=14.sp,lineHeight=18.sp)
             }
         }
@@ -129,6 +131,8 @@ private fun PlayerGlyph(icon: String, color: Color, modifier: Modifier) {
             "play" -> drawPath(Path().apply { moveTo(w*.28f,h*.15f); lineTo(w*.85f,h*.5f); lineTo(w*.28f,h*.85f); close() },color)
             "pause" -> { drawRect(color,Offset(w*.22f,h*.17f),Size(w*.18f,h*.66f)); drawRect(color,Offset(w*.60f,h*.17f),Size(w*.18f,h*.66f)) }
             "previous" -> { drawPath(Path().apply {moveTo(w*.84f,h*.15f);lineTo(w*.30f,h*.5f);lineTo(w*.84f,h*.85f);close()},color);drawRect(color,Offset(w*.14f,h*.15f),Size(w*.10f,h*.70f)) }
+            "rewind" -> {drawPath(Path().apply {moveTo(w*.48f,h*.2f);lineTo(w*.12f,h*.5f);lineTo(w*.48f,h*.8f);close()},color);drawPath(Path().apply {moveTo(w*.88f,h*.2f);lineTo(w*.52f,h*.5f);lineTo(w*.88f,h*.8f);close()},color)}
+            "forward" -> {drawPath(Path().apply {moveTo(w*.12f,h*.2f);lineTo(w*.48f,h*.5f);lineTo(w*.12f,h*.8f);close()},color);drawPath(Path().apply {moveTo(w*.52f,h*.2f);lineTo(w*.88f,h*.5f);lineTo(w*.52f,h*.8f);close()},color)}
             "next" -> { drawPath(Path().apply { moveTo(w*.16f,h*.15f);lineTo(w*.70f,h*.5f);lineTo(w*.16f,h*.85f);close() },color);drawRect(color,Offset(w*.76f,h*.15f),Size(w*.10f,h*.70f)) }
             "queue" -> { line(.12f,.2f,.88f,.2f);line(.12f,.5f,.70f,.5f);line(.12f,.8f,.55f,.8f);line(.78f,.64f,.78f,.94f);line(.64f,.79f,.92f,.79f) }
             "episodes" -> { rectangle(.08f,.12f,.24f,.20f);rectangle(.08f,.42f,.24f,.20f);rectangle(.08f,.72f,.24f,.20f);line(.46f,.22f,.92f,.22f);line(.46f,.52f,.92f,.52f);line(.46f,.82f,.92f,.82f) }

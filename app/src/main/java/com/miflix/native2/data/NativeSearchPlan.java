@@ -8,6 +8,14 @@ import java.util.Locale;
 /** At most four queries: original/translated Latino searches first when playback audio is Spanish. */
 public final class NativeSearchPlan {
     private NativeSearchPlan() {}
+    public static List<String> queries(List<String> titles,String type,String year,int season,String preferredAudio) {
+        if(!StreamLanguagePriority.prefersKorean(preferredAudio)) return queries(titles,type,year,season,StreamLanguagePriority.prefersSpanish(preferredAudio));
+        List<String> ordinary=queries(titles,type,year,season,false);
+        LinkedHashSet<String> korean=new LinkedHashSet<>();
+        for(String query:ordinary) korean.add(query+" korean");
+        korean.addAll(ordinary);
+        return new ArrayList<>(korean);
+    }
     public static List<String> queries(List<String> titles, String type, String year, int season, boolean spanish) {
         LinkedHashSet<String> queries = new LinkedHashSet<>();
         List<String> clean = new ArrayList<>();

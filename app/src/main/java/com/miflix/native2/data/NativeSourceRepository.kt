@@ -57,7 +57,7 @@ class NativeSourceRepository(private val transport: suspend (String,String,Map<S
         val indexKey=listOf(owner,fingerprint,names.joinToString("|"),type,year,season,preferredAudio).joinToString(":")
         val page=pages[indexKey]?.takeIf { System.currentTimeMillis()-it.at<120_000 }
         val hits=page?.hits ?: supervisorScope {
-            val queries=NativeSearchPlan.queries(names,type,year,season,StreamLanguagePriority.prefersSpanish(preferredAudio))
+            val queries=NativeSearchPlan.queries(names,type,year,season,preferredAudio)
             val outcomes=queries.map { query -> async {
                 try {
                     currentCoroutineContext().ensureActive()
@@ -78,7 +78,8 @@ class NativeSourceRepository(private val transport: suspend (String,String,Map<S
             h.optString("hash").matches(Regex("(?i)[a-f0-9]{40}")) && NativeSourceMatching.titleMatches(name,names) &&
                 (type!="movie" || names.any { StreamFilters.releaseYear(name,it)==year.take(4).toIntOrNull() })
         }.distinctBy { it.optString("hash").lowercase(Locale.ROOT) }
-            .sortedWith(compareBy<JSONObject> {if(StreamLanguagePriority.prefersSpanish(preferredAudio)) StreamLanguagePriority.rank("",it.optString("title")) else 0}
+            .sortedWith(compareBy<JSONObject> {if(StreamLanguagePriority.prefersSpanish(preferredAudio)) StreamLanguagePriority.rank("",it.optString("title"))
+                else if(StreamLanguagePriority.prefersKorean(preferredAudio)) {if(StreamLanguagePriority.hasAudio("",it.optString("title"),"ko")) 0 else if(StreamLanguagePriority.rank("",it.optString("title"))==2) 1 else 2} else 0}
                 .thenBy {if(StreamLanguagePriority.prefersSpanish(preferredAudio)) StreamLanguagePriority.spanishVariantRank("",it.optString("title")) else 0}).take(80)
         if(candidates.isEmpty()) return@withLock emptyList()
         val hashes=candidates.joinToString(",") { it.getString("hash").lowercase(Locale.ROOT) }

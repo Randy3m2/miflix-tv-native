@@ -7,24 +7,28 @@ import java.net.URLEncoder
 
 class SubtitleRepository(
     private val v3BaseUrl: String = "https://opensubtitles-v3.strem.io",
-    private val officialFallbackBaseUrl: String = "https://opensubtitles.strem.io/stremio/v1"
+    private val officialFallbackBaseUrl: String = "https://opensubtitles.strem.io/stremio/v1",
+    private val fetch:suspend (String)->String = {Http.text(it,timeoutMs=12000)}
 ) {
     suspend fun resolve(
         imdbId: String,
         type: String,
         season: Int = 0,
         episode: Int = 0,
-        stream: StreamChoice? = null
+        stream: StreamChoice? = null,
+        preferredLanguage:String=""
     ): List<SubtitleChoice> {
         val primary = resolveFrom(v3BaseUrl, "OpenSubtitles v3", imdbId, type, season, episode, stream)
         val hasEs = primary.any { it.lang == "es" }
         val hasEn = primary.any { it.lang == "en" }
-        if (hasEs && hasEn) return prioritize(primary)
+        val preferred=normalizeLang(preferredLanguage).takeUnless {it=="off"}.orEmpty()
+        val complete=if(preferred.isBlank()) hasEs && hasEn else primary.any {StreamLanguagePriority.languageMatches(it.lang,preferred)}
+        if (complete) return prioritize(primary,preferred)
 
         val fallback = runCatching {
             resolveFrom(officialFallbackBaseUrl, "OpenSubtitles official fallback", imdbId, type, season, episode, stream)
         }.getOrDefault(emptyList())
-        return prioritize((primary + fallback).distinctBy { it.url })
+        return prioritize((primary + fallback).distinctBy { it.url },preferred)
     }
 
     private suspend fun resolveFrom(
@@ -52,7 +56,7 @@ class SubtitleRepository(
         // A Sequence callback cannot call suspend HTTP functions. Try URLs in order.
         for (url in urls) {
             val rows = runCatching {
-                parse(Http.text(url, timeoutMs = 12000), sourceName)
+                parse(fetch(url), sourceName)
             }.getOrNull()
             if (!rows.isNullOrEmpty()) return rows
         }
@@ -70,6 +74,7 @@ class SubtitleRepository(
                 when (lang) {
                     "es" -> "Español · $sourceName"
                     "en" -> "English · $sourceName"
+                    "ko" -> "Korean · 한국어 · $sourceName"
                     else -> "${x.optString("lang", "Subtitle")} · $sourceName"
                 }
             }
@@ -77,9 +82,9 @@ class SubtitleRepository(
         }
     }
 
-    private fun prioritize(rows: List<SubtitleChoice>): List<SubtitleChoice> = rows
+    private fun prioritize(rows: List<SubtitleChoice>,preferred:String): List<SubtitleChoice> = rows
         .distinctBy { it.url }
-        .sortedWith(compareBy<SubtitleChoice> { languageRank(it.lang) }.thenBy { it.label.lowercase() })
+        .sortedWith(compareBy<SubtitleChoice> { if(preferred.isNotBlank() && StreamLanguagePriority.languageMatches(it.lang,preferred)) -1 else languageRank(it.lang) }.thenBy { it.label.lowercase() })
 
     private fun normalizeLang(raw: String): String {
         val x = raw.trim().lowercase()
@@ -88,7 +93,7 @@ class SubtitleRepository(
             "eng", "en-us", "en-gb", "english" -> "en"
             "por", "pt-br", "pt-pt", "portuguese" -> "pt"
             "fre", "fra", "fr-fr", "french" -> "fr"
-            else -> x
+            else -> StreamLanguagePriority.normalizeKoreanLanguage(x)
         }
     }
 

@@ -377,11 +377,16 @@ class AppState(context: Context) {
         return playbackPrefs.getString(secondaryAudioKeyRP62(),"").orEmpty().takeUnless {it==audioLanguage}.orEmpty()
     }
     fun saveSecondaryAudioRP62(value:String) {
-        require(value in setOf("","es","en","pt","fr"))
+        require(value in setOf("","es","en","pt","fr","ko"))
         playbackPrefs.edit().putString(secondaryAudioKeyRP62(),value).apply()
         secondaryAudioRevisionRP62++;invalidatePlaybackWork()
     }
-    var subtitleLanguage by mutableStateOf(playbackPrefs.getString("subtitle", "es") ?: "es")
+    private val legacySubtitleRP78=playbackPrefs.getString("subtitle","es") ?: "es"
+    private var subtitleRevisionRP78 by mutableIntStateOf(0)
+    private fun profileSubtitleKeyRP78()="subtitle_rp78:${localExtrasScope()}"
+    var subtitleLanguage:String
+        get() {subtitleRevisionRP78;return playbackPrefs.getString(profileSubtitleKeyRP78(),legacySubtitleRP78) ?: legacySubtitleRP78}
+        set(value) {playbackPrefs.edit().putString(profileSubtitleKeyRP78(),value).apply();subtitleRevisionRP78++}
     var subtitleColor by mutableStateOf(playbackPrefs.getInt("subtitleColor",android.graphics.Color.WHITE))
     var subtitleScale by mutableStateOf(playbackPrefs.getFloat("subtitleScale",1f).coerceIn(0.8f,1.4f))
     fun saveSubtitleStyle(color: Int, scale: Float) {
@@ -395,7 +400,7 @@ class AppState(context: Context) {
     fun savePlaybackPreferences(audio: String, subtitle: String, autoplay: Boolean) {
         if(audioLanguage != audio) invalidatePlaybackWork()
         audioLanguage = audio; subtitleLanguage = subtitle; autoplayNext = autoplay
-        playbackPrefs.edit().putString("subtitle",subtitle).putBoolean("autoplay",autoplay).apply()
+        playbackPrefs.edit().putBoolean("autoplay",autoplay).apply()
     }
     private var queueRevision by mutableStateOf(0)
     private fun queueKey()="queue_${session?.userId ?: "local"}_${activeProfile.id}"
@@ -2766,12 +2771,12 @@ class AppState(context: Context) {
             it.season==req.season && it.episode==req.episode
     }==true
     private val playbackSubtitleJobs = mutableMapOf<String, Deferred<List<SubtitleChoice>>>()
-    private fun subtitleKey(item: MediaSummary, season: Int, episode: Int) = "${item.cloudId}:$season:$episode"
+    private fun subtitleKey(item: MediaSummary, season: Int, episode: Int) = "${localExtrasScope()}:$subtitleLanguage:${item.cloudId}:$season:$episode"
     suspend fun playbackSubtitles(req: PlayerRequest): List<SubtitleChoice> {
         val rows=playbackSubtitleJobs[subtitleKey(req.item,req.season,req.episode)]?.await().orEmpty()
         if(rows.isNotEmpty()) return rows
         val imdb=details?.takeIf { selected?.cloudId==req.item.cloudId }?.imdbId ?: tmdb.details(req.item).imdbId ?: return emptyList()
-        return subtitleRepo.resolve(imdb,req.item.type,req.season,req.episode,req.stream)
+        return subtitleRepo.resolve(imdb,req.item.type,req.season,req.episode,req.stream,preferredLanguage=subtitleLanguage)
     }
 
     private suspend fun playResolved(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeOverride: Long? = null, selectedStream: StreamChoice? = null, fallbackStreams: List<StreamChoice> = emptyList(), onStarted: ((PlayerRequest) -> Unit)? = null) = coroutineScope {
@@ -2792,13 +2797,14 @@ class AppState(context: Context) {
             lastSourceRP16.get(memoryKeyRP16)?.takeIf {StreamOrdering.nativeAllowedRP77(it,audioLanguage,nativeSpanishOnlyRP77) && StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) &&
                 runCatching {java.net.URI(it.url).scheme in setOf("http","https")}.getOrDefault(false)} else null
         val streamsJob = async { if(rememberedRP16!=null) listOf(rememberedRP16) else if (selectedStream != null) (listOf(selectedStream)+fallbackStreams).distinctBy {it.url}.filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) } else resolvePlaybackSources(item,imdb,season,episode) }
+        val preferredSubtitleRP78=subtitleLanguage
         val subtitleKey=subtitleKey(item,season,episode)
         if(playbackSubtitleJobs.size>=16 && subtitleKey !in playbackSubtitleJobs) {
             val oldest=playbackSubtitleJobs.keys.first(); playbackSubtitleJobs.remove(oldest)?.cancel()
         }
         // Subtitle services must not gate opening the video. Keep late results for the CC menu.
         val subsJob = playbackSubtitleJobs.getOrPut(subtitleKey) { appScope.async {
-            runCatching { subtitleRepo.resolve(imdb, item.type, season, episode, null) }.getOrDefault(emptyList())
+            runCatching { subtitleRepo.resolve(imdb, item.type, season, episode, null,preferredLanguage=preferredSubtitleRP78) }.getOrDefault(emptyList())
         } }
         runCatching {
             val streams = streamsJob.await()
@@ -2821,7 +2827,7 @@ class AppState(context: Context) {
             val mergedSubs = (best.subtitles + externalSubs)
                 .distinctBy { it.url }
                 .sortedWith(compareBy<SubtitleChoice> {
-                    when (it.lang.lowercase(Locale.US)) { "es", "spa" -> 0; "en", "eng" -> 1; else -> 2 }
+                    when {com.miflix.native2.data.StreamLanguagePriority.languageMatches(it.lang,subtitleLanguage) ->0;it.lang.lowercase(Locale.US) in setOf("es","spa") ->1;it.lang.lowercase(Locale.US) in setOf("en","eng") ->2;else ->3}
                 }.thenBy { it.label })
             if(!valid()) return@coroutineScope
             val enriched = best.copy(subtitles = mergedSubs)

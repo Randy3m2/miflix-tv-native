@@ -11,11 +11,12 @@ public final class StreamLanguagePriority {
     private static final String END = "(?![\\p{L}\\p{N}])";
     private static final Pattern SPANISH = Pattern.compile(EDGE + "(?:es(?:[-_](?:es|mx|ar|co|do|cl|pe|ve|ec|419))?|spa|esp|spanish|espanol|castellano|castilian|espana|spain|lat|latino|latina|latam|latin[ ._-]+american|espanol[ ._-]+latino)" + END);
     private static final Pattern ENGLISH = Pattern.compile(EDGE + "(?:en(?:[-_](?:us|gb))?|eng|english|ingles)" + END);
+    private static final Pattern KOREAN = Pattern.compile(EDGE + "(?:ko(?:-kr)?|kor|korean|corean[oa]|" + Normalizer.normalize("한국어",Normalizer.Form.NFD) + ")" + END);
     private static final Pattern OTHER = Pattern.compile(EDGE + "(?:pl|pol|polish|polski|polaco|fr|fra|fre|french|francais|de|deu|ger|german|aleman|it|ita|italian|italiano|pt|por|portuguese|portugues|ru|rus|russian|ruso|ja|jpn|japanese|japones|ko|kor|korean|coreano|hi|hin|hindi)" + END);
     private static final Pattern SUB = Pattern.compile("\\b(?:subtitles?|subs?|subtitulos?|subbed|hardsubs?|vostfr|vose|vosi)\\b");
     private static final Pattern SUB_SECTION = Pattern.compile("(?:[|;]|📝|💬|📜)\\s*(?:subtitles?|subs?|subtitulos?)\\b");
     private static final Pattern AUDIO = Pattern.compile("\\b(?:audio|dubbed|doblado|doblaje)\\b");
-    private static final Pattern LANGUAGE_BEFORE_SUB = Pattern.compile("(?:spanish|espanol|castellano|latino|latam|english|ingles|spa|eng|es|en)\\s+(?:subtitles?|subs?|subtitulos?)\\b.*");
+    private static final Pattern LANGUAGE_BEFORE_SUB = Pattern.compile("(?:spanish|espanol|castellano|latino|latam|english|ingles|spa|eng|es|en|korean|coreano|kor|ko)\\s+(?:subtitles?|subs?|subtitulos?)\\b.*");
     private static String normalize(String text) {
         return Normalizer.normalize(text == null ? "" : text, Normalizer.Form.NFD)
             .replaceAll("\\p{M}+", "").toLowerCase(Locale.ROOT).replace('_', '-');
@@ -28,11 +29,18 @@ public final class StreamLanguagePriority {
         String value=normalize(language).trim();
         return value.equals("en") || value.startsWith("en-") || value.equals("eng") || value.equals("english") || value.equals("ingles");
     }
+    public static boolean prefersKorean(String language) {
+        return KOREAN.matcher(normalize(language).trim()).matches();
+    }
+    public static String normalizeKoreanLanguage(String language) {
+        return prefersKorean(language) ? "ko" : language;
+    }
     public static boolean languageMatches(String actual,String preferred) {
         String a=normalize(actual).trim(), p=normalize(preferred).trim();
         if(p.isEmpty() || a.isEmpty()) return false;
         if(prefersSpanish(p)) return prefersSpanish(a);
         if(prefersEnglish(p)) return prefersEnglish(a);
+        if(prefersKorean(p)) return prefersKorean(a);
         String base=p.split("-")[0];
         if(base.equals("pt")) return a.equals("por") || a.equals("portuguese") || a.equals("portugues") || a.equals("pt") || a.startsWith("pt-");
         if(base.equals("fr")) return a.equals("fra") || a.equals("fre") || a.equals("french") || a.equals("francais") || a.equals("fr") || a.startsWith("fr-");
@@ -42,6 +50,11 @@ public final class StreamLanguagePriority {
         if(preferred==null || preferred.trim().isEmpty()) return false;
         if(prefersSpanish(preferred)) return rank(declaredAudioLanguages,labels)==0;
         if(prefersEnglish(preferred)) return hasEnglishAudio(declaredAudioLanguages,labels);
+        if(prefersKorean(preferred)) {
+            String declared=normalize(declaredAudioLanguages);
+            String evidence=category(declared)!=2 ? declared : audioEvidence(labels);
+            return KOREAN.matcher(evidence).find() || evidence.contains("🇰🇷");
+        }
         String declared=normalize(declaredAudioLanguages);
         String evidence=category(declared)!=2 ? declared : audioEvidence(labels);
         String base=normalize(preferred).split("-")[0];
@@ -62,7 +75,7 @@ public final class StreamLanguagePriority {
     private static int category(String text) {
         if (SPANISH.matcher(text).find() || spanishFlag(text)) return 0;
         if (ENGLISH.matcher(text).find() || text.contains("🇺🇸") || text.contains("🇬🇧")) return 1;
-        if (OTHER.matcher(text).find()) return 3;
+        if (KOREAN.matcher(text).find() || text.contains("🇰🇷") || OTHER.matcher(text).find()) return 3;
         return 2;
     }
     public static int rank(String declaredAudioLanguages, String labels) {

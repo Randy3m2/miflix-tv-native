@@ -1,0 +1,29 @@
+BruniO RP78 — Korean / 한국어
+versionCode 22182 / versionName 2.0.0-rp78
+Aplicar SOBRE RP77, conservando las rutas. No se eliminan archivos.
+
+CAMBIOS
+- Korean · 한국어 disponible en Settings para Playback audio principal, secundario y subtítulos.
+- Audio principal sigue siendo por perfil, independiente de la interfaz. Se admite ko también como audio secundario.
+- Preferencia de subtítulos ahora separada por cuenta/perfil. Migra tomando el último valor compartido anterior como valor inicial; los cambios futuros ya no afectan a otros perfiles.
+- Se reconocen ko, kor, ko-KR, Korean, coreano y 한국어, así como 🇰🇷 en etiquetas de audio. Los subtítulos coreanos no se interpretan como evidencia de audio coreano. Los metadatos explícitos de audio tienen prioridad sobre las etiquetas del nombre.
+
+GENERAL Y ADD-ONS
+Cuando el audio preferido es coreano, los enlaces identificados con audio coreano tienen prioridad sobre resoluciones mayores de otro idioma, tanto en elección automática como en fallback. Usa los resultados que ya devuelven los add-ons instalados, incluidos Torrentio y Comet. No instala esos add-ons, no cambia sus manifiestos ni sus filtros en el servidor. Si un add-on está configurado para excluir coreano, hay que habilitarlo en la configuración de ese proveedor para que pueda devolverlo.
+
+No genera pistas de audio/subtítulos faltantes y no comprueba pistas reales antes de reproducir. La selección final también depende de la información que entregue el archivo al reproductor. Las elecciones de pistas guardadas manualmente por serie conservan su prioridad anterior.
+
+MOTOR NATIVO TORBOX
+Añade búsquedas dirigidas con 'korean' junto al título original/traducido y búsquedas generales, con el mismo máximo de cuatro consultas. Prioriza candidatos y archivos etiquetados coreanos. El filtro opcional Solo español de RP77 solo aplica cuando Playback audio está en español; no elimina resultados cuando el idioma principal sea coreano. Se mantienen los órdenes de calidad/tamaño y TorBox sigue siendo opcional, con QR local y sin aviso al iniciar.
+
+SUBTÍTULOS
+Normaliza los códigos coreanos en las respuestas de add-ons y OpenSubtitles. Media3 recibe ko/ko-KR como preferencias de audio y ko en subtítulos. La búsqueda externa prioriza el idioma de subtítulos elegido; si el primario trae español/inglés pero no coreano, consulta el respaldo existente para intentar obtenerlo. Si ya trae el idioma preferido, evita esa solicitud adicional. La caché de subtítulos queda separada por cuenta/perfil/idioma. La búsqueda externa sigue siendo asíncrona; si llega tarde, los resultados siguen accesibles desde el menú CC existente.
+
+VALIDACION
+KoreanRP78Check.java compilado/ejecutado en JDK 17: PASS (alias/emoji, metadatos, descarte de subtítulos como audio, consultas nativas acotadas). Regresión Java RP77: PASS (prioridad latino, filtro español, tamaño e identidad nativa).
+KoreanWiringRP78Check.py: PASS (tres selectores, perfil, normalización/player, respaldo de subtítulos y clasificación de enlaces).
+Se incluyen pruebas JUnit Kotlin para orden entre add-ons, idioma secundario, compatibilidad del filtro español y respaldo coreano de subtítulos. Pendientes de ejecutar en CI: no hay compilador Kotlin/Android SDK configurados.
+Revisión sintáctica de los archivos Kotlin modificados: sin diagnósticos nuevos en las verificaciones completadas. El analizador se cerró inesperadamente al procesar AppState.kt completo; se revisó el diff y se verificó por separado el bloque nuevo de preferencias. No es una compilación Android.
+
+No hay APK generado ni prueba de reproducción real con Torrentio/Comet/TorBox. Falta compilar y probar en TV: coreano principal/secundario, coreano en subtítulos, dos perfiles, fuentes sin etiquetas y compatibilidad español/latino.
+Sin SQL, Supabase ni Vercel. No se agregan sondeos ni telemetría; puede consultarse el respaldo de subtítulos al faltar el idioma elegido en la respuesta primaria.

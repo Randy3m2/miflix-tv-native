@@ -1032,17 +1032,17 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(state.audioLanguage)) {
                     Text(tr("Enlaces: español latino y de España primero; después el idioma secundario seleccionado.",
                         "Links: Latin American and Spain Spanish first, then the selected secondary language."),color=Muted,fontSize=14.sp)
-                    Text(tr("Con BruniO Native activado en Fuentes, también buscamos por el título en español, latino y castellano.","With BruniO Native enabled in Sources, we also search the Spanish title, Latino and Castilian releases."),color=Muted,fontSize=14.sp)
+                    Text(tr("Con BruniO Native activado en Fuentes, también buscamos por el título original y en español, priorizando latino.","With BruniO Native enabled in Sources, we also search original and Spanish titles, prioritizing Latino releases."),color=Muted,fontSize=14.sp)
                 }
                 LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(vertical=8.dp)) { item { FlowRow(horizontalArrangement=Arrangement.spacedBy(18.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
-                    listOf("" to tr("Automático","Auto"), "es" to "Español", "en" to "English", "pt" to "Português", "fr" to "Français").forEach { (code,label) ->
+                    listOf("" to tr("Automático","Auto"), "es" to "Español", "en" to "English", "pt" to "Português", "fr" to "Français", "ko" to "Korean · 한국어").forEach { (code,label) ->
                         FocusButton(label,primary=state.audioLanguage==code) { state.savePlaybackPreferences(code,state.subtitleLanguage,state.autoplayNext) }
                     }
                 } } }
                 Text(tr("Idioma secundario · este perfil","Secondary language · this profile"),color=Color.White,fontSize=18.sp)
                 Text(tr("Si el principal no está disponible, intenta este idioma automáticamente. No cambia el idioma de la interfaz.","If the primary language is unavailable, automatically try this language. Does not change the interface language."),color=Muted,fontSize=14.sp)
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                    listOf("" to tr("Desactivado","Off"),"es" to "Español", "en" to "English", "pt" to "Português", "fr" to "Français").filter {it.first.isBlank() || it.first!=state.audioLanguage}.forEach {(code,label) ->
+                    listOf("" to tr("Desactivado","Off"),"es" to "Español", "en" to "English", "pt" to "Português", "fr" to "Français", "ko" to "Korean · 한국어").filter {it.first.isBlank() || it.first!=state.audioLanguage}.forEach {(code,label) ->
                         FocusButton(label,primary=state.secondaryAudioLanguageRP62==code) {state.saveSecondaryAudioRP62(code)}
                     }
                 }
@@ -1122,7 +1122,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Subtitles";helpDescription="Choose the subtitle language used for playback.";helpIndex=5 }) {
                 Text("${tr("Subtítulos","Subtitles")}: ${state.subtitleLanguage}",color=Muted)
                 LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(vertical=8.dp)) { item { FlowRow(horizontalArrangement=Arrangement.spacedBy(18.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
-                    listOf("off" to tr("Desactivado","Off"), "es" to "Español", "en" to "English", "pt" to "Português", "fr" to "Français").forEach { (code,label) ->
+                    listOf("off" to tr("Desactivado","Off"), "es" to "Español", "en" to "English", "pt" to "Português", "fr" to "Français", "ko" to "Korean · 한국어").forEach { (code,label) ->
                         FocusButton(label,primary=state.subtitleLanguage==code) { state.savePlaybackPreferences(state.audioLanguage,code,state.autoplayNext) }
                     }
                 } } }
@@ -1426,11 +1426,12 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             val trackBuilder = TrackSelectionParameters.Builder(context)
             fun audioCodes(code:String):List<String> = if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(code))
                 listOf("es-419","es-MX","es-AR","es-CO","es-DO","es-CL","es-PE","es-VE","es-EC","es-ES","es")
+                else if(com.miflix.native2.data.StreamLanguagePriority.prefersKorean(code)) listOf("ko-KR","ko")
                 else listOf(code).filter {it.isNotBlank()}
             val audioPreferences=(audioCodes(state.audioLanguage)+audioCodes(state.secondaryAudioLanguageRP62)+
                 if(state.secondaryAudioLanguageRP62.isBlank() && com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(state.audioLanguage)) listOf("en") else emptyList()).distinct()
             trackBuilder.setPreferredAudioLanguages(*audioPreferences.toTypedArray())
-            if (preferredText != null) trackBuilder.setPreferredTextLanguage(preferredText)
+            if (preferredText != null) trackBuilder.setPreferredTextLanguage(normalizeMediaLanguage(preferredText))
             savedSeriesTracks?.optString("audio")?.takeIf {it.isNotBlank()}?.let {trackBuilder.setPreferredAudioLanguage(it)}
             trackBuilder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT,seriesTextOff)
             trackSelectionParameters = trackBuilder.build()
@@ -2340,7 +2341,7 @@ private fun normalizeMediaLanguage(raw: String): String = when (raw.lowercase())
     "eng", "en-us", "english" -> "en"
     "por", "pt-br", "pt-pt", "portuguese" -> "pt"
     "fre", "fra", "fr-fr", "french" -> "fr"
-    else -> raw
+    else -> com.miflix.native2.data.StreamLanguagePriority.normalizeKoreanLanguage(raw)
 }
 
 private fun subtitleMime(url: String): String {

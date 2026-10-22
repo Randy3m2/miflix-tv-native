@@ -173,7 +173,7 @@ class StreamRepository internal constructor(initialManifestUrl:String,
         return when (x) {
             "spa", "es-es", "es_419", "spanish", "español" -> "es"
             "eng", "en-us", "en-gb", "english" -> "en"
-            else -> x.ifBlank { raw }
+            else -> StreamLanguagePriority.normalizeKoreanLanguage(x).ifBlank {raw}
         }
     }
 

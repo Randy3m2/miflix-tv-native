@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP78: Korean/한국어 en audio principal, secundario y subtítulos; prioridad coreana en el motor nativo y enlaces de add-ons; subtítulos preferidos por perfil." to "RP78: Korean/한국어 in primary/secondary audio and subtitles; Korean priority for the native engine and add-on sources; profile-scoped subtitle preferences.",
         "RP77: motor TorBox con prioridad latino según Playback audio, filtro opcional Solo español y tamaño ascendente/descendente dentro de cada calidad; preferencias de audio y filtros por perfil." to "RP77: TorBox engine prioritizes Latino based on Playback audio, with optional Spanish-only filtering and ascending/descending size within each quality; audio and filter preferences are profile-scoped.",
         "RP76: TorBox experimental y opcional solo en Settings, sin configuración al inicio; QR local para pegar la API key sin activar el motor automáticamente." to "RP76: experimental optional TorBox in Settings only, without startup setup; local QR pastes the API key without automatically enabling the engine.",
         "RP75: configuración inicial de TorBox; modo Solo motor nativo para buscar VOD sin consultar otros add-ons, con clave cifrada en esta TV." to "RP75: initial TorBox setup; Native engine only mode finds VOD without querying other add-ons, with an encrypted key on this TV.",

@@ -52,10 +52,12 @@ internal object StreamOrdering {
     fun sorted(streams: List<StreamChoice>, preferredAudio: String = "",bandwidthBps: Long=0,durationSeconds: Int=0,providerOrder:List<String> = emptyList(),secondaryAudio:String = "",nativeSizeAscending:Boolean=false,nativeSpanishOnly:Boolean=false): List<StreamChoice> {
         val spanish = StreamLanguagePriority.prefersSpanish(preferredAudio)
         val english = StreamLanguagePriority.prefersEnglish(preferredAudio)
+        val korean = StreamLanguagePriority.prefersKorean(preferredAudio)
         return streams.filter { playable(it) && nativeAllowedRP77(it,preferredAudio,nativeSpanishOnly) }
             .sortedWith(compareBy<StreamChoice> { if(secondaryAudio.isNotBlank()) {
                     when {hasAudioRP62(it,preferredAudio) ->0;hasAudioRP62(it,secondaryAudio) ->1;languageRank(it)==2 ->2;else ->3}
-                } else if(spanish) languageRank(it) else if(english) {if(hasEnglishAudio(it)) 0 else if(languageRank(it)==2) 1 else 2} else 0 }
+                } else if(spanish) languageRank(it) else if(english) {if(hasEnglishAudio(it)) 0 else if(languageRank(it)==2) 1 else 2}
+                else if(korean) {if(hasAudioRP62(it,preferredAudio)) 0 else if(languageRank(it)==2) 1 else 2} else 0 }
                 .thenBy {if((spanish || StreamLanguagePriority.prefersSpanish(secondaryAudio)) && languageRank(it)==0) StreamLanguagePriority.spanishVariantRank(
                     it.audioLanguages.joinToString(" "),"${it.name}\n${it.title}\n${it.filename}") else 0}
                 .thenBy {providerOrder.indexOf(it.addonName).let {index ->if(index<0) Int.MAX_VALUE else index}}

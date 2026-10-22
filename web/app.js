@@ -74,9 +74,7 @@ function showDetail(item){
  const play=el('button',t('Reproducir en TV'),'quiet detail-tv');play.onclick=()=>{if(!castToken){openCast(item);return;}castItem=item;play.disabled=true;castSend('play').finally(()=>play.disabled=false);};actions.append(play);
  const list=el('button',(favorites.has(item.cloudId)?'✓ ':'+ ')+t('Mi lista'),'quiet detail-list');list.dataset.favoriteId=item.cloudId;list.setAttribute('aria-pressed',String(favorites.has(item.cloudId)));list.setAttribute('aria-label',(favorites.has(item.cloudId)?t('Quitar '):t('Guardar '))+item.title);list.onclick=()=>toggle(item,list);actions.append(list);
  const more=detailActionMenu(language==='en'?'More':'Más');more.panel.className+=' detail-more-items';for(const [label,handler] of [['Compartir',()=>shareTitle(item)],['Recomendar a amigos',()=>recommendTitle(item)],['Crear evento',()=>openEvent(item)]]){const b=el('button',t(label),'quiet');b.onclick=handler;more.panel.append(b);}actions.append(more.root);
- if(item.type==='series'){
-  const fields=el('div',undefined,'event-fields');for(const [id,label] of [['castSeason','Temporada'],['castEpisode','Episodio']]){const l=el('label',t(label)),n=el('input');n.type='number';n.min='1';n.max='10000';n.value=$(id).value||'1';n.oninput=()=>{$(id).value=n.value;};l.append(n);fields.append(l);}info.append(fields);
- }
+
  info.append(actions);root.append(info);if(!$('detail').open)$('detail').showModal();if(typeof enrichDetail==='function')enrichDetail(item);
 }
 async function titleBatch(ids){const items=[];for(let i=0;i<ids.length;i+=20){const data=await catalog({action:'titles',ids:ids.slice(i,i+20)});items.push(...data.items);}return {items};}

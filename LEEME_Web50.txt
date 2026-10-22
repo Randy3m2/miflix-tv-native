@@ -1,0 +1,10 @@
+BruniO Web v50 — Ficha de series sin campos duplicados
+
+Aplicar sobre Web v49 respetando las rutas.
+Se eliminan los campos manuales Season / Episode marcados en la captura.
+Se conserva Seasons & episodes, la selección por tarjetas y los valores
+internos usados por Play, Choose source, descargas y envío a TV.
+
+Verificación: sintaxis JavaScript y revisión del cambio, limitado al bloque
+visual de esos dos campos. No se ha desplegado a tu cuenta.
+Solo redesplegar Vercel. Sin SQL ni funciones de Supabase.

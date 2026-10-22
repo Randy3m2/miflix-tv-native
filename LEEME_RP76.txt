@@ -1,0 +1,26 @@
+BruniO RP76 — TorBox opcional + QR local
+versionCode 22180 / versionName 2.0.0-rp76
+
+Aplicar sobre RP74 o RP75, respetando las rutas. Incluye los cambios necesarios de RP75 para no requerir su pantalla inicial. No hay que borrar archivos anteriores. No modifica los catálogos Tirso ni los logos, ni las mejoras RP74 del panel/error.
+
+COMPORTAMIENTO
+- Se elimina la llamada a la configuración TorBox al iniciar Home. La selección de gustos anterior vuelve a su flujo original.
+- La prueba del motor nativo queda exclusivamente en Settings > Sources > Motor nativo, marcada como experimental y opcional.
+- Para cuentas sin configuración, motor apagado y modo exclusivo apagado por defecto: se mantienen las fuentes habituales.
+- Guardar una API key no activa el motor. Solo se activa/desactiva mediante su botón. No se borra ni se modifica automáticamente una elección que ya hayas hecho en RP75.
+- El botón Solo motor nativo es opcional: apagado combina resultados con los add-ons actuales; encendido evita consultar add-ons para buscar enlaces VOD mientras el motor esté activo.
+
+QR LOCAL
+1. En Settings, pulsa Pegar API key por QR local.
+2. Celular y TV deben estar en la misma red Wi-Fi/Ethernet. Escanea el QR y pega la API key en el formulario oscuro del celular.
+3. Enviar a la TV solo rellena el campo oculto de la TV. No guarda la clave ni activa el motor.
+4. Vuelve en la TV y pulsa Verificar y guardar. Después activa el motor cuando quieras probarlo.
+
+El QR incluye la dirección IP local de la TV, un puerto temporal y un ticket; nunca incluye la API key. El formulario envía la clave por POST mediante HTTP en la red local (no es un túnel HTTPS). Solo usarlo en una red local de confianza. La clave no se imprime, no se devuelve en las páginas ni se guarda en el navegador por código de BruniO. La clave se conserva cifrada en la TV únicamente al verificar y guardar. No va a Supabase.
+
+El enlace vence en dos minutos, admite una entrega exitosa por QR y requiere el secreto del formulario. Rechaza orígenes ajenos y conexiones fuera de la subred. El receptor cierra al salir del QR, cambiar cuenta/perfil, abandonar Settings o pasar al fondo; también comprueba estas condiciones antes de rellenar el campo. Nuevo QR revoca el anterior. No envía la clave a TorBox hasta pulsar Verificar y guardar en la TV.
+
+VALIDACION
+Se compiló el receptor Java con JDK 17 y se ejecutaron las pruebas de validación de clave y Origin/CSRF: PASS. La prueba real por sockets LAN queda SKIP porque el entorno no tiene una IPv4 privada de LAN. Comprobaciones de integración opcional/activación explícita/QR solo como borrador/aislamiento de cuenta y conservación RP74: PASS. Analizador Kotlin sin errores nuevos respecto a los archivos base; no equivale a compilación Android.
+
+No se generó un APK ni se probó un teléfono/TV real o una clave TorBox real. Falta compilar y probar en TV. Sin SQL, despliegue Supabase ni Vercel. No se instalan componentes P2P en la TV.

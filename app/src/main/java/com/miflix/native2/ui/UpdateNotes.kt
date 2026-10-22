@@ -12,6 +12,8 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP76: TorBox experimental y opcional solo en Settings, sin configuración al inicio; QR local para pegar la API key sin activar el motor automáticamente." to "RP76: experimental optional TorBox in Settings only, without startup setup; local QR pastes the API key without automatically enabling the engine.",
+        "RP75: configuración inicial de TorBox; modo Solo motor nativo para buscar VOD sin consultar otros add-ons, con clave cifrada en esta TV." to "RP75: initial TorBox setup; Native engine only mode finds VOD without querying other add-ons, with an encrypted key on this TV.",
         "RP74: aviso de error de canal sin bloquear la navegación; panel de canales con catálogo local en segundo plano y búsqueda/favoritos optimizados." to "RP74: channel error notice keeps navigation available; channel panel loads the local catalog in the background and caches search/favorites work.",
         "RP73: 477 entradas adicionales integradas en Tirso TV, conservando el catálogo anterior y sus enlaces." to "RP73: 477 additional entries integrated into Tirso TV, preserving the existing catalog and links.",
         "RP72: Sport Recaps y grabaciones deportivas con pausa, barra de progreso y saltos de diez segundos, sin cambiar el control de los directos." to "RP72: Sport Recaps and sports recordings get pause, a timeline and ten-second skips while live channel controls stay separate.",

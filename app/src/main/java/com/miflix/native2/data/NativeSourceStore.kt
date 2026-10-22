@@ -24,6 +24,10 @@ class NativeSourceStore(context: Context) {
     }
     fun enabled(owner: String?)=owner!=null && prefs.getBoolean("enabled_$owner",false)
     fun hasKey(owner: String?)=owner!=null && prefs.contains("key_$owner")
+    fun onlyNative(owner:String?)=owner!=null && prefs.getBoolean("only_native_rp75_$owner",false)
+    fun setOnlyNative(owner:String,value:Boolean) {prefs.edit().putBoolean("only_native_rp75_$owner",value).apply()}
+    fun offerSetup(owner:String?)=owner!=null && !hasKey(owner) && !prefs.getBoolean("setup_done_rp75_$owner",false)
+    fun dismissSetup(owner:String) {prefs.edit().putBoolean("setup_done_rp75_$owner",true).apply()}
     fun token(owner: String?): String {
         if(owner==null) return ""
         val value=prefs.getString("key_$owner",null) ?: return ""
@@ -39,5 +43,5 @@ class NativeSourceStore(context: Context) {
         prefs.edit().putString("key_$owner",Base64.encodeToString(cipher.iv,Base64.NO_WRAP)+":"+Base64.encodeToString(encrypted,Base64.NO_WRAP)).apply()
     }
     fun enable(owner: String,value: Boolean) { prefs.edit().putBoolean("enabled_$owner",value).apply() }
-    fun clear(owner: String) { prefs.edit().remove("key_$owner").remove("enabled_$owner").apply() }
+    fun clear(owner: String) { prefs.edit().remove("key_$owner").remove("enabled_$owner").remove("only_native_rp75_$owner").apply() }
 }

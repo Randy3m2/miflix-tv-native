@@ -1059,12 +1059,21 @@ class AppState(context: Context) {
     var nativeSourceSaving by mutableStateOf(false)
     val nativeSourceEnabled: Boolean get() { nativeRevision;return nativeStore.enabled(session?.userId) }
     val nativeSourceConfigured: Boolean get() { nativeRevision;return nativeStore.hasKey(session?.userId) }
+    val nativeOnlyRP75:Boolean get() {nativeRevision;return nativeStore.onlyNative(session?.userId)}
+    internal val offerNativeSetupRP75:Boolean get() {nativeRevision;return nativeStore.offerSetup(session?.userId)}
+    internal fun dismissNativeSetupRP75() {
+        session?.userId?.let {nativeStore.dismissSetup(it);nativeRevision++}
+    }
+    fun setNativeOnlyRP75(value:Boolean) {
+        val owner=session?.userId ?: return
+        nativeStore.setOnlyNative(owner,value);nativeRevision++;nativeSources.invalidate();invalidatePlaybackWork()
+    }
     fun toggleNativeSources() {
         val owner=session?.userId ?: run { error=tr("Inicia sesión primero","Sign in first");return }
         if(!nativeSourceEnabled && nativeStore.token(owner).isBlank()) { error=tr("Guarda primero tu API key de TorBox","Save your TorBox API key first");return }
         nativeStore.enable(owner,!nativeSourceEnabled);nativeRevision++;nativeSources.invalidate();invalidatePlaybackWork()
     }
-    suspend fun saveNativeSourceKey(value: String) {
+    suspend fun saveNativeSourceKey(value: String,activateRP75:Boolean=false,onlyNativeRP75:Boolean=true) {
         val owner=session?.userId ?: error(tr("Inicia sesión primero","Sign in first"))
         if(nativeSourceSaving) return
         nativeSourceSaving=true;nativeSourceStatus=""
@@ -1072,8 +1081,12 @@ class AppState(context: Context) {
             val token=value.trim();require(token.length in 16..256 && token.none { it.isWhitespace() }) { tr("API key inválida","Invalid API key") }
             nativeSources.validate(token)
             if(session?.userId!=owner) return
-            nativeStore.save(owner,token);nativeRevision++;nativeSources.invalidate();invalidatePlaybackWork()
-            nativeSourceStatus=tr("Clave verificada y guardada. Puedes activar el motor.","Key verified and saved. You can enable the engine.")
+            nativeStore.save(owner,token)
+            nativeStore.dismissSetup(owner)
+            if(activateRP75) {nativeStore.setOnlyNative(owner,onlyNativeRP75);nativeStore.enable(owner,true)}
+            nativeRevision++;nativeSources.invalidate();invalidatePlaybackWork()
+            nativeSourceStatus=if(activateRP75) tr("TorBox conectado. Motor nativo activado.","TorBox connected. Native engine enabled.")
+                else tr("Clave verificada y guardada. Puedes activar el motor.","Key verified and saved. You can enable the engine.")
         } finally { nativeSourceSaving=false }
     }
     fun clearNativeSourceKey() {
@@ -1082,7 +1095,7 @@ class AppState(context: Context) {
     private data class PlaybackCacheKey(
         val owner: String?,val profile: String,val cloudId: String,val imdb: String,
         val season: Int,val episode: Int,val year: String,val title: String,
-        val manifests: List<String>,val nativeEnabled: Boolean,val nativeVersion: Int,
+        val manifests: List<String>,val nativeEnabled: Boolean,val nativeVersion: Int,val nativeOnly:Boolean,
         val sizeLimit: Long,val audio: String,val secondaryAudio: String
     )
     private val playbackLinkCache=com.miflix.native2.data.PlaybackLinkCache<PlaybackCacheKey,List<StreamChoice>>(12) {
@@ -1091,7 +1104,7 @@ class AppState(context: Context) {
     private val playbackCacheMutex=Mutex()
     private fun playbackCacheKey(item: MediaSummary,imdb: String,season: Int,episode: Int)=PlaybackCacheKey(
         session?.userId,activeProfile.id,item.cloudId,imdb,season,episode,item.year,item.title,
-        streamRepo.manifests().toList(),nativeSourceEnabled,nativeRevision,streamSizeBytes,audioLanguage,secondaryAudioLanguageRP62)
+        streamRepo.manifests().toList(),nativeSourceEnabled,nativeRevision,nativeOnlyRP75,streamSizeBytes,audioLanguage,secondaryAudioLanguageRP62)
     private suspend fun resolvePlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = playbackCacheMutex.withLock {
         val key=playbackCacheKey(item,imdb,season,episode)
         playbackLinkCache.get(key)?.let { return@withLock StreamOrdering.sorted(it,audioLanguage,providerOrder=sourceProviderOrderRP2(),secondaryAudio=secondaryAudioLanguageRP62) }
@@ -1107,8 +1120,9 @@ class AppState(context: Context) {
         if(!native) return@supervisorScope StreamOrdering.sorted(
             streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage), audioLanguage,providerOrder=sourceProviderOrderRP2(),secondaryAudio=secondaryAudioLanguageRP62)
         val token=nativeStore.token(owner)
+        val onlyNative=nativeOnlyRP75
         val addon=async {
-            if(streamRepo.manifests().isEmpty()) emptyList() else streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage)
+            if(onlyNative || streamRepo.manifests().isEmpty()) emptyList() else streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage)
         }
         var failure: String?=null
         val builtIn=try {

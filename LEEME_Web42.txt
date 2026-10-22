@@ -1,0 +1,6 @@
+BruniO Web v42 · Top 10 sin scroll vertical interno
+Aplicar sobre Web v41 respetando rutas y volver a desplegar Vercel.
+
+La fila horizontal tenía overflow vertical automático implícito y los números sobresalían de la caja de las tarjetas. Se limita su pintura a cada tarjeta y se bloquea el eje vertical del carrusel, conservando el horizontal. Solo afecta a Top 10 de películas y Top 10 de series.
+
+Validado en Chrome con datos de prueba, escritorio y móvil: scrollHeight == clientHeight en ambos carruseles; desplazamiento horizontal comprobado con la flecha. No cambia consultas, paginación, TV ni Supabase. Sin SQL.

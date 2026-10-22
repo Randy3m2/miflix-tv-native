@@ -49,3 +49,7 @@ body>header.cinema-header{display:flex}
 .home-top10 .cinema-nav{top:5px;bottom:8px}.home-top10 .home-freshness{max-width:96%;font-size:clamp(9px,.9vw,13px);padding:4px 7px;border-radius:3px 3px 0 0}
 @media(max-width:1000px){.home-top10 .cinema-rail>.home-ranked-card{flex-basis:calc((100% - 32px)/3)}.home-top10 .home-rank{font-size:29vw}}
 @media(max-width:600px){.home-top10 .cinema-rail{gap:14px}.home-top10 .cinema-rail>.home-ranked-card{flex-basis:71%;padding:0}.home-top10 .home-rank{font-size:62vw;-webkit-text-stroke:2px #777}.home-top10 .home-ranked-card .poster{width:57%}.home-top10 .home-ranked-card .save{opacity:1}.home-top10 .home-freshness{font-size:10px}}
+/* v42: a Top 10 is horizontal only. Keep rank glyphs inside each card's paint box. */
+.home-top10 .cinema-rail{overflow-x:auto;overflow-y:hidden}
+.home-top10 .cinema-rail>.home-ranked-card{overflow:hidden;overflow:clip}
+.home-top10 .home-rank{bottom:0}

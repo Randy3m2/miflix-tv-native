@@ -108,7 +108,8 @@ window.addEventListener('message',async event=>{
  const current=activeWebPlayer,data=event.data;
  if(!current||event.source!==current.frame.contentWindow||event.origin!==location.origin||data?.channel!==current.channel||session?.user.id!==current.owner||selected()!==current.profile)return;
  if(data.brunio==='player-close'){closeBrowserPlayer();return;}
- if(data.brunio==='player-sources'){closeBrowserPlayer();if(current.target?.live&&current.target.liveChannel)openLiveSources(current.target.liveChannel);else if(current.target?.cloudId){await openDetail(current.target);if(currentDetail?.cloudId===current.target.cloudId){$('castSeason').value=String(current.target.season||1);$('castEpisode').value=String(current.target.episode||1);openDownloads(currentDetail);}}return;}
+ if(data.brunio==='player-sources'){await openPlayerSources43(current,data);return;}
+ if(data.brunio==='player-source-select43'){await selectPlayerSource43(current,data);return;}
  if(data.brunio!=='player-next'||cinemaNextBusy||current.target?.type!=='series')return;
  cinemaNextBusy=true;try{
   const target=current.target,season=Number(target.season||1),episode=Number(target.episode||1),details=await catalog({action:'details',cloud:target.cloudId});

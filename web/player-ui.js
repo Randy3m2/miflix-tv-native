@@ -24,7 +24,8 @@
  const qualityLabel=node('label',null,word('Calidad','Quality')),quality=node('select');qualityLabel.append(quality);
  const speedLabel=node('label',null,word('Velocidad','Speed')),speed=node('select');for(const rate of [.5,.75,1,1.25,1.5,2]){const o=node('option',null,rate+'×');o.value=String(rate);speed.append(o);}speed.value='1';speed.onchange=()=>video.playbackRate=Number(speed.value);speedLabel.append(speed);
  audioLabel.hidden=true;speedLabel.hidden=true;more.append(audioLabel,qualityLabel,speedLabel);
- const sourceChange=node('button','p-source-change',word('Cambiar enlace','Change Source'));sourceChange.type='button';sourceChange.hidden=window.parent===window&&!/^tmdb:(movie|series):[1-9][0-9]*$/.test(params.get('cloud')||'');sourceChange.onclick=()=>{reportProgress('close');if(window.parent!==window)window.parent.postMessage({brunio:'player-sources',channel:params.get('channel')},location.origin);else{const cloud=(params.get('cloud')||'').split(':');location.href='./#'+(cloud[1]==='series'?'s':'m')+Number(cloud[2]).toString(36);}};
+ const sourceChange=control(word('Cambiar enlace','Change Source'),'<path d="M10 13a5 5 0 0 0 7 .1l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7-.1l-3 3a5 5 0 0 0 7 7l1.7-1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',()=>{});sourceChange.classList.add('p-source-change');sourceChange.hidden=window.parent===window;
+
 
  const external=node('details','p-external'),summary=node('summary',null,word('Más opciones de reproducción','More playback options'));external.append(summary);
  root.append(more);

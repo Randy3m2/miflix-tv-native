@@ -1,0 +1,18 @@
+BruniO Web v43 · Idioma y enlaces laterales
+Aplicar sobre Web v42, respetando rutas. Volver a desplegar Vercel y recargar la web.
+
+PERFIL
+Selector de idioma propio con superficie oscura y opciones del mismo estilo que el menú, sin ventana blanca/azul del navegador. Reutiliza el cambio de idioma existente. Compatible con clic, teclado, Escape y cierre al salir del menú.
+
+REPRODUCTOR WEB INTEGRADO
+- Icono de cadena en lugar del texto Change Source, con tooltip y etiqueta accesible traducida.
+- Abre enlaces en un panel dentro del reproductor: no cierra ni pausa el vídeo al abrir/cerrar o mientras se buscan/preparan enlaces.
+- Cambia de fuente solo al elegir una. Si no se puede generar el enlace, conserva la fuente anterior y muestra el error.
+- Al comenzar el nuevo enlace, solicita reanudar desde el tiempo actual. Hay carga al cambiar de fuente; la compatibilidad y precisión del salto dependen del navegador y del archivo.
+- VOD conserva perfil, episodio exacto y límite de tamaño; usa las funciones existentes de TorBox. Live usa los enlaces compatibles del canal actual.
+- Conserva validación de URL y mensajes por origen, iframe, canal, perfil y solicitud. Los tickets quedan en la página principal.
+- El panel funciona dentro del player integrado, incluyendo su pantalla completa HTML. La pestaña independiente no muestra este botón, porque no tiene la conexión autenticada con la página principal. El fullscreen nativo de iOS tiene controles propios.
+
+VERIFICACIÓN
+Sintaxis JS; regresiones Cast/AirPlay y puente de subtítulos; prueba de enlaces con servidor simulado (episodio, solicitud/perfil, errores y selección). Prueba en Chrome con vídeo local reproduciéndose: abrir/cerrar panel y fallo de fuente conservan reproducción. Selector de idioma revisado visualmente y probado con clic y teclado.
+Sin prueba con enlaces reales autenticados ni despliegue a tus servicios desde aquí. No cambia TV, SQL ni funciones Supabase. Las consultas de enlaces ocurren al abrir el panel y al seleccionar, sin polling nuevo.

@@ -1,0 +1,9 @@
+BruniO Web v47 — Continue Watching en Friends
+
+Aplicar sobre Web v46 respetando las rutas.
+
+Corrección: ocultar Continue Watching de inmediato al cambiar de pestaña, antes de iniciar las consultas de Friends, Calendar, Live TV u otras pantallas. Al volver a Home se muestra de nuevo mediante su render normal. No añade consultas ni cambia el progreso guardado.
+
+Verificado: prueba de navegación y navegador con datos de prueba, Home → Friends → Home → Friends. La fila desaparece fuera de Home y regresa al volver.
+
+Solo redesplegar la web en Vercel. No requiere SQL, funciones de Supabase ni build Android.

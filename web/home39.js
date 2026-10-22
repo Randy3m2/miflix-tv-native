@@ -58,7 +58,7 @@ const number=el('span',String(index+1),'home-rank');number.setAttribute('aria-hi
  $('more').hidden=!home39.more;$('more').disabled=loading;$('more').textContent=cinemaWords('Cargar más filas','Load more rows');
 };
 const more39=$('more').onclick;$('more').onclick=()=>isHome39()?load(false):more39();
-const setView39=setView;setView=function(next){if(next!=='explore'){home39.key='';home39.shelves=[];$('more').textContent=t('Ver más');}return setView39(next);};
+const setView39=setView;setView=function(next){continueShelf44.hidden=true;if(next!=='explore'){home39.key='';home39.shelves=[];$('more').textContent=t('Ver más');}return setView39(next);};
 // Profile disclosure uses real account profiles and existing account actions.
 (function(){
  const menu=document.querySelector('.header-menu'),summary=menu?.querySelector('summary'),panel=menu?.querySelector('.header-menu-panel');if(!menu||!summary||!panel)return;

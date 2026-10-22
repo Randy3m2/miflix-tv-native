@@ -1,0 +1,23 @@
+BruniO RP74 — versionCode 22178 / 2.0.0-rp74
+
+Aplicar estos archivos encima de RP73 respetando las rutas. No hay que eliminar archivos. El catalogo RP73 de Tirso y sus 477 incorporaciones se conservan: este parche no modifica assets de canales ni logos.
+
+1. Canal con error:
+Aviso integrado de cinco segundos, sin dialogo modal ni botones que capturen el foco. Arriba/abajo permiten cambiar al siguiente/anterior canal de la lista existente y OK/derecha abren el panel, incluso si el canal fallo antes del primer fotograma. Al desaparecer el aviso, no vuelve a mostrarse la pantalla de carga de ese canal fallido. Se conservan las restricciones de invitado/Kids y la lista/categoria vigente. El fallo no provoca un salto automatico de canal. En Sports, se conservan los intentos de fuentes de RP71 antes de mostrar el fallo. Peliculas y grabaciones deportivas conservan sus controles de VOD.
+
+2. Panel de canales (tambien selector compartido de Split Screen):
+- Lectura del catalogo local fuera del hilo de interfaz y una vez por revision.
+- Reutilizacion del catalogo al cambiar de categoria o buscar, sin releerlo por cada pulsacion.
+- Normalizacion de nombres y resultados de busqueda memorizados.
+- Favoritos por conjunto de IDs; acceso al canal local por mapa.
+- Indice de fila entregado por LazyColumn, sin recorrer el listado por cada tarjeta.
+- La posicion de scroll se consulta al guardar/salir, sin suscribir todo el panel a cada pixel del desplazamiento.
+- Se espera a que la categoria este cargada antes de restaurar el foco inicial.
+Se mantiene el diseño, la carga diferida de las filas, los logos existentes y los tiempos de OK: corto reproducir; 750-1749 ms favorito; >=1750 ms opciones.
+
+VALIDACION:
+Comprobaciones de regresion sobre la condicion real de navegacion: fallo antes/despues de imagen, siguiente/anterior, panel abierto, selector de fuentes, controles enfocados y exclusion de VOD/recaps. Revisadas rutas de cache, guardado de posicion y umbrales de pulsacion. Analizador sintactico Kotlin: ningun error nuevo frente a RP72; Screens.kt conserva un diagnostico preexistente de la gramatica. Esto no equivale a compilar Kotlin/Android.
+
+No se ha generado ni probado un APK: el entorno no dispone de Android SDK/Kotlin configurados. Falta compilar en tu proyecto y validar en TV: abrir Tirso, buscar, bajar/subir, favoritos, regresar al canal actual, errores 404/403 antes de imagen, y cambiar despues de desaparecer el aviso.
+
+No requiere SQL, Supabase ni Vercel. No incorpora consultas de red nuevas ni telemetria. No se afirma una mejora de FPS medida sin probar en el dispositivo.

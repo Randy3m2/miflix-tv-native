@@ -1351,7 +1351,6 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var speed by remember(request.playbackId) { mutableStateOf(1f) }
     var playbackError by remember(request.playbackId) { mutableStateOf<String?>(null) }
     var advancingSource by remember(request.playbackId) {mutableStateOf(false)}
-    LaunchedEffect(playbackError) {if(playbackError!=null) {hadPlaybackError=true;state.finishPlaybackLoading(request.playbackId)}}
     var externalSubtitles by remember(request.playbackId) { mutableStateOf<List<SubtitleChoice>>(emptyList()) }
     var subtitleLoading by remember(request.playbackId) { mutableStateOf(false) }
     var pendingSubtitleLabel by remember(request.playbackId) { mutableStateOf<String?>(null) }
@@ -1761,6 +1760,19 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         if(state.watchParty==null || !state.partyFollowHost || state.partyRole!=PartyRole.GUEST) player.setPlaybackSpeed(1f)
     }
 
+    LaunchedEffect(playbackError) {
+        if(playbackError!=null) {
+            hadPlaybackError=true;state.finishPlaybackLoading(request.playbackId)
+            if(request.live && !request.sportsRecordingRP72) {
+                // A failed channel is still navigable, even if it never rendered a frame.
+                controlsVisible=false;pauseInfoDismissed=true;pauseSynopsis=false
+                if(playerMenu==null && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && state.sourceSelection==null) {
+                    withFrameNanos {};runCatching {surfaceFocus.requestFocus()}
+                }
+            }
+        }
+    }
+
     // Explicit timer also covers controls holding focus on TV remotes.
     LaunchedEffect(player, controlInteraction, showEpisodes, showQueue, showPartyActions, showAccessRequests, state.sourceSelection, playerMenu, paused, ended, playbackError, mini) {
         if (!mini && playbackError==null && !paused && !ended && playerMenu == null && !quickReactions && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && state.sourceSelection == null) {
@@ -1816,10 +1828,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             true
         } else if(request.live && !request.sportsRecordingRP72 && code in listOf(android.view.KeyEvent.KEYCODE_MEDIA_PAUSE,android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)) {
             true
-        } else if(request.live && !request.sportsRecordingRP72 && firstFrame && !controlsVisible &&
+        } else if(request.live && !request.sportsRecordingRP72 && (firstFrame || hadPlaybackError) && (!controlsVisible || (hadPlaybackError && surfaceFocusedRP34)) &&
             code in listOf(android.view.KeyEvent.KEYCODE_DPAD_UP,android.view.KeyEvent.KEYCODE_DPAD_DOWN) &&
             !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu==null &&
-            playbackError==null && state.sourceSelection==null) {
+            state.sourceSelection==null) {
             if(event.type==KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount==0) {
                 dismissKey=code
                 if(channelStepJobRP40?.isActive!=true) channelStepJobRP40=channelMenuScopeRP34.launch {
@@ -1829,7 +1841,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 }
             }
             true
-        } else if(request.live && !request.sportsRecordingRP72 && firstFrame && (!controlsVisible || surfaceFocusedRP34) &&
+        } else if(request.live && !request.sportsRecordingRP72 && (firstFrame || hadPlaybackError) && (!controlsVisible || surfaceFocusedRP34) &&
             code==android.view.KeyEvent.KEYCODE_DPAD_RIGHT && event.type==KeyEventType.KeyDown &&
             !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu==null && state.sourceSelection==null) {
             dismissKey=code;pauseInfoDismissed=true;pauseSynopsis=false;controlsVisible=false
@@ -1889,7 +1901,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             },
             modifier = if(maximized) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(horizontal=40.dp,vertical=24.dp)
         ) }
-        if(!firstFrame && playbackError==null && state.playbackLoading==null) PlaybackArtwork(state,request)
+        if(!firstFrame && !hadPlaybackError && playbackError==null && state.playbackLoading==null) PlaybackArtwork(state,request)
         ContentWarningOverlayRP31(state,request,firstFrame,visible=!mini && state.appForeground && playerMenu==null && !showEpisodes && !showPartyActions,
             modifier=Modifier.align(Alignment.TopStart).padding(start=28.dp,top=24.dp))
         if(mini) {
@@ -1904,7 +1916,20 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 FocusButton(tr("Cerrar","Close"),horizontalPadding=14.dp) { parkCurrentPlayback();state.miniPlayer=false;state.playerRequest=null }
             }
         } else if(firstFrame || hadPlaybackError || playbackError!=null) {
-        if(playbackError!=null) {
+        if(playbackError!=null && request.live && !request.sportsRecordingRP72) {
+            val errorMessage=playbackError
+            LaunchedEffect(errorMessage) {
+                delay(5000)
+                if(playbackError==errorMessage) playbackError=null
+            }
+            // Inline notice: no Dialog/window, no focus target, no key interception.
+            Column(Modifier.align(Alignment.TopStart).padding(24.dp).widthIn(max=470.dp)
+                .background(Color(0xEE171717),RoundedCornerShape(14.dp)).padding(18.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                Text(tr("No se pudo reproducir este canal","This channel could not be played"),color=Color.White,fontSize=18.sp)
+                Text(request.item.title,color=Muted,fontSize=14.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Text(tr("↑ / ↓ Cambiar canal · OK Ver canales","↑ / ↓ Change channel · OK Channel list"),color=Color.White,fontSize=12.sp)
+            }
+        } else if(playbackError!=null) {
             val errorMessage=playbackError
             LaunchedEffect(errorMessage) {
                 if(request.liveProvider=="lidom") return@LaunchedEffect

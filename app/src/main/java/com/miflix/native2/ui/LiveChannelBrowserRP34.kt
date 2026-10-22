@@ -14,6 +14,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
@@ -65,6 +66,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     val categoryListRP40=rememberLazyListState()
     val channelList=rememberLazyListState(restoredRP40?.scrollIndex ?: 0,restoredRP40?.scrollOffset ?: 0)
     var initialFocus by remember {mutableStateOf(true)}
+    var loadedSelectionRP74 by remember {mutableStateOf("")}
     var categories by remember {mutableStateOf<List<BrowserCategoryRP34>>(emptyList())}
     var selected by remember {mutableStateOf("")}
     var channels by remember {mutableStateOf<List<BrowserChannelRP34>>(emptyList())}
@@ -81,19 +83,27 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     val revision=LiveLibrary.revision
     val customRevisionRP48 by CustomChannelsRP45.changesRP48.collectAsState()
     val localOwnerRP48=CustomChannelsRP45.owner(state)
-    val localIdsRP48=remember(localOwnerRP48,customRevisionRP48) {CustomChannelsRP45.list(context,localOwnerRP48,true).map {it.id}.toSet()}
+    // Read local JSON/preferences once per revision, off the UI thread.
+    val localCatalogRP74 by produceState<List<CustomChannelRP45>?>(null,localOwnerRP48,customRevisionRP48) {
+        value=withContext(Dispatchers.IO) {CustomChannelsRP45.list(context,localOwnerRP48,true)}
+    }
+    val localChannelsRP74=localCatalogRP74.orEmpty()
+    val localByIdRP74=remember(localChannelsRP74) {localChannelsRP74.associateBy {it.id}}
+    val localIdsRP48=remember(localByIdRP74) {localByIdRP74.keys}
     var showM3URP61 by remember(localOwnerRP48) {mutableStateOf(false)}
     var customManageRP48 by remember(localOwnerRP48) {mutableStateOf<CustomChannelRP45?>(null)}
-    val favorites=remember(revision,customRevisionRP48,state.session?.userId,state.activeProfile.id) {LiveLibrary.favorites(context,state).filter {it.provider!=CustomChannelsRP45.provider || it.channel.id in localIdsRP48}}
-    val group=categories.firstOrNull {it.key==selected}
-    LaunchedEffect(retry,customRevisionRP48) {
+    val favorites=remember(revision,customRevisionRP48,localIdsRP48,state.session?.userId,state.activeProfile.id) {LiveLibrary.favorites(context,state).filter {it.provider!=CustomChannelsRP45.provider || it.channel.id in localIdsRP48}}
+    val favoriteKeysRP74=remember(favorites) {favorites.map {BrowserChannelRP34(it.provider,it.channel).key}.toHashSet()}
+    val group=remember(categories,selected) {categories.firstOrNull {it.key==selected}}
+    LaunchedEffect(retry,customRevisionRP48,localCatalogRP74) {
+        if(localCatalogRP74==null) return@LaunchedEffect
         loading=true;message="";catalogWarningRP39="";categories=emptyList();selected=""
         val localCategoryRP48=BrowserCategoryRP34(CustomChannelsRP45.provider,CustomChannelsRP45.categoryRP48(),"")
-        val nautaSourceCategoriesRP71=listOf(CustomChannelsRP45.categoryNautaSourceRP71())+CustomChannelsRP45.list(context,localOwnerRP48).map {it.category}.distinct().sorted().map {LiveCategory("tv","nauta-source:"+it,"Nauta Source · "+it)}
+        val nautaSourceCategoriesRP71=listOf(CustomChannelsRP45.categoryNautaSourceRP71())+localChannelsRP74.filter {CustomChannelsRP45.matchesRP61(it,"nauta-source:Todos")}.map {it.category}.distinct().sorted().map {LiveCategory("tv","nauta-source:"+it,"Nauta Source · "+it)}
         val tirsoCategoriesRP51=(CustomChannelsRP45.categoriesRP51()+CustomChannelsRP45.categoriesRP61()+M3UListsRP61.categories(context,localOwnerRP48)+nautaSourceCategoriesRP71).map {BrowserCategoryRP34(CustomChannelsRP45.provider,it,"")}
         categories=tirsoCategoriesRP51+listOf(localCategoryRP48)
         if(initialProvider==CustomChannelsRP45.provider) {
-            val currentChannel=current?.liveChannelId?.let {CustomChannelsRP45.findRP48(context,localOwnerRP48,it)}
+            val currentChannel=current?.liveChannelId?.let {localByIdRP74[it]}
             selected=categories.firstOrNull {it.key==restoredRP40?.category?.key}?.key
                 ?: categories.firstOrNull {c ->currentChannel!=null && CustomChannelsRP45.matchesRP61(currentChannel,c.value.id)}?.key
                 ?: tirsoCategoriesRP51.firstOrNull()?.key ?: localCategoryRP48.key
@@ -133,19 +143,21 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                 else tr("No se pudieron cargar las categorías de TV.","Could not load TV categories.")
         }
     }
-    LaunchedEffect(selected,search,if(group?.provider==CustomChannelsRP45.provider || selected=="favorites") customRevisionRP48 else 0L) {
-        generation++;resolving=false;more=false;channels=emptyList();offset=0;message=""
+    LaunchedEffect(selected,search,localCatalogRP74,if(group?.provider==CustomChannelsRP45.provider || selected=="favorites") customRevisionRP48 else 0L) {
+        generation++;resolving=false;more=false;channels=emptyList();offset=0;message="";loadedSelectionRP74=""
+        val categorySelectionRP74=selected
+        val categoryGenerationRP74=generation
         if(selected.isBlank()) return@LaunchedEffect
-        if(selected=="favorites") {loading=false;return@LaunchedEffect}
+        if(selected=="favorites") {loadedSelectionRP74=categorySelectionRP74;loading=false;return@LaunchedEffect}
         val c=group ?: return@LaunchedEffect
         loading=true
         if(c.provider==CustomChannelsRP45.provider) {
             val categoryId=c.value.id
-            val local=CustomChannelsRP45.list(context,localOwnerRP48,true).filter {channel ->
+            val local=localChannelsRP74.filter {channel ->
                 CustomChannelsRP45.matchesRP61(channel,categoryId)
             }
             channels=local.map {channel ->BrowserChannelRP34(CustomChannelsRP45.provider,LiveChannel(channel.id,"tv",channel.name,channel.logo,CustomChannelsRP45.sourceRP61(channel),number=channel.number))}
-            offset=channels.size;loading=false
+            offset=channels.size;loadedSelectionRP74=categorySelectionRP74;loading=false
             if(channels.isEmpty()) message=tr("No hay canales en esta categoría.","No channels in this category.")
             return@LaunchedEffect
         }
@@ -168,28 +180,35 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                 pageCache[cacheKey]=channels to more
             }
         } catch(e:CancellationException) {throw e} catch(_:Exception) {message=tr("No se pudo cargar esta categoría.","Could not load this category.")}
-        finally {loading=false}
+        finally {if(categoryGenerationRP74==generation) {loadedSelectionRP74=categorySelectionRP74;loading=false}}
     }
     val playing=current?.takeIf {r -> restoredRP40==null && group?.provider==r.liveProvider && search.isBlank() && (group?.value?.genre==null || group?.value?.let {isMostViewedRP37(it)}==true)}?.let {r ->
         BrowserChannelRP34(r.liveProvider,LiveChannel(r.liveChannelId,r.liveType,r.item.title,r.item.backdrop,r.item.overview))
     }
-    val displayed=(if(selected=="favorites") favorites.map {BrowserChannelRP34(it.provider,it.channel)} else if(group?.provider==CustomChannelsRP45.provider) channels else listOfNotNull(playing)+channels).distinctBy {it.key}.filter {
-        search.isBlank() || IptvPlaylist.searchKey(it.value.name).contains(IptvPlaylist.searchKey(search)) || it.value.number.toString()==search.trim()
+    // Normalize each channel name once per catalog change, not once per focus/scroll frame.
+    val candidatesRP74=remember(selected,favorites,group?.provider,playing,channels) {
+        (if(selected=="favorites") favorites.map {BrowserChannelRP34(it.provider,it.channel)} else if(group?.provider==CustomChannelsRP45.provider) channels else listOfNotNull(playing)+channels).distinctBy {it.key}
     }
-    LaunchedEffect(displayed.map {it.key},loading) {
-        if(initialFocus && !loading) {
+    val searchNamesRP74=remember(candidatesRP74) {candidatesRP74.associate {it.key to IptvPlaylist.searchKey(it.value.name)}}
+    val displayed=remember(candidatesRP74,searchNamesRP74,search) {
+        val query=IptvPlaylist.searchKey(search)
+        candidatesRP74.filter {search.isBlank() || searchNamesRP74[it.key].orEmpty().contains(query) || it.value.number.toString()==search.trim()}
+    }
+    LaunchedEffect(displayed,loading,loadedSelectionRP74) {
+        if(initialFocus && !loading && selected.isNotBlank() && loadedSelectionRP74==selected) {
             val index=displayed.indexOfFirst {it.provider==current?.liveProvider && it.value.id==current?.liveChannelId}
             if(index>=0) {channelList.scrollToItem(index);withFrameNanos {};runCatching {playingChannelFocus.requestFocus()}}
             else {withFrameNanos {};runCatching {first.requestFocus()}}
             initialFocus=false
         }
     }
-    val lastBrowseRP40 by rememberUpdatedState(group?.let {c ->
-        LiveBrowseSnapshotRP40(c,displayed,search,offset,more,channelList.firstVisibleItemIndex,channelList.firstVisibleItemScrollOffset)
+    // Defer scroll-state reads until disposal; observing offsets here recomposes the whole panel per pixel.
+    val lastBrowseRP40 by rememberUpdatedState<()->LiveBrowseSnapshotRP40?>({
+        group?.let {c ->LiveBrowseSnapshotRP40(c,displayed,search,offset,more,channelList.firstVisibleItemIndex,channelList.firstVisibleItemScrollOffset)}
     })
     DisposableEffect(Unit) {
         onDispose {
-            lastBrowseRP40?.takeIf {snap -> ownerRP40==(state.session?.userId to state.activeProfile.id) && snap.rows.any {it.provider==current?.liveProvider && it.value.id==current?.liveChannelId}}
+            lastBrowseRP40()?.takeIf {snap -> ownerRP40==(state.session?.userId to state.activeProfile.id) && snap.rows.any {it.provider==current?.liveProvider && it.value.id==current?.liveChannelId}}
                 ?.let {LiveChannelNavigationRP40.save(state,it)}
         }
     }
@@ -204,7 +223,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     fun tune(entry:BrowserChannelRP34) {
         if(resolving) return
         if(entry.provider==CustomChannelsRP45.provider) {
-            val channel=CustomChannelsRP45.list(context,CustomChannelsRP45.owner(state),true).firstOrNull {it.id==entry.value.id}
+            val channel=localByIdRP74[entry.value.id]
             if(channel!=null && state.partyRole!=PartyRole.GUEST && !state.kidsMode) {
                 group?.let {c ->LiveChannelNavigationRP40.save(state,LiveBrowseSnapshotRP40(c,displayed,search,offset,more,channelList.firstVisibleItemIndex,channelList.firstVisibleItemScrollOffset))}
                 select(CustomChannelsRP45.request(channel))
@@ -274,12 +293,12 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                     if(loading || resolving) Text(if(resolving) tr("Abriendo canal…","Opening channel…") else tr("Cargando…","Loading…"),color=Muted,fontSize=12.sp)
                     if(message.isNotBlank()) Text(message,color=Color.White,fontSize=12.sp)
                     LazyColumn(Modifier.weight(1f),state=channelList,verticalArrangement=Arrangement.spacedBy(2.dp),contentPadding=PaddingValues(bottom=16.dp)) {
-                        items(displayed,key={it.key}) {entry ->
-                            val favorite=favorites.any {it.provider==entry.provider && it.channel.id==entry.value.id}
-                            BrowserChannelRowRP34(entry.value,entry.value.number.takeIf {it>0} ?: (displayed.indexOf(entry)+1),favorite,
+                        itemsIndexed(displayed,key={_,entry ->entry.key}) {index,entry ->
+                            val favorite=entry.key in favoriteKeysRP74
+                            BrowserChannelRowRP34(entry.value,entry.value.number.takeIf {it>0} ?: (index+1),favorite,
                                 playing=entry.provider==current?.liveProvider && entry.value.id==current?.liveChannelId,
-                                click={tune(entry)},favoriteHold={LiveLibrary.toggle(context,state,entry.provider,entry.value)},optionsHold={if(entry.provider==CustomChannelsRP45.provider) customManageRP48=CustomChannelsRP45.findRP48(context,localOwnerRP48,entry.value.id) else genericOptionsRP54=entry},
-                                modifier=Modifier.then(if(entry==displayed.firstOrNull()) Modifier.focusRequester(firstChannel) else Modifier)
+                                click={tune(entry)},favoriteHold={LiveLibrary.toggle(context,state,entry.provider,entry.value)},optionsHold={if(entry.provider==CustomChannelsRP45.provider) customManageRP48=localByIdRP74[entry.value.id] else genericOptionsRP54=entry},
+                                modifier=Modifier.then(if(index==0) Modifier.focusRequester(firstChannel) else Modifier)
                                     .then(if(entry.provider==current?.liveProvider && entry.value.id==current?.liveChannelId) Modifier.focusRequester(playingChannelFocus) else Modifier).onPreviewKeyEvent {event ->
                                     false
                                 })

@@ -22,8 +22,9 @@ load=async function(reset){
  if(reset||key!==home39.key){home39.key=key;home39.shelves=[];home39.next=0;home39.more=true;items=[];render();}
  $('status').textContent=cinemaWords('Preparando tu inicio…','Preparing your home…');
  try{
-  const data=await requestHomeShelves41({action:'home',offset:home39.next,provider:activeProvider,type:filter,region:$('region').value,seed:homeSeed39()});
+  const [data,continued]=await Promise.all([requestHomeShelves41({action:'home',offset:home39.next,provider:activeProvider,type:filter,region:$('region').value,seed:homeSeed39()}),reset?loadContinue44().catch(()=>[]):Promise.resolve(continue44.items)]);
   if(ticket!==generation||homeKey39()!==key||!isHome39())return;
+  continue44.items=continued;
   if(!Array.isArray(data.shelves))throw Error(cinemaWords('Actualiza la función brunio-catalog para cargar el nuevo inicio.','Update brunio-catalog to load the new home.'));
   if(home39.next===0)homeFresh39(data,key);
   const known=new Set(home39.shelves.map(s=>s.id));home39.shelves.push(...data.shelves.filter(s=>!known.has(s.id)&&s.items?.length));
@@ -38,9 +39,10 @@ load=async function(reset){
 };
 const homeRender39=render;
 render=function(){
+ continueShelf44.hidden=!isHome39()||!!activeProvider||!continue44.items.length;
  if(!isHome39()||home39.key!==homeKey39()){homeRender39();return;}
  closeCinemaHover();cinemaTabs.hidden=$('app').hidden;document.body.classList.add('cinema-browse');cinemaRenderHero(items[0]);
- cinemaRailCleanup.forEach(dispose=>dispose());cinemaRailCleanup=[];cinemaRails.replaceChildren();cinemaRails.hidden=false;$('grid').hidden=true;cinemaHero.hidden=!items.length;
+ cinemaRailCleanup.forEach(dispose=>dispose());cinemaRailCleanup=[];cinemaRails.replaceChildren();renderContinue44();cinemaRails.hidden=false;$('grid').hidden=true;cinemaHero.hidden=!items.length;
  for(const shelf of home39.shelves){
   const section=el('section',undefined,'cinema-shelf'+(shelf.ranked?' home-top10':'')),heading=el('div',undefined,'cinema-shelf-heading'),rail=el('div',undefined,'cinema-rail'),wrap=el('div',undefined,'cinema-rail-wrap');
   heading.append(el('h2',shelf.title));if(shelf.ranked){const note=el('small',cinemaWords('Popularidad de TMDB','TMDB popularity'),'home-ranking-note');heading.append(note);}

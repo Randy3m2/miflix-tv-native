@@ -14,7 +14,7 @@
  window.addEventListener('message',event=>{const data=event.data;if(event.origin!==location.origin||event.source!==window.parent||data?.channel!==params.get('channel')||data.requestId!==requestId||panel.hidden)return;
   if(data.brunio==='player-source-ready43'){
    let address;try{address=new URL(data.address,location.href);if(address.origin!==location.origin||address.pathname!==location.pathname)return;}catch{return;}
-   const fragment=new URLSearchParams(address.hash.slice(1));if(!data.live&&Number.isFinite(video.currentTime))fragment.set('resume',String(video.currentTime));address.hash=fragment.toString();location.replace(address.href);return;
+   const fragment=new URLSearchParams(address.hash.slice(1));if(!data.live&&Number.isFinite(video.currentTime))fragment.set('resume',String(video.currentTime));address.hash=fragment.toString();address.searchParams.set('source',requestId);location.replace(address.href);return;
   }
   if(data.brunio!=='player-source-list43')return;choosing=false;
   if(data.error){status.textContent=data.error;list.querySelectorAll('button').forEach(b=>b.disabled=false);return;}

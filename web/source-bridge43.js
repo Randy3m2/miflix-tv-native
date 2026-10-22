@@ -19,7 +19,7 @@ async function selectPlayerSource43(current,data){
  const picker=current.picker43;if(!picker||picker.id!==data.requestId||!sourceCurrent43(current,picker)||picker.busy)return;
  const source=picker.sources.find(s=>s.id===String(data.id));if(!source)return;picker.busy=true;
  try{
-  const result=current.target.live?{url:source.url,filename:''}:await api('/functions/v1/brunio-downloads','POST',{action:'link',maxGb:picker.maxGb,ticket:source.ticket,profile:current.profile,language});
+  const result=current.target.live?{url:source.url,filename:''}:await sourceDeadline44(api('/functions/v1/brunio-downloads','POST',{action:'link',maxGb:picker.maxGb,ticket:source.ticket,profile:current.profile,language}));
   if(!sourceCurrent43(current,picker))return;
   // Reuse exactly the existing media URL validation; never navigate to provider pages.
   const target={...current.target,sourceFilename:result.filename||source.filename||''};
@@ -27,3 +27,5 @@ async function selectPlayerSource43(current,data){
   current.target=target;current.frame.contentWindow.postMessage({brunio:'player-source-ready43',channel:current.channel,requestId:picker.id,address,live:!!target.live},location.origin);
  }catch(e){sourceReply43(current,picker,{error:e.message});}finally{picker.busy=false;}
 }
+
+async function sourceDeadline44(promise){let timer;try{return await Promise.race([promise,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error(language==='en'?'This source took too long. Try another link.':'Este enlace tardó demasiado. Prueba otro.')),45000);})]);}finally{clearTimeout(timer);}}

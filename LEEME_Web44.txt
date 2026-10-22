@@ -1,0 +1,13 @@
+BruniO Web v44 · Continue Watching y cambio de enlace
+Aplicar sobre Web v43 conservando rutas. Redesplegar Vercel y recargar.
+
+CONTINUE WATCHING
+Primera fila antes de las plataformas, después del hero. Combina progreso local de la web y progreso del perfil de TV, usando el más reciente. Desde 5 segundos, excluye progreso >=90%, conserva episodio/temporada y muestra barra blanca. Hasta 20 títulos recientes; se actualiza al cerrar el reproductor. Si no hay títulos en curso, se oculta. Se oculta al filtrar por una plataforma para no mezclar contenido sin disponibilidad verificada.
+
+CHANGE SOURCE
+La nueva fuente antes solo cambiaba el fragmento # de la misma URL. Eso no reiniciaba el documento, por lo que el motor conservaba la fuente anterior y el panel quedaba preparando. Ahora cada cambio lleva un identificador de navegación en la query para iniciar el nuevo motor, con la fuente privada aún en el fragmento y posición actual de reanudación. El panel permanece lateral y la fuente anterior continúa hasta elegir/generar otra.
+La generación del enlace tiene límite de 45 segundos: muestra error y permite reintentar si no responde; no aplica respuestas tardías de esa espera.
+
+VALIDACIÓN
+Chrome con vídeo local y respuesta de cambio simulada: contador de cargas de documento 1 → 2; nuevo vídeo reproduciéndose y panel cerrado. Continue Watching antes de plataformas, con barra de progreso. Pruebas de fusión local/cloud, completados, tipos y perfiles; límite de espera y protecciones de mensajes; regresiones Cast/AirPlay. No se probaron enlaces reales de add-ons desde aquí.
+No cambia Android TV ni requiere SQL o redespliegue de funciones Supabase. Lee títulos del catálogo existente para la fila de progreso, sin polling ni escrituras nuevas.

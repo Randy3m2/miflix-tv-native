@@ -1,0 +1,11 @@
+BruniO Android TV RP70 · 22174
+Aplicar sobre RP69 conservando rutas. Parche de código, no APK.
+
+HOME
+Se elimina la cancelación incondicional de entrada al foco de las filas. Cuando la tarjeta guardada ya está compuesta, se solicita directamente. Si todavía no está disponible, se permite la entrada nativa de LazyColumn/LazyRow y después se restaura el índice capturado antes de esa entrada. Así una fila diferida no bloquea el avance más allá de For you. Las pulsaciones nuevas no se descartan por una animación de scroll en curso; se limita solo la repetición mantenida. Se conserva memoria por fila y el índice cero en filas no visitadas.
+
+DETALLES
+El cierre de Más opciones ahora es únicamente una X, centrada en un botón de 46 dp. Mantiene etiqueta accesible Cerrar/Close y relleno blanco al enfocarse. Sin texto partido. Conserva TV Material de RP69.
+
+Comprobaciones de código realizadas: eliminación de cancelación incondicional, control de repetición y cierre solo con icono; import Text de TV Material conservado. No se compiló ni probó físicamente en Android TV: validar bajar más allá de For you, volver a una tarjeta previamente seleccionada y cierre con OK/Atrás.
+Sin SQL, cambios web, dependencias nuevas ni llamadas nuevas a Supabase.

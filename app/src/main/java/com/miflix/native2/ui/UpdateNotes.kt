@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP70: evita bloquear el foco al entrar en filas diferidas del Home; cierre de Más opciones con una X sin texto." to "RP70: avoids blocking focus when entering lazy Home rows; More options closes with an icon-only X.",
         "RP69: corrige el import de Text en Más opciones para usar TV Material, la dependencia existente del proyecto." to "RP69: fixes the More options Text import to use the project's existing TV Material dependency.",
         "RP68: menú Más opciones de detalles renovado, negro, con portada, grupos de acciones e iconos; solo la acción enfocada se rellena de blanco." to "RP68: redesigned black details More options panel with artwork, action groups and icons; only the focused action is filled white.",
         "RP67: Split Screen comparte el primer canal en la actividad de amigos; navegación vertical restaura la tarjeta elegida por fila sin enfocar tarjetas vecinas transitorias." to "RP67: Split Screen shares the first channel in friend activity; vertical navigation restores each row's chosen card without transient neighbouring-card focus.",

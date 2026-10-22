@@ -22,6 +22,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -49,7 +52,7 @@ internal fun DetailOptionsPanelRP68(title:String,image:String?,playback:List<Det
                         Text(tr("Más opciones","More options"),fontSize=24.sp,fontWeight=FontWeight.Bold,color=Color.White)
                         Text(title,fontSize=15.sp,color=Color(0xFFB5B5B5),maxLines=1,overflow=TextOverflow.Ellipsis)
                     }
-                    DetailActionRP68(DetailOptionRP68(tr("Cerrar","Close"),"close",close),Modifier.width(92.dp))
+                    DetailCloseRP70(close)
                 }
                 Spacer(Modifier.height(20.dp))
                 Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF303030)))
@@ -61,6 +64,20 @@ internal fun DetailOptionsPanelRP68(title:String,image:String?,playback:List<Det
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DetailCloseRP70(close:()->Unit) {
+    var focused by remember {mutableStateOf(false)}
+    val selected=actionFocusVisibleRP64(focused)
+    val label=tr("Cerrar","Close")
+    Box(Modifier.size(46.dp).clip(RoundedCornerShape(12.dp))
+        .background(if(selected)Color.White else Color(0xFF242424))
+        .semantics {contentDescription=label}
+        .onFocusChanged {focused=it.isFocused}.tvClick(close).focusable()
+        .clickable(role=Role.Button,onClick=close),contentAlignment=Alignment.Center) {
+        DetailIconRP68("close",if(selected)Color(0xFF101010) else Color.White)
     }
 }
 

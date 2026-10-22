@@ -33,7 +33,7 @@ internal fun Modifier.smoothVerticalDpad(canRepeat: () -> Boolean = {true}): Mod
     val gate=remember {com.miflix.native2.data.VerticalRepeatGate()}
     this.onFocusChanged {if(!it.hasFocus) gate.reset()}.onPreviewKeyEvent {event ->
         val vertical=event.nativeKeyEvent.keyCode==19 || event.nativeKeyEvent.keyCode==20
-        val consumed=if(vertical && event.type==KeyEventType.KeyDown && !canRepeat()) true
+        val consumed=if(vertical && event.type==KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount>0 && !canRepeat()) true
         else gate.consume(event.nativeKeyEvent.keyCode,event.type==KeyEventType.KeyDown,event.type==KeyEventType.KeyUp,
             event.nativeKeyEvent.repeatCount,event.nativeKeyEvent.eventTime,false)
         if(vertical && event.type==KeyEventType.KeyDown && !consumed) VerticalFocusIntentRP67.revision++
@@ -48,31 +48,40 @@ internal fun Modifier.firstCardOnDown(
     restoreIndex: () -> Int = {0},
     restoreFocus: (Int) -> androidx.compose.ui.focus.FocusRequester? = {if(it==0) first else null}
 ): Modifier = composed {
-    var intentRevision by remember {androidx.compose.runtime.mutableLongStateOf(0L)}
+    var active by remember {androidx.compose.runtime.mutableStateOf(false)}
+    var pending by remember {androidx.compose.runtime.mutableStateOf(false)}
     var entrySerial by remember {androidx.compose.runtime.mutableIntStateOf(0)}
     var entryIndex by remember {androidx.compose.runtime.mutableIntStateOf(0)}
+    var intentRevision by remember {androidx.compose.runtime.mutableLongStateOf(0L)}
     val currentIndex by androidx.compose.runtime.rememberUpdatedState(restoreIndex)
     val currentFocus by androidx.compose.runtime.rememberUpdatedState(restoreFocus)
-    androidx.compose.runtime.LaunchedEffect(entrySerial) {
-        if(entrySerial==0 || intentRevision!=VerticalFocusIntentRP67.revision) return@LaunchedEffect
+    androidx.compose.runtime.LaunchedEffect(active,entrySerial) {
+        if(!active || !pending) return@LaunchedEffect
         val index=entryIndex.coerceIn(0,(row.layoutInfo.totalItemsCount-1).coerceAtLeast(0))
-        if(index !in row.layoutInfo.visibleItemsInfo.map {it.index}) row.scrollToItem(index)
-        for(attempt in 0 until 8) {
-            androidx.compose.runtime.withFrameNanos { }
+        try {
             if(intentRevision!=VerticalFocusIntentRP67.revision) return@LaunchedEffect
-            if(runCatching {currentFocus(index)?.requestFocus() ?: false}.getOrDefault(false)) break
-        }
+            if(index !in row.layoutInfo.visibleItemsInfo.map {it.index}) row.scrollToItem(index)
+            for(attempt in 0 until 8) {
+                androidx.compose.runtime.withFrameNanos { }
+                if(!active || intentRevision!=VerticalFocusIntentRP67.revision) break
+                if(runCatching {currentFocus(index)?.requestFocus() ?: false}.getOrDefault(false)) break
+            }
+        } finally {pending=false}
     }
-    this.focusProperties {
+    this.onFocusChanged {active=it.hasFocus}.focusProperties {
         onEnter = {
             val vertical=requestedFocusDirection==androidx.compose.ui.focus.FocusDirection.Down ||
                 requestedFocusDirection==androidx.compose.ui.focus.FocusDirection.Up
             if(vertical) {
-                // Cancel native spatial selection before any neighbour can overwrite row memory.
+                // Snapshot before a native candidate updates the row's selected-card memory.
                 entryIndex=currentIndex().coerceAtLeast(0)
-                cancelFocusChange()
                 intentRevision=VerticalFocusIntentRP67.revision
+                val attached=entryIndex in row.layoutInfo.visibleItemsInfo.map {it.index}
+                val redirected=attached && runCatching {currentFocus(entryIndex)?.requestFocus() ?: false}.getOrDefault(false)
+                pending=!redirected
                 entrySerial++
+                // Never cancel entry into a lazy row whose target has not been composed.
+                // Native entry reveals the row; its saved card is restored once attached.
             }
         }
     }.focusGroup()

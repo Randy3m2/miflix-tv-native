@@ -2666,6 +2666,15 @@ class AppState(context: Context) {
             onStarted={ req -> if(moment!=null) playerRequest=req.copy(momentStartMs=moment.momentStartMs,momentEndMs=moment.momentEndMs,momentSender=moment.momentSender) })
     }
 
+    private var voiceRevisionRP81 by mutableIntStateOf(0)
+    val voiceLocaleRP81:String get() {
+        voiceRevisionRP81
+        return SearchQueryRP81.voiceLocale(playbackPrefs.getString("voice_rp81:${localExtrasScope()}",null),interfaceLanguage)
+    }
+    fun setVoiceLocaleRP81(value:String) {
+        require(value in setOf("es-MX","en-US"))
+        playbackPrefs.edit().putString("voice_rp81:${localExtrasScope()}",value).apply();voiceRevisionRP81++
+    }
     private val searchResultCache=linkedMapOf<String,Pair<Long,List<MediaSummary>>>()
     fun tasteAspects(item:MediaSummary):Set<String> = playbackPrefs.getStringSet("taste:${ratingsKey()}:${item.cloudId}",emptySet()).orEmpty().toSet()
     fun saveTasteAspects(item:MediaSummary,traits:Set<String>) {
@@ -2781,33 +2790,60 @@ class AppState(context: Context) {
         return FlexibleSearch.rank(rows.distinctBy {it.cloudId}.filter {FlexibleSearch.score(it.title,normalized)>=650},normalized).take(30)
     }
     suspend fun searchFlexible(query: String): List<MediaSummary> = supervisorScope {
-        if(!easyModeRP79) TasteQuery.parse(query)?.let {request ->
+        val parsed=SearchQueryRP81.parse(query)
+        if(!easyModeRP79 && !parsed.explicitPerson) TasteQuery.parse(query)?.let {request ->
             val seed=FlexibleSearch.rank(tmdb.search(request[0]),request[0]).firstOrNull() ?: return@supervisorScope emptyList()
             val matches=tmdb.tasteMatches(seed,setOf(request[1]))
             return@supervisorScope if(kidsMode) tmdb.kidsFilter(matches) else matches
         }
         val intent=DiscoveryMood.intent(query)
-        if(!easyModeRP79 && intent.isNotBlank()) return@supervisorScope discoveryPicks(intent)
-        val normalized=FlexibleSearch.normalize(query)
+        if(!easyModeRP79 && !parsed.explicitPerson && intent.isNotBlank()) return@supervisorScope discoveryPicks(intent)
+        val normalized=parsed.query
         if(normalized.length<2) return@supervisorScope emptyList()
-        val cacheKey="${tmdb.language}:$kidsMode:$easyModeRP79:$normalized"
+        val locale=tmdb.language;val owner=localExtrasScope();val wasKids=kidsMode;val wasEasy=easyModeRP79
+        val cacheKey="$owner:$locale:$wasKids:$wasEasy:${parsed.role}:${parsed.mediaType}:$normalized"
         searchResultCache[cacheKey]?.takeIf {System.currentTimeMillis()-it.first<5*60*1000L}?.let {return@supervisorScope it.second}
         val local=localSearch(normalized)
-        // Extra queries only when the normal search has no close title match.
+        val peopleJob=async {
+            try {withTimeoutOrNull(6500L) {tmdb.searchPeopleRP81(parsed,locale)}} catch(e:CancellationException) {throw e} catch(_:Exception) {null}
+        }
         val remote=mutableListOf<MediaSummary>()
+        val aliases=mutableMapOf<String,Int>()
         var primaryFailed=false
-        try {remote.addAll(tmdb.search(normalized))} catch(e: CancellationException) {throw e} catch(_: Exception) {primaryFailed=true}
-        if(!primaryFailed && (local+remote).none {FlexibleSearch.score(it.title,normalized)>=650}) {
+        suspend fun fetchTitlesRP81(text:String,language:String) {
+            val rows=withTimeoutOrNull(4500L) {tmdb.search(text,language)} ?: throw IllegalStateException("Search timed out")
+            remote.addAll(rows)
+            rows.forEach {item ->aliases[item.cloudId]=maxOf(aliases[item.cloudId] ?: 0,FlexibleSearch.score(item.title,normalized))}
+        }
+        fun titleScore(item:MediaSummary)=maxOf(FlexibleSearch.score(item.title,normalized),aliases[item.cloudId] ?: 0)
+        try {fetchTitlesRP81(normalized,locale)} catch(e:CancellationException) {throw e} catch(_:Exception) {primaryFailed=true}
+        val people=peopleJob.await()
+        // A Spanish title can be entered even with an English interface, and vice versa.
+        // Keep primary-locale metadata first, using translated titles only for ranking.
+        if(!primaryFailed && !parsed.explicitPerson && (local+remote).none {titleScore(it)>=650}) {
+            try {fetchTitlesRP81(normalized,if(locale.startsWith("es")) "en-US" else "es-MX")}
+            catch(e:CancellationException) {throw e} catch(_:Exception) { }
+        }
+        if(!primaryFailed && people?.rows.isNullOrEmpty() && (local+remote).none {titleScore(it)>=650}) {
             for(variant in FlexibleSearch.variants(normalized)) {
                 kotlinx.coroutines.currentCoroutineContext().ensureActive()
-                try {remote.addAll(tmdb.search(variant))} catch(e: CancellationException) {throw e} catch(_: Exception) {break}
-                if(remote.any {FlexibleSearch.score(it.title,normalized)>=650}) break
+                try {fetchTitlesRP81(variant,locale)} catch(e:CancellationException) {throw e} catch(_:Exception) {break}
+                if(remote.any {titleScore(it)>=650}) break
             }
         }
-        val all=FlexibleSearch.rank(local+remote,normalized).take(if(kidsMode) 20 else 60)
-        val ranked=if(kidsMode) tmdb.kidsFilter(all) else all
+        val titles=(remote+local).distinctBy {it.cloudId}.filter {parsed.mediaType=="all" || it.type==parsed.mediaType}
+            .sortedWith(compareByDescending<MediaSummary> {titleScore(it)}.thenByDescending {it.rating})
+        val filmography=people?.rows.orEmpty()
+        val peopleFirst=filmography.isNotEmpty() && (parsed.explicitPerson ||
+            (people?.confidence ?: 0)>=900 && (normalized.contains(' ') || titles.none {titleScore(it)>=950}) ||
+            (people?.confidence ?: 0)>=750 && titles.none {titleScore(it)>=850})
+        if(parsed.explicitPerson && people==null) throw IllegalStateException(tr("No pudimos consultar la filmografía. Reintenta.","Could not load the filmography. Try again."))
+        val all=(if(parsed.explicitPerson) filmography else if(peopleFirst) filmography+titles else titles+filmography).distinctBy {it.cloudId}.take(if(wasKids) 40 else if(filmography.isNotEmpty()) 120 else 60)
+        val ranked=if(wasKids) tmdb.kidsFilter(all) else all
+        if(ranked.isEmpty() && primaryFailed && people==null) throw IllegalStateException(tr("No pudimos completar la búsqueda.","Could not complete the search."))
+        if(owner!=localExtrasScope() || locale!=tmdb.language || wasKids!=kidsMode || wasEasy!=easyModeRP79) return@supervisorScope emptyList()
         if(searchResultCache.size>=12) searchResultCache.remove(searchResultCache.keys.first())
-        if(!primaryFailed) searchResultCache[cacheKey]=System.currentTimeMillis() to ranked
+        if(!primaryFailed && people!=null) searchResultCache[cacheKey]=System.currentTimeMillis() to ranked
         ranked
     }
 

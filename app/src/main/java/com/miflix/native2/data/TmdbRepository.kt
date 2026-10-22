@@ -337,7 +337,59 @@ class TmdbRepository(var token: String) {
         return rows
     }
 
-    suspend fun search(query: String): List<MediaSummary> = parseList(get("/search/multi", mapOf("query" to query)), limit = 40)
+    suspend fun search(query: String,searchLocale:String=language): List<MediaSummary> =
+        parseList(get("/search/multi", mapOf("query" to query,"language" to searchLocale,"include_adult" to "false")), limit = 40)
+
+    private val peopleCacheRP81=linkedMapOf<String,Pair<Long,PeopleSearchRP81>>()
+    internal suspend fun searchPeopleRP81(query:SearchQueryRP81,locale:String=language):PeopleSearchRP81 = coroutineScope {
+        val text=query.query
+        if(text.length<3) return@coroutineScope PeopleSearchRP81()
+        val key="$locale:${query.role}:${query.mediaType}:$text"
+        peopleCacheRP81[key]?.takeIf {System.currentTimeMillis()-it.first<5*60_000L}?.let {return@coroutineScope it.second}
+        val candidates=mutableListOf<JSONObject>()
+        fun score(person:JSONObject):Int {
+            val name=person.optString("name")
+            return maxOf(FlexibleSearch.score(name,text),FlexibleSearch.score(
+                SearchQueryRP81.phoneticName(name),SearchQueryRP81.phoneticName(text)).coerceAtMost(900))
+        }
+        suspend fun lookup(name:String) {
+            val rows=get("/search/person",mapOf("query" to name,"language" to locale,"include_adult" to "false")).optJSONArray("results") ?: return
+            candidates.addAll((0 until rows.length()).map {rows.getJSONObject(it)}.filter {!it.optBoolean("adult")})
+        }
+        lookup(text)
+        val words=text.split(' ').filter {it.length>=3}
+        // Surname/first-name lookups can recover a misspelled full name, but must still
+        // pass the full-name score before any credits are fetched. At most two retries.
+        for(variant in listOfNotNull(words.lastOrNull(),words.firstOrNull()).distinct().filter {it!=text}.take(2)) {
+            if(candidates.any {score(it)>=750}) break
+            lookup(variant)
+        }
+        val ordered=candidates.distinctBy {it.optInt("id")}.filter {it.optInt("id")>0 && score(it)>=700}
+            .sortedWith(compareByDescending<JSONObject> {score(it)}.thenByDescending {
+                when(query.role) {"director" -> it.optString("known_for_department")=="Directing";"actor" -> it.optString("known_for_department")=="Acting";else -> true}
+            }.thenByDescending {it.optDouble("popularity")})
+        val best=ordered.firstOrNull()?.let {score(it)} ?: 0
+        val chosen=ordered.filter {score(it)>=best-40}.take(2)
+        val rows=chosen.map {person ->async {
+            val body=get("/person/${person.getInt("id")}/combined_credits",mapOf("language" to locale))
+            val cast=if(query.role!="director") body.optJSONArray("cast") else null
+            val crew=if(query.role!="actor") body.optJSONArray("crew") else null
+            val credits=(0 until (cast?.length() ?: 0)).map {cast!!.getJSONObject(it)}+
+                (0 until (crew?.length() ?: 0)).map {crew!!.getJSONObject(it)}.filter {it.optString("job")=="Director"}
+            credits.filter {credit ->
+                val media=credit.optString("media_type")
+                val genres=credit.optJSONArray("genre_ids")
+                val talk=media=="tv" && (0 until (genres?.length() ?: 0)).any {genres!!.optInt(it) in setOf(10763,10767)}
+                !credit.optBoolean("adult") && !talk && media in setOf("movie","tv") &&
+                    (query.mediaType=="all" || query.mediaType==if(media=="tv") "series" else "movie")
+            }.map {mapItem(it,if(it.optString("media_type")=="tv") "series" else "movie")}
+        }}.awaitAll().flatten().distinctBy {it.cloudId}.filter {it.poster!=null || it.backdrop!=null}
+            .sortedWith(compareByDescending<MediaSummary> {it.popularity}.thenByDescending {it.rating}).take(120)
+        val result=PeopleSearchRP81(rows,best)
+        if(peopleCacheRP81.size>=16) peopleCacheRP81.remove(peopleCacheRP81.keys.first())
+        peopleCacheRP81[key]=System.currentTimeMillis() to result
+        result
+    }
 
     suspend fun discoverGenre(genreId: Int): List<MediaSummary> = discoverMovieGenre(genreId, "popularity.desc", 1, 20)
 

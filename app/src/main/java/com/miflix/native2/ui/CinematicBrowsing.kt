@@ -208,6 +208,8 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
     var results by remember {mutableStateOf<List<MediaSummary>>(emptyList())}
     var searching by remember {mutableStateOf(false)}
     var searchError by remember {mutableStateOf(false)}
+    var voiceAlternativesRP81 by remember(owner) {mutableStateOf<List<String>>(emptyList())}
+    var voiceOwnerRP81 by remember(owner) {mutableStateOf<String?>(null)}
     val keyboardFocus=remember {FocusRequester()}
     val resultsFocus=remember {FocusRequester()}
     BackHandler(onBack=onBack)
@@ -218,15 +220,22 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
     val voice=androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) { result ->
         if(result.resultCode==android.app.Activity.RESULT_OK) {
-            result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.takeIf {it.isNotBlank()}?.let {replace(it)}
+            if(voiceOwnerRP81==state.searchHistoryOwner()) {
+                val heard=result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS).orEmpty()
+                    .map {it.trim().take(120)}.filter {it.isNotBlank()}
+                    .distinctBy {com.miflix.native2.data.SearchQueryRP81.normalize(it)}.take(5)
+                voiceAlternativesRP81=heard
+                heard.firstOrNull()?.let {replace(it)}
+            }
         }
     }
     fun dictate() {
+        voiceOwnerRP81=owner;voiceAlternativesRP81=emptyList()
         val intent=android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE,if(state.interfaceLanguage=="es") "es-DO" else "en-US")
-            .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS,1)
-            .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT,tr("Di el título","Say the title"))
+            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE,state.voiceLocaleRP81)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS,5)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT,tr("Di un título, actor o director","Say a title, actor or director"))
         try {
             voice.launch(intent)
         } catch(e: android.content.ActivityNotFoundException) {
@@ -243,7 +252,7 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
         if(query.trim().length<2) {searching=false;return@LaunchedEffect}
         searching=true
         try {
-            delay(if(com.miflix.native2.data.TasteQuery.parse(query)!=null) 650 else 350)
+            delay(if(com.miflix.native2.data.TasteQuery.parse(query)!=null) 650 else 500)
             results=state.searchFlexible(query.trim())
         } catch(e: CancellationException) {
             throw e
@@ -278,10 +287,15 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
                 }.focusable().tvClick {keyboardFocus.requestFocus()}.clickable {keyboardFocus.requestFocus()}
                 .background(Panel,RoundedCornerShape(8.dp)).border(if(textFocused) 2.dp else 1.dp,if(textFocused) Accent else PanelBorder,RoundedCornerShape(8.dp))
                 .padding(horizontal=14.dp),contentAlignment=Alignment.CenterStart) {
-                Text(if(query.isEmpty()) tr("Películas, series…","Movies, series…") else query,
+                Text(if(query.isEmpty()) tr("Película, serie, actor o director…","Movie, series, actor or director…") else query,
                     color=if(query.isEmpty()) Muted else Color.White,fontSize=if(easySearchRP80) 22.sp else 19.sp,maxLines=1,
                     onTextLayout={searchLayoutRP35=it},
                     modifier=Modifier.fillMaxWidth().onSizeChanged {fieldWidth=it.width}.horizontalScroll(textScroll))
+            }
+            if(voiceAlternativesRP81.size>1) LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp),contentPadding=PaddingValues(vertical=2.dp)) {
+                items(voiceAlternativesRP81,key={it}) {heard ->
+                    SearchKey(heard,Modifier.widthIn(max=280.dp)) {replace(heard)}
+                }
             }
             Row(Modifier.weight(1f).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(24.dp)) {
                 LazyColumn(Modifier.width(if(easySearchRP80) 250.dp else 220.dp).fillMaxHeight(),verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=20.dp)) {
@@ -298,6 +312,10 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
                                 SearchKey("⌫",Modifier.weight(1f)) {apply(SearchTextEditor.backspace(query,cursor))}
                                 SearchKey("←",Modifier.weight(1f)) {cursor=SearchTextEditor.move(query,cursor,-1)}
                                 SearchKey("→",Modifier.weight(1f)) {cursor=SearchTextEditor.move(query,cursor,1)}
+                            }
+                            Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                                SearchKey(if(state.voiceLocaleRP81=="es-MX") "✓ ES" else "ES",Modifier.weight(1f)) {state.setVoiceLocaleRP81("es-MX")}
+                                SearchKey(if(state.voiceLocaleRP81=="en-US") "✓ EN" else "EN",Modifier.weight(1f)) {state.setVoiceLocaleRP81("en-US")}
                             }
                             Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
                                 SearchKey(tr("Voz","Voice"),Modifier.weight(1f)) {dictate()}

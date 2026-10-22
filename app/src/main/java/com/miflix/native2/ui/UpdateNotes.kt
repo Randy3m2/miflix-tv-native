@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP68: menú Más opciones de detalles renovado, negro, con portada, grupos de acciones e iconos; solo la acción enfocada se rellena de blanco." to "RP68: redesigned black details More options panel with artwork, action groups and icons; only the focused action is filled white.",
         "RP67: Split Screen comparte el primer canal en la actividad de amigos; navegación vertical restaura la tarjeta elegida por fila sin enfocar tarjetas vecinas transitorias." to "RP67: Split Screen shares the first channel in friend activity; vertical navigation restores each row's chosen card without transient neighbouring-card focus.",
         "RP66: corrige compilación de My List al usar una animación local de foco de 80 ms en lugar de FastMotion privado." to "RP66: fixes My List compilation by using a local 80 ms focus animation instead of the private FastMotion value.",
         "RP65: My List con siete pósteres por fila, imagen completa en la tarjeta y título sobre degradado como Home; conserva carga de 15 y Cargar 15 más." to "RP65: My List with seven poster cards per row, edge-to-edge artwork and titles over a Home-style gradient; keeps 15 initial titles and Load 15 more.",

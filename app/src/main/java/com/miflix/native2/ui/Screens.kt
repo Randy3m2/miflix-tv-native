@@ -727,23 +727,22 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
     if(showQueueAdd) QueueAddDialog(state,item) { showQueueAdd=false }
     if(showQueue) QueueDialog(state) { showQueue=false }
 
-    if(showMore) Dialog(onDismissRequest={ showMore=false }) {
-        val moreFocus=remember { FocusRequester() }
-        LaunchedEffect(Unit) { withFrameNanos { };runCatching { moreFocus.requestFocus() } }
-        Column(Modifier.consumeOpeningPress().widthIn(max=520.dp).heightIn(max=480.dp).background(Panel,RoundedCornerShape(24.dp)).padding(24.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-            Text(tr("Más opciones","More options"),color=Color.White,fontSize=24.sp)
-            if(state.localExtras.enabled("lists")) FocusButton(tr("Añadir a lista local","Add to local list")) {showMore=false;showLocalListAdd=true}
-            if(state.localExtras.enabled("hide")) FocusButton(tr("Hoy no quiero ver esto","Not today")) {showMore=false;showNotToday=true}
-            if(!state.selectedUpcoming) FocusButton(tr("Desde el principio","Play from beginning"),modifier=Modifier.focusRequester(moreFocus)) { showMore=false;state.launch { if(item.type=="movie") state.playMovie(true) else state.playSeriesFromStart() } }
-            FocusButton(tr("Añadir a cola","Add to queue"),modifier=if(state.selectedUpcoming) Modifier.focusRequester(moreFocus) else Modifier) { showMore=false;if(item.type=="series") showQueueAdd=true else state.enqueue(item) }
-            FocusButton(tr("Ver cola","View queue")+" · ${state.queueEntries.size}") { showMore=false;showQueue=true }
-            FocusButton(tr("Recomendar a amigos","Recommend to friends")) { showMore=false;showRecommend=true }
+    if(showMore) {
+        val playbackActions=buildList {
             if(!state.selectedUpcoming) {
-                FocusButton(tr("Elegir enlace","Play manually")) { showMore=false;state.launch {state.chooseCurrentSources()} }
-                FocusButton(tr("Marcar como visto","Mark as watched")) { showMore=false;state.markWatched(item) }
+                add(DetailOptionRP68(tr("Desde el principio","Play from beginning"),"play") {showMore=false;state.launch {if(item.type=="movie") state.playMovie(true) else state.playSeriesFromStart()}})
+                add(DetailOptionRP68(tr("Elegir enlace","Play manually"),"link") {showMore=false;state.launch {state.chooseCurrentSources()}})
             }
-            FocusButton(tr("Cerrar","Close")) { showMore=false }
+            add(DetailOptionRP68(tr("Añadir a cola","Add to queue"),"queue") {showMore=false;if(item.type=="series") showQueueAdd=true else state.enqueue(item)})
+            add(DetailOptionRP68(tr("Ver cola","View queue")+" · ${state.queueEntries.size}","list") {showMore=false;showQueue=true})
         }
+        val collectionActions=buildList {
+            if(state.localExtras.enabled("lists")) add(DetailOptionRP68(tr("Añadir a lista local","Add to local list"),"list") {showMore=false;showLocalListAdd=true})
+            if(!state.selectedUpcoming) add(DetailOptionRP68(tr("Marcar como visto","Mark as watched"),"check") {showMore=false;state.markWatched(item)})
+            add(DetailOptionRP68(tr("Recomendar a amigos","Recommend to friends"),"share") {showMore=false;showRecommend=true})
+            if(state.localExtras.enabled("hide")) add(DetailOptionRP68(tr("Hoy no quiero ver esto","Not today"),"hide") {showMore=false;showNotToday=true})
+        }
+        DetailOptionsPanelRP68(item.title,item.backdrop ?: item.poster,playbackActions,collectionActions) {showMore=false}
     }
 
     AppShell(state,state.detailsReturnScreen,{ state.screen=it }) {

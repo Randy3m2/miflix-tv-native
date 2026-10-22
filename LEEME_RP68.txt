@@ -1,0 +1,13 @@
+BruniO Android TV RP68 · 22172
+Aplicar sobre RP67 conservando rutas. 5 archivos; parche de código, no APK.
+
+Menú Más opciones de la pantalla de detalles:
+- Panel negro de dos columnas, con portada y título del contenido.
+- Reproducción y Tu contenido en grupos separados, iconos vectoriales locales.
+- Filas amplias y rectangulares; solo el foco actual tiene relleno blanco.
+- Cerrar visible en la cabecera; Atrás también cierra.
+- Alto limitado a la pantalla, desplazamiento para alcanzar todas las opciones.
+- Conserva condiciones y acciones anteriores: listas, ocultar, empezar de cero, elegir enlace, añadir/ver cola, recomendar y marcar visto.
+
+No cambia web ni Supabase. Sin SQL, imágenes externas nuevas ni builds.
+Verificado: edición limitada al bloque del menú, conservación de acciones y uso de coil3 existente. Pendiente compilación Kotlin y prueba visual/de navegación en TV; no se ejecutó Android aquí.

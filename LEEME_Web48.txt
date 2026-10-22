@@ -1,0 +1,16 @@
+BruniO Web v48 — Logo de carga y límite GB visible
+
+Aplicar sobre Web v47 respetando las rutas. Solo redesplegar Vercel.
+Sin SQL, cambios de funciones de Supabase ni build de Android TV.
+
+- Logo BruniO con pulso suave y tres puntos mientras se prepara el enlace.
+- Logo en el reproductor de películas/series durante carga y buffering; se oculta al reproducir, pausar, terminar, fallar o solicitar permiso de autoplay.
+- Usa el logo existente y respeta la preferencia de movimiento reducido.
+- El botón de cerrar permanece accesible durante la preparación.
+- Límite por archivo en GB visible directamente al abrir Elegir enlace.
+  Aplicar guarda el límite y vuelve a filtrar las fuentes. 0 = sin límite.
+  Se mantiene la excepción para fuentes sin tamaño informado de Mandanguita/Deepflix.
+
+Verificación: estados de carga/error/autoplay en prueba automatizada, pruebas anteriores de reintentos/perfiles/temporadas y navegador con datos de prueba. Se verificó el logo cargado/animado y una búsqueda manual con límite de 3 GB. No se ha desplegado a tu cuenta.
+
+No añade llamadas para la animación. Aplicar un límite diferente hace la búsqueda necesaria para ese filtro, como antes.

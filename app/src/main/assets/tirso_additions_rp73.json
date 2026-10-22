@@ -1,0 +1,3341 @@
+[
+  {
+    "number": 5,
+    "name": "A&E",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/5.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ae.png",
+    "category": "General"
+  },
+  {
+    "number": 6,
+    "name": "Eventos 2",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/6.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/eventos2.png",
+    "category": "General"
+  },
+  {
+    "number": 8,
+    "name": "A&E HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/8.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ae_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 9,
+    "name": "Aplus",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/9.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/aplus.png",
+    "category": "General"
+  },
+  {
+    "number": 14,
+    "name": "Atrescine",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/14.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/a3cine.png",
+    "category": "Cine"
+  },
+  {
+    "number": 20,
+    "name": "ADN 40",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/20.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/adn40.png",
+    "category": "General"
+  },
+  {
+    "number": 22,
+    "name": "Channel 22",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/22.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 24,
+    "name": "Channel 24",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/24.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 25,
+    "name": "Channel 25",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/25.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 27,
+    "name": "Channel 27",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/27.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 29,
+    "name": "AMC",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/29.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/amc.png",
+    "category": "Cine"
+  },
+  {
+    "number": 32,
+    "name": "AMC España",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/32.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/amc_es.png",
+    "category": "Cine"
+  },
+  {
+    "number": 33,
+    "name": "AMC HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/33.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/amc_hd.png",
+    "category": "Cine"
+  },
+  {
+    "number": 35,
+    "name": "América TV (Perú)",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/35.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/pe_america.png",
+    "category": "General"
+  },
+  {
+    "number": 38,
+    "name": "Channel 38",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/38.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 42,
+    "name": "Animal Planet HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/42.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/animalplanet_hd.png",
+    "category": "Cultura"
+  },
+  {
+    "number": 54,
+    "name": "AXN",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/54.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/axn.png",
+    "category": "General"
+  },
+  {
+    "number": 57,
+    "name": "Channel 57",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/57.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 58,
+    "name": "AXN HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/58.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/axn_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 59,
+    "name": "AXN España HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/59.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/axn_es_hd.png",
+    "category": "España"
+  },
+  {
+    "number": 61,
+    "name": "AXN White HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/61.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/axnwhite_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 62,
+    "name": "Channel 62",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/62.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 63,
+    "name": "AZ Cinema",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/63.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/azcinema.png",
+    "category": "Cine"
+  },
+  {
+    "number": 64,
+    "name": "AZ Clic",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/64.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/azclic.png",
+    "category": "General"
+  },
+  {
+    "number": 66,
+    "name": "AZ Corazón",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/66.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/azcorazon.png",
+    "category": "General"
+  },
+  {
+    "number": 68,
+    "name": "AZ Corazón HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/68.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/azcorazon_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 70,
+    "name": "AZ Mundo HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/70.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/azmundo_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 71,
+    "name": "Azteca 7",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/71.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/azteca7.png",
+    "category": "General"
+  },
+  {
+    "number": 72,
+    "name": "Azteca 7",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/72.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/azteca7.png",
+    "category": "General"
+  },
+  {
+    "number": 74,
+    "name": "Azteca 7",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/74.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/azteca7.png",
+    "category": "General"
+  },
+  {
+    "number": 75,
+    "name": "Channel 75",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/75.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 76,
+    "name": "Azteca 13",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/76.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/azteca13.png",
+    "category": "General"
+  },
+  {
+    "number": 78,
+    "name": "Azteca Uno HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/78.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/azteca1_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 83,
+    "name": "Bandamax",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/83.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/bandamax.png",
+    "category": "General"
+  },
+  {
+    "number": 84,
+    "name": "Bandamax Hd",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/84.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/bandamax_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 86,
+    "name": "Channel 86",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/86.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 88,
+    "name": "beIN Sports",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/88.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/beinsports.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 89,
+    "name": "beIN Sports",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/89.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/beinsports.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 90,
+    "name": "beIN Sports en Español",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/90.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/beinsportsn.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 91,
+    "name": "beIN Sports en Español",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/91.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/beinsportsn.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 92,
+    "name": "Bitme",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/92.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/bitme.png",
+    "category": "General"
+  },
+  {
+    "number": 101,
+    "name": "Channel 101",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/101.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 104,
+    "name": "Channel 104",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/104.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 106,
+    "name": "Canal 5",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/106.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/canal5.png",
+    "category": "General"
+  },
+  {
+    "number": 107,
+    "name": "Canal 5 Ld",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/107.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/canal5_ld.png",
+    "category": "General"
+  },
+  {
+    "number": 108,
+    "name": "Canal 5 Hd",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/108.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/canal5_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 109,
+    "name": "Canal 5",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/109.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ho_canal5.png",
+    "category": "General"
+  },
+  {
+    "number": 111,
+    "name": "Channel 111",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/111.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 112,
+    "name": "Channel 112",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/112.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 114,
+    "name": "Canaldelasestrellas",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/114.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/canaldelasestrellas.png",
+    "category": "General"
+  },
+  {
+    "number": 117,
+    "name": "Channel 117",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/117.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 119,
+    "name": "Channel 119",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/119.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 121,
+    "name": "Toros",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/121.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/toros.png",
+    "category": "General"
+  },
+  {
+    "number": 122,
+    "name": "Channel 122",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/122.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 126,
+    "name": "Caracol",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/126.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/caracol.png",
+    "category": "General"
+  },
+  {
+    "number": 127,
+    "name": "Caracolinternacional",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/127.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/caracolinternacional.png",
+    "category": "General"
+  },
+  {
+    "number": 131,
+    "name": "Channel 131",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/131.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 132,
+    "name": "Cartoon Network HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/132.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/cartoonnetwork_hd.png",
+    "category": "Infantiles"
+  },
+  {
+    "number": 137,
+    "name": "Boomerang HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/137.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/boomerang_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 140,
+    "name": "Channel 140",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/140.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 142,
+    "name": "Channel 142",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/142.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 143,
+    "name": "TNT Sports Chile",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/143.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/cdfpremium_hd.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 146,
+    "name": "Channel 146",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/146.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 148,
+    "name": "Channel 148",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/148.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 149,
+    "name": "Channel 149",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/149.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 156,
+    "name": "Channel 156",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/156.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 159,
+    "name": "Cine 24/7 Acción Sagas",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/159.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/cine247_accion_sagas.png",
+    "category": "24/7"
+  },
+  {
+    "number": 165,
+    "name": "Cine 24/7 Sci-Fi",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/165.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/cine247_ficcion.png",
+    "category": "24/7"
+  },
+  {
+    "number": 172,
+    "name": "Cine 247 Infantil Sagas Hd",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/172.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/cine247_infantil_sagas_hd.png",
+    "category": "24/7"
+  },
+  {
+    "number": 173,
+    "name": "Cinelatino",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/173.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/cinelatino.png",
+    "category": "General"
+  },
+  {
+    "number": 180,
+    "name": "Cine 24/7 Terror",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/180.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/cine247_terror.png",
+    "category": "24/7"
+  },
+  {
+    "number": 185,
+    "name": "Cinecanal",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/185.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/cinecanal.png",
+    "category": "General"
+  },
+  {
+    "number": 186,
+    "name": "Channel 186",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/186.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 187,
+    "name": "Channel 187",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/187.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 188,
+    "name": "Cinecanal HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/188.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/cinecanal_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 190,
+    "name": "Cinemax",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/190.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/cinemax.png",
+    "category": "Cine"
+  },
+  {
+    "number": 191,
+    "name": "Channel 191",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/191.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 194,
+    "name": "Channel 194",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/194.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 196,
+    "name": "Cinemax HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/196.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/cinemax_hd.png",
+    "category": "Cine"
+  },
+  {
+    "number": 201,
+    "name": "Claro Sports",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/201.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/clarosports.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 208,
+    "name": "CNN en Español",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/208.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/cnnenespanol.png",
+    "category": "General"
+  },
+  {
+    "number": 216,
+    "name": "Comedy Central",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/216.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/comedycentral.png",
+    "category": "General"
+  },
+  {
+    "number": 218,
+    "name": "Comedy Central",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/218.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/comedycentral.png",
+    "category": "General"
+  },
+  {
+    "number": 219,
+    "name": "Comedy Central",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/219.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/comedycentral.png",
+    "category": "General"
+  },
+  {
+    "number": 220,
+    "name": "Comedy Central HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/220.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/comedycentral_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 225,
+    "name": "Channel 225",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/225.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 228,
+    "name": "Channel 228",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/228.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 234,
+    "name": "De Película",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/234.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/depelicula.png",
+    "category": "General"
+  },
+  {
+    "number": 235,
+    "name": "Channel 235",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/235.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 236,
+    "name": "Channel 236",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/236.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 237,
+    "name": "De Película HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/237.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/depelicula_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 239,
+    "name": "De Película Plus HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/239.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/depeliculaplus_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 242,
+    "name": "DHE",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/242.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/dhe.png",
+    "category": "General"
+  },
+  {
+    "number": 249,
+    "name": "Channel 249",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/249.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 250,
+    "name": "Channel 250",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/250.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 251,
+    "name": "Discovery Channel HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/251.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/discoverychannel_hd.png",
+    "category": "Cultura"
+  },
+  {
+    "number": 257,
+    "name": "Channel 257",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/257.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 258,
+    "name": "Discovery Home & Health HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/258.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/discoveryhh_hd.png",
+    "category": "Cultura"
+  },
+  {
+    "number": 266,
+    "name": "Discovery Kids HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/266.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/discoverykids_hd.png",
+    "category": "Infantiles"
+  },
+  {
+    "number": 275,
+    "name": "Discovery Turbo HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/275.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/discoveryturbo_hd.png",
+    "category": "Cultura"
+  },
+  {
+    "number": 286,
+    "name": "Disney Junior",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/286.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/disneyjunior.png",
+    "category": "Infantiles"
+  },
+  {
+    "number": 287,
+    "name": "Disney Junior HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/287.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/disneyjunior_hd.png",
+    "category": "Infantiles"
+  },
+  {
+    "number": 290,
+    "name": "Channel 290",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/290.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 291,
+    "name": "Channel 291",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/291.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 292,
+    "name": "Channel 292",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/292.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 296,
+    "name": "Channel 296",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/296.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 300,
+    "name": "Channel 300",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/300.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 302,
+    "name": "Channel 302",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/302.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 304,
+    "name": "Channel 304",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/304.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 306,
+    "name": "Channel 306",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/306.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 310,
+    "name": "Channel 310",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/310.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 313,
+    "name": "Channel 313",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/313.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 316,
+    "name": "Channel 316",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/316.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 318,
+    "name": "Channel 318",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/318.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 319,
+    "name": "Channel 319",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/319.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 325,
+    "name": "Eventos 1",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/325.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/eventos1.png",
+    "category": "General"
+  },
+  {
+    "number": 333,
+    "name": "Eentertainment",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/333.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/eentertainment.png",
+    "category": "General"
+  },
+  {
+    "number": 336,
+    "name": "E Hd",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/336.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/e_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 338,
+    "name": "Ecuavisa",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/338.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ec_ecuavisa.png",
+    "category": "General"
+  },
+  {
+    "number": 341,
+    "name": "Channel 341",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/341.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 342,
+    "name": "El Canal del Fútbol (Ecuador)",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/342.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ec_canaldelfutbol.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 349,
+    "name": "El Gourmet",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/349.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/elgourmet.png",
+    "category": "General"
+  },
+  {
+    "number": 358,
+    "name": "Channel 358",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/358.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 359,
+    "name": "Channel 359",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/359.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 364,
+    "name": "Channel 364",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/364.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 370,
+    "name": "Channel 370",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/370.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 371,
+    "name": "Channel 371",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/371.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 409,
+    "name": "Estrellatv Hd",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/409.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/estrellatv_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 413,
+    "name": "Europa",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/413.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/europa.png",
+    "category": "General"
+  },
+  {
+    "number": 414,
+    "name": "Eurosport",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/414.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/eurosport.png",
+    "category": "General"
+  },
+  {
+    "number": 419,
+    "name": "Film & Arts HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/419.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/filmarts_hd.png",
+    "category": "Cine"
+  },
+  {
+    "number": 420,
+    "name": "Film & Arts HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/420.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/filmarts_hd.png",
+    "category": "Cine"
+  },
+  {
+    "number": 424,
+    "name": "Food Network",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/424.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/foodnetwork.png",
+    "category": "General"
+  },
+  {
+    "number": 426,
+    "name": "F1 TV",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/426.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/f1tv.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 427,
+    "name": "F1 TV",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/427.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/f1tv.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 429,
+    "name": "Foro TV",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/429.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/forotv.png",
+    "category": "General"
+  },
+  {
+    "number": 430,
+    "name": "Fox Es Hd",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/430.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/fox_es_hd.png",
+    "category": "España"
+  },
+  {
+    "number": 431,
+    "name": "Channel 431",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/431.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 433,
+    "name": "Channel 433",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/433.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 458,
+    "name": "Channel 458",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/458.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 459,
+    "name": "Channel 459",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/459.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 466,
+    "name": "Channel 466",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/466.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 467,
+    "name": "Fox Sports 2",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/467.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/foxsports2.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 471,
+    "name": "Fox Sports 1 USA HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/471.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/foxsports1_usa_hd.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 472,
+    "name": "Fox Sports 2 USA HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/472.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/foxsports2_usa_hd.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 474,
+    "name": "Fx",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/474.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/fx.png",
+    "category": "General"
+  },
+  {
+    "number": 476,
+    "name": "Fx",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/476.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/fx.png",
+    "category": "General"
+  },
+  {
+    "number": 477,
+    "name": "Fx Hd",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/477.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/fx_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 478,
+    "name": "Channel 478",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/478.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 480,
+    "name": "Channel 480",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/480.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 481,
+    "name": "Galatv",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/481.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/galatv.png",
+    "category": "General"
+  },
+  {
+    "number": 482,
+    "name": "Channel 482",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/482.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 483,
+    "name": "Gamavisión Ecuador",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/483.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ec_gama.png",
+    "category": "General"
+  },
+  {
+    "number": 485,
+    "name": "Garage TV HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/485.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/garagetv_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 488,
+    "name": "Channel 488",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/488.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 489,
+    "name": "Channel 489",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/489.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 490,
+    "name": "GOLPERU",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/490.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/golperu.png",
+    "category": "General"
+  },
+  {
+    "number": 491,
+    "name": "Channel 491",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/491.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 492,
+    "name": "GOLTV HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/492.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/goltvhd.png",
+    "category": "General"
+  },
+  {
+    "number": 494,
+    "name": "Golden HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/494.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/goldenhd.png",
+    "category": "General"
+  },
+  {
+    "number": 495,
+    "name": "Golden Edge",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/495.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/goldenedge.png",
+    "category": "General"
+  },
+  {
+    "number": 496,
+    "name": "Channel 496",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/496.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 497,
+    "name": "Golden HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/497.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/goldenhd.png",
+    "category": "General"
+  },
+  {
+    "number": 500,
+    "name": "Golden Premier 1",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/500.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/goldenpremier1.png",
+    "category": "General"
+  },
+  {
+    "number": 502,
+    "name": "Golden Premier 2",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/502.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/goldenpremier2.png",
+    "category": "General"
+  },
+  {
+    "number": 504,
+    "name": "Golf Channel HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/504.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/golfchannel_hd.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 512,
+    "name": "HBO",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/512.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/hbo.png",
+    "category": "Cine"
+  },
+  {
+    "number": 513,
+    "name": "Channel 513",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/513.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 518,
+    "name": "HBO 2",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/518.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/hbo2.png",
+    "category": "Cine"
+  },
+  {
+    "number": 519,
+    "name": "Channel 519",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/519.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 520,
+    "name": "HBO 2 HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/520.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/hbo2_hd.png",
+    "category": "Cine"
+  },
+  {
+    "number": 521,
+    "name": "HBO 2",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/521.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/hbo2.png",
+    "category": "Cine"
+  },
+  {
+    "number": 523,
+    "name": "Channel 523",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/523.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 525,
+    "name": "HBO Family",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/525.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/hbofamily.png",
+    "category": "Cine"
+  },
+  {
+    "number": 526,
+    "name": "HBO Family HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/526.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/hbofamily_hd.png",
+    "category": "Cine"
+  },
+  {
+    "number": 527,
+    "name": "HBO HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/527.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/hbo_hd.png",
+    "category": "Cine"
+  },
+  {
+    "number": 531,
+    "name": "HBO Plus",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/531.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/hboplus.png",
+    "category": "Cine"
+  },
+  {
+    "number": 534,
+    "name": "HBO Plus HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/534.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/hboplus_hd.png",
+    "category": "Cine"
+  },
+  {
+    "number": 536,
+    "name": "HBO Plus Oeste HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/536.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/hboplusoeste_hd.png",
+    "category": "Cine"
+  },
+  {
+    "number": 538,
+    "name": "HBO Pop",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/538.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/hbopop.png",
+    "category": "Cine"
+  },
+  {
+    "number": 543,
+    "name": "HBO Xtreme",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/543.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/hboxtreme.png",
+    "category": "Cine"
+  },
+  {
+    "number": 544,
+    "name": "Channel 544",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/544.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 545,
+    "name": "HBO Xtreme HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/545.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/hboxtreme_hd.png",
+    "category": "Cine"
+  },
+  {
+    "number": 547,
+    "name": "Hch",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/547.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ho_hch.png",
+    "category": "General"
+  },
+  {
+    "number": 548,
+    "name": "Channel 548",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/548.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 554,
+    "name": "Historia España",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/554.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/historiaes.png",
+    "category": "España"
+  },
+  {
+    "number": 557,
+    "name": "Channel 557",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/557.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 560,
+    "name": "History Channel HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/560.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/historychannel_hd.png",
+    "category": "Cultura"
+  },
+  {
+    "number": 564,
+    "name": "¡Hola! TV",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/564.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/holatv.png",
+    "category": "General"
+  },
+  {
+    "number": 568,
+    "name": "Htv",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/568.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/htv.png",
+    "category": "General"
+  },
+  {
+    "number": 572,
+    "name": "Channel 572",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/572.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 576,
+    "name": "Imagen Televisión",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/576.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/imagentelevision.png",
+    "category": "General"
+  },
+  {
+    "number": 577,
+    "name": "Channel 577",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/577.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 580,
+    "name": "Channel 580",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/580.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 581,
+    "name": "Investigation Discovery HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/581.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/investigationdiscovery_hd.png",
+    "category": "Cultura"
+  },
+  {
+    "number": 585,
+    "name": "Channel 585",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/585.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 594,
+    "name": "Channel 594",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/594.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 595,
+    "name": "Channel 595",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/595.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 598,
+    "name": "Channel 598",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/598.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 600,
+    "name": "Channel 600",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/600.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 601,
+    "name": "Channel 601",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/601.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 603,
+    "name": "laSexta HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/603.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/lasexta_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 609,
+    "name": "Latinatv",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/609.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ur_latinatv.png",
+    "category": "General"
+  },
+  {
+    "number": 615,
+    "name": "Lifetime",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/615.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/lifetime.png",
+    "category": "General"
+  },
+  {
+    "number": 616,
+    "name": "Liga de Campeones HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/616.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ligadecampeones_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 617,
+    "name": "Channel 617",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/617.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 620,
+    "name": "Channel 620",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/620.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 629,
+    "name": "Channel 629",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/629.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 630,
+    "name": "Channel 630",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/630.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 631,
+    "name": "Channel 631",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/631.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 632,
+    "name": "Channel 632",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/632.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 633,
+    "name": "Channel 633",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/633.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 634,
+    "name": "Channel 634",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/634.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 636,
+    "name": "Channel 636",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/636.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 643,
+    "name": "Más Chica",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/643.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/maschic.png",
+    "category": "General"
+  },
+  {
+    "number": 646,
+    "name": "Channel 646",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/646.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 648,
+    "name": "Channel 648",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/648.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 651,
+    "name": "Mega Chile",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/651.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ch_mega.png",
+    "category": "General"
+  },
+  {
+    "number": 652,
+    "name": "Mega Chile",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/652.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ch_mega.png",
+    "category": "General"
+  },
+  {
+    "number": 658,
+    "name": "MLB Network",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/658.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/mlbnetwork.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 659,
+    "name": "Channel 659",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/659.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 660,
+    "name": "MovieMax",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/660.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/moviemax.png",
+    "category": "General"
+  },
+  {
+    "number": 661,
+    "name": "Movistar Acción HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/661.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/movistar_accion_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 662,
+    "name": "Movistar Cine Español HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/662.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/movistar_cinen_hd.png",
+    "category": "Cine"
+  },
+  {
+    "number": 663,
+    "name": "Movistar Comedia HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/663.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/movistar_comedia_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 664,
+    "name": "Movistar Deportes 2 HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/664.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/movistar_deportes2_hd.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 665,
+    "name": "Movistar Deportes HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/665.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/movistar_deportes_hd.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 666,
+    "name": "Movistar Deportes Sur",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/666.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/movistar_deportes_sur.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 667,
+    "name": "Movistar Estrenos HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/667.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/movistar_estrenos_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 668,
+    "name": "Movistar LaLiga",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/668.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/movistar_laliga.png",
+    "category": "General"
+  },
+  {
+    "number": 669,
+    "name": "Movistar Series Hd",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/669.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/movistar_series_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 673,
+    "name": "MTV",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/673.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/mtv.png",
+    "category": "General"
+  },
+  {
+    "number": 674,
+    "name": "MTV España",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/674.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/mtv_es.png",
+    "category": "España"
+  },
+  {
+    "number": 675,
+    "name": "Channel 675",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/675.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 679,
+    "name": "Channel 679",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/679.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 680,
+    "name": "MTV HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/680.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/mtv_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 683,
+    "name": "MTV Live",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/683.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/mtvlive.png",
+    "category": "General"
+  },
+  {
+    "number": 684,
+    "name": "Channel 684",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/684.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 685,
+    "name": "Channel 685",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/685.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 686,
+    "name": "Channel 686",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/686.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 688,
+    "name": "Channel 688",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/688.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 689,
+    "name": "Channel 689",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/689.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 690,
+    "name": "Multimedios",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/690.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/multimedios.png",
+    "category": "General"
+  },
+  {
+    "number": 691,
+    "name": "Multimedios Monterrey",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/691.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/multimediosmonterrey.png",
+    "category": "General"
+  },
+  {
+    "number": 692,
+    "name": "Channel 692",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/692.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 693,
+    "name": "Multimedios HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/693.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/multimedios_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 694,
+    "name": "Channel 694",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/694.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 696,
+    "name": "Channel 696",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/696.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 698,
+    "name": "Channel 698",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/698.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 699,
+    "name": "Channel 699",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/699.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 706,
+    "name": "National Geographic HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/706.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/natgeo_hd.png",
+    "category": "Cultura"
+  },
+  {
+    "number": 710,
+    "name": "NBA TV",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/710.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/nba.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 711,
+    "name": "Channel 711",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/711.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 712,
+    "name": "NBC Golf",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/712.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/nbcgolf.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 713,
+    "name": "Channel 713",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/713.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 714,
+    "name": "Eventos 1",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/714.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/eventos1.png",
+    "category": "General"
+  },
+  {
+    "number": 717,
+    "name": "Channel 717",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/717.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 720,
+    "name": "NFL Network",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/720.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/nflnow.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 723,
+    "name": "NHL Network",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/723.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/nhl.png",
+    "category": "General"
+  },
+  {
+    "number": 724,
+    "name": "Channel 724",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/724.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 726,
+    "name": "Nick 2 HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/726.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/nick2_hd.png",
+    "category": "Infantiles"
+  },
+  {
+    "number": 728,
+    "name": "Nickelodeon HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/728.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/nick_hd.png",
+    "category": "Infantiles"
+  },
+  {
+    "number": 732,
+    "name": "Nick Jr.",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/732.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/nickjr.png",
+    "category": "Infantiles"
+  },
+  {
+    "number": 740,
+    "name": "Channel 740",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/740.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 746,
+    "name": "Channel 746",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/746.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 752,
+    "name": "Channel 752",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/752.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 753,
+    "name": "Paramount Network HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/753.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/paramount_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 754,
+    "name": "Paramount Network España HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/754.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/paramount_es_hd.png",
+    "category": "España"
+  },
+  {
+    "number": 757,
+    "name": "Pasiones Hd",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/757.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/pasiones_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 765,
+    "name": "Latina Televisión Perú",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/765.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/pe_latina.png",
+    "category": "General"
+  },
+  {
+    "number": 774,
+    "name": "Channel 774",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/774.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 775,
+    "name": "Channel 775",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/775.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 779,
+    "name": "Channel 779",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/779.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 785,
+    "name": "RCN Televisión",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/785.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/rcn.png",
+    "category": "General"
+  },
+  {
+    "number": 788,
+    "name": "RCN Novelas",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/788.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/rcnnovelas.png",
+    "category": "General"
+  },
+  {
+    "number": 791,
+    "name": "Retromusic",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/791.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/retromusic.png",
+    "category": "General"
+  },
+  {
+    "number": 792,
+    "name": "Ritmosonlatino",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/792.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ritmosonlatino.png",
+    "category": "General"
+  },
+  {
+    "number": 801,
+    "name": "Channel 801",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/801.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 803,
+    "name": "Channel 803",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/803.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 810,
+    "name": "Channel 810",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/810.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 811,
+    "name": "Sky Sports Premier League HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/811.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/skysportspremier_hd.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 815,
+    "name": "Sony",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/815.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/sony.png",
+    "category": "General"
+  },
+  {
+    "number": 818,
+    "name": "Sony Hd",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/818.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/sony_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 823,
+    "name": "Space",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/823.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/space.png",
+    "category": "Cine"
+  },
+  {
+    "number": 825,
+    "name": "Space",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/825.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/space.png",
+    "category": "Cine"
+  },
+  {
+    "number": 826,
+    "name": "Space",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/826.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/space.png",
+    "category": "Cine"
+  },
+  {
+    "number": 832,
+    "name": "Star Channel",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/832.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/star.png",
+    "category": "General"
+  },
+  {
+    "number": 834,
+    "name": "Star Channel HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/834.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/star_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 835,
+    "name": "Star Channel",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/835.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/star.png",
+    "category": "General"
+  },
+  {
+    "number": 836,
+    "name": "Channel 836",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/836.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 837,
+    "name": "Channel 837",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/837.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 839,
+    "name": "Starz Cinema",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/839.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/starzcinema.png",
+    "category": "Cine"
+  },
+  {
+    "number": 840,
+    "name": "Channel 840",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/840.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 841,
+    "name": "Starz Encore Action",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/841.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/starzencoreaction.png",
+    "category": "General"
+  },
+  {
+    "number": 842,
+    "name": "Channel 842",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/842.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 843,
+    "name": "Starz Encore Family",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/843.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/starzencorefamily.png",
+    "category": "General"
+  },
+  {
+    "number": 844,
+    "name": "Starz East",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/844.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/starzeast.png",
+    "category": "General"
+  },
+  {
+    "number": 845,
+    "name": "Studio Universal",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/845.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/studiouniversal.png",
+    "category": "Cine"
+  },
+  {
+    "number": 848,
+    "name": "Studio Universal HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/848.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/studiouniversal_hd.png",
+    "category": "Cine"
+  },
+  {
+    "number": 853,
+    "name": "Syfy",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/853.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/syfy.png",
+    "category": "General"
+  },
+  {
+    "number": 856,
+    "name": "Syfy España HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/856.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/syfy_es_hd.png",
+    "category": "España"
+  },
+  {
+    "number": 857,
+    "name": "Syfy HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/857.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/syfy_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 859,
+    "name": "Tbsveryfunny",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/859.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/tbsveryfunny.png",
+    "category": "General"
+  },
+  {
+    "number": 860,
+    "name": "Channel 860",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/860.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 861,
+    "name": "TC Televisión Ecuador",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/861.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ec_tc.png",
+    "category": "General"
+  },
+  {
+    "number": 862,
+    "name": "TCM",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/862.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/tcm.png",
+    "category": "General"
+  },
+  {
+    "number": 866,
+    "name": "Tele",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/866.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ur_tele.png",
+    "category": "General"
+  },
+  {
+    "number": 867,
+    "name": "Teleamazonas",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/867.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ec_teleamazonas.png",
+    "category": "General"
+  },
+  {
+    "number": 871,
+    "name": "Telecinco España HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/871.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/telecinco_hd.png",
+    "category": "España"
+  },
+  {
+    "number": 872,
+    "name": "Teledeporte España HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/872.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/teledeporte_es_hd.png",
+    "category": "España"
+  },
+  {
+    "number": 878,
+    "name": "Telehit Hd",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/878.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/telehit_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 879,
+    "name": "Telehit Hd",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/879.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/telehit_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 883,
+    "name": "Channel 883",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/883.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 884,
+    "name": "Telemedellín",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/884.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/co_telemedellin.png",
+    "category": "General"
+  },
+  {
+    "number": 888,
+    "name": "Telemundo",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/888.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/telemundo.png",
+    "category": "General"
+  },
+  {
+    "number": 889,
+    "name": "Telemundo",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/889.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/telemundo.png",
+    "category": "General"
+  },
+  {
+    "number": 900,
+    "name": "Channel 900",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/900.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 901,
+    "name": "Channel 901",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/901.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 902,
+    "name": "Channel 902",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/902.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 904,
+    "name": "Channel 904",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/904.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 905,
+    "name": "Tigo Sports Bolivia",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/905.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/tigosportsbo.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 906,
+    "name": "Tigo Sports Panamá",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/906.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/tigosportspa.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 911,
+    "name": "TLC",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/911.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/tlc.png",
+    "category": "General"
+  },
+  {
+    "number": 912,
+    "name": "TLNovelas",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/912.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/tlnovelas.png",
+    "category": "General"
+  },
+  {
+    "number": 913,
+    "name": "Channel 913",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/913.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 915,
+    "name": "TLNovelas",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/915.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/tlnovelas.png",
+    "category": "General"
+  },
+  {
+    "number": 916,
+    "name": "Channel 916",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/916.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 917,
+    "name": "Channel 917",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/917.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 918,
+    "name": "Channel 918",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/918.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 920,
+    "name": "Channel 920",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/920.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 921,
+    "name": "TNT",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/921.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/tnt.png",
+    "category": "General"
+  },
+  {
+    "number": 925,
+    "name": "Channel 925",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/925.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 926,
+    "name": "TNT HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/926.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/tnt_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 927,
+    "name": "TNT España HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/927.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/tnt_es_hd.png",
+    "category": "España"
+  },
+  {
+    "number": 929,
+    "name": "TNT Series",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/929.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/tntseries.png",
+    "category": "General"
+  },
+  {
+    "number": 932,
+    "name": "Channel 932",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/932.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 933,
+    "name": "TNT Series HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/933.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/tntseries_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 943,
+    "name": "Canal Trece Colombia",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/943.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/co_trece.png",
+    "category": "General"
+  },
+  {
+    "number": 949,
+    "name": "truTV",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/949.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/trutv.png",
+    "category": "General"
+  },
+  {
+    "number": 950,
+    "name": "Channel 950",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/950.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 951,
+    "name": "Channel 951",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/951.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 952,
+    "name": "TUDN",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/952.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/tudn.png",
+    "category": "General"
+  },
+  {
+    "number": 953,
+    "name": "TUDN HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/953.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/tudn_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 954,
+    "name": "TUDN HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/954.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/tudn_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 955,
+    "name": "TUDN HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/955.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/tudn_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 956,
+    "name": "TUDN USA",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/956.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/tudn_usa.png",
+    "category": "General"
+  },
+  {
+    "number": 957,
+    "name": "TUDN USA HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/957.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/tudn_usa_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 958,
+    "name": "TV Chile",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/958.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ch_tvchile.png",
+    "category": "General"
+  },
+  {
+    "number": 965,
+    "name": "TVC Deportes",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/965.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/tvcdeportes.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 966,
+    "name": "Channel 966",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/966.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 975,
+    "name": "TyC Sports",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/975.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/tycsports.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 976,
+    "name": "Channel 976",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/976.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 977,
+    "name": "Channel 977",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/977.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 978,
+    "name": "Unicable",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/978.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/unicable.png",
+    "category": "General"
+  },
+  {
+    "number": 980,
+    "name": "Unicable",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/980.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/unicable.png",
+    "category": "General"
+  },
+  {
+    "number": 981,
+    "name": "Unicable HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/981.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/unicable_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 982,
+    "name": "UniMás",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/982.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/unimas.png",
+    "category": "General"
+  },
+  {
+    "number": 984,
+    "name": "Universal Channel",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/984.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/universal.png",
+    "category": "General"
+  },
+  {
+    "number": 988,
+    "name": "Universal Cinema HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/988.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/universal_cinema_hd.png",
+    "category": "Cine"
+  },
+  {
+    "number": 992,
+    "name": "Universal Comedy HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/992.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/universal_comedy_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 996,
+    "name": "Universal Crime HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/996.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/universal_crime_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 998,
+    "name": "Universal Channel",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/998.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/universal.png",
+    "category": "General"
+  },
+  {
+    "number": 1003,
+    "name": "Universal Premiere HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1003.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/universal_premiere_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 1006,
+    "name": "Universal Reality Hd",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1006.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/universal_reality_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 1009,
+    "name": "Univision",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1009.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/univision.png",
+    "category": "General"
+  },
+  {
+    "number": 1010,
+    "name": "Channel 1010",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1010.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1012,
+    "name": "Channel 1012",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1012.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1013,
+    "name": "Univisiontlnovelas",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1013.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/univisiontlnovelas.png",
+    "category": "General"
+  },
+  {
+    "number": 1014,
+    "name": "Canal 1 (Colombia)",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1014.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/co_uno.png",
+    "category": "General"
+  },
+  {
+    "number": 1015,
+    "name": "Vamos Hd",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1015.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/vamos_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 1016,
+    "name": "Channel 1016",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1016.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1017,
+    "name": "Channel 1017",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1017.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1028,
+    "name": "Vtv",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1028.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ur_vtv.png",
+    "category": "General"
+  },
+  {
+    "number": 1030,
+    "name": "WAPA TV",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1030.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/wapa.png",
+    "category": "General"
+  },
+  {
+    "number": 1032,
+    "name": "Warner Channel",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1032.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/warnerchannel.png",
+    "category": "General"
+  },
+  {
+    "number": 1034,
+    "name": "Warner Channel HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1034.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/warnerchannel_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 1038,
+    "name": "Channel 1038",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1038.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1039,
+    "name": "Win Sports",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1039.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/winsports.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 1040,
+    "name": "Win Sports+ HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1040.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/winsportsplus_hd.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 1041,
+    "name": "Win Sports+",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1041.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/winsportsplus.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 1042,
+    "name": "Win Sports+",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1042.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/winsportsplus.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 1043,
+    "name": "Channel 1043",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1043.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1044,
+    "name": "Win Sports HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1044.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/winsports_hd.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 1047,
+    "name": "Channel 1047",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1047.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1048,
+    "name": "Channel 1048",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1048.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1049,
+    "name": "Channel 1049",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1049.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1050,
+    "name": "Channel 1050",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1050.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1056,
+    "name": "Claro Sports 3 HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1056.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/clarosports3_hd.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 1057,
+    "name": "Eventos 1",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1057.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/eventos1.png",
+    "category": "General"
+  },
+  {
+    "number": 1058,
+    "name": "Channel 1058",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1058.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1059,
+    "name": "Channel 1059",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1059.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1060,
+    "name": "GOLTV Ecuador",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1060.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/goltvec.png",
+    "category": "General"
+  },
+  {
+    "number": 1061,
+    "name": "Channel 1061",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1061.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1062,
+    "name": "Channel 1062",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1062.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1063,
+    "name": "ATV Perú HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1063.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/pe_atv_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 1064,
+    "name": "Channel 1064",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1064.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1065,
+    "name": "Canal N Perú",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1065.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/pe_canaln.png",
+    "category": "General"
+  },
+  {
+    "number": 1066,
+    "name": "Channel 1066",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1066.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1067,
+    "name": "Channel 1067",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1067.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1070,
+    "name": "Liga 1 Max Perú HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1070.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/pe_liga1max_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 1071,
+    "name": "Channel 1071",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1071.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1072,
+    "name": "Channel 1072",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1072.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1073,
+    "name": "Teletica Canal 7 (Costa Rica)",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1073.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/cr_teletica.png",
+    "category": "General"
+  },
+  {
+    "number": 1074,
+    "name": "Channel 1074",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1074.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1075,
+    "name": "Canal 2 Nicaragua",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1075.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ni_canal2.png",
+    "category": "General"
+  },
+  {
+    "number": 1076,
+    "name": "Canal 10 Nicaragua HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1076.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ni_canal10_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 1077,
+    "name": "Tigo Sports Costa Rica HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1077.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/cr_tigosports_hd.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 1078,
+    "name": "Canal 2 El Salvador",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1078.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/sa_canal2.png",
+    "category": "General"
+  },
+  {
+    "number": 1079,
+    "name": "Sky Sports LaLiga HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1079.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/skysportslaliga_hd.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 1080,
+    "name": "Channel 1080",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1080.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1081,
+    "name": "Channel 1081",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1081.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1082,
+    "name": "Channel 1082",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1082.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1083,
+    "name": "Canal 12 El Salvador",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1083.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/sa_canal12.png",
+    "category": "General"
+  },
+  {
+    "number": 1084,
+    "name": "Repretel Canal 6 (Costa Rica)",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1084.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/cr_canal6.png",
+    "category": "General"
+  },
+  {
+    "number": 1085,
+    "name": "Dreamworks",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1085.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/dreamworks.png",
+    "category": "General"
+  },
+  {
+    "number": 1089,
+    "name": "Guatevisión",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1089.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/gt_guatevision.png",
+    "category": "General"
+  },
+  {
+    "number": 1090,
+    "name": "RTS Ecuador",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1090.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ec_rts.png",
+    "category": "General"
+  },
+  {
+    "number": 1091,
+    "name": "Deutsche Welle Español",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1091.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/dw.png",
+    "category": "General"
+  },
+  {
+    "number": 1092,
+    "name": "Enlace",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1092.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/enlace.png",
+    "category": "General"
+  },
+  {
+    "number": 1093,
+    "name": "Ewtn",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1093.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ewtn.png",
+    "category": "General"
+  },
+  {
+    "number": 1095,
+    "name": "Itvdeportes",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1095.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/itvdeportes.png",
+    "category": "General"
+  },
+  {
+    "number": 1097,
+    "name": "Mariavision",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1097.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/mariavision.png",
+    "category": "General"
+  },
+  {
+    "number": 1098,
+    "name": "Channel 1098",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1098.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1100,
+    "name": "Movistar LaLiga",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1100.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/movistar_laliga.png",
+    "category": "General"
+  },
+  {
+    "number": 1101,
+    "name": "HBO Mundi",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1101.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/hbomundi.png",
+    "category": "Cine"
+  },
+  {
+    "number": 1102,
+    "name": "Channel 1102",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1102.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1103,
+    "name": "TV Globo (Brasil)",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1103.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/br_globo.png",
+    "category": "General"
+  },
+  {
+    "number": 1108,
+    "name": "Telemundo Internacional",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1108.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/telemundointernacional.png",
+    "category": "General"
+  },
+  {
+    "number": 1112,
+    "name": "ESPN México",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1112.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/espnmx.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 1114,
+    "name": "Fox Deportes HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1114.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/foxdeportes_hd.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 1115,
+    "name": "América TV (Perú)",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1115.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/pe_america.png",
+    "category": "General"
+  },
+  {
+    "number": 1116,
+    "name": "ViX Deportes 1",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1116.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/vixdeportes1.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 1117,
+    "name": "RCN Televisión",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1117.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/rcn.png",
+    "category": "General"
+  },
+  {
+    "number": 1118,
+    "name": "Channel 1118",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1118.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1119,
+    "name": "Channel 1119",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1119.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1120,
+    "name": "Atv Hd",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1120.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/atv_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 1121,
+    "name": "Eventos 6",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1121.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/eventos6.png",
+    "category": "General"
+  },
+  {
+    "number": 1122,
+    "name": "Channel 1122",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1122.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1124,
+    "name": "Sky Sports Bundesliga",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1124.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/skysportsbundesliga.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 1125,
+    "name": "GOLTV España",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1125.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/goltv_es.png",
+    "category": "España"
+  },
+  {
+    "number": 1126,
+    "name": "DAZN 2",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1126.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/dazn2.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 1129,
+    "name": "Channel 1129",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1129.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1130,
+    "name": "Eventos 6 Premium",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1130.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/eventos6_premium.png",
+    "category": "General"
+  },
+  {
+    "number": 1133,
+    "name": "El Canal del Fútbol (Ecuador)",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1133.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/ec_canaldelfutbol.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 1134,
+    "name": "Eventos 6",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1134.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/eventos6.png",
+    "category": "General"
+  },
+  {
+    "number": 1136,
+    "name": "ViX Deportes 2",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1136.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/vixdeportes2.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 1137,
+    "name": "ViX Deportes 4",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1137.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/vixdeportes4.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 1138,
+    "name": "ViX Deportes 7",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1138.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/vixdeportes7.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 1139,
+    "name": "Eventos 1",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1139.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/eventos1.png",
+    "category": "General"
+  },
+  {
+    "number": 1140,
+    "name": "Channel 1140",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1140.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1141,
+    "name": "DSports 2 HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1141.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/dsports2_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 1142,
+    "name": "Channel 1142",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1142.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1145,
+    "name": "Channel 1145",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1145.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1146,
+    "name": "RCN Televisión",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1146.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/rcn.png",
+    "category": "General"
+  },
+  {
+    "number": 1147,
+    "name": "Eventos 2",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1147.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/eventos2.png",
+    "category": "General"
+  },
+  {
+    "number": 1148,
+    "name": "DAZN 1 HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1148.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/dazn1_hd.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 1149,
+    "name": "Novelisima",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1149.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/novelisima.png",
+    "category": "General"
+  },
+  {
+    "number": 1150,
+    "name": "Novelisima Hd",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1150.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/novelisima_hd.png",
+    "category": "General"
+  },
+  {
+    "number": 1151,
+    "name": "Eventos 3",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1151.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/eventos3.png",
+    "category": "General"
+  },
+  {
+    "number": 1152,
+    "name": "ViX Deportes 5",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1152.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/vixdeportes5.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 1153,
+    "name": "Cine Dinamita",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1153.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/cinemadinamita.png",
+    "category": "Cine"
+  },
+  {
+    "number": 1154,
+    "name": "Cine Dinamita",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1154.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/cinemadinamita.png",
+    "category": "Cine"
+  },
+  {
+    "number": 1155,
+    "name": "Channel 1155",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1155.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1156,
+    "name": "Channel 1156",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1156.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1157,
+    "name": "Channel 1157",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1157.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1158,
+    "name": "RPC TV Panamá",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1158.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/rpc.png",
+    "category": "General"
+  },
+  {
+    "number": 1167,
+    "name": "ESPN Colombia HD",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1167.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/espn_co_hd.png",
+    "category": "Deportes"
+  },
+  {
+    "number": 1168,
+    "name": "Rick and Morty 24/7",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1168.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/rickymorty.png",
+    "category": "24/7"
+  },
+  {
+    "number": 1169,
+    "name": "Kenanykel",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1169.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/kenanykel.png",
+    "category": "General"
+  },
+  {
+    "number": 1170,
+    "name": "Channel 1170",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1170.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1174,
+    "name": "Channel 1174",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1174.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1175,
+    "name": "Channel 1175",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1175.m3u8",
+    "logo": "",
+    "category": "General"
+  },
+  {
+    "number": 1176,
+    "name": "Tntnovelas",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1176.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/tntnovelas.png",
+    "category": "General"
+  },
+  {
+    "number": 1177,
+    "name": "Eventos 1 Premium",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1177.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/eventos1_premium.png",
+    "category": "General"
+  },
+  {
+    "number": 1178,
+    "name": "Eventos 6",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1178.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/eventos6.png",
+    "category": "General"
+  },
+  {
+    "number": 1179,
+    "name": "Evento",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1179.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/evento.png",
+    "category": "General"
+  },
+  {
+    "number": 1181,
+    "name": "Lagranjavip",
+    "url": "http://m3u.tvcluboficial.com/free/ReachBot/Kip/1181.m3u8",
+    "logo": "https://raw.githubusercontent.com/tv-logo/tv-logos/main/countries/united-states/lagranjavip.png",
+    "category": "General"
+  }
+]

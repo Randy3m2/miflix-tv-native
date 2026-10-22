@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP73: 477 entradas adicionales integradas en Tirso TV, conservando el catálogo anterior y sus enlaces." to "RP73: 477 additional entries integrated into Tirso TV, preserving the existing catalog and links.",
         "RP72: Sport Recaps y grabaciones deportivas con pausa, barra de progreso y saltos de diez segundos, sin cambiar el control de los directos." to "RP72: Sport Recaps and sports recordings get pause, a timeline and ten-second skips while live channel controls stay separate.",
         "RP71: menú Seguir viendo renovado; Nauta Source en Others; Nuvio Test retirado; deportes con QR, fuente premium predeterminada y hasta cinco intentos automáticos." to "RP71: refreshed Continue Watching menu; Nauta Source folder in Others; Nuvio Test removed; sports QR, default premium source and up to five automatic attempts.",
         "RP70: evita bloquear el foco al entrar en filas diferidas del Home; cierre de Más opciones con una X sin texto." to "RP70: avoids blocking focus when entering lazy Home rows; More options closes with an icon-only X.",

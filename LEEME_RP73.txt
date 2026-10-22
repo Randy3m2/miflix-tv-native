@@ -1,0 +1,10 @@
+BruniO RP73 — versionCode 22177
+Aplicar encima de RP72, respetando rutas.
+
+477 entradas nuevas, mezcladas con Tirso TV. Mismo proveedor, IDs, panel, favoritos, eliminacion y Split Screen existentes. No se reemplaza tvclub_channels_rp50.json ni channel_logos_rp50.json: los 220 anteriores permanecen intactos en tu proyecto, incluidos los cinco ausentes de la lista nueva. Total esperado con ese catalogo: 697. Los IDs repetidos conservan primero la entrada original. Las ediciones y eliminaciones locales conservan su prioridad.
+
+Los nuevos se asignan a las categorias existentes por grupo/nombre; sin identificacion suficiente quedan en General. 179 entradas nuevas tienen nombre generico en el archivo original: se conserva, sin inventar nombres. Logos: URLs suministradas en la M3U, no verificados por red. No se agregan imagenes ficticias ni se cambian los logos anteriores.
+
+Validacion: 477 numeros unicos, ningun numero de los 220 anteriores incluido en el archivo adicional; carga por el mismo prefijo Tirso y deduplicacion existente. No se verifico reproduccion de los enlaces.
+
+Este ZIP contiene codigo preparado para compilar en tu proyecto, no APK. El entorno no tiene Android SDK configurado: falta compilar y probar en TV. Sin SQL, Supabase ni Vercel.

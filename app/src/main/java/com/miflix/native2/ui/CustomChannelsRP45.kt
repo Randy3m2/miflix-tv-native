@@ -57,7 +57,7 @@ internal object CustomChannelsRP45 {
     private fun bundled(context:Context):List<CustomChannelRP45> {
         included?.let {return it}
         return try {
-            listOf("tvclub_channels_rp50.json" to FACTORY,"iptv_plus_rp61.json" to PLUS).flatMap { (asset,prefix) ->
+            listOf("tvclub_channels_rp50.json" to FACTORY,"tirso_additions_rp73.json" to FACTORY,"iptv_plus_rp61.json" to PLUS).flatMap { (asset,prefix) ->
                 val a=runCatching {JSONArray(context.assets.open(asset).bufferedReader().use {it.readText()})}.getOrElse {JSONArray()}
                 (0 until a.length()).mapNotNull {i ->
                     val o=a.getJSONObject(i);val n=o.optInt("number");val name=o.optString("name");val url=o.optString("url")

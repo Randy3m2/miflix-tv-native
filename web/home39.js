@@ -1,7 +1,7 @@
 'use strict';
 // Home pagination is by shelves; search and My List retain their title pagination.
 const home39={unsupported:false,key:'',shelves:[],next:0,more:true,busy:false,seen:new Map()};
-function isHome39(){return !home39.unsupported&&view==='explore'&&!$('search').value.trim()&&!$('genre').value&&!$('year').value&&!selectedPerson&&!$('cinemaSearch38')?.open&&['popularity.desc','added.desc'].includes($('sort').value);}
+function isHome39(){return view==='explore'&&!$('search').value.trim()&&!$('genre').value&&!$('year').value&&!selectedPerson&&!$('cinemaSearch38')?.open&&['popularity.desc','added.desc'].includes($('sort').value);}
 function homeSeed39(){return Object.entries(recentProgress).filter(([id,p])=>/^tmdb:(movie|series):[1-9][0-9]*$/.test(id)&&(Number(p.position)>=5||Number(p.percent)>0)).sort((a,b)=>Number(b[1].updatedAt||0)-Number(a[1].updatedAt||0))[0]?.[0]||'';}
 function homeKey39(){return [session?.user.id,selected(),language,activeProvider,filter,$('region').value,homeSeed39()].join('|');}
 function homeFresh39(data,key){
@@ -22,7 +22,7 @@ load=async function(reset){
  if(reset||key!==home39.key){home39.key=key;home39.shelves=[];home39.next=0;home39.more=true;items=[];render();}
  $('status').textContent=cinemaWords('Preparando tu inicio…','Preparing your home…');
  try{
-  const data=await catalog({action:'home',offset:home39.next,provider:activeProvider,type:filter,region:$('region').value,seed:homeSeed39()});
+  const data=await requestHomeShelves41({action:'home',offset:home39.next,provider:activeProvider,type:filter,region:$('region').value,seed:homeSeed39()});
   if(ticket!==generation||homeKey39()!==key||!isHome39())return;
   if(!Array.isArray(data.shelves))throw Error(cinemaWords('Actualiza la función brunio-catalog para cargar el nuevo inicio.','Update brunio-catalog to load the new home.'));
   if(home39.next===0)homeFresh39(data,key);
@@ -32,13 +32,6 @@ load=async function(reset){
   $('status').textContent=data.partial?cinemaWords('Algunas filas no respondieron. Vuelve a cargar el inicio para reintentar.','Some rows did not respond. Reload home to retry.'):'';
   loading=false;render();
  }catch(e){if(ticket===generation){
-  if(/^invalid action$/i.test(String(e?.message||'').trim())){
-   // Older deployed functions support discover but do not yet support home.
-   // Detect once per page; do not hide authentication/network errors or repeat failed requests.
-   home39.unsupported=true;home39.key='';home39.shelves=[];home39.busy=false;loading=false;
-   $('more').textContent=t('Ver más');$('more').disabled=false;
-   return await homeLoad39(true);
-  }
   $('status').textContent=e.message;loading=false;home39.more=true;render();
  }}
  finally{if(ticket===generation){home39.busy=false;loading=false;$('more').disabled=false;}}
@@ -51,7 +44,10 @@ render=function(){
  for(const shelf of home39.shelves){
   const section=el('section',undefined,'cinema-shelf'+(shelf.ranked?' home-top10':'')),heading=el('div',undefined,'cinema-shelf-heading'),rail=el('div',undefined,'cinema-rail'),wrap=el('div',undefined,'cinema-rail-wrap');
   heading.append(el('h2',shelf.title));if(shelf.ranked){const note=el('small',cinemaWords('Popularidad de TMDB','TMDB popularity'),'home-ranking-note');heading.append(note);}
-  shelf.items.forEach((item,index)=>{const node=card(item);if(shelf.ranked){node.classList.add('home-ranked-card');const number=el('span',String(index+1),'home-rank');number.setAttribute('aria-hidden','true');node.prepend(number);node.setAttribute('aria-label',String(index+1)+'. '+item.title);}
+  shelf.items.forEach((item,index)=>{const node=card(item);if(shelf.ranked){node.classList.add('home-ranked-card');
+    const artwork=node.querySelector('.poster img'),portrait=safeImage(item.poster);
+    if(artwork&&portrait){artwork.src=portrait;artwork.onerror=()=>{artwork.onerror=null;const fallback=safeImage(item.backdrop);if(fallback)artwork.src=fallback;};}
+const number=el('span',String(index+1),'home-rank');number.setAttribute('aria-hidden','true');node.prepend(number);node.setAttribute('aria-label',String(index+1)+'. '+item.title);}
    let badge=item.freshness==='recent-release'?cinemaWords('Recién estrenada','Recently released'):item.freshness==='new-season'?cinemaWords('Nueva temporada','New season'):item.freshness==='new-episode'?cinemaWords('Nuevo episodio','New episode'):home39.seen.has(item.cloudId)?cinemaWords('Recién añadido','Recently added'):'';
    if(badge){const tag=el('span',badge,'home-freshness');if(!item.freshness)tag.title=cinemaWords('Nuevo en tus recomendaciones de BruniO','New in your BruniO recommendations');node.querySelector('.poster')?.append(tag);}rail.append(node);});
   wrap.append(rail);section.append(heading,wrap);cinemaRails.append(section);cinemaRailCleanup.push(cinemaInlineNavigation(rail,wrap));

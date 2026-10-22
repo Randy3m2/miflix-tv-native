@@ -37,3 +37,15 @@ body>header.cinema-header{display:flex}
 @media(prefers-reduced-motion:reduce){.home-skeleton-row{animation:none}}
 
 @media(min-width:901px){body>header.cinema-header .profile-menu39 .header-menu-panel .preferences{display:flex;flex-direction:column;gap:4px;align-items:stretch}body>header.cinema-header .profile-menu39 .header-menu-panel{background:#222;padding:16px 12px;gap:0}body>header.cinema-header .profile-menu39 .preferences>button,body>header.cinema-header .profile-menu39 .preferences>select{font-size:16px;min-height:44px;width:100%;padding:10px 12px}}
+
+/* v41: portrait Top 10, oversized outlined ranks behind the artwork. */
+.home-top10 .cinema-rail{gap:16px;padding-top:5px;padding-bottom:8px;align-items:flex-end}
+.home-top10 .cinema-rail>.home-ranked-card{flex:0 0 calc((100% - 64px)/5);padding:0;position:relative;min-width:0;isolation:isolate;background:none;border:0;box-shadow:none;overflow:visible}
+.home-top10 .home-ranked-card .poster{display:block;position:relative;z-index:2;aspect-ratio:2/3;width:57%;height:auto;margin-left:auto;border-radius:9px;overflow:hidden;padding:0;background:#202020}
+.home-top10 .home-ranked-card .poster img{width:100%;height:100%;object-fit:cover;aspect-ratio:2/3}
+.home-top10 .home-ranked-card>h3,.home-top10 .home-ranked-card>p{display:none}
+.home-top10 .home-rank{position:absolute;left:0;bottom:-.035em;z-index:1;line-height:.86;font-family:Arial,Helvetica,sans-serif;font-weight:900;font-size:clamp(150px,18.5vw,340px);font-style:normal;letter-spacing:-.085em;color:#141414;-webkit-text-stroke:3px #777;pointer-events:none}
+.home-top10 .home-ranked-card .save{z-index:3;right:7px;top:7px;opacity:0;transition:opacity .15s}.home-top10 .home-ranked-card:hover .save,.home-top10 .home-ranked-card:focus-within .save{opacity:1}
+.home-top10 .cinema-nav{top:5px;bottom:8px}.home-top10 .home-freshness{max-width:96%;font-size:clamp(9px,.9vw,13px);padding:4px 7px;border-radius:3px 3px 0 0}
+@media(max-width:1000px){.home-top10 .cinema-rail>.home-ranked-card{flex-basis:calc((100% - 32px)/3)}.home-top10 .home-rank{font-size:29vw}}
+@media(max-width:600px){.home-top10 .cinema-rail{gap:14px}.home-top10 .cinema-rail>.home-ranked-card{flex-basis:71%;padding:0}.home-top10 .home-rank{font-size:62vw;-webkit-text-stroke:2px #777}.home-top10 .home-ranked-card .poster{width:57%}.home-top10 .home-ranked-card .save{opacity:1}.home-top10 .home-freshness{font-size:10px}}

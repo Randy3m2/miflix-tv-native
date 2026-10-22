@@ -1,0 +1,22 @@
+BruniO Web v41 · Filas y Load more
+Aplicar sobre Web v40 conservando rutas. Solo web; no cambia TV.
+
+Se corrigió el fallback anterior, que volvía al catálogo paginado antiguo y reconstruía unas pocas filas al añadir títulos.
+
+Ahora, si Supabase aún no reconoce action=home:
+- Usa las acciones existentes discover/search/details para cargar filas independientes.
+- Carga 15 filas iniciales disponibles. Load more añade 6 filas nuevas, sin reconstruir ni sustituir el contenido de las anteriores; se puede repetir hasta agotar las secciones.
+- Mantiene plataforma, región y tipo en las consultas; omite filas sin resultados y busca otras disponibles.
+- Top 10 de películas y series separados, franquicias, géneros, años y selección según el historial cuando existe.
+- Excluye contenidos con fecha futura. No inventa etiquetas de episodios o temporadas nuevas cuando el servidor antiguo no da esa información.
+- Una sola detección de acción no soportada por página; hasta 3 solicitudes simultáneas; reutiliza la caché existente y no hace polling.
+
+INSTALAR
+Subir web/ y volver a desplegar Vercel. Después recargar la página para usar v41. No necesita desplegar Supabase para resolver este problema ni ejecutar SQL.
+Para reducir llamadas y obtener las etiquetas de nuevos episodios/temporadas, sigue siendo preferible desplegar brunio-catalog (index.ts + home.ts incluidos en v39/v40). Con el servidor nuevo, se conserva la ruta de una solicitud por lote de filas. Con el servidor antiguo, cada fila necesita su consulta, por lo que hay más invocaciones que en la ruta nueva.
+
+VERIFICACIÓN
+Prueba automatizada con servidor antiguo simulado: 15, 21, 27 filas; conservación de filas anteriores; IDs sin duplicados; paginación repetida hasta el final; plataforma/región; máximo de 3 consultas concurrentes; exclusión de estrenos futuros; errores de sesión sin fallback. Sintaxis JavaScript validada. Sin despliegue real ni prueba autenticada en producción desde aquí.
+
+DISEÑO TOP 10
+Póster vertical y número gigante delineado detrás, inspirado en la referencia; aplicado solo a las dos filas Top 10. Las otras filas conservan formato horizontal. Ranking por popularidad TMDB, no ranking oficial por país de Netflix. Etiquetas solo cuando hay datos; el diseño no genera estrenos ficticios.

@@ -51,6 +51,9 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         android.view.ContextThemeWrapper(baseContext,0).apply { applyOverrideConfiguration(config) }
     }
     CompositionLocalProvider(LocalCardFreshnessLoad provides {item: com.miflix.native2.model.MediaSummary -> state.requestCardFreshness(item)},LocalCardFreshness provides {item: com.miflix.native2.model.MediaSummary -> state.cardFreshness(item)},LocalPlayerMenuSide provides (state.screen==Screen.PLAYER || state.screen==Screen.MULTIVIEW),LocalContext provides localizedContext,LocalProfileManage provides {state.socialProfileEditor=true},LocalCastPair provides {state.localCastPairing=true},LocalTitleActions provides {item: com.miflix.native2.model.MediaSummary -> state.titleActions(item)}) {
+    val originalDensity=androidx.compose.ui.platform.LocalDensity.current
+    CompositionLocalProvider(LocalSimpleHome provides state.easyModeRP79,androidx.compose.ui.platform.LocalDensity provides
+        androidx.compose.ui.unit.Density(originalDensity.density,if(state.easyModeRP79) maxOf(originalDensity.fontScale,1.2f) else originalDensity.fontScale)) {
     MaterialTheme {
         var bootstrapped by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) {
@@ -63,8 +66,8 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             BruniOSplashScreen()
             return@MaterialTheme
         }
-        LaunchedEffect(bootstrapped, initialPartyCode) {
-            if (bootstrapped && !initialPartyCode.isNullOrBlank()) {
+        LaunchedEffect(bootstrapped, initialPartyCode,state.easyModeRP79) {
+            if (bootstrapped && !state.easyModeRP79 && !initialPartyCode.isNullOrBlank()) {
                 state.launch { state.joinWatchParty(initialPartyCode) }
             }
         }
@@ -99,9 +102,10 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             } else false
         }.pointerInput(Unit) {awaitPointerEventScope {while(true) {awaitPointerEvent(PointerEventPass.Initial);MenuActivity.touch()} }}) {
         navigationState.SaveableStateProvider("${state.session?.userId}:${state.activeProfile.id}:${state.screen.name}") {
-        val destination=if(state.kidsMode && state.screen !in setOf(Screen.HOME,Screen.SEARCH,Screen.MY_LIST,Screen.DETAILS,Screen.PROFILES,Screen.NOTIFICATIONS,Screen.PLAYER)) Screen.HOME else state.screen
+        val destination=if(state.easyModeRP79 && !com.miflix.native2.data.EasyModePolicyRP79.allowsScreen(state.screen.name)) Screen.HOME else if(state.kidsMode && state.screen !in setOf(Screen.HOME,Screen.SEARCH,Screen.MY_LIST,Screen.DETAILS,Screen.PROFILES,Screen.NOTIFICATIONS,Screen.PLAYER)) Screen.HOME else state.screen
         LaunchedEffect(destination,state.screen) {if(destination!=state.screen) state.screen=destination}
-        when (destination) {
+        if(state.easyModeRP79 && destination!=Screen.PLAYER) EasyScreenRP79(state,destination)
+        else when (destination) {
             Screen.SPLASH -> BruniOSplashScreen()
             Screen.HOME -> if(state.kidsMode) KidsHomeScreen(state) else HomeScreen(state) { state.screen = it }
             Screen.FRIENDS -> FriendsScreen(state)
@@ -150,13 +154,13 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 }
             }
         }
-        LiveScoreOverlayRP11(state)
+        if(!state.easyModeRP79) LiveScoreOverlayRP11(state)
         }
-        LaunchedEffect(bootstrapped,state.session?.userId,state.activeProfile.id) {
-            if(bootstrapped) runCatching { state.loadRatings() }.onFailure { state.error=it.message }
+        LaunchedEffect(bootstrapped,state.session?.userId,state.activeProfile.id,state.easyModeRP79) {
+            if(bootstrapped && !state.easyModeRP79) runCatching { state.loadRatings() }.onFailure { state.error=it.message }
         }
-        LaunchedEffect(bootstrapped, state.session?.userId, state.activeProfile.id, state.favorites.toList()) {
-            if(bootstrapped) while(true) {
+        LaunchedEffect(bootstrapped, state.session?.userId, state.activeProfile.id, state.favorites.toList(),state.easyModeRP79) {
+            if(bootstrapped && !state.easyModeRP79) while(true) {
                 runCatching { state.checkNotifications() }
                 delay(30*60*1000L)
             }
@@ -170,13 +174,13 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         // Event presence has no polling loop. App background/exit records a durable stop.
         LaunchedEffect(bootstrapped,state.session?.userId,state.appForeground,state.screen,state.miniPlayer,
             state.playerRequest?.playbackId,state.multiViewRequests.firstOrNull()?.playbackId,state.socialReadyPlaybackId,state.socialEndedPlaybackId,
-            state.watchParty?.roomCode) {
-            if(bootstrapped && !state.sessionNeedsSignIn) state.publishSocialPresenceEvent()
+            state.watchParty?.roomCode,state.easyModeRP79) {
+            if(bootstrapped && !state.easyModeRP79 && !state.sessionNeedsSignIn) state.publishSocialPresenceEvent()
         }
-        PresenceNetworkRecovery(state)
+        if(!state.easyModeRP79) PresenceNetworkRecovery(state)
         LaunchedEffect(bootstrapped,state.session?.userId,state.appForeground,
-            state.activeProfile.avatarValue,state.pendingPartyCode) {
-            if(bootstrapped && state.session!=null && state.appForeground) while(true) {
+            state.activeProfile.avatarValue,state.pendingPartyCode,state.easyModeRP79) {
+            if(bootstrapped && !state.easyModeRP79 && state.session!=null && state.appForeground) while(true) {
                 if(!state.sessionNeedsSignIn) {
                     try { state.refreshSocialActivity() }
                     catch(e: kotlinx.coroutines.CancellationException) { throw e }
@@ -186,8 +190,8 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 delay(5000)
             }
         }
-        LaunchedEffect(state.session?.userId, state.watchParty?.roomCode,state.appForeground) {
-            if (state.watchParty != null && state.appForeground) {
+        LaunchedEffect(state.session?.userId, state.watchParty?.roomCode,state.appForeground,state.easyModeRP79) {
+            if (!state.easyModeRP79 && state.watchParty != null && state.appForeground) {
                 var ticks = 0
                 while (state.watchParty != null && state.appForeground) {
                     if(!state.sessionNeedsSignIn) {
@@ -203,12 +207,12 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             Text(tr("Pulsa Atrás otra vez para salir","Press Back again to exit"),color=Color.White,fontSize=16.sp,
                 modifier=Modifier.padding(bottom=32.dp).background(Color(0xE6222222),RoundedCornerShape(16.dp)).padding(horizontal=24.dp,vertical=14.dp))
         }
-        if(state.changelogOpen) ChangelogDialog(state) {state.changelogOpen=false}
+        if(!state.easyModeRP79 && state.changelogOpen) ChangelogDialog(state) {state.changelogOpen=false}
         MenuScreensaver(state)
-        if(state.socialProfileEditor) SocialSettingsDialog(state) {state.socialProfileEditor=false}
-        LocalCastHost(state)
-        state.contextTitle?.let {title -> TitleActionsDialog(state,title,state.contextContinue) {state.contextTitle=null} }
-        state.sourceSelection?.let { SourcePickerOverlay(state, it) }
+        if(!state.easyModeRP79 && state.socialProfileEditor) SocialSettingsDialog(state) {state.socialProfileEditor=false}
+        if(!state.easyModeRP79) LocalCastHost(state)
+        state.contextTitle?.takeUnless {state.easyModeRP79}?.let {title -> TitleActionsDialog(state,title,state.contextContinue) {state.contextTitle=null} }
+        state.sourceSelection?.takeUnless {state.easyModeRP79}?.let { SourcePickerOverlay(state, it) }
 
         if(state.playbackLoading==null) state.busyMessage?.let {LoadingOverlay(it)}
         LaunchedEffect(state.error) {if(state.error!=null) state.abortPlaybackLoading()}
@@ -225,8 +229,10 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             },close={state.profilePhotoEditor=null},hidden=state.hiddenAvatars,remove=state::hideAvatar,restore=state::restoreAvatars,
                 customUpload={ state.profilePhotoEditor=null;state.launch { state.socialAction { state.startAvatarUpload(profile) } } })
         }
-        AvatarUploadDialog(state)
-        PartyRequestPopup(state)
+        if(!state.easyModeRP79) {
+            AvatarUploadDialog(state)
+            PartyRequestPopup(state)
+        }
         if(state.partyClosedNotice) {
             Dialog(onDismissRequest={ state.partyClosedNotice=false }) {
                 val confirm=remember { FocusRequester() }
@@ -267,6 +273,8 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
 
     }
 }
+}
+
 }
 
 @Composable

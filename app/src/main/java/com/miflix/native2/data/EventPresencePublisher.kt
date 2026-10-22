@@ -39,6 +39,16 @@ internal class EventPresencePublisher(context: Context, private val social: Soci
         retry(s)
     }
 
+    /** Finish one stop event when entering Easy mode, then suspend all retries. */
+    suspend fun stopForEasyMode(s: CloudSession?) {
+        worker?.cancel();worker?.join();worker=null;session=null
+        if(s!=null) {
+            queue(s,"","",0,0,null,System.currentTimeMillis())
+            try { kotlinx.coroutines.withTimeoutOrNull(4000L) { worker?.join() } }
+            finally { worker?.cancel();worker?.join();worker=null;session=null }
+        }
+    }
+
     fun retry(s: CloudSession) {
         session=s
         retrySignal++

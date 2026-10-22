@@ -51,7 +51,7 @@ internal data class BrowserChannelRP34(val provider:String,val value:LiveChannel
 
 /** Shared TV remote picker for player Channels and multiview add/replace. */
 @Composable
-internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select:(PlayerRequest)->Unit,close:()->Unit,compactRP43:Boolean=false) {
+internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select:(PlayerRequest)->Unit,close:()->Unit,compactRP43:Boolean=false,embeddedRP79:Boolean=false) {
     val current=state.playerRequest?.takeIf {it.live}
     val ownerRP40=remember {state.session?.userId to state.activeProfile.id}
     val restoredRP40=remember {LiveChannelNavigationRP40.matching(state,current)}
@@ -250,10 +250,10 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
             finally {if(stamp==generation) resolving=false}
         }
     }
-    PlayerMenuDialog(onDismissRequest=close,fullScreen=true) {
+    EasyBrowserFrameRP79(embeddedRP79,close) {
         BoxWithConstraints(Modifier.fillMaxSize().consumeOpeningPress()) {
-            val width=if(compactRP43) {if(maxWidth<700.dp) .82f else .60f} else if(maxWidth<700.dp) .82f else .64f
-            Row(Modifier.align(if(compactRP43) Alignment.CenterEnd else Alignment.CenterStart).fillMaxHeight(if(compactRP43) .88f else 1f).fillMaxWidth(width).widthIn(max=740.dp).clip(RoundedCornerShape(if(compactRP43) 18.dp else 0.dp)).background(Color(0xEF080808)),horizontalArrangement=Arrangement.spacedBy(1.dp)) {
+            val width=if(embeddedRP79) 1f else if(compactRP43) {if(maxWidth<700.dp) .82f else .60f} else if(maxWidth<700.dp) .82f else .64f
+            Row(Modifier.align(if(compactRP43) Alignment.CenterEnd else Alignment.CenterStart).fillMaxHeight(if(compactRP43) .88f else 1f).fillMaxWidth(width).widthIn(max=if(embeddedRP79) 2400.dp else 740.dp).clip(RoundedCornerShape(if(compactRP43) 18.dp else 0.dp)).background(Color(0xEF080808)),horizontalArrangement=Arrangement.spacedBy(1.dp)) {
                 Column(Modifier.weight(.36f).fillMaxHeight().onPreviewKeyEvent {event ->
                     if(event.nativeKeyEvent.keyCode==android.view.KeyEvent.KEYCODE_DPAD_RIGHT && displayed.isNotEmpty()) {
                         if(event.type==KeyEventType.KeyDown) scope.launch {
@@ -274,7 +274,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                         Text(catalogWarningRP39,color=Muted,fontSize=10.sp)
                         FocusButton(tr("Reintentar","Retry"),modifier=Modifier.fillMaxWidth()) {retry++}
                     }
-                    if(!state.kidsMode && state.partyRole!=PartyRole.GUEST) FocusButton(tr("+ Lista M3U","+ M3U playlist"),modifier=Modifier.fillMaxWidth()) {showM3URP61=true}
+                    if(!state.easyModeRP79 && !state.kidsMode && state.partyRole!=PartyRole.GUEST) FocusButton(tr("+ Lista M3U","+ M3U playlist"),modifier=Modifier.fillMaxWidth()) {showM3URP61=true}
                     FocusButton(tr("Cerrar","Close"),modifier=Modifier.fillMaxWidth(),onClick=close)
                 }
                 Column(Modifier.weight(.64f).fillMaxHeight().onPreviewKeyEvent {event ->
@@ -297,8 +297,8 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                             val favorite=entry.key in favoriteKeysRP74
                             BrowserChannelRowRP34(entry.value,entry.value.number.takeIf {it>0} ?: (index+1),favorite,
                                 playing=entry.provider==current?.liveProvider && entry.value.id==current?.liveChannelId,
-                                click={tune(entry)},favoriteHold={LiveLibrary.toggle(context,state,entry.provider,entry.value)},optionsHold={if(entry.provider==CustomChannelsRP45.provider) customManageRP48=localByIdRP74[entry.value.id] else genericOptionsRP54=entry},
-                                modifier=Modifier.then(if(index==0) Modifier.focusRequester(firstChannel) else Modifier)
+                                click={tune(entry)},favoriteHold={if(!state.easyModeRP79) LiveLibrary.toggle(context,state,entry.provider,entry.value)},optionsHold={if(state.easyModeRP79) Unit else if(entry.provider==CustomChannelsRP45.provider) customManageRP48=localByIdRP74[entry.value.id] else genericOptionsRP54=entry},
+                                easyRP79=state.easyModeRP79,modifier=Modifier.then(if(index==0) Modifier.focusRequester(firstChannel) else Modifier)
                                     .then(if(entry.provider==current?.liveProvider && entry.value.id==current?.liveChannelId) Modifier.focusRequester(playingChannelFocus) else Modifier).onPreviewKeyEvent {event ->
                                     false
                                 })
@@ -365,7 +365,7 @@ private fun BrowserCategoryRowRP34(title:String,selected:Boolean,modifier:Modifi
 }
 
 @Composable
-private fun BrowserChannelRowRP34(channel:LiveChannel,number:Int,favorite:Boolean,playing:Boolean,click:()->Unit,favoriteHold:()->Unit,optionsHold:()->Unit,modifier:Modifier=Modifier) {
+private fun BrowserChannelRowRP34(channel:LiveChannel,number:Int,favorite:Boolean,playing:Boolean,click:()->Unit,favoriteHold:()->Unit,optionsHold:()->Unit,easyRP79:Boolean=false,modifier:Modifier=Modifier) {
     var focused by remember(channel.id) {mutableStateOf(false)}
     Row(modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(if(focused) Color(0xFF292929) else Color.Transparent)
         .border(if(focused) 1.dp else 0.dp,if(focused) Color.White else Color.Transparent,RoundedCornerShape(8.dp))
@@ -377,7 +377,7 @@ private fun BrowserChannelRowRP34(channel:LiveChannel,number:Int,favorite:Boolea
         }
         Text(number.toString(),color=Muted,fontSize=12.sp)
         Column(Modifier.weight(1f)) {
-            Text(channel.name,color=Color.White,fontWeight=FontWeight.Bold,fontSize=14.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(channel.name,color=Color.White,fontWeight=FontWeight.Bold,fontSize=if(easyRP79) 19.sp else 14.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             Text(if(playing) tr("▶ Reproduciendo","▶ Now playing") else tr("EN VIVO","LIVE"),color=if(playing) Color.White else Muted,fontSize=10.sp)
         }
         ChannelHeartRP38(favorite)

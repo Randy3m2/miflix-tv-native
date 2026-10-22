@@ -53,8 +53,24 @@ internal fun CompactPlayerControls(
     onResize: () -> Unit, onMenu: (String) -> Unit, onLinks: () -> Unit, onSeek: (Long) -> Unit,
     seekable: Boolean, party: Boolean, onParty: () -> Unit, onChat: () -> Unit, onReactions: () -> Unit, onQuickReactions: () -> Unit, onClose: () -> Unit, onMaximize: () -> Unit,
     nextAvailable: Boolean, onNext: () -> Unit, onEpisodes: () -> Unit, onQueue: () -> Unit, onInfo: () -> Unit, onPip: () -> Unit, onMultiView: () -> Unit, onMoment: () -> Unit,
-    previousChannelVisible:Boolean=false,previousChannelAvailable:Boolean=false,previousChannelName:String="",onPreviousChannel:()->Unit={},onScores:()->Unit={},channelFavoriteRP36: @Composable ()->Unit={},badgePlayerRP26:androidx.media3.exoplayer.ExoPlayer?=null
+    previousChannelVisible:Boolean=false,previousChannelAvailable:Boolean=false,previousChannelName:String="",onPreviousChannel:()->Unit={},onScores:()->Unit={},channelFavoriteRP36: @Composable ()->Unit={},badgePlayerRP26:androidx.media3.exoplayer.ExoPlayer?=null,easyModeRP79:Boolean=false
 ) {
+    if(easyModeRP79) {
+        Box(Modifier.fillMaxSize()) {
+            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                .background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xF0000000))))
+                .padding(30.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+                Text(request.item.title,color=Color.White,fontSize=28.sp,maxLines=2)
+                Row(horizontalArrangement=Arrangement.spacedBy(18.dp),verticalAlignment=Alignment.CenterVertically) {
+                    if(!request.live || request.sportsRecordingRP72) FocusButton(if(paused) tr("Reproducir","Play") else tr("Pausar","Pause"),Modifier.focusRequester(playFocus)) {onInteraction();onPlay()}
+                    else FocusButton(tr("Canales","Channels"),Modifier.focusRequester(playFocus)) {onInteraction();onMenu("channels")}
+                    FocusButton(tr("Idioma de audio","Audio language")) {onInteraction();onMenu("audio")}
+                    if(!request.live && duration>0) Text(playbackTime(position)+" / "+playbackTime(duration),color=Color.White,fontSize=20.sp)
+                }
+            }
+        }
+        return
+    }
     val seekFocus=remember { FocusRequester() }
     var focusedLabel by remember { mutableStateOf("") }
     Box(Modifier.fillMaxSize()) {

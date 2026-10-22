@@ -64,7 +64,7 @@ class AppState(context: Context) {
         {lastSourcePrefsRP16.edit().putString("rows",it).apply()})
     private fun lastSourceKeyRP16(item:MediaSummary,season:Int,episode:Int)=LastPlaybackSourceRP16.key(
         localExtrasScope(),item.cloudId,season,episode,
-        org.json.JSONArray(listOf(audioLanguage,secondaryAudioLanguageRP62,streamSizeBytes,nativeSourceEnabled,nativeRevision,nativeOnlyRP75,nativeSpanishOnlyRP77,nativeSizeAscendingRP77,
+        org.json.JSONArray(listOf(easyModeRP79,audioLanguage,secondaryAudioLanguageRP62,streamSizeBytes,nativeSourceEnabled,nativeRevision,nativeOnlyRP75,nativeSpanishOnlyRP77,nativeSizeAscendingRP77,
             org.json.JSONArray(streamRepo.manifests()))).toString())
     internal fun rememberSuccessfulPlaybackRP16(req:PlayerRequest) {
         if(req.live || req.momentEndMs>0 || watchParty!=null || playerRequest?.playbackId!=req.playbackId || req.sourceMemoryKeyRP16.isBlank()) return
@@ -271,7 +271,7 @@ class AppState(context: Context) {
     var socialProfileEditor by mutableStateOf(false)
     var contextTitle by mutableStateOf<MediaSummary?>(null)
     var contextContinue by mutableStateOf(false)
-    fun titleActions(item: MediaSummary, continuing: Boolean = false) {contextContinue=continuing;contextTitle=item}
+    fun titleActions(item: MediaSummary, continuing: Boolean = false) {if(!easyModeRP79) {contextContinue=continuing;contextTitle=item}}
     var focusColor by mutableIntStateOf(playbackPrefs.getInt("focus_color",0xFFB792FF.toInt()))
         private set
     var rememberLastProfile by mutableStateOf(playbackPrefs.getBoolean("remember_last_profile",false))
@@ -498,7 +498,7 @@ class AppState(context: Context) {
     }
     fun clearNotifications() { notifications.clear(); persistNotices() }
     suspend fun checkNotifications() {
-        if(checkingNotices || tmdb.token.isBlank()) return
+        if(easyModeRP79 || checkingNotices || tmdb.token.isBlank()) return
         checkingNotices = true
         val ownerKey = noticesKey(); val knownOwner = knownKey(); val ids = favorites.toList()
         try {
@@ -534,6 +534,7 @@ class AppState(context: Context) {
         introRepo.segments(imdb,req.season,req.episode,req.item.type == "movie")
     }.getOrDefault(PlaybackSegments())
     suspend fun playerSources(req: PlayerRequest, position: Long) {
+        if(easyModeRP79) return
         if(req.liveProvider=="lidom") {showLidomSources(req);return}
         if(req.live) { error=tr("Los canales en vivo usan su enlace configurado","Live channels use their configured stream"); return }
         val generation=playbackWork.generation
@@ -814,7 +815,7 @@ class AppState(context: Context) {
     }
     private val livePrefs = context.getSharedPreferences("miflix_live", Context.MODE_PRIVATE)
     val socialIdentityId:String? get()=session?.let {ProfileSocialIdentityRP1.actor(it.userId,activeProfile.id,activeProfile.primary)}
-    private fun profileSocialSession(account:CloudSession?=session):CloudSession? = if(kidsMode) null else account?.let {ProfileSocialIdentityRP1.session(it,activeProfile)}
+    private fun profileSocialSession(account:CloudSession?=session):CloudSession? = if(kidsMode || easyModeRP79) null else account?.let {ProfileSocialIdentityRP1.session(it,activeProfile)}
     private fun isCurrentSocialSession(actor:CloudSession):Boolean {
         val scope=ProfileSocialIdentityRP1.scope(actor)
         return session?.userId==scope.account && activeProfile.id==scope.profile && !kidsMode
@@ -1028,7 +1029,7 @@ class AppState(context: Context) {
     private var socialExpiresAt=0L
     /** Capture the lease once at first frame, never from the progress/seek ticker. */
     fun socialPlaybackStarted(req: PlayerRequest, position: Long, duration: Long) {
-        if(playerRequest?.playbackId!=req.playbackId || socialReadyPlaybackId==req.playbackId) return
+        if(easyModeRP79 || playerRequest?.playbackId!=req.playbackId || socialReadyPlaybackId==req.playbackId) return
         val remaining=if(req.live) 4*60*60*1000L
             else if(duration>0) (duration-position.coerceAtLeast(0)).coerceAtLeast(0)+30*60*1000L
             else if(req.item.type=="series") 90*60*1000L else 3*60*60*1000L
@@ -1047,6 +1048,7 @@ class AppState(context: Context) {
     private var splitPresenceIdRP67=""
     private var splitPresenceExpiresRP67=0L
     fun publishSocialPresenceEvent() {
+        if(easyModeRP79) return
         val s=profileSocialSession() ?: return
         val split=multiViewRequests.firstOrNull()?.takeIf {appForeground && screen==Screen.MULTIVIEW}
         if(split?.playbackId!=splitPresenceIdRP67) {
@@ -1117,7 +1119,7 @@ class AppState(context: Context) {
         val owner: String?,val profile: String,val cloudId: String,val imdb: String,
         val season: Int,val episode: Int,val year: String,val title: String,
         val manifests: List<String>,val nativeEnabled: Boolean,val nativeVersion: Int,val nativeOnly:Boolean,val nativeSpanishOnly:Boolean,val nativeSizeAscending:Boolean,
-        val sizeLimit: Long,val audio: String,val secondaryAudio: String
+        val sizeLimit: Long,val audio: String,val secondaryAudio: String,val easy:Boolean
     )
     private val playbackLinkCache=com.miflix.native2.data.PlaybackLinkCache<PlaybackCacheKey,List<StreamChoice>>(12) {
         android.os.SystemClock.elapsedRealtime()
@@ -1125,7 +1127,7 @@ class AppState(context: Context) {
     private val playbackCacheMutex=Mutex()
     private fun playbackCacheKey(item: MediaSummary,imdb: String,season: Int,episode: Int)=PlaybackCacheKey(
         session?.userId,activeProfile.id,item.cloudId,imdb,season,episode,item.year,item.title,
-        streamRepo.manifests().toList(),nativeSourceEnabled,nativeRevision,nativeOnlyRP75,nativeSpanishOnlyRP77,nativeSizeAscendingRP77,streamSizeBytes,audioLanguage,secondaryAudioLanguageRP62)
+        streamRepo.manifests().toList(),nativeSourceEnabled,nativeRevision,nativeOnlyRP75,nativeSpanishOnlyRP77,nativeSizeAscendingRP77,streamSizeBytes,audioLanguage,secondaryAudioLanguageRP62,easyModeRP79)
     private suspend fun resolvePlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = playbackCacheMutex.withLock {
         val key=playbackCacheKey(item,imdb,season,episode)
         playbackLinkCache.get(key)?.let { return@withLock StreamOrdering.sorted(it,audioLanguage,providerOrder=sourceProviderOrderRP2(),secondaryAudio=secondaryAudioLanguageRP62,nativeSizeAscending=nativeSizeAscendingRP77,nativeSpanishOnly=nativeSpanishOnlyRP77) }
@@ -1136,6 +1138,9 @@ class AppState(context: Context) {
     }
     private suspend fun fetchPlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = supervisorScope {
         val owner=session?.userId
+        if(easyModeRP79) return@supervisorScope StreamOrdering.sorted(
+            easyStreamsRP79.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage),
+            audioLanguage,secondaryAudio=secondaryAudioLanguageRP62)
         val native=owner!=null && nativeStore.enabled(owner)
         // Disabled is the default and leaves the existing add-on path unchanged.
         if(!native) return@supervisorScope StreamOrdering.sorted(
@@ -1194,7 +1199,7 @@ class AppState(context: Context) {
         addonOrderRevision;profileAddonRevision
         return AddonPriorityRP2.ordered(streamRepo.sourceAddons(),savedAddonOrder(language),language)
     }
-    private fun sourceProviderOrderRP2()=orderedSourceAddonsRP2().map {it.name}
+    private fun sourceProviderOrderRP2()=if(easyModeRP79) easyStreamsRP79.sourceAddonNames() else orderedSourceAddonsRP2().map {it.name}
     suspend fun inspectAddonOrderRP2() {
         val scope=profileAddonScope();val manifests=streamRepo.manifests()
         addonOrderLoading=true
@@ -1258,8 +1263,9 @@ class AppState(context: Context) {
     var screen: Screen
         get()=currentScreen
         set(value) {
-            currentScreen=value
-            if(value==Screen.FRIENDS) refreshFriendsTab()
+            val destination=if(easyModeRP79 && !com.miflix.native2.data.EasyModePolicyRP79.allowsScreen(value.name)) Screen.HOME else value
+            currentScreen=destination
+            if(destination==Screen.FRIENDS) refreshFriendsTab()
         }
     var friendsTabLoading by mutableStateOf(false)
         private set
@@ -1727,6 +1733,80 @@ class AppState(context: Context) {
         try { block() } catch(e: CancellationException) { throw e } catch(e: Exception) {playbackLoading=null; error=e.message ?: tr("No se pudo completar la operación","Could not complete the operation") }
     }
 
+    private var easyRevisionRP79 by mutableIntStateOf(0)
+    val easyModeRP79:Boolean get() {
+        easyRevisionRP79
+        return !kidsMode && playbackPrefs.getBoolean(com.miflix.native2.data.EasyModePolicyRP79.key(session?.userId,activeProfile.id),false)
+    }
+    private val easyStreamsRP79=StreamRepository("").apply {
+        setManifests(com.miflix.native2.data.EasyModePolicyRP79.sourceManifests())
+    }
+    private var easyHomeOwnerRP79=""
+    private fun easySnapshotKeyRP79()=com.miflix.native2.data.EasyModePolicyRP79.key(session?.userId,activeProfile.id)+":watching"
+    private fun saveEasySnapshotRP79() {
+        val rows=org.json.JSONObject()
+        progress.entries.sortedByDescending {it.value.updatedAt}.take(1000).forEach {(key,p) ->rows.put(key,
+            org.json.JSONObject().put("percent",p.percent).put("position",p.position).put("duration",p.duration)
+                .put("updatedAt",p.updatedAt).put("season",p.season).put("episode",p.episode))}
+        playbackPrefs.edit().putString(easySnapshotKeyRP79(),org.json.JSONObject().put("progress",rows)
+            .put("favorites",org.json.JSONArray(favorites.toList())).toString()).apply()
+    }
+    private fun restoreEasySnapshotRP79() {
+        if(!easyModeRP79) return
+        val body=runCatching {org.json.JSONObject(playbackPrefs.getString(easySnapshotKeyRP79(),"{}").orEmpty())}.getOrNull() ?: return
+        val rows=body.optJSONObject("progress") ?: return
+        rows.keys().forEach {key ->runCatching {
+            val p=rows.getJSONObject(key)
+            val saved=PlaybackProgress(p.getDouble("percent"),p.getLong("position"),p.getLong("duration"),p.getLong("updatedAt"),p.optInt("season"),p.optInt("episode"))
+            if(saved.updatedAt>(progress[key]?.updatedAt ?: 0L)) progress[key]=saved
+        }}
+        if(session==null) body.optJSONArray("favorites")?.let {a ->
+            favorites.clear();favorites.addAll((0 until a.length()).map {a.getString(it)})
+        }
+    }
+    suspend fun setEasyModeRP79(enabled:Boolean) {
+        if(kidsMode) return
+        val owner=session?.userId;val profile=activeProfile.id
+        val key=com.miflix.native2.data.EasyModePolicyRP79.key(owner,profile)
+        val actor=profileSocialSession()
+        if(enabled) leaveWatchParty()
+        if(owner!=session?.userId || profile!=activeProfile.id) return
+        playbackPrefs.edit().putBoolean(key,enabled).apply();easyRevisionRP79++
+        invalidatePlaybackWork();sourceSelection=null;contextTitle=null;socialProfileEditor=false
+        localCastPairing=false;profilePhotoEditor=null;miniPlayer=false;playerRequest=null
+        showLiveScoresRP11=false;pendingPartyCode=null;randomEpisodeCloud=null
+        partyClosedNotice=false;partyJoinedNotice=null;changelogOpen=false
+        screen=Screen.HOME
+        if(enabled) {saveEasySnapshotRP79();presenceEvents.stopForEasyMode(actor)}
+    }
+    suspend fun loadEasyHomeRP79() = supervisorScope {
+        val owner="${localExtrasScope()}:${interfaceLanguage}"
+        if(!easyModeRP79 || tmdb.token.isBlank() || easyHomeOwnerRP79==owner) return@supervisorScope
+        easyHomeOwnerRP79=owner
+        restoreEasySnapshotRP79()
+        val a=async {runCatching {tmdb.popularMovies()}}
+        val b=async {runCatching {tmdb.popularSeries()}}
+        val c=async {runCatching {resolveContinueWatching()}}
+        fun current()=easyModeRP79 && owner=="${localExtrasScope()}:${interfaceLanguage}"
+        val movieResult=a.await();val seriesResult=b.await()
+        movieResult.onSuccess {if(current()) movies.replaceWith(it)}
+        seriesResult.onSuccess {if(current()) series.replaceWith(it)}
+        c.await().onSuccess {if(current()) continueWatching.replaceWith(it)}
+        if(movieResult.isFailure || seriesResult.isFailure) easyHomeOwnerRP79=""
+    }
+    suspend fun easyResumeRP79(item:MediaSummary) {
+        this.open(item)
+        if(!easyModeRP79 || selected?.cloudId!=item.cloudId || details==null || selectedUpcoming) return
+        if(item.type!="series") playMovie()
+        else {
+            val saved=progress[item.cloudId]
+            val season=saved?.season?.coerceAtLeast(1) ?: 1
+            if(currentSeason!=season) loadSeason(season)
+            val episode=episodes.firstOrNull {it.episode==(saved?.episode ?: 1)} ?: episodes.firstOrNull()
+            episode?.let {playEpisode(it)}
+        }
+    }
+
     val kidsMode: Boolean get()=activeProfile.isKids || activeProfile.id==KidsContentPolicy.PROFILE_ID
     val kidsMovies=mutableStateListOf<MediaSummary>()
     val kidsSeries=mutableStateListOf<MediaSummary>()
@@ -1798,7 +1878,7 @@ class AppState(context: Context) {
         if (tmdb.token.isNotBlank()) {
             runCatching { loadHome() }.onFailure { error = it.message }
         }
-        session?.let { account ->
+        session?.takeUnless {easyModeRP79}?.let { account ->
             runCatching { trakt.call(account,"status").optBoolean("connected") }.onSuccess { traktConnected=it }
             profileSocialSession(account)?.let {actor ->runCatching {val name=social.nickname(actor);if(isCurrentSocialSession(actor)) nickname=name}}
             val actor=profileSocialSession(account)
@@ -1810,7 +1890,7 @@ class AppState(context: Context) {
                 }
             }
         }
-        screen = if (tmdb.token.isBlank()) Screen.SETTINGS else if(rememberLastProfile) Screen.HOME else Screen.PROFILES
+        screen = if (tmdb.token.isBlank()) Screen.SETTINGS else if(rememberLastProfile || easyModeRP79) Screen.HOME else Screen.PROFILES
     }
 
     suspend fun login(email: String, password: String) {
@@ -1866,6 +1946,7 @@ class AppState(context: Context) {
     }
 
     suspend fun selectProfile(p: Profile) {
+        easyHomeOwnerRP79=""
         if(p.id!=activeProfile.id) {
             profileSocialSession()?.let {presenceEvents.queue(it,"","",0,0,null,System.currentTimeMillis())}
             leaveWatchParty()
@@ -2051,6 +2132,7 @@ class AppState(context: Context) {
     }
 
     suspend fun loadHome() = supervisorScope {
+        if(easyModeRP79) {loadEasyHomeRP79();return@supervisorScope}
         if(kidsMode) return@supervisorScope
         val owner=ratingsKey();val language=interfaceLanguage
         fun current()=owner==ratingsKey() && language==interfaceLanguage
@@ -2357,6 +2439,7 @@ class AppState(context: Context) {
 
     fun toggleFavorite(item: MediaSummary) {
         if (favorites.contains(item.cloudId)) favorites.remove(item.cloudId) else favorites.add(0,item.cloudId)
+        if(easyModeRP79) saveEasySnapshotRP79()
     }
 
     var randomEpisodeCloud by mutableStateOf<String?>(null)
@@ -2648,16 +2731,16 @@ class AppState(context: Context) {
         return FlexibleSearch.rank(rows.distinctBy {it.cloudId}.filter {FlexibleSearch.score(it.title,normalized)>=650},normalized).take(30)
     }
     suspend fun searchFlexible(query: String): List<MediaSummary> = supervisorScope {
-        TasteQuery.parse(query)?.let {request ->
+        if(!easyModeRP79) TasteQuery.parse(query)?.let {request ->
             val seed=FlexibleSearch.rank(tmdb.search(request[0]),request[0]).firstOrNull() ?: return@supervisorScope emptyList()
             val matches=tmdb.tasteMatches(seed,setOf(request[1]))
             return@supervisorScope if(kidsMode) tmdb.kidsFilter(matches) else matches
         }
         val intent=DiscoveryMood.intent(query)
-        if(intent.isNotBlank()) return@supervisorScope discoveryPicks(intent)
+        if(!easyModeRP79 && intent.isNotBlank()) return@supervisorScope discoveryPicks(intent)
         val normalized=FlexibleSearch.normalize(query)
         if(normalized.length<2) return@supervisorScope emptyList()
-        val cacheKey="${tmdb.language}:$kidsMode:$normalized"
+        val cacheKey="${tmdb.language}:$kidsMode:$easyModeRP79:$normalized"
         searchResultCache[cacheKey]?.takeIf {System.currentTimeMillis()-it.first<5*60*1000L}?.let {return@supervisorScope it.second}
         val local=localSearch(normalized)
         // Extra queries only when the normal search has no close title match.
@@ -2804,7 +2887,7 @@ class AppState(context: Context) {
         }
         // Subtitle services must not gate opening the video. Keep late results for the CC menu.
         val subsJob = playbackSubtitleJobs.getOrPut(subtitleKey) { appScope.async {
-            runCatching { subtitleRepo.resolve(imdb, item.type, season, episode, null,preferredLanguage=preferredSubtitleRP78) }.getOrDefault(emptyList())
+            if(easyModeRP79) emptyList() else runCatching { subtitleRepo.resolve(imdb, item.type, season, episode, null,preferredLanguage=preferredSubtitleRP78) }.getOrDefault(emptyList())
         } }
         runCatching {
             val streams = streamsJob.await()
@@ -2936,6 +3019,7 @@ class AppState(context: Context) {
         }
         progress[key] = row
         progress[req.item.cloudId] = row
+        if(easyModeRP79) saveEasySnapshotRP79()
         val shelf=if(kidsMode) kidsContinue else continueWatching
         val available=(shelf.toList()+req.item).associateBy {it.cloudId}
         val ids=com.miflix.native2.data.ContinueWatchingPolicyRP10.ids(progress)
@@ -3261,6 +3345,7 @@ class AppState(context: Context) {
         pushCloud(); traktStatus=tr("Lista de Trakt importada a Mi lista","Watchlist imported to My List")
     }
     suspend fun traktMarkWatched(req: PlayerRequest, position: Long, duration: Long) {
+        if(easyModeRP79) return
         if(isMomentOnly(req)) return
         if(!traktConnected || req.live || duration<=0 || position.toDouble()/duration<0.8)return
         val s=session ?: return

@@ -123,7 +123,8 @@ private val StreamingTiles = listOf(
 internal fun AppShell(state: AppState, screen: Screen, onNavigate: (Screen) -> Unit, content: @Composable BoxScope.() -> Unit) {
     val contentFocus=remember { FocusRequester() }
     Column(Modifier.fillMaxSize().background(Bg)) {
-        Sidebar(screen, state.activeProfile.name, onNavigate, state.unreadNoticeCount, state.activeProfile,
+        if(state.easyModeRP79) EasyNavigationRP79(state,onMoveDown={contentFocus.requestFocus()})
+        else Sidebar(screen, state.activeProfile.name, onNavigate, state.unreadNoticeCount, state.activeProfile,
             onMoveDown={ contentFocus.requestFocus(); Unit },onEditPicture={ state.profilePhotoEditor=state.activeProfile },kids=state.kidsMode)
         Box(Modifier.weight(1f).fillMaxWidth().padding(bottom=24.dp).focusRequester(contentFocus).focusGroup(), content = content)
     }
@@ -960,6 +961,14 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
             Row(Modifier.weight(1f).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(22.dp)) {
                 LazyColumn(Modifier.weight(.7f).fillMaxHeight(),state=settingsScroll,
                     contentPadding=PaddingValues(top=4.dp,bottom=42.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                    if(category=="system" && !state.kidsMode) item(key="easy-rp79") {
+                        SettingsSectionCard {
+                            Text(tr("Modo fácil","Easy mode"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
+                            Text(tr("Solo Home, Buscar, Mi lista y Live TV. Texto grande, reproductor básico y sin Friends ni Party en segundo plano. Para salir, mantén pulsado el logo de BruniO.",
+                                "Only Home, Search, My List and Live TV. Large text, basic playback and no background Friends or Party. Hold the BruniO logo to exit."),color=Muted,fontSize=16.sp)
+                            FocusButton(tr("Activar para este perfil","Enable for this profile")) {state.launch {state.setEasyModeRP79(true)}}
+                        }
+                    }
                     if(category=="system") item(key="setting-0") {
                         SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="About BruniO";helpDescription="Usage on this device, installed version and updates.";helpIndex=0 }) {
                 Text(tr("Acerca de BruniO","About BruniO"),color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
@@ -1470,8 +1479,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
 
     LaunchedEffect(request.playbackId) {
         if(!request.live) {
-            state.launch { segments = state.playbackSegments(request) }
-            state.launch { recommendations = runCatching { state.recommendationsFor(request.item) }.getOrDefault(emptyList()) }
+            if(!state.easyModeRP79) {
+                state.launch { segments = state.playbackSegments(request) }
+                state.launch { recommendations = runCatching { state.recommendationsFor(request.item) }.getOrDefault(emptyList()) }
+            }
             if(request.item.type == "series") {
                 state.launch { episodeInfo = runCatching { state.tmdb.episodeInfo(request.item,request.season,request.episode) }.getOrNull() }
                 state.launch { upcoming = runCatching { state.nextEpisode(request) }.getOrNull() }
@@ -1504,10 +1515,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     LaunchedEffect(paused,request.playbackId) {
         pauseInfoDismissed = false
         pauseSynopsis = false
-        if(paused) { delay(5000); if(!pauseInfoDismissed) pauseSynopsis = true }
+        if(paused && !state.easyModeRP79) { delay(5000); if(!pauseInfoDismissed) pauseSynopsis = true }
     }
-    val randomMode=state.randomEpisodeCloud==request.item.cloudId && request.item.type=="series"
-    val queueNext=state.queueEntries.firstOrNull()
+    val randomMode=!state.easyModeRP79 && state.randomEpisodeCloud==request.item.cloudId && request.item.type=="series"
+    val queueNext=if(state.easyModeRP79) null else state.queueEntries.firstOrNull()
     var queueSynopsis by remember(queueNext?.id) { mutableStateOf("") }
     LaunchedEffect(queueNext?.id) {
         queueNext?.let { entry -> queueSynopsis=runCatching {
@@ -1903,7 +1914,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             modifier = if(maximized) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(horizontal=40.dp,vertical=24.dp)
         ) }
         if(!firstFrame && !hadPlaybackError && playbackError==null && state.playbackLoading==null) PlaybackArtwork(state,request)
-        ContentWarningOverlayRP31(state,request,firstFrame,visible=!mini && state.appForeground && playerMenu==null && !showEpisodes && !showPartyActions,
+        if(!state.easyModeRP79) ContentWarningOverlayRP31(state,request,firstFrame,visible=!mini && state.appForeground && playerMenu==null && !showEpisodes && !showPartyActions,
             modifier=Modifier.align(Alignment.TopStart).padding(start=28.dp,top=24.dp))
         if(mini) {
             Row(Modifier.align(Alignment.BottomCenter).background(Color(0xEE171717)).padding(6.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -1945,13 +1956,16 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 Text(playbackError.orEmpty(),color=Muted)
                 Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     FocusButton(tr("Reintentar","Retry"),modifier=Modifier.focusRequester(retryFocus)) { playbackError=null; surfaceGeneration++; player.prepare() }
-                    FocusButton(if(request.liveProvider=="lidom") tr("Probar otra fuente","Try another source") else tr("Otro enlace","Another link")) { playbackError=null; state.launch { state.playerSources(request,player.currentPosition) } }
+                    if(!state.easyModeRP79) FocusButton(if(request.liveProvider=="lidom") tr("Probar otra fuente","Try another source") else tr("Otro enlace","Another link")) { playbackError=null; state.launch { state.playerSources(request,player.currentPosition) } }
                     FocusButton(tr("Salir","Exit")) { parkCurrentPlayback();onClose() }
                 }
             }
             }
         }
 
+        LaunchedEffect(state.easyModeRP79,playerMenu) {
+            if(state.easyModeRP79 && !com.miflix.native2.data.EasyModePolicyRP79.allowsPlayerMenu(playerMenu)) playerMenu=null
+        }
         if(playerMenu in listOf("content","speed","audio","subtitles")) PlayerOptionsDialog(playerMenu!!, player, tracks, speed,
             onSpeed={ speed=it; player.setPlaybackSpeed(it) },
             externalSubtitles=externalSubtitles.filter { extra -> request.stream.subtitles.none { it.url==extra.url } }, subtitleLoading=subtitleLoading,
@@ -2012,7 +2026,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }
         if((firstFrame || hadPlaybackError) && controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !showEpisodes && !showPartyActions && !ended) {
             CompactPlayerControls(request, paused, positionMs, durationMs, speed, maximized, playFocus,
-                badgePlayerRP26=player,
+                badgePlayerRP26=player,easyModeRP79=state.easyModeRP79,
                 previousChannelVisible=request.live && !request.sportsRecordingRP72 && state.previousLiveChannelEnabled,
                 previousChannelAvailable=state.previousLiveChannel(request)!=null && state.partyRole!=PartyRole.GUEST,
                 previousChannelName=state.previousLiveChannel(request)?.item?.title.orEmpty(),
@@ -2084,7 +2098,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
 
             }
         }
-        if(!momentNotice && !showMomentComposer && paused && !pauseInfoDismissed && !ended && !showEpisodes && !showPartyActions && playerMenu == null && !quickReactions && state.sourceSelection == null) {
+        if(!state.easyModeRP79 && !momentNotice && !showMomentComposer && paused && !pauseInfoDismissed && !ended && !showEpisodes && !showPartyActions && playerMenu == null && !quickReactions && state.sourceSelection == null) {
             val clock = com.miflix.native2.player.PlaybackClockRP63.format(clockNow)
             val remaining = (durationMs - positionMs).coerceAtLeast(0L) / 1000
             val remainingText = when {
@@ -2099,7 +2113,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 Text(if(request.live || durationMs <= 0) remainingText else "${tr("Finaliza","Ends")} · "+com.miflix.native2.player.PlaybackClockRP63.format(clockNow+((durationMs-positionMs).coerceAtLeast(0)/speed.coerceAtLeast(0.1f)).toLong()),color=Color(0xFFE0E0E0),fontSize=19.sp, lineHeight=23.sp)
             }
         }
-        if(request.momentEndMs<=0 && !ended && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu==null && !quickReactions && state.sourceSelection==null && state.partyRole != PartyRole.GUEST && durationMs > 0) {
+        if(!state.easyModeRP79 && request.momentEndMs<=0 && !ended && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu==null && !quickReactions && state.sourceSelection==null && state.partyRole != PartyRole.GUEST && durationMs > 0) {
             val intro = segments.intro?.takeIf { it.endMs <= durationMs && positionMs >= it.startMs && positionMs < it.endMs }
             val credits = segments.outro?.takeIf { it.startMs < durationMs && positionMs >= it.startMs && positionMs < it.endMs }
             if(intro != null || credits != null) Box(Modifier.align(Alignment.BottomEnd).padding(end=30.dp,bottom=100.dp)) {
@@ -2110,8 +2124,15 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 }
             }
         }
-        if(rateAtEnd) RatingDialog(state,request.item) { rateAtEnd=false; state.launch { recommendations=state.recommendationsFor(request.item) } }
-        if(request.momentEndMs<=0 && ended && state.playbackLoading==null && state.partyRole != PartyRole.GUEST && !rateAtEnd && !showQueue && !showPartyActions) {
+        if(!state.easyModeRP79 && rateAtEnd) RatingDialog(state,request.item) { rateAtEnd=false; state.launch { recommendations=state.recommendationsFor(request.item) } }
+        if(state.easyModeRP79 && ended && state.playbackLoading==null) PlayerMenuDialog(onDismissRequest=onClose) {
+            Column(Modifier.width(560.dp).background(Panel,RoundedCornerShape(20.dp)).padding(26.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+                Text(tr("Terminó la reproducción","Playback ended"),color=Color.White,fontSize=28.sp)
+                upcoming?.let {next -> FocusButton(tr("Siguiente episodio","Next episode")) {cancelAutoplay=true;state.launch {state.playNext(request,next)}}}
+                FocusButton(tr("Volver","Back")) {cancelAutoplay=true;onClose()}
+            }
+        }
+        if(!state.easyModeRP79 && request.momentEndMs<=0 && ended && state.playbackLoading==null && state.partyRole != PartyRole.GUEST && !rateAtEnd && !showQueue && !showPartyActions) {
             PlayerMenuDialog(onDismissRequest={ cancelAutoplay=true; onClose() },properties=DialogProperties(usePlatformDefaultWidth=false)) {
                 Column(Modifier.width(850.dp).heightIn(max=600.dp).verticalScroll(rememberScrollState()).background(Color(0xF00B0B0B),RoundedCornerShape(20.dp)).padding(25.dp)) {
                     Text("${tr("Terminaste","You finished")} ${request.item.title}",color=Color.White,fontSize=26.sp, lineHeight=31.sp)
@@ -2153,7 +2174,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 }
             }
         }
-        if(state.watchParty==null) LocalPlayerToolsRC100(state,request,player,
+        if(!state.easyModeRP79 && state.watchParty==null) LocalPlayerToolsRC100(state,request,player,
             visible=!mini && controlsVisible && playerMenu==null && !showEpisodes && !showQueue && !showPartyActions && playbackError==null && !ended,
             onPause={cancelAutoplay=true;userPlayback(false)})
         if(playerMenu=="party-chat") PlayerPartyChatDialog(state) { playerMenu=null;controlInteraction++ }

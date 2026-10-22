@@ -1794,6 +1794,56 @@ class AppState(context: Context) {
         c.await().onSuccess {if(current()) continueWatching.replaceWith(it)}
         if(movieResult.isFailure || seriesResult.isFailure) easyHomeOwnerRP79=""
     }
+    private val easyMlbByOwnerRP80=mutableStateMapOf<String,Boolean>()
+    var easyMlbRP80:Boolean
+        get()=easyMlbByOwnerRP80[localExtrasScope()] ?: false
+        set(value) {easyMlbByOwnerRP80[localExtrasScope()]=value}
+    val easyRowsRP80=mutableStateMapOf<String,List<MediaSummary>>()
+    var easyRowsLoadingRP80 by mutableStateOf(false)
+        private set
+    var easyRowsMessageRP80 by mutableStateOf("")
+        private set
+    private var easyRowsOwnerRP80 by mutableStateOf("")
+    private var easyRowsAttemptedRP80=false
+    private val easyRowsMutexRP80=Mutex()
+    private fun easyCatalogOwnerRP80()="${localExtrasScope()}:${tmdb.language}"
+    val easyRowsMatchRP80:Boolean get()=easyRowsOwnerRP80==easyCatalogOwnerRP80()
+    suspend fun loadEasyRowsRP80(retry:Boolean=false) = easyRowsMutexRP80.withLock {
+        if(!easyModeRP79 || tmdb.token.isBlank()) return@withLock
+        val owner=easyCatalogOwnerRP80()
+        if(easyRowsOwnerRP80!=owner) {
+            easyRowsRP80.clear();easyRowsOwnerRP80=owner;easyRowsAttemptedRP80=false
+        }
+        if(easyRowsAttemptedRP80 && !retry) return@withLock
+        val pending=EasyHomeRowsRP80.rows.filter {it.id !in easyRowsRP80}
+        if(pending.isEmpty()) return@withLock
+        easyRowsLoadingRP80=true;easyRowsMessageRP80=""
+        var completed=false
+        fun current()=easyModeRP79 && owner==easyCatalogOwnerRP80() && owner==easyRowsOwnerRP80
+        try {
+            val permits=Semaphore(3)
+            supervisorScope {
+                pending.map {row ->async {permits.withPermit {
+                    if(!current()) return@withPermit
+                    val titles=try {row.load(tmdb).filter {it.type=="movie" || it.type=="series"}.distinctBy {it.cloudId}.take(20)}
+                        catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
+                    if(current() && titles.isNotEmpty()) easyRowsRP80[row.id]=titles
+                }}}.awaitAll()
+            }
+            completed=true
+            if(current()) {
+                easyRowsAttemptedRP80=true
+                if(EasyHomeRowsRP80.rows.any {it.id !in easyRowsRP80}) easyRowsMessageRP80=tr(
+                    "Algunas filas no pudieron cargar. Puedes volver a intentarlo.",
+                    "Some rows could not load. You can try again.")
+            }
+        } finally {
+            if(owner==easyRowsOwnerRP80) {
+                easyRowsLoadingRP80=false
+                if(!completed) easyRowsAttemptedRP80=false
+            }
+        }
+    }
     suspend fun easyResumeRP79(item:MediaSummary) {
         this.open(item)
         if(!easyModeRP79 || selected?.cloudId!=item.cloudId || details==null || selectedUpcoming) return

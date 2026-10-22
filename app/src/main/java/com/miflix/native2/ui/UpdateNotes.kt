@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP80: Modo fácil con buscador original ampliado, 26 filas más Seguir viendo, MLB con el add-on de deportes y salida manteniendo BruniO 60 segundos." to "RP80: Easy mode restores larger original search, 26 rows plus Continue Watching, MLB through the sports add-on and a 60-second BruniO hold to exit.",
         "RP79: Modo fácil por perfil con Home, Buscar, Mi lista y Live TV; texto grande, controles básicos y tareas sociales desactivadas." to "RP79: per-profile Easy mode with Home, Search, My List and Live TV; large text, basic controls and social background work disabled.",
         "RP78: Korean/한국어 en audio principal, secundario y subtítulos; prioridad coreana en el motor nativo y enlaces de add-ons; subtítulos preferidos por perfil." to "RP78: Korean/한국어 in primary/secondary audio and subtitles; Korean priority for the native engine and add-on sources; profile-scoped subtitle preferences.",
         "RP77: motor TorBox con prioridad latino según Playback audio, filtro opcional Solo español y tamaño ascendente/descendente dentro de cada calidad; preferencias de audio y filtros por perfil." to "RP77: TorBox engine prioritizes Latino based on Playback audio, with optional Spanish-only filtering and ascending/descending size within each quality; audio and filter preferences are profile-scoped.",

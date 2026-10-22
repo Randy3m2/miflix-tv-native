@@ -201,6 +201,7 @@ private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolea
 /** Remote keyboard and results share one viewport; no navigation to a second page. */
 @Composable
 internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
+    val easySearchRP80=LocalEasySearchRP80.current
     val owner=state.searchHistoryOwner()
     var query by rememberSaveable(owner) {mutableStateOf(state.searchQuery)}
     var cursor by rememberSaveable(owner) {mutableIntStateOf(query.length)}
@@ -226,9 +227,13 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
             .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE,if(state.interfaceLanguage=="es") "es-DO" else "en-US")
             .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS,1)
             .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT,tr("Di el título","Say the title"))
-        try {voice.launch(intent)}
-        catch(_: android.content.ActivityNotFoundException) {state.error=tr("Esta TV no tiene un servicio de dictado disponible.","No voice input service is available on this TV.")}
-        catch(_: Exception) {state.error=tr("No se pudo iniciar el micrófono.","Could not start voice input.")}
+        try {
+            voice.launch(intent)
+        } catch(e: android.content.ActivityNotFoundException) {
+            state.error=tr("Esta TV no tiene un servicio de dictado disponible.","No voice input service is available on this TV.")
+        } catch(e: Exception) {
+            state.error=tr("No se pudo iniciar el micrófono.","Could not start voice input.")
+        }
     }
     LaunchedEffect(Unit) {withFrameNanos { };runCatching {keyboardFocus.requestFocus()}}
     LaunchedEffect(query,state.interfaceLanguage,owner) {
@@ -237,10 +242,14 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
         results=state.localSearch(query)
         if(query.trim().length<2) {searching=false;return@LaunchedEffect}
         searching=true
-        try {delay(if(com.miflix.native2.data.TasteQuery.parse(query)!=null) 650 else 350);results=state.searchFlexible(query.trim())}
-        catch(e: CancellationException) {throw e}
-        catch(_: Exception) {searchError=true}
-        finally {searching=false}
+        try {
+            delay(if(com.miflix.native2.data.TasteQuery.parse(query)!=null) 650 else 350)
+            results=state.searchFlexible(query.trim())
+        } catch(e: CancellationException) {
+            throw e
+        } catch(e: Exception) {
+            searchError=true
+        } finally {searching=false}
     }
     val suggestions=(if(state.kidsMode) state.kidsMovies+state.kidsSeries else state.seasonalItems+state.trending+state.movies+state.series).distinctBy {it.cloudId}.take(30)
     val display=if(query.isBlank()) suggestions else results
@@ -256,7 +265,7 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
                 val caret=layout.getCursorRect(cursor.coerceIn(0,query.length)).left
                 textScroll.scrollTo((caret-fieldWidth*.8f).toInt().coerceAtLeast(0))
             }
-            Box(Modifier.fillMaxWidth().height(46.dp).onFocusChanged {textFocused=it.isFocused}
+            Box(Modifier.fillMaxWidth().height(if(easySearchRP80) 56.dp else 46.dp).onFocusChanged {textFocused=it.isFocused}
                 .onPreviewKeyEvent {event ->
                     val code=event.nativeKeyEvent.keyCode
                     if(code==21 || code==22 || code==67) {
@@ -270,12 +279,12 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
                 .background(Panel,RoundedCornerShape(8.dp)).border(if(textFocused) 2.dp else 1.dp,if(textFocused) Accent else PanelBorder,RoundedCornerShape(8.dp))
                 .padding(horizontal=14.dp),contentAlignment=Alignment.CenterStart) {
                 Text(if(query.isEmpty()) tr("Películas, series…","Movies, series…") else query,
-                    color=if(query.isEmpty()) Muted else Color.White,fontSize=19.sp,maxLines=1,
+                    color=if(query.isEmpty()) Muted else Color.White,fontSize=if(easySearchRP80) 22.sp else 19.sp,maxLines=1,
                     onTextLayout={searchLayoutRP35=it},
                     modifier=Modifier.fillMaxWidth().onSizeChanged {fieldWidth=it.width}.horizontalScroll(textScroll))
             }
             Row(Modifier.weight(1f).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(24.dp)) {
-                LazyColumn(Modifier.width(220.dp).fillMaxHeight(),verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=20.dp)) {
+                LazyColumn(Modifier.width(if(easySearchRP80) 250.dp else 220.dp).fillMaxHeight(),verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=20.dp)) {
                     item {
                         Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
                             "abcdefghijklmnopqrstuvwxyz1234567890".chunked(6).forEachIndexed { row,letters ->
@@ -311,13 +320,13 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
                 Column(Modifier.weight(1f).fillMaxHeight()) {
                     Text(if(query.isBlank()) tr("Tus recomendaciones de búsqueda","Your Search Recommendations") else tr("Resultados para","Results for")+" “${query.trim()}”",
                         color=Color.White,fontSize=20.sp,lineHeight=24.sp,fontWeight=FontWeight.Bold,maxLines=2,modifier=Modifier.padding(bottom=6.dp))
-                    if(com.miflix.native2.data.TasteQuery.parse(query)!=null) Text(tr("Coincidencias por temas, reparto y fotografía disponibles","Matches based on available themes, cast and cinematography"),color=Muted,fontSize=12.sp)
-                    if(com.miflix.native2.data.DiscoveryMood.intent(query).isNotBlank()) Text(tr("Selección por ánimo · basada en géneros y tus preferencias","Mood picks · based on genres and your preferences"),color=Muted,fontSize=12.sp)
+                    if(!state.easyModeRP79 && com.miflix.native2.data.TasteQuery.parse(query)!=null) Text(tr("Coincidencias por temas, reparto y fotografía disponibles","Matches based on available themes, cast and cinematography"),color=Muted,fontSize=12.sp)
+                    if(!state.easyModeRP79 && com.miflix.native2.data.DiscoveryMood.intent(query).isNotBlank()) Text(tr("Selección por ánimo · basada en géneros y tus preferencias","Mood picks · based on genres and your preferences"),color=Muted,fontSize=12.sp)
                     if(searching || searchError) Text(if(searching) tr("Buscando más…","Finding more…") else tr("No pudimos completar la búsqueda.","Could not complete the search."),color=Muted,fontSize=12.sp)
                     if(!searching && !searchError && query.isNotBlank() && display.isEmpty()) Text(tr("Prueba otro título.","Try another title."),color=Muted,fontSize=14.sp)
                     LazyVerticalGrid(GridCells.Adaptive(142.dp),modifier=Modifier.weight(1f).fillMaxWidth().focusRequester(resultsFocus).focusGroup(),
                         horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(top=4.dp,bottom=32.dp)) {
-                        gridItems(display,key={it.cloudId}) {item -> MediaCard(item,compact=true) {state.rememberSearch(query);state.launch {state.open(item)}} }
+                        gridItems(display,key={it.cloudId}) {item -> MediaCard(item,compact=true,allowContextMenu=!state.easyModeRP79) {state.rememberSearch(query);state.launch {state.open(item)}} }
                     }
                 }
             }
@@ -325,14 +334,16 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
     }
 }
 
+internal val LocalEasySearchRP80=staticCompositionLocalOf {false}
+
 @Composable
 private fun SearchKey(label: String,modifier: Modifier=Modifier,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    val active=actionFocusVisibleRP64(focused)
-    Box(modifier.height(28.dp).onFocusChanged {focused=it.isFocused}.focusable().tvClick(onClick).clickable(onClick=onClick)
-        .background(if(active) Color.White else Panel,RoundedCornerShape(6.dp))
-        .border(1.dp,if(active) Color.White else PanelBorder,RoundedCornerShape(6.dp)).padding(horizontal=4.dp),
+    val largeRP80=LocalEasySearchRP80.current
+    Box(modifier.height(if(largeRP80) 34.dp else 28.dp).onFocusChanged {focused=it.isFocused}.focusable().tvClick(onClick).clickable(onClick=onClick)
+        .background(if(focused) Accent else Panel,RoundedCornerShape(6.dp))
+        .border(1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(6.dp)).padding(horizontal=4.dp),
         contentAlignment=Alignment.Center) {
-        Text(label,color=if(active) Color.Black else Color.White,fontSize=13.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+        Text(label,color=if(focused) FocusInk else Color.White,fontSize=if(largeRP80) 16.sp else 13.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
     }
 }

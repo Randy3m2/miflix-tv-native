@@ -247,7 +247,7 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,openNa
     fun tune(event:HubEventRP41,manual:Boolean=false) {
         if(resolving) return
         if(state.partyRole==PartyRole.GUEST) {message=tr("El anfitrión elige el contenido.","The host chooses the content.");return}
-        if(event.provider=="sports" && manual) {pendingRP44=event;return}
+        if(event.provider=="sports" && manual && !state.easyModeRP79) {pendingRP44=event;return}
         val stamp=generation;val profile=state.session?.userId to state.activeProfile.id
         scope.launch {
             resolving=true;message=""
@@ -409,4 +409,10 @@ internal fun HubCategoryChipRP42(label:String,selected:Boolean,click:()->Unit) {
         }
         Text(label,color=if(active) Color.Black else Color.White,fontSize=13.sp,fontWeight=if(selected) FontWeight.Bold else FontWeight.Normal)
     }
+}
+
+/** Same configured sports add-on and baseball catalogs; no separate source or full hub. */
+@Composable
+internal fun EasyMlbRP80(state:AppState,modifier:Modifier) {
+    HubSportsRP41(state,"baseball",modifier,{})
 }

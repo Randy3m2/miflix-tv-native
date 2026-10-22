@@ -964,8 +964,8 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     if(category=="system" && !state.kidsMode) item(key="easy-rp79") {
                         SettingsSectionCard {
                             Text(tr("Modo fácil","Easy mode"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
-                            Text(tr("Solo Home, Buscar, Mi lista y Live TV. Texto grande, reproductor básico y sin Friends ni Party en segundo plano. Para salir, mantén pulsado el logo de BruniO.",
-                                "Only Home, Search, My List and Live TV. Large text, basic playback and no background Friends or Party. Hold the BruniO logo to exit."),color=Muted,fontSize=16.sp)
+                            Text(tr("Solo Home, Buscar, Mi lista, Live TV y MLB. Texto grande, reproductor básico y sin Friends ni Party en segundo plano. Para salir, mantén pulsado BruniO durante 60 segundos y suelta.",
+                                "Only Home, Search, My List, Live TV and MLB. Large text, basic playback and no background Friends or Party. Hold BruniO for 60 seconds, then release to exit."),color=Muted,fontSize=16.sp)
                             FocusButton(tr("Activar para este perfil","Enable for this profile")) {state.launch {state.setEasyModeRP79(true)}}
                         }
                     }

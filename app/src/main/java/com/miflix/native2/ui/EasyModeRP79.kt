@@ -27,10 +27,8 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.miflix.native2.model.MediaSummary
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.delay
 
-/** Only these four destinations are shown; profile recovery is a deliberate logo hold. */
+/** Basic navigation only; profile recovery requires the sixty-second logo gesture. */
 @Composable
 internal fun EasyNavigationRP79(state:AppState,onMoveDown:()->Unit={}) {
     var exit by remember {mutableStateOf(false)}
@@ -41,10 +39,16 @@ internal fun EasyNavigationRP79(state:AppState,onMoveDown:()->Unit={}) {
                 true
             } else false
         },verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-        FocusButton("BruniO",onLongClick={exit=true},horizontalPadding=14.dp) {}
+        EasyExitLogoRP80(state) {exit=true}
         listOf(Screen.HOME to "Home",Screen.SEARCH to tr("🔍 Buscar","🔍 Search"),
-            Screen.MY_LIST to tr("Mi lista","My List"),Screen.LIVE_TV to tr("En vivo","Live TV")).forEach {(screen,label) ->
-            FocusButton(label,primary=state.screen==screen,horizontalPadding=18.dp) {state.screen=screen}
+            Screen.MY_LIST to tr("Mi lista","My List")).forEach {(screen,label) ->
+            FocusButton(label,primary=state.screen==screen,horizontalPadding=16.dp) {state.screen=screen}
+        }
+        FocusButton("Live TV",primary=state.screen==Screen.LIVE_TV && !state.easyMlbRP80,horizontalPadding=16.dp) {
+            state.easyMlbRP80=false;state.screen=Screen.LIVE_TV
+        }
+        FocusButton("MLB",primary=state.screen==Screen.LIVE_TV && state.easyMlbRP80,horizontalPadding=16.dp) {
+            state.easyMlbRP80=true;state.screen=Screen.LIVE_TV
         }
     }
     if(exit) androidx.compose.ui.window.Dialog(onDismissRequest={exit=false}) {
@@ -72,12 +76,18 @@ internal fun EasyScreenRP79(state:AppState,screen:Screen) {
     BackHandler(enabled=screen!=Screen.HOME) {
         state.screen=if(screen==Screen.DETAILS && state.detailsReturnScreen in listOf(Screen.HOME,Screen.SEARCH,Screen.MY_LIST)) state.detailsReturnScreen else Screen.HOME
     }
+    if(screen==Screen.SEARCH) {
+        CompositionLocalProvider(LocalEasySearchRP80 provides true) {
+            SearchScreen(state) {state.screen=Screen.HOME}
+        }
+        return
+    }
     AppShell(state,screen,{state.screen=it}) {
         when(screen) {
             Screen.HOME -> EasyHomeRP79(state,owner)
-            Screen.SEARCH -> EasySearchRP79(state,owner)
             Screen.MY_LIST -> EasyListRP79(state,owner)
-            Screen.LIVE_TV -> LiveChannelBrowserRP34(state,"nauta",select={request ->
+            Screen.LIVE_TV -> if(state.easyMlbRP80) EasyMlbRP80(state,Modifier.fillMaxSize().padding(horizontal=24.dp,vertical=12.dp))
+            else LiveChannelBrowserRP34(state,"nauta",select={request ->
                 state.openLivePlayer(request.copy(returnScreen=Screen.LIVE_TV))
             },close={state.screen=Screen.HOME},embeddedRP79=true)
             Screen.DETAILS -> EasyDetailsRP79(state)
@@ -90,14 +100,27 @@ internal fun EasyScreenRP79(state:AppState,screen:Screen) {
 private fun EasyHomeRP79(state:AppState,owner:String) {
     var loading by remember(owner) {mutableStateOf(true)}
     LaunchedEffect(owner) {try {state.loadEasyHomeRP79()} finally {loading=false}}
+    LaunchedEffect(owner) {state.loadEasyRowsRP80()}
     LazyColumn(Modifier.fillMaxSize().padding(horizontal=30.dp),verticalArrangement=Arrangement.spacedBy(22.dp),contentPadding=PaddingValues(top=16.dp,bottom=32.dp)) {
-        item {Text(tr("¿Qué quieres ver?","What would you like to watch?"),color=Color.White,fontSize=32.sp,fontWeight=FontWeight.Bold)}
-        if(state.continueWatching.isNotEmpty()) item {
+        item(key="easy-heading") {Text(tr("¿Qué quieres ver?","What would you like to watch?"),color=Color.White,fontSize=32.sp,fontWeight=FontWeight.Bold)}
+        if(state.continueWatching.isNotEmpty()) item(key="easy-continue") {
             EasyShelfRP79(tr("Seguir viendo","Continue Watching"),state.continueWatching.toList()) {item ->state.launch {state.easyResumeRP79(item)}}
         }
-        item {EasyShelfRP79(tr("Películas","Movies"),state.movies.toList()) {item ->state.launch {state.open(item)}}}
-        item {EasyShelfRP79(tr("Series","Series"),state.series.toList()) {item ->state.launch {state.open(item)}}}
-        if(loading) item {Text(tr("Cargando…","Loading…"),color=Muted,fontSize=22.sp)}
+        item(key="easy-movies") {EasyShelfRP79(tr("Películas populares","Popular movies"),state.movies.toList()) {item ->state.launch {state.open(item)}}}
+        item(key="easy-series") {EasyShelfRP79(tr("Series populares","Popular series"),state.series.toList()) {item ->state.launch {state.open(item)}}}
+        if(state.easyRowsMatchRP80) EasyHomeRowsRP80.rows.forEach {row ->
+            val titles=state.easyRowsRP80[row.id].orEmpty()
+            if(titles.isNotEmpty()) item(key="easy-extra:${row.id}") {
+                EasyShelfRP79(tr(row.spanish,row.english),titles) {item ->state.launch {state.open(item)}}
+            }
+        }
+        if(loading || state.easyRowsLoadingRP80) item(key="easy-loading") {Text(tr("Preparando más opciones para ti…","Preparing more choices for you…"),color=Muted,fontSize=22.sp)}
+        if(state.easyRowsMatchRP80 && !state.easyRowsLoadingRP80 && state.easyRowsMessageRP80.isNotBlank()) item(key="easy-retry-rows") {
+            Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                Text(state.easyRowsMessageRP80,color=Muted,fontSize=20.sp)
+                FocusButton(tr("Cargar las filas pendientes","Load remaining rows")) {state.launch {state.loadEasyRowsRP80(retry=true)}}
+            }
+        }
         if(!loading && state.movies.isEmpty() && state.series.isEmpty()) item {
             FocusButton(tr("Volver a cargar","Try again")) {state.launch {state.loadEasyHomeRP79()}}
         }
@@ -123,34 +146,6 @@ private fun EasyCardRP79(item:MediaSummary,modifier:Modifier=Modifier,onOpen:()-
         AsyncImage(item.poster,null,Modifier.fillMaxWidth().height(220.dp).background(Color(0xFF222222)),contentScale=ContentScale.Crop)
         Text(item.title,color=if(focused) Color.Black else Color.White,fontSize=20.sp,lineHeight=26.sp,maxLines=2,
             overflow=TextOverflow.Ellipsis,modifier=Modifier.fillMaxWidth().heightIn(min=68.dp).padding(10.dp))
-    }
-}
-
-@Composable
-private fun EasySearchRP79(state:AppState,owner:String) {
-    var query by rememberSaveable(owner) {mutableStateOf("")}
-    var results by remember(owner) {mutableStateOf<List<MediaSummary>>(emptyList())}
-    var loading by remember(owner) {mutableStateOf(false)}
-    var message by remember(owner) {mutableStateOf("")}
-    LaunchedEffect(owner,query) {
-        results=emptyList();message="";loading=false
-        if(query.trim().length<2) return@LaunchedEffect
-        delay(450);loading=true
-        try {
-            results=state.searchFlexible(query).filter {it.type=="movie" || it.type=="series"}
-        } catch(e: CancellationException) {
-            throw e
-        } catch(e: Exception) {
-            message=tr("No se pudo buscar. Inténtalo de nuevo.","Search failed. Please try again.")
-        } finally {loading=false}
-    }
-    Column(Modifier.fillMaxSize().padding(30.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
-        Text(tr("Buscar película o serie","Search movies or series"),color=Color.White,fontSize=30.sp,fontWeight=FontWeight.Bold)
-        NativeTextField(query,{query=it},tr("Escribe el nombre…","Type a title…"),modifier=Modifier.fillMaxWidth())
-        if(loading) Text(tr("Buscando…","Searching…"),color=Muted,fontSize=22.sp)
-        if(message.isNotBlank()) Text(message,color=Muted,fontSize=20.sp)
-        if(!loading && query.trim().length>=2 && results.isEmpty() && message.isBlank()) Text(tr("Sin resultados","No results"),color=Muted,fontSize=22.sp)
-        EasyGridRP79(results,Modifier.weight(1f)) {item ->state.launch {state.open(item)}}
     }
 }
 

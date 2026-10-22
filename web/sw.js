@@ -1,6 +1,6 @@
 'use strict';
 // Public app shell only. Never cache Supabase, TorBox media, authenticated data or private links.
-const CACHE='brunio-shell-49',FILES=['./','index.html','app.js?v=49','experience.js?v=49','live.js?v=49','style.css?v=49','cinema.css?v=49','cinema.js?v=49','player-ui.css?v=49','player-ui.js?v=49','audio-state.js?v=49','search38.js?v=49','home39.js?v=49','home-compat41.js?v=49','language43.js?v=49','continue44.js?v=49','source-bridge43.js?v=49','player-sources43.js?v=49','features46.js?v=49','player46.js?v=49','manifest.webmanifest','brunio-logo.png','icon-192.png','icon-512.png'];
+const CACHE='brunio-shell-48',FILES=['./','index.html','app.js?v=48','experience.js?v=48','live.js?v=48','style.css?v=48','cinema.css?v=48','cinema.js?v=48','player-ui.css?v=48','player-ui.js?v=48','audio-state.js?v=48','search38.js?v=48','home39.js?v=48','home-compat41.js?v=48','language43.js?v=48','continue44.js?v=48','source-bridge43.js?v=48','player-sources43.js?v=48','features46.js?v=48','player46.js?v=48','manifest.webmanifest','brunio-logo.png','icon-192.png','icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('brunio-shell-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{

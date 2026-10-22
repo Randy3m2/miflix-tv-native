@@ -1,0 +1,25 @@
+BruniO · Android TV RP67 (22171) + Web v39
+Aplicar sobre TV RP66 y Web v38, conservando las rutas. No es un APK.
+
+TV
+- Split Screen publica el primer canal de la lista en la actividad social mientras BruniO está en primer plano. Agregar otras pantallas no sustituye ese canal. Si lo quitas/reemplazas, se publica el primero que quede.
+- Entrada vertical cancela la selección espacial transitoria, guarda el destino antes de cambiar el foco y restaura la tarjeta elegida en la fila. Una fila sin selección comienza por la primera. Un nuevo movimiento descarta restauraciones pendientes anteriores.
+- Conserva navegación horizontal y My List de RP66.
+
+WEB
+- 15 filas iniciales cuando hay contenido disponible; Cargar más añade 6 filas, hasta agotar las secciones.
+- Top 10 de películas y series separados (popularidad TMDB, no ranking oficial de Netflix).
+- Franquicias, géneros y Porque viste según el historial del perfil. Sin historial: selección de títulos valorados.
+- Todas las filas se filtran por plataforma y región, incluidas franquicias y recomendaciones; las filas vacías se sustituyen por otras disponibles.
+- Episodio/temporada nueva: fechas verificadas dentro de 30 días. Recién estrenada: estreno reciente. Recién añadido: título nuevo en las recomendaciones locales de BruniO frente a visitas anteriores; no afirma la fecha de alta en Netflix.
+- Menú de perfiles con las acciones existentes y letras del menú superiores más grandes. No se agregan acciones ficticias de transferencia o administración de cuentas.
+- Una solicitud de catálogo por lote de filas, caché y hasta 5 consultas externas concurrentes; sin polling ni escrituras nuevas en Supabase. Las carátulas cargan de forma diferida.
+
+INSTALACIÓN
+1. Subir app/ para TV y compilar con el proceso habitual.
+2. Desplegar la función Supabase brunio-catalog incluyendo index.ts Y home.ts. Se reutilizan los secretos existentes. Comando habitual: supabase functions deploy brunio-catalog
+3. Subir web/ respetando rutas y volver a desplegar Vercel. No ejecutar SQL.
+Si tu index.ts tiene cambios propios posteriores, conservarlos e integrar únicamente el import homeShelves y la rama action=home antes de la validación de acciones.
+
+VALIDACIÓN
+Pruebas del catálogo con respuestas simuladas: paginación, Top 10, filtro de plataforma, historial, fechas e invalidación de entradas. Sintaxis JS/TS y regresiones Cast/subtítulos pasaron. Revisión visual web en escritorio y celular con datos de prueba. Sin despliegue real ni prueba del catálogo autenticado en producción. TV: revisión de código; pendiente compilar y probar con mando físico. No se generó APK.

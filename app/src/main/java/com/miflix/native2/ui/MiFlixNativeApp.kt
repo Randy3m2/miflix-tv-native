@@ -169,7 +169,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         }
         // Event presence has no polling loop. App background/exit records a durable stop.
         LaunchedEffect(bootstrapped,state.session?.userId,state.appForeground,state.screen,state.miniPlayer,
-            state.playerRequest?.playbackId,state.socialReadyPlaybackId,state.socialEndedPlaybackId,
+            state.playerRequest?.playbackId,state.multiViewRequests.firstOrNull()?.playbackId,state.socialReadyPlaybackId,state.socialEndedPlaybackId,
             state.watchParty?.roomCode) {
             if(bootstrapped && !state.sessionNeedsSignIn) state.publishSocialPresenceEvent()
         }

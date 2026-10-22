@@ -1,3 +1,4 @@
+import {homeShelves} from './home.ts';
 const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization,apikey,content-type','Access-Control-Allow-Methods':'POST,OPTIONS'};
 const reply=(value:unknown,status=200)=>new Response(JSON.stringify(value),{status,headers:{...cors,'Content-Type':'application/json'}});
 const cache=new Map<string,{at:number;data:any}>();
@@ -85,6 +86,7 @@ Deno.serve(async(request:Request)=>{
   const input=await request.json();language=input.language==='en'?'en':'es';const lang={language:language==='en'?'en-US':'es-ES'};
   const region=typeof input.region==='string'&&/^[A-Z]{2}$/.test(input.region)?input.region:'US';
   if(input.action==='subtitles'){if(!/^tmdb:(movie|series):[1-9][0-9]{0,8}$/.test(input.cloud||''))return reply({error:'Invalid title'},400);if(input.cloud.startsWith('tmdb:series:')&&(!Number.isSafeInteger(Number(input.season))||Number(input.season)<0||Number(input.season)>10000||!Number.isSafeInteger(Number(input.episode))||Number(input.episode)<1||Number(input.episode)>10000))return reply({error:'Invalid episode'},400);return reply(await preloadSubtitles(input,language));}
+  if(input.action==='home')return reply(await homeShelves(input,language,catalog,media,platforms));
   if(input.action==='config') {
    const [m,t,p,pt]=await Promise.all([catalog('/genre/movie/list',lang),catalog('/genre/tv/list',lang),catalog('/watch/providers/movie',lang),catalog('/watch/providers/tv',lang)]);
    const providers=Object.entries(platforms).map(([key,v])=>{const provider=[...(p.results||[]),...(pt.results||[])].find((x:any)=>v.ids.includes(x.provider_id));return {key,name:v.name,logo:provider?.logo_path?`https://image.tmdb.org/t/p/w185${provider.logo_path}`:null};});

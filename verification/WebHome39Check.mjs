@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import {homeShelves} from '../supabase/functions/brunio-catalog/home.ts';
+const platforms={netflix:{ids:[8]}};
+let active=0,peak=0,calls=[];
+const row=(id,kind='movie')=>({id,adult:false,title:'Movie '+id,name:'The Walking Dead '+id,original_name:'The Walking Dead '+id,release_date:'2024-01-01',first_air_date:'2024-01-01'});
+const tmdb=async(path,params={})=>{calls.push([path,params]);active++;peak=Math.max(active,peak);await new Promise(r=>setTimeout(r,1));active--;
+ if(path.endsWith('/watch/providers'))return {results:{US:{flatrate:[{provider_id:8}]}}};
+ if(path.startsWith('/collection'))return {parts:Array.from({length:8},(_,i)=>row(i+1))};
+ if(/^\/tv\/\d+$/.test(path))return {last_episode_to_air:{air_date:new Date().toISOString().slice(0,10),season_number:2},seasons:[{season_number:2,air_date:new Date().toISOString().slice(0,10)}]};
+ if(path.includes('/recommendations'))return {results:[row(9)]};
+ if(path==='/movie/42')return {title:'Seed title',recommendations:{results:[row(9)]}};
+ return {results:Array.from({length:20},(_,i)=>row(i+1))};
+};
+const media=(r,kind)=>({id:r.id,title:r.title,cloudId:`tmdb:${kind}:${r.id}`,type:kind,date:r.release_date});
+const first=await homeShelves({provider:'netflix'},'es',tmdb,media,platforms);
+assert.equal(first.shelves.length,15);assert(first.nextOffset>=15);assert(first.hasMore);assert.equal(first.shelves[0].items.length,10);assert.equal(first.shelves[1].items.length,10);assert(peak<=5,'bounded concurrent upstream requests');
+for(const [path,p]of calls)if(path.startsWith('/discover')){assert.equal(p.with_watch_providers,'8');assert.equal(p.watch_region,'US');assert.equal(p.with_watch_monetization_types,'flatrate');}
+assert(first.shelves.find(s=>s.id==='ongoing').items.some(x=>x.freshness==='new-season'));
+const second=await homeShelves({offset:first.nextOffset},'en',tmdb,media,platforms);assert.equal(second.shelves.length,6);assert(!second.shelves.some(s=>first.shelves.some(x=>x.id===s.id)));
+const personalized=await homeShelves({seed:'tmdb:movie:42'},'en',tmdb,media,platforms);assert.equal(personalized.shelves.find(s=>s.id==='because').title,'Because you watched Seed title');
+await assert.rejects(()=>homeShelves({offset:-1},'en',tmdb,media,platforms));await assert.rejects(()=>homeShelves({provider:'unknown'},'en',tmdb,media,platforms));
+const unavailable=await homeShelves({provider:'netflix'},'en',async(p,q)=>p.endsWith('/watch/providers')?{results:{}}:tmdb(p,q),media,platforms);assert(!unavailable.shelves.some(s=>s.id==='star-wars'),'no out-of-platform franchise leakage');assert.equal(unavailable.shelves.length,15,'fill unavailable franchises with scoped shelves');
+console.log('PASS: 15 initial shelves, +6 pagination, separate top tens, provider scoping, personalization, real episode dates, bounded concurrency and invalid inputs.');

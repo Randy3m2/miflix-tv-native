@@ -1033,13 +1033,20 @@ class AppState(context: Context) {
     fun socialPlaybackEnded(req: PlayerRequest) {
         if(playerRequest?.playbackId==req.playbackId) socialEndedPlaybackId=req.playbackId
     }
+    private var splitPresenceIdRP67=""
+    private var splitPresenceExpiresRP67=0L
     fun publishSocialPresenceEvent() {
         val s=profileSocialSession() ?: return
-        val req=playerRequest?.takeIf { appForeground && (screen==Screen.PLAYER || miniPlayer) &&
+        val split=multiViewRequests.firstOrNull()?.takeIf {appForeground && screen==Screen.MULTIVIEW}
+        if(split?.playbackId!=splitPresenceIdRP67) {
+            splitPresenceIdRP67=split?.playbackId.orEmpty()
+            splitPresenceExpiresRP67=if(split!=null) System.currentTimeMillis()+4*60*60*1000L else 0L
+        }
+        val req=split ?: playerRequest?.takeIf { appForeground && (screen==Screen.PLAYER || miniPlayer) &&
             it.playbackId==socialReadyPlaybackId && it.playbackId!=socialEndedPlaybackId }
         presenceEvents.queue(s,req?.item?.title.orEmpty(),req?.item?.cloudId.orEmpty(),
             req?.season ?: 0,req?.episode ?: 0,if(req!=null) watchParty?.roomCode else null,
-            if(req!=null) socialExpiresAt else System.currentTimeMillis())
+            if(split!=null) splitPresenceExpiresRP67 else if(req!=null) socialExpiresAt else System.currentTimeMillis())
     }
     fun retrySocialPresenceEvent() { profileSocialSession()?.takeUnless {sessionNeedsSignIn}?.let {presenceEvents.retry(it)} }
 

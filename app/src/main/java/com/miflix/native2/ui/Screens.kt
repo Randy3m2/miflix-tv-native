@@ -1565,6 +1565,19 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
         }
     }
+    LaunchedEffect(player,request.playbackId) {
+        if(request.liveProvider!="sports" || request.sportsLinksRP71.isEmpty()) return@LaunchedEffect
+        var activeWait=0L
+        while(!firstFrame && playbackError==null && state.playerRequest?.playbackId==request.playbackId && state.playerRequest?.sportsLinksRP71?.isNotEmpty()==true) {
+            delay(500)
+            if(state.appForeground && player.playWhenReady && playerMenu==null) activeWait+=500
+            if(activeWait>=20_000) {
+                if(!state.nextSportsSourceRP71(request) && state.playerRequest?.playbackId==request.playbackId)
+                    playbackError=tr("No iniciaron los primeros enlaces. Usa Cambiar fuente para elegir otro.","The first sources did not start. Use Change source to choose another.")
+                break
+            }
+        }
+    }
     DisposableEffect(player, playbackView) {
         val previousKeepScreenOn = playbackView.keepScreenOn
         fun updateScreenAwake() {
@@ -1577,6 +1590,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         var restoredSeriesAudio=false
         val listener = object : Player.Listener {
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                if(request.liveProvider=="sports" && state.nextSportsSourceRP71(request)) return
                 // Some IPTV endpoints have no extension and return generic content types.
                 // Retry HLS once only when automatic container detection failed, never on HTTP/auth errors.
                 if(request.live && request.liveMime!="application/dash+xml" && !triedLiveHls && error.errorCode==androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED) {
@@ -1641,7 +1655,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 updateScreenAwake()
             }
 
-            override fun onRenderedFirstFrame() {if(!firstFrame) state.rememberSuccessfulPlaybackRP16(request);state.recordSuccessfulLiveChannel(request);if(!firstFrame) LiveHubPlaybackRP41.remember(context,state,request);state.socialPlaybackStarted(request,player.currentPosition,player.duration);if(!firstFrame) state.markLidomSourceWorking(request);firstFrame=true;state.finishPlaybackLoading(request.playbackId)}
+            override fun onRenderedFirstFrame() {state.sportsStartedRP71(request);if(!firstFrame) state.rememberSuccessfulPlaybackRP16(request);state.recordSuccessfulLiveChannel(request);if(!firstFrame) LiveHubPlaybackRP41.remember(context,state,request);state.socialPlaybackStarted(request,player.currentPosition,player.duration);if(!firstFrame) state.markLidomSourceWorking(request);firstFrame=true;state.finishPlaybackLoading(request.playbackId)}
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if(playbackState==Player.STATE_READY) state.socialPlaybackReady(request,player.currentPosition,player.duration)
                 if (playbackState == Player.STATE_ENDED) {
@@ -1948,8 +1962,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 FocusButton("OK",modifier=Modifier.focusRequester(first)) { playerMenu=null;controlInteraction++ }
             }
         }
+        if(playerMenu=="sports_links") {LaunchedEffect(request.playbackId) {state.sportsStartedRP71(request)}}
         if(playerMenu=="sports_links") LiveSportsLinksRP44(state,LiveChannel(request.liveChannelId,request.liveType,request.item.title,request.item.backdrop,request.item.overview),{playerMenu=null},manifestOverrideRP49=if(request.liveProvider==com.miflix.native2.data.NuvioTestConfigRP49.PROVIDER) state.calendarLiveManifest(request.liveProvider) else null) {stream ->
-            playerMenu=null;state.openLivePlayer(request.copy(stream=stream,playbackId=java.util.UUID.randomUUID().toString()))
+            playerMenu=null;state.openLivePlayer(request.copy(stream=stream,playbackId=java.util.UUID.randomUUID().toString(),sportsLinksRP71=emptyList(),sportsOwnerRP71=""))
         }
         sportsTargetRP44?.let {entry ->LiveSportsLinksRP44(state,entry.value,{sportsTargetRP44=null},manifestOverrideRP49=if(entry.provider==com.miflix.native2.data.NuvioTestConfigRP49.PROVIDER) state.calendarLiveManifest(entry.provider) else null) {stream ->
             val c=entry.value;sportsTargetRP44=null

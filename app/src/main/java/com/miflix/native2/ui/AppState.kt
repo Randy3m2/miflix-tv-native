@@ -455,9 +455,9 @@ class AppState(context: Context) {
         refreshCalendar()
     }
     fun calendarLiveManifest(kind: String): String = when(kind) {
-        com.miflix.native2.data.NuvioTestConfigRP49.PROVIDER -> com.miflix.native2.data.NuvioTestConfigRP49.MANIFEST
+        com.miflix.native2.data.NuvioTestConfigRP49.PROVIDER -> error("This source has been removed")
         "iptv", "iptv:do", "iptv:tur", "iptv:mx", "iptv:es", "iptv:us" -> IptvRepository.manifest(kind)
-        "sports" -> livePrefs.getString("sports_manifest","https://sportsfree-us2.highfly.to/manifest.json").orEmpty()
+        "sports" -> com.miflix.native2.data.SportsSourceRP71.read(appContext)
         else -> "https://stremio-addon-wheat.vercel.app/manifest.json"
     }
     suspend fun openCalendarEvent(event: CalendarEvent) {
@@ -1560,6 +1560,24 @@ class AppState(context: Context) {
         val previous=previousLiveChannel(req) ?: return
         // Reuse the last successful request, but start a new live playback at its live edge.
         openLivePlayer(previous.copy(playbackId=UUID.randomUUID().toString(),resumeMs=0L,sourceFallbackPlaying=null))
+    }
+    internal fun sportsRequestRP71(req:PlayerRequest,rows:List<StreamChoice>):PlayerRequest {
+        val choices=rows.distinctBy {it.url}.take(5)
+        require(choices.isNotEmpty()) {tr("No hay enlaces disponibles","No links available")}
+        return req.copy(stream=choices.first(),sportsLinksRP71=choices,sportsAttemptRP71=0,sportsOwnerRP71="${session?.userId ?: "local"}:${activeProfile.id}")
+    }
+    internal fun nextSportsSourceRP71(req:PlayerRequest):Boolean {
+        val current=playerRequest ?: return false
+        if(current.playbackId!=req.playbackId || !current.live || current.liveProvider!="sports" || screen!=Screen.PLAYER || !appForeground || kidsMode || partyRole==PartyRole.GUEST ||
+            current.sportsOwnerRP71!="${session?.userId ?: "local"}:${activeProfile.id}") return false
+        val index=com.miflix.native2.data.SportsPolicyRP71.nextAttempt(current.sportsAttemptRP71,current.sportsLinksRP71.size)
+        if(index<0) return false
+        openLivePlayer(current.copy(stream=current.sportsLinksRP71[index],sportsAttemptRP71=index,playbackId=UUID.randomUUID().toString(),resumeMs=0L))
+        return true
+    }
+    internal fun sportsStartedRP71(req:PlayerRequest) {
+        val current=playerRequest ?: return
+        if(current.playbackId==req.playbackId && current.sportsLinksRP71.isNotEmpty()) playerRequest=current.copy(sportsLinksRP71=emptyList(),sportsOwnerRP71="")
     }
     fun openLivePlayer(req: PlayerRequest) {
         require(!kidsMode) {tr("TV en vivo no está disponible en Kids.","Live TV is not available in Kids.") }
@@ -3330,7 +3348,10 @@ data class PlayerRequest(
     val momentEndMs: Long = 0L,
     val momentSender: String = "",
     val sourceFallbackPlaying: Boolean? = null,
-    val sourceMemoryKeyRP16: String = ""
+    val sourceMemoryKeyRP16: String = "",
+    val sportsLinksRP71: List<StreamChoice> = emptyList(),
+    val sportsAttemptRP71: Int = 0,
+    val sportsOwnerRP71: String = ""
 )
 
 data class SourceSelection(

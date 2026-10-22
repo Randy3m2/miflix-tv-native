@@ -1,0 +1,68 @@
+BruniO Android TV — RP71 (22175 / 2.0.0-rp71)
+
+Aplicar SOBRE RP70. Extraer y subir respetando las rutas originales.
+Este ZIP es un parche de código, NO un APK. No se generó una build.
+No requiere SQL, cambios en Supabase ni redespliegue de Vercel.
+
+1. CONTINUE WATCHING
+El menú al mantener OK usa el panel moderno ya incorporado en RP68/RP70:
+negro, imagen del contenido, acciones agrupadas con iconos, foco blanco
+solo en la acción seleccionada y cierre con X. Conserva Ir a detalles,
+Elegir enlace, Desde el principio y Quitar de Seguir viendo.
+También se aplica al menú equivalente de otros títulos, sin cambiar
+las acciones de los episodios ni los tiempos de pulsación de canales.
+
+2. OTHERS / NAUTA SOURCE
+Los canales locales que antes se repetían en cada pestaña de Others pasan
+a una única tarjeta/carpeta Nauta Source. Dentro hay categorías y tarjetas.
+No se cambian sus URLs, logos, edición, eliminación ni acceso desde Live TV.
+La lista del reproductor reutiliza la misma navegación y categoría guardada.
+Nuvio Test se elimina del hub y de los catálogos activos; su asset queda
+vacío. Se conserva solo una identidad retirada para compatibilidad con
+referencias antiguas, sin su manifest ni sus carpetas importadas.
+Los canales de Tirso/IPTV que ya tenían sus propias áreas las conservan.
+
+3. SPORTS SETTINGS
+Nueva fuente premium de fábrica: la dirección facilitada en este request.
+Se aplica al instalar y a los antiguos valores gratuitos por defecto.
+Si ya guardaste otra dirección personalizada, se conserva; puedes cambiarla
+manualmente o por el nuevo QR de Configurar deportes.
+El QR abre un formulario temporal en la misma red local: pegar manifest HTTPS,
+guardar, y la configuración se aplica a la TV. No requiere Supabase.
+El receptor se cierra al abandonar la pantalla/cambiar perfil o ir a segundo
+plano. Conserva los controles de ticket temporal, subred, Host, Origin y CSRF.
+
+4. SPORTS AUTOPLAY
+OK sobre un evento inicia el primer enlace. Si falla antes del primer frame,
+se prueban hasta cinco URLs distintas en el orden entregado por el add-on
+(o las disponibles si hay menos). No vuelve a consultar el manifest por
+cada intento: reutiliza la lista recibida y conserva los headers del stream.
+También contempla una espera inicial de 20 segundos por fuente, contando
+solo mientras la app está en primer plano y la reproducción está solicitada.
+La secuencia se detiene al verse el primer frame o al abrir el selector manual.
+Al agotarse queda el error con las opciones para elegir otro enlace.
+Mantener OK en la tarjeta del evento abre el selector manual.
+En el panel de canales se conserva el menú largo de favoritos y se añade
+Elegir enlace para los eventos deportivos. Dentro del player, el icono de
+enlace se identifica como Cambiar fuente / Change source.
+Los reintentos nuevos corresponden al reproductor principal; no se añade
+un motor de reintentos independiente a cada casilla de Split Screen.
+Nauta, IPTV y los canales personalizados conservan su reproducción actual.
+
+VERIFICACIÓN
+- Compiladas las clases Java del receptor y la política de Sports con sus
+  dependencias Java locales. Pruebas de valor de fábrica, migración del
+  valor gratuito, conservación de dirección personalizada, validación HTTPS,
+  límite de cinco intentos y controles Origin/CSRF: PASARON.
+- Comprobaciones de integración de código: carpeta, retirada de Nuvio,
+  menú moderno, rutas manuales/automáticas, aislamiento de reproducción
+  y perfil, ciclo de vida del QR, foco blanco y versión RP71: PASARON.
+- Revisión sintáctica Kotlin sin nuevos errores detectados respecto a las
+  limitaciones conocidas del analizador; esto NO equivale a compilar Android.
+- Prueba de sockets del QR: OMITIDA aquí porque el entorno no presenta una
+  interfaz IPv4 LAN privada. Se incluye la prueba para ejecutarla en una LAN.
+- El manifest premium devolvió HTTP 403 desde este entorno. Su disponibilidad
+  y las reproducciones deben validarse desde la TV/red del usuario.
+- Falta compilar en GitHub/Android SDK y probar visualmente con mando en TV.
+  No se afirma que un enlace bloqueado o paywalled vaya a funcionar; se
+  respetan los cinco intentos y se conserva la selección manual.

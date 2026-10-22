@@ -55,14 +55,15 @@ private val hubCatalogRP41=PlaybackLinkCache<String,List<LiveCategory>>(4) {Syst
 internal fun LiveHubRP41(state:AppState) {
     val context=LocalContext.current
     val owner="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
-    var section by remember(owner) {mutableStateOf(LiveHubMemoryRP46.section(owner))}
+    var section by remember(owner) {mutableStateOf(LiveHubMemoryRP46.section(owner).let {if(it=="nuvio") "others" else it})}
     var customChannelsRP45 by remember(owner) {mutableStateOf(false)}
     var configuring by remember {mutableStateOf(false)}
+    var sportsQrRP71 by remember {mutableStateOf(false)}
     var revision by remember {mutableIntStateOf(0)}
     val first=remember {FocusRequester()}
     val contentFocusRP44=remember {FocusRequester()}
     fun changeSectionRP46(value:String) {LiveHubMemoryRP46.section(owner,value);section=value}
-    fun back() {changeSectionRP46(if(section=="nuvio") "others" else "hub")}
+    fun back() {changeSectionRP46(if(section=="nauta-source") "others" else "hub")}
     BackHandler {if(section!="hub") back() else state.screen=Screen.HOME}
     LaunchedEffect(section) {if(section=="hub") {withFrameNanos {};runCatching {first.requestFocus()}}}
     Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal=14.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -71,7 +72,7 @@ internal fun LiveHubRP41(state:AppState) {
         Column(Modifier.weight(1f).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
             FocusButton("‹",horizontalPadding=14.dp) {if(section=="hub") state.screen=Screen.HOME else back()}
-            Text(if(section=="hub") tr("En Vivo","Live") else when(section) {"basketball"->"NBA · Basketball";"baseball"->"MLB · Baseball";"football"->"NFL · American Football";"soccer"->tr("Fútbol","Football");"f1"->"F1";"lidom"->"LIDOM";"tv"->tr("Canales de TV","TV Channels");"nuvio"->"Nuvio Test";else->"Others"},color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
+            Text(if(section=="hub") tr("En Vivo","Live") else when(section) {"basketball"->"NBA · Basketball";"baseball"->"MLB · Baseball";"football"->"NFL · American Football";"soccer"->tr("Fútbol","Football");"f1"->"F1";"lidom"->"LIDOM";"tv"->tr("Canales de TV","TV Channels");"nauta-source"->"Nauta Source";else->"Others"},color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
             if(section=="others") {
                 FocusButton(tr("Mis canales","My channels")) {customChannelsRP45=true}
                 FocusButton(tr("Configurar deportes","Sports settings")) {configuring=true}
@@ -100,9 +101,9 @@ internal fun LiveHubRP41(state:AppState) {
             }
             }
         } else if(section=="tv") key(owner) {UnifiedLiveTVRP32(state,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())}
-        else if(section=="nuvio") NuvioTestScreenRP49(state,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())
+        else if(section=="nauta-source") NautaSourceScreenRP71(state,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())
         else if(section=="lidom") HubLidomRP41(state,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())
-        else key(section,revision) {HubSportsRP41(state,section,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup()) {changeSectionRP46("nuvio")}}
+        else key(section,revision) {HubSportsRP41(state,section,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup()) {changeSectionRP46("nauta-source")}}
     }
     }
     if(customChannelsRP45) CustomChannelsPanelRP45(state) {customChannelsRP45=false}
@@ -112,16 +113,17 @@ internal fun LiveHubRP41(state:AppState) {
             Column(Modifier.widthIn(max=600.dp).background(Panel,RoundedCornerShape(18.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 Text(tr("Fuente de deportes","Sports source"),color=Color.White,fontSize=22.sp)
                 NativeTextField(manifest,{manifest=it},"https://…/manifest.json",modifier=Modifier.fillMaxWidth())
+                FocusButton(tr("Escanear QR desde el celular","Scan QR from phone")) {sportsQrRP71=true}
                 FocusButton(tr("Guardar","Save")) {
-                    if(manifest.startsWith("https://") && manifest.endsWith("/manifest.json")) {
-                        context.getSharedPreferences("miflix_live",android.content.Context.MODE_PRIVATE).edit().putString("sports_manifest",manifest.trim()).apply()
-                        revision++;configuring=false
-                    }
+                    if(SportsSourceRP71.valid(manifest.trim())) {
+                        SportsSourceRP71.save(context,manifest.trim());revision++;configuring=false
+                    } else state.error=tr("Usa un manifest HTTPS válido.","Use a valid HTTPS manifest.")
                 }
                 FocusButton(tr("Cerrar","Close")) {configuring=false}
             }
         }
     }
+    if(sportsQrRP71) SportsQrSheetRP71(state,{value ->SportsSourceRP71.save(context,value);revision++;configuring=false},{sportsQrRP71=false})
 }
 
 @Composable
@@ -147,7 +149,7 @@ private fun HubTileRP41(board:ImageBitmap,index:Int,label:String,modifier:Modifi
 }
 
 @Composable
-private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,openNuvioRP49:()->Unit) {
+private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,openNautaSourceRP71:()->Unit) {
     val repo=remember {LiveRepository()};val scope=rememberCoroutineScope()
     val ownerRP46="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
     val contextRP48=LocalContext.current
@@ -235,22 +237,25 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,openNu
         finally {loading=false}
     }
     var pendingRP44 by remember {mutableStateOf<HubEventRP41?>(null)}
-    fun playRP44(event:HubEventRP41,stream:StreamChoice) {
+    fun playRP44(event:HubEventRP41,stream:StreamChoice,automatic:List<StreamChoice> = emptyList()) {
         val c=event.channel
         LiveChannelNavigationRP40.save(state,LiveBrowseSnapshotRP40(BrowserCategoryRP34(event.provider,event.category,"Sports"),displayedRP42.filter {it.provider==event.provider && it.category==event.category}.map {BrowserChannelRP34(it.provider,it.channel)},offset=offsetsRP41[event.category] ?: offset,more=event.category in pendingRP41))
-        state.openLivePlayer(PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),stream,0,0,0L,live=true,liveChannelId=c.id,liveProvider=event.provider,liveType=c.type,returnScreen=Screen.LIVE_TV))
+        val request=PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),stream,0,0,0L,live=true,liveChannelId=c.id,liveProvider=event.provider,liveType=c.type,returnScreen=Screen.LIVE_TV)
+        state.openLivePlayer(if(automatic.isEmpty()) request else state.sportsRequestRP71(request,automatic))
     }
     pendingRP44?.let {event ->LiveSportsLinksRP44(state,event.channel,{pendingRP44=null}) {stream ->pendingRP44=null;playRP44(event,stream)}}
-    fun tune(event:HubEventRP41) {
+    fun tune(event:HubEventRP41,manual:Boolean=false) {
         if(resolving) return
         if(state.partyRole==PartyRole.GUEST) {message=tr("El anfitrión elige el contenido.","The host chooses the content.");return}
-        if(event.provider=="sports") {pendingRP44=event;return}
+        if(event.provider=="sports" && manual) {pendingRP44=event;return}
         val stamp=generation;val profile=state.session?.userId to state.activeProfile.id
         scope.launch {
             resolving=true;message=""
             try {
-                val stream=repo.streams(state.calendarLiveManifest(event.provider),event.channel).firstOrNull() ?: error("No links")
+                val streams=repo.streams(state.calendarLiveManifest(event.provider),event.channel)
+                val stream=streams.firstOrNull() ?: error("No links")
                 if(stamp!=generation || profile!=(state.session?.userId to state.activeProfile.id) || state.screen!=Screen.LIVE_TV || state.partyRole==PartyRole.GUEST) return@launch
+                if(event.provider=="sports") {playRP44(event,stream,streams);return@launch}
                 val c=event.channel
                 LiveChannelNavigationRP40.save(state,LiveBrowseSnapshotRP40(BrowserCategoryRP34(event.provider,event.category,if(event.provider=="nauta") "Nauta" else "Sports"),displayedRP42.filter {it.provider==event.provider && it.category==event.category}.map {BrowserChannelRP34(it.provider,it.channel)},offset=if(event.provider=="sports") offsetsRP41[event.category] ?: offset else displayedRP42.count {it.provider==event.provider && it.category==event.category},more=event.provider=="sports" && event.category in pendingRP41))
                 state.openLivePlayer(PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),stream,0,0,0L,live=true,liveChannelId=c.id,liveProvider=event.provider,liveType=c.type,returnScreen=Screen.LIVE_TV))
@@ -271,15 +276,10 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,openNu
         if(nautaWarningRP42.isNotBlank()) Text(nautaWarningRP42,color=Muted,fontSize=12.sp)
         if(message.isNotBlank()) {Text(message,color=Muted);FocusButton(tr("Reintentar","Retry")) {retry++}}
         LazyVerticalGrid(GridCells.Adaptive(240.dp),Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(6.dp,6.dp,6.dp,30.dp)) {
-            if(section=="others") item(key="nuvio-test-rp49") {
-                HubEventCardRP41("Nuvio Test",null,tr("Repeticiones deportivas · 8 deportes","Sports replays · 8 sports")) {openNuvioRP49()}
+            if(section=="others") item(key="nauta-source-rp71") {
+                HubEventCardRP41("Nauta Source",null,tr("Carpeta · Tus canales organizados","Folder · Your channels, organized")) {openNautaSourceRP71()}
             }
-            items(customRowsRP48,key={"custom:"+it.id}) {channel ->
-                HubEventCardRP41(CustomChannelsRP45.labelRP50(channel),channel.logo,tr("EN VIVO · Mantén OK: opciones","LIVE · Hold OK: options"),onHoldRP48={customManageRP48=channel},logoRP50=true) {
-                    if(state.partyRole!=PartyRole.GUEST && !state.kidsMode) state.openLivePlayer(CustomChannelsRP45.request(channel))
-                }
-            }
-            items(displayedRP42,key={it.key}) {event ->HubEventCardRP41(event.channel.name,event.channel.poster,when {event.provider=="nauta"->if(f1ChannelRP42(event.channel.name)) "Nauta · F1" else "Nauta · DAZN";event.provider in IptvRepository.sources->"IPTV · "+IptvRepository.sources[event.provider]?.first.orEmpty();else->event.channel.description}) {tune(event)}}
+            items(displayedRP42,key={it.key}) {event ->HubEventCardRP41(event.channel.name,event.channel.poster,when {event.provider=="nauta"->if(f1ChannelRP42(event.channel.name)) "Nauta · F1" else "Nauta · DAZN";event.provider in IptvRepository.sources->"IPTV · "+IptvRepository.sources[event.provider]?.first.orEmpty();else->event.channel.description},onHoldRP48={tune(event,manual=true)}) {tune(event)}}
             if(!loading && displayedRP42.isEmpty() && customRowsRP48.isEmpty() && message.isBlank()) item(span={GridItemSpan(maxLineSpan)}) {Text(tr("No hay eventos publicados ahora.","No events published right now."),color=Muted)}
             if(more && !loading) item(span={GridItemSpan(maxLineSpan)}) {FocusButton(tr("Cargar más","Load more")) {
                 val c=selected

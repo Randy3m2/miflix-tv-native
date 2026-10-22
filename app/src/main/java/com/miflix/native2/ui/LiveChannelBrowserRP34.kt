@@ -89,7 +89,8 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     LaunchedEffect(retry,customRevisionRP48) {
         loading=true;message="";catalogWarningRP39="";categories=emptyList();selected=""
         val localCategoryRP48=BrowserCategoryRP34(CustomChannelsRP45.provider,CustomChannelsRP45.categoryRP48(),"")
-        val tirsoCategoriesRP51=(CustomChannelsRP45.categoriesRP51()+CustomChannelsRP45.categoriesRP61()+M3UListsRP61.categories(context,localOwnerRP48)).map {BrowserCategoryRP34(CustomChannelsRP45.provider,it,"")}
+        val nautaSourceCategoriesRP71=listOf(CustomChannelsRP45.categoryNautaSourceRP71())+CustomChannelsRP45.list(context,localOwnerRP48).map {it.category}.distinct().sorted().map {LiveCategory("tv","nauta-source:"+it,"Nauta Source · "+it)}
+        val tirsoCategoriesRP51=(CustomChannelsRP45.categoriesRP51()+CustomChannelsRP45.categoriesRP61()+M3UListsRP61.categories(context,localOwnerRP48)+nautaSourceCategoriesRP71).map {BrowserCategoryRP34(CustomChannelsRP45.provider,it,"")}
         categories=tirsoCategoriesRP51+listOf(localCategoryRP48)
         if(initialProvider==CustomChannelsRP45.provider) {
             val currentChannel=current?.liveChannelId?.let {CustomChannelsRP45.findRP48(context,localOwnerRP48,it)}
@@ -99,12 +100,12 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
             loading=false
             return@LaunchedEffect
         }
-        val providers=listOf(if(initialProvider==NuvioTestConfigRP49.PROVIDER) NuvioTestConfigRP49.PROVIDER else if(initialProvider=="sports") "sports" else "nauta")
+        val providers=listOf(if(initialProvider=="sports") "sports" else "nauta")
         val found=coroutineScope {providers.map {provider ->async {
             try {permits.withPermit {
                 val manifest=state.calendarLiveManifest(provider)
-                val catalog=if(provider==NuvioTestConfigRP49.PROVIDER) NuvioTestConfigRP49.categories(context) else browserCategoryCacheRP34.get(manifest) ?: repo.categories(manifest).also {browserCategoryCacheRP34.put(manifest,it)}
-                catalog.map {BrowserCategoryRP34(provider,it,if(provider==NuvioTestConfigRP49.PROVIDER) "Nuvio Test" else if(provider=="nauta") "Nauta" else if(provider=="sports") tr("Deportes","Sports") else IptvRepository.sources[provider]?.first.orEmpty())}
+                val catalog=browserCategoryCacheRP34.get(manifest) ?: repo.categories(manifest).also {browserCategoryCacheRP34.put(manifest,it)}
+                catalog.map {BrowserCategoryRP34(provider,it,if(provider=="nauta") "Nauta" else if(provider=="sports") tr("Deportes","Sports") else IptvRepository.sources[provider]?.first.orEmpty())}
             }} catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
         }}.awaitAll().flatten()}
         categories=(tirsoCategoriesRP51+found+IptvRepository.sources.map {(provider,source) ->
@@ -211,19 +212,21 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
             else message=tr("El canal ya no está disponible en este perfil.","This channel is no longer available in this profile.")
             return
         }
-        if(entry.provider=="sports" || entry.provider==NuvioTestConfigRP49.PROVIDER) {pendingSportsRP44=entry;return}
-        val stamp=generation
+        if(entry.provider==NuvioTestConfigRP49.PROVIDER) {message=tr("Esta fuente se retiró.","This source was removed.");return}
+        val stamp=generation;val playbackOwnerRP71=state.session?.userId to state.activeProfile.id
+        if(state.partyRole==PartyRole.GUEST) return
         scope.launch {
             resolving=true;message=""
             try {
-                val stream=repo.streams(state.calendarLiveManifest(entry.provider),entry.value).firstOrNull()
-                    ?: error("No streams")
-                if(stamp!=generation) return@launch
+                val streams=repo.streams(state.calendarLiveManifest(entry.provider),entry.value)
+                val stream=streams.firstOrNull() ?: error("No streams")
+                if(stamp!=generation || playbackOwnerRP71!=(state.session?.userId to state.activeProfile.id) || state.partyRole==PartyRole.GUEST) return@launch
                 val c=entry.value
                 val activeCategory=group ?: BrowserCategoryRP34(entry.provider,LiveCategory(entry.value.type,"favorites","Favorites"),"")
                 LiveChannelNavigationRP40.save(state,LiveBrowseSnapshotRP40(activeCategory,displayed,search,offset,more,channelList.firstVisibleItemIndex,channelList.firstVisibleItemScrollOffset))
-                select(PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),stream,0,0,0L,
-                    live=true,liveChannelId=c.id,liveProvider=entry.provider,liveType=c.type))
+                val req=PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),stream,0,0,0L,
+                    live=true,liveChannelId=c.id,liveProvider=entry.provider,liveType=c.type)
+                select(if(entry.provider=="sports") state.sportsRequestRP71(req,streams) else req)
             } catch(e:CancellationException) {throw e} catch(_:Exception) {if(stamp==generation) message=tr("No se pudo abrir el canal. Prueba otro.","Could not open the channel. Try another.")}
             finally {if(stamp==generation) resolving=false}
         }
@@ -322,6 +325,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                         LiveLibrary.toggle(context,state,entry.provider,entry.value)
                         genericOptionsRP54=null
                     }
+                    if(entry.provider=="sports") FocusButton(tr("Elegir enlace","Play manually"),modifier=Modifier.fillMaxWidth()) {genericOptionsRP54=null;pendingSportsRP44=entry}
                     FocusButton(tr("Cerrar","Close"),modifier=Modifier.fillMaxWidth()) {genericOptionsRP54=null}
                 }
             }

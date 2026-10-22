@@ -22,24 +22,20 @@ internal val LocalTitleActions=staticCompositionLocalOf<((MediaSummary)->Unit)?>
 
 @Composable
 internal fun TitleActionsDialog(state: AppState,item: MediaSummary,continuing: Boolean,close: ()->Unit) {
-    val first=remember {FocusRequester()}
-    LaunchedEffect(Unit) {withFrameNanos {};runCatching {first.requestFocus()} }
     suspend fun prepare() {
         state.open(item)
         check(state.selected?.cloudId==item.cloudId && state.details?.summary?.cloudId==item.cloudId) {tr("Título no disponible","Title unavailable")}
     }
-    fun action(block: suspend ()->Unit) {close();state.launch {state.socialAction {block()} } }
-    PlayerMenuDialog(onDismissRequest=close) {
-        Column(Modifier.consumeOpeningPress().widthIn(max=520.dp).background(Panel,RoundedCornerShape(24.dp)).padding(24.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-            Text(item.title,color=Color.White,fontSize=24.sp)
-            FocusButton(tr("Ir a detalles","Go to details"),modifier=Modifier.focusRequester(first)) {action {state.open(item)} }
-            FocusButton(tr("Elegir enlace","Play manually")) {action {prepare();if(!state.selectedUpcoming) state.chooseCurrentSources()} }
-            FocusButton(tr("Desde el principio","Start from beginning")) {action {prepare();if(!state.selectedUpcoming) {if(item.type=="movie") state.playMovie(true) else state.playSeriesFromStart()} } }
-            if(continuing) FocusButton(tr("Quitar","Remove"),destructive=true) {state.removeContinue(item);close()}
-            else FocusButton(tr("Marcar como visto","Mark as watched")) {state.markWatched(item);close()}
-            FocusButton(tr("Cerrar","Close"),onClick=close)
-        }
-    }
+    fun action(block:suspend ()->Unit) {close();state.launch {state.socialAction {block()}}}
+    val playback=listOf(
+        DetailOptionRP68(tr("Ir a detalles","Go to details"),"info") {action {state.open(item)}},
+        DetailOptionRP68(tr("Elegir enlace","Play manually"),"link") {action {prepare();if(!state.selectedUpcoming) state.chooseCurrentSources()}},
+        DetailOptionRP68(tr("Desde el principio","Start from beginning"),"play") {action {prepare();if(!state.selectedUpcoming) {if(item.type=="movie") state.playMovie(true) else state.playSeriesFromStart()}}}
+    )
+    val collection=listOf(DetailOptionRP68(if(continuing) tr("Quitar de Seguir viendo","Remove from Continue Watching") else tr("Marcar como visto","Mark as watched"),if(continuing) "remove" else "check") {
+        if(continuing) state.removeContinue(item) else state.markWatched(item);close()
+    })
+    DetailOptionsPanelRP68(item.title,item.backdrop ?: item.poster,playback,collection,close)
 }
 
 @Composable

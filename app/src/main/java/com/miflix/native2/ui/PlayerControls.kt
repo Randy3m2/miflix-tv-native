@@ -93,7 +93,7 @@ internal fun CompactPlayerControls(
                     onInteraction=onInteraction,onClick=onPreviousChannel,onLabel={focusedLabel=it},enabled=previousChannelAvailable)
                 if(!request.live) PlayerIconButton("cc",tr("Subtítulos","Subtitles"),onInteraction=onInteraction,onClick={onMenu("subtitles")},onLabel={ focusedLabel=it })
                 if(!request.live) PlayerIconButton("audio",tr("Pista de audio","Audio track"),onInteraction=onInteraction,onClick={onMenu("audio")},onLabel={ focusedLabel=it })
-                if(!request.live || (request.liveProvider=="sports" || request.liveProvider==com.miflix.native2.data.NuvioTestConfigRP49.PROVIDER)) PlayerIconButton("links",tr("Enlaces de reproducción","Playback links"),onInteraction=onInteraction,onClick=onLinks,onLabel={ focusedLabel=it })
+                if(!request.live || (request.liveProvider=="sports" || request.liveProvider==com.miflix.native2.data.NuvioTestConfigRP49.PROVIDER)) PlayerIconButton("links",if(request.liveProvider=="sports") tr("Cambiar fuente","Change source") else tr("Enlaces de reproducción","Playback links"),onInteraction=onInteraction,onClick=onLinks,onLabel={ focusedLabel=it })
                 PlayerIconButton("party","Friends & Party",onInteraction=onInteraction,onClick=onParty,onLabel={ focusedLabel=it })
                 PlayerIconButton("chat",tr("Chat del Party","Party chat"),onInteraction=onInteraction,onClick=onChat,onLabel={ focusedLabel=it })
                 PlayerIconButton("reactions",tr("Emojis · Mantén pulsado para frases","Emojis · Hold for phrases"),onInteraction=onInteraction,onClick=onQuickReactions,onLongClick=onReactions,onLabel={ focusedLabel=it })

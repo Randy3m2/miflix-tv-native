@@ -8,11 +8,9 @@ data class NuvioFolderRP49(val id:String,val title:String,val poster:String?,val
 /** Imported folder/catalog layout, separate from the user's existing sports source. */
 object NuvioTestConfigRP49 {
     const val PROVIDER="nuvio:rp49"
-    const val MANIFEST="https://nuviosports.xyz/eyJ0ZWFtcyI6IkZlcnJhcmkiLCJ0aW1lem9uZSI6IkFtZXJpY2EvU2FudG9fRG9taW5nbyIsImxhbmd1YWdlcyI6IkVuZ2xpc2gsIFNwYW5pc2giLCJ3ZWJTdHJlYW1zIjoiZGlzYWJsZWQiLCJzcG9ydHMiOiJmb290YmFsbCxiYXNrZXRiYWxsLGFtZXJpY2FuX2Zvb3RiYWxsLG1vdG9yc3BvcnQsaG9ja2V5LGJhc2ViYWxsLGNvbGxlZ2UsbW1hLHRlbm5pcyxkYXJ0cyxvdGhlciJ9/manifest.json?lg=English%2C+Spanish"
+    const val MANIFEST="retired:nuvio:rp49"
     @Volatile private var cached:List<NuvioFolderRP49>?=null
-    fun folders(context:Context):List<NuvioFolderRP49> = cached ?: synchronized(this) {
-        cached ?: context.assets.open("nuvio_test_rp49.json").bufferedReader().use {parse(it.readText())}.also {cached=it}
-    }
+    fun folders(context:Context):List<NuvioFolderRP49> = emptyList() // Retired: no catalog asset or network access.
     fun categories(context:Context)=folders(context).flatMap {folder ->folder.catalogs.map {it.copy(name=folder.title+" · "+it.name)}}
     fun parse(text:String):List<NuvioFolderRP49> {
         val root=JSONArray(text)

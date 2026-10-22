@@ -33,12 +33,14 @@ internal object CustomChannelsRP45 {
         val simple=java.text.Normalizer.normalize(name.replace(Regex("\\s+HD$",RegexOption.IGNORE_CASE),"" ).lowercase(java.util.Locale.ROOT),java.text.Normalizer.Form.NFD).replace(Regex("[\\p{M}]"),"").replace(Regex("[^a-z0-9]"),"")
         return (direct.ifBlank {index.optJSONObject("names")?.optString(simple).orEmpty()}).takeIf {it.startsWith("https://") || it.startsWith("file:///android_asset/")}
     }
+    fun categoryNautaSourceRP71()=LiveCategory("tv","nauta-source:Todos","Nauta Source")
     fun categoryRP48()=LiveCategory("tv","custom-rp48","Others")
     fun categoriesRP51()=listOf("Todos","General","Cine","24/7","Deportes","Infantiles","España","Cultura").map {LiveCategory("tv","tirso:"+it,if(it=="Todos") "Tirso TV" else it)}
     fun categoriesRP61()=listOf("Todos","General","Cine","Series","Deportes","Infantiles","España","Cultura","Noticias","Novelas","Música","Religión","Adultos").map {
         LiveCategory("tv","iptvplus:"+it,if(it=="Todos") "IPTV +" else "IPTV + · "+it)
     }
     fun matchesRP61(c:CustomChannelRP45,category:String):Boolean = when {
+        category.startsWith("nauta-source:") -> !c.id.startsWith(PLUS) && !c.id.startsWith("m3ulist:") && (category=="nauta-source:Todos" || c.category==category.removePrefix("nauta-source:"))
         category.startsWith("m3ulist:") -> M3UListsRP61.matches(c,category)
         category=="tirso:Todos" -> c.id.startsWith(FACTORY)
         category.startsWith("tirso:") -> c.id.startsWith(FACTORY) && c.category==category.removePrefix("tirso:")

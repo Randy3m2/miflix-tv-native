@@ -1,0 +1,9 @@
+BruniO Web v45 — Texto del menú
+
+Aplicar sobre Web v44 respetando las rutas.
+Texto del menú centrado dentro de los botones, incluido el seleccionado.
+Tamaño: 17 px en escritorio y 15 px en pantallas de hasta 700 px.
+El contador de Mi lista mantiene su tamaño independiente.
+Verificado en navegador: texto a 17 px, sin margen izquierdo y centrado en ambos ejes.
+
+Redesplegar la web en Vercel. Sin SQL ni cambios de Android TV.

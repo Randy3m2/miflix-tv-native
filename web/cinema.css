@@ -62,3 +62,8 @@ body>header.cinema-header .header-menu-panel .preferences>.language-menu43{displ
 .language-menu43 .language-option43{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:43px;margin:0;padding:10px 12px;background:transparent;border:0;border-radius:5px;color:#ddd;font-size:15px;text-align:left}.language-option43[aria-checked=true]{background:#303030;color:#fff}.language-menu43 button:hover{background:#393939}.language-menu43 button:focus-visible{background:#fff;color:#101010;outline:2px solid #fff;outline-offset:-2px}.language-check43{font-size:16px}.language-check43[hidden]{visibility:hidden;display:block}
 
 .continue-shelf44{margin:20px 0 26px}.continue-shelf44 .poster{position:relative}.continue-track44{position:absolute;left:9px;right:9px;bottom:7px;height:4px;border-radius:4px;background:#ffffff45;overflow:hidden;z-index:3}.continue-track44>span{display:block;height:100%;background:#fff;border-radius:4px}
+/* v45: labels inherit the navigation typography, not the old 11px counter style. */
+body>header.cinema-header .tabs>button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:46px;padding:0 17px;font-size:17px;line-height:1.2;text-align:center;white-space:nowrap}
+body>header.cinema-header .tabs>button>span[data-i18n]{margin:0;font:inherit;line-height:inherit;display:inline-block}
+body>header.cinema-header .tabs>button>#count{margin:0;font-size:12px;line-height:1;font-weight:600}
+@media(max-width:700px){body>header.cinema-header .tabs>button{min-height:42px;padding:0 13px;font-size:15px}}

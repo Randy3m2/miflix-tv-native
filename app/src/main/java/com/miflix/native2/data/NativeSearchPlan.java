@@ -5,7 +5,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 
-/** At most two extra index searches for Spanish; the ordinary English fallback remains. */
+/** At most four queries: original/translated Latino searches first when playback audio is Spanish. */
 public final class NativeSearchPlan {
     private NativeSearchPlan() {}
     public static List<String> queries(List<String> titles, String type, String year, int season, boolean spanish) {
@@ -17,12 +17,9 @@ public final class NativeSearchPlan {
         }
         String suffix = "series".equals(type) ? String.format(Locale.ROOT, " S%02d", season)
             : " " + (year == null ? "" : year.substring(0, Math.min(4, year.length())));
+        if (spanish) for (String title : clean) queries.add(title + suffix + " latino");
+        // Generic title searches still discover Spain/unspecified Spanish releases and file-level labels.
         for (String title : clean) queries.add(title + suffix);
-        if (spanish && !clean.isEmpty()) {
-            String title = clean.get(clean.size() - 1);
-            queries.add(title + suffix + " latino");
-            queries.add(title + suffix + " castellano");
-        }
         return new ArrayList<>(queries);
     }
 }

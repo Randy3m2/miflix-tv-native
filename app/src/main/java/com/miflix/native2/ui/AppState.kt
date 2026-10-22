@@ -64,7 +64,7 @@ class AppState(context: Context) {
         {lastSourcePrefsRP16.edit().putString("rows",it).apply()})
     private fun lastSourceKeyRP16(item:MediaSummary,season:Int,episode:Int)=LastPlaybackSourceRP16.key(
         localExtrasScope(),item.cloudId,season,episode,
-        org.json.JSONArray(listOf(audioLanguage,secondaryAudioLanguageRP62,streamSizeBytes,nativeSourceEnabled,nativeRevision,
+        org.json.JSONArray(listOf(audioLanguage,secondaryAudioLanguageRP62,streamSizeBytes,nativeSourceEnabled,nativeRevision,nativeOnlyRP75,nativeSpanishOnlyRP77,nativeSizeAscendingRP77,
             org.json.JSONArray(streamRepo.manifests()))).toString())
     internal fun rememberSuccessfulPlaybackRP16(req:PlayerRequest) {
         if(req.live || req.momentEndMs>0 || watchParty!=null || playerRequest?.playbackId!=req.playbackId || req.sourceMemoryKeyRP16.isBlank()) return
@@ -363,7 +363,13 @@ class AppState(context: Context) {
         try {if(sameParty(epoch,account.userId,room.roomCode)) social.send(account,room.roomCode,"playback",action)}
         catch(e: CancellationException) {throw e} catch(_: Exception) { /* Cosmetic failure must not interrupt playback. */ }
     }
-    var audioLanguage by mutableStateOf(playbackPrefs.getString("audio", "es") ?: "es")
+    // Freeze the old shared value as a migration default; subsequent edits belong to one profile.
+    private val legacyAudioRP77=playbackPrefs.getString("audio","es") ?: "es"
+    private var audioRevisionRP77 by mutableIntStateOf(0)
+    private fun profileAudioKeyRP77()="audio_rp77:${localExtrasScope()}"
+    var audioLanguage:String
+        get() {audioRevisionRP77;return playbackPrefs.getString(profileAudioKeyRP77(),legacyAudioRP77) ?: legacyAudioRP77}
+        set(value) {playbackPrefs.edit().putString(profileAudioKeyRP77(),value).apply();audioRevisionRP77++}
     private var secondaryAudioRevisionRP62 by mutableIntStateOf(0)
     private fun secondaryAudioKeyRP62()="secondary_audio_rp62:${localExtrasScope()}"
     val secondaryAudioLanguageRP62:String get() {
@@ -389,7 +395,7 @@ class AppState(context: Context) {
     fun savePlaybackPreferences(audio: String, subtitle: String, autoplay: Boolean) {
         if(audioLanguage != audio) invalidatePlaybackWork()
         audioLanguage = audio; subtitleLanguage = subtitle; autoplayNext = autoplay
-        playbackPrefs.edit().putString("audio",audio).putString("subtitle",subtitle).putBoolean("autoplay",autoplay).apply()
+        playbackPrefs.edit().putString("subtitle",subtitle).putBoolean("autoplay",autoplay).apply()
     }
     private var queueRevision by mutableStateOf(0)
     private fun queueKey()="queue_${session?.userId ?: "local"}_${activeProfile.id}"
@@ -1068,6 +1074,16 @@ class AppState(context: Context) {
         val owner=session?.userId ?: return
         nativeStore.setOnlyNative(owner,value);nativeRevision++;nativeSources.invalidate();invalidatePlaybackWork()
     }
+    private var nativeOptionsRevisionRP77 by mutableIntStateOf(0)
+    private fun nativeOptionKeyRP77(name:String)="native_rp77:$name:${localExtrasScope()}"
+    val nativeSpanishOnlyRP77:Boolean get() {nativeOptionsRevisionRP77;return playbackPrefs.getBoolean(nativeOptionKeyRP77("spanish_only"),true)}
+    val nativeSizeAscendingRP77:Boolean get() {nativeOptionsRevisionRP77;return playbackPrefs.getBoolean(nativeOptionKeyRP77("size_ascending"),false)}
+    fun saveNativeSpanishOnlyRP77(value:Boolean) {saveNativeOptionRP77("spanish_only",value)}
+    fun saveNativeSizeAscendingRP77(value:Boolean) {saveNativeOptionRP77("size_ascending",value)}
+    private fun saveNativeOptionRP77(name:String,value:Boolean) {
+        playbackPrefs.edit().putBoolean(nativeOptionKeyRP77(name),value).apply()
+        nativeOptionsRevisionRP77++;nativeSources.invalidate();invalidatePlaybackWork()
+    }
     fun toggleNativeSources() {
         val owner=session?.userId ?: run { error=tr("Inicia sesión primero","Sign in first");return }
         if(!nativeSourceEnabled && nativeStore.token(owner).isBlank()) { error=tr("Guarda primero tu API key de TorBox","Save your TorBox API key first");return }
@@ -1095,7 +1111,7 @@ class AppState(context: Context) {
     private data class PlaybackCacheKey(
         val owner: String?,val profile: String,val cloudId: String,val imdb: String,
         val season: Int,val episode: Int,val year: String,val title: String,
-        val manifests: List<String>,val nativeEnabled: Boolean,val nativeVersion: Int,val nativeOnly:Boolean,
+        val manifests: List<String>,val nativeEnabled: Boolean,val nativeVersion: Int,val nativeOnly:Boolean,val nativeSpanishOnly:Boolean,val nativeSizeAscending:Boolean,
         val sizeLimit: Long,val audio: String,val secondaryAudio: String
     )
     private val playbackLinkCache=com.miflix.native2.data.PlaybackLinkCache<PlaybackCacheKey,List<StreamChoice>>(12) {
@@ -1104,10 +1120,10 @@ class AppState(context: Context) {
     private val playbackCacheMutex=Mutex()
     private fun playbackCacheKey(item: MediaSummary,imdb: String,season: Int,episode: Int)=PlaybackCacheKey(
         session?.userId,activeProfile.id,item.cloudId,imdb,season,episode,item.year,item.title,
-        streamRepo.manifests().toList(),nativeSourceEnabled,nativeRevision,nativeOnlyRP75,streamSizeBytes,audioLanguage,secondaryAudioLanguageRP62)
+        streamRepo.manifests().toList(),nativeSourceEnabled,nativeRevision,nativeOnlyRP75,nativeSpanishOnlyRP77,nativeSizeAscendingRP77,streamSizeBytes,audioLanguage,secondaryAudioLanguageRP62)
     private suspend fun resolvePlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = playbackCacheMutex.withLock {
         val key=playbackCacheKey(item,imdb,season,episode)
-        playbackLinkCache.get(key)?.let { return@withLock StreamOrdering.sorted(it,audioLanguage,providerOrder=sourceProviderOrderRP2(),secondaryAudio=secondaryAudioLanguageRP62) }
+        playbackLinkCache.get(key)?.let { return@withLock StreamOrdering.sorted(it,audioLanguage,providerOrder=sourceProviderOrderRP2(),secondaryAudio=secondaryAudioLanguageRP62,nativeSizeAscending=nativeSizeAscendingRP77,nativeSpanishOnly=nativeSpanishOnlyRP77) }
         val streams=fetchPlaybackSources(item,imdb,season,episode)
         // Cache successful lists only; account/settings changes cannot publish stale results.
         if(streams.isNotEmpty() && key==playbackCacheKey(item,imdb,season,episode)) playbackLinkCache.put(key,streams)
@@ -1118,7 +1134,7 @@ class AppState(context: Context) {
         val native=owner!=null && nativeStore.enabled(owner)
         // Disabled is the default and leaves the existing add-on path unchanged.
         if(!native) return@supervisorScope StreamOrdering.sorted(
-            streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage), audioLanguage,providerOrder=sourceProviderOrderRP2(),secondaryAudio=secondaryAudioLanguageRP62)
+            streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage), audioLanguage,providerOrder=sourceProviderOrderRP2(),secondaryAudio=secondaryAudioLanguageRP62,nativeSizeAscending=nativeSizeAscendingRP77,nativeSpanishOnly=nativeSpanishOnlyRP77)
         val token=nativeStore.token(owner)
         val onlyNative=nativeOnlyRP75
         val addon=async {
@@ -1131,9 +1147,9 @@ class AppState(context: Context) {
             kotlinx.coroutines.withTimeout(10000) { nativeSources.search(owner!!,token,listOf(detail.originalTitle,
                 if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(audioLanguage))
                     try {tmdb.spanishTitle(item).ifBlank {item.title}} catch(e: CancellationException) {throw e} catch(_: Exception) {item.title}
-                else item.title),item.type,item.year,season,episode,streamSizeBytes,audioLanguage) }
+                else item.title),item.type,item.year,season,episode,streamSizeBytes,audioLanguage,spanishOnly=nativeSpanishOnlyRP77,sizeAscending=nativeSizeAscendingRP77) }
         } catch(e: kotlinx.coroutines.TimeoutCancellationException) { failure=tr("Motor nativo: tiempo agotado","Native engine: timed out");emptyList() } catch(e: CancellationException) { throw e } catch(e: Exception) { failure=e.message;emptyList() }
-        val links=StreamOrdering.sorted((addon.await()+builtIn).filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) }, audioLanguage,providerOrder=sourceProviderOrderRP2(),secondaryAudio=secondaryAudioLanguageRP62)
+        val links=StreamOrdering.sorted((addon.await()+builtIn).filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) }, audioLanguage,providerOrder=sourceProviderOrderRP2(),secondaryAudio=secondaryAudioLanguageRP62,nativeSizeAscending=nativeSizeAscendingRP77,nativeSpanishOnly=nativeSpanishOnlyRP77)
         if(session?.userId==owner) nativeSourceStatus=failure ?: tr("Motor nativo: ","Native engine: ")+builtIn.size+tr(" enlaces disponibles"," available links")
         if(links.isEmpty() && failure!=null) throw IllegalStateException(failure)
         links
@@ -2701,7 +2717,7 @@ class AppState(context: Context) {
                 resolvePlaybackSources(req.item,remembered.imdb,req.season,req.episode)
             } catch(e:CancellationException) {throw e} catch(_:Exception) {return false}
             if(!stillValid()) return false
-            val candidates=StreamOrdering.fallbackCandidates(fresh,audioLanguage,providerOrder=sourceProviderOrderRP2(),secondaryAudio=secondaryAudioLanguageRP62).filter {it.url!=req.stream.url}
+            val candidates=StreamOrdering.fallbackCandidates(fresh,audioLanguage,providerOrder=sourceProviderOrderRP2(),secondaryAudio=secondaryAudioLanguageRP62,nativeSizeAscending=nativeSizeAscendingRP77,nativeSpanishOnly=nativeSpanishOnlyRP77).filter {it.url!=req.stream.url}
             val rows=listOf(req.stream)+candidates
             if(rows.size<2) return false
             sourceFallback=SourceFallbackPlan(remembered.owner,remembered.profile,remembered.generation,rows,
@@ -2773,7 +2789,7 @@ class AppState(context: Context) {
         val progressKeyRP16=if(item.type=="series") "${item.cloudId}:s${season}e${episode}" else item.cloudId
         val targetProgressRP16=progress[progressKeyRP16] ?: progress[item.cloudId]?.takeIf {item.type!="series" || (it.season==season && it.episode==episode)}
         val rememberedRP16=if(selectedStream==null && watchParty==null && (resumeOverride ?: targetProgressRP16?.position ?: 0L)>0L)
-            lastSourceRP16.get(memoryKeyRP16)?.takeIf {StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) &&
+            lastSourceRP16.get(memoryKeyRP16)?.takeIf {StreamOrdering.nativeAllowedRP77(it,audioLanguage,nativeSpanishOnlyRP77) && StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) &&
                 runCatching {java.net.URI(it.url).scheme in setOf("http","https")}.getOrDefault(false)} else null
         val streamsJob = async { if(rememberedRP16!=null) listOf(rememberedRP16) else if (selectedStream != null) (listOf(selectedStream)+fallbackStreams).distinctBy {it.url}.filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) } else resolvePlaybackSources(item,imdb,season,episode) }
         val subtitleKey=subtitleKey(item,season,episode)
@@ -2789,13 +2805,13 @@ class AppState(context: Context) {
             if(!valid()) return@coroutineScope
             val bandwidth=if(adaptiveSource) androidx.media3.exoplayer.upstream.DefaultBandwidthMeter.getSingletonInstance(appContext).bitrateEstimate else 0L
             val seconds=(details?.takeIf {it.summary.cloudId==item.cloudId}?.runtimeMinutes ?: 0)*60
-            val chosen = rememberedRP16 ?: selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2(),secondaryAudioLanguageRP62)
+            val chosen = rememberedRP16 ?: selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2(),secondaryAudioLanguageRP62,nativeSizeAscendingRP77,nativeSpanishOnlyRP77)
                 ?: throw IllegalStateException(if(streamRepo.hasTorrentOnlyResults())
                     tr("Estos complementos solo devolvieron torrents. Se necesitan enlaces directos HTTP/HTTPS.","These add-ons only returned torrents. Direct HTTP/HTTPS links are required.")
                     else tr("No se encontraron enlaces reproducibles","No playable sources found"))
             val automaticFallback=autoplayNextLink && watchParty==null
             val retryRows=if(automaticFallback) {
-                val candidates=StreamOrdering.fallbackCandidates(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2(),secondaryAudioLanguageRP62).filter {it.url!=chosen.url}
+                val candidates=StreamOrdering.fallbackCandidates(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2(),secondaryAudioLanguageRP62,nativeSizeAscendingRP77,nativeSpanishOnlyRP77).filter {it.url!=chosen.url}
                 val ordered=(listOf(chosen)+candidates).distinctBy {it.url}
                 if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(audioLanguage)) ordered else ordered.take(com.miflix.native2.player.SourceFallbackBudget.MAX_ATTEMPTS)
             } else listOf(chosen)

@@ -23,6 +23,18 @@ fun NativeSourcesSettings(state: AppState) {
         if(state.nativeSourceConfigured) FocusButton(tr("Solo motor nativo: ","Native engine only: ")+if(state.nativeOnlyRP75) tr("Sí","Yes") else tr("No","No"),primary=state.nativeOnlyRP75) {
             if(!state.nativeSourceSaving) state.setNativeOnlyRP75(!state.nativeOnlyRP75)
         }
+        Text(tr("Preferencias de este perfil","This profile's preferences"),color=Color.White,fontSize=18.sp)
+        Text(tr("Se usa el idioma de Playback audio, no el de la interfaz. En español: latino primero, luego España, castellano y español sin región.",
+            "Uses the Playback audio language, not the interface language. For Spanish: Latino first, then Spain, Castilian and unspecified Spanish."),color=Muted,fontSize=13.sp)
+        FocusButton(tr("Solo español cuando el audio es español: ","Spanish only when playback audio is Spanish: ")+if(state.nativeSpanishOnlyRP77) tr("Sí","Yes") else tr("No","No"),modifier=Modifier.fillMaxWidth()) {
+            state.saveNativeSpanishOnlyRP77(!state.nativeSpanishOnlyRP77)
+        }
+        FocusButton(if(state.nativeSizeAscendingRP77) tr("Orden: calidad ↓ · tamaño menor primero","Order: quality ↓ · smaller size first")
+            else tr("Orden: calidad ↓ · tamaño mayor primero","Order: quality ↓ · larger size first"),modifier=Modifier.fillMaxWidth()) {
+            state.saveNativeSizeAscendingRP77(!state.nativeSizeAscendingRP77)
+        }
+        Text(tr("El filtro de español usa etiquetas del resultado y del archivo; excluye idioma desconocido y subtítulos sin audio español. No verifica las pistas antes de reproducir. Apágalo si quieres permitir otros idiomas.",
+            "The Spanish filter uses release and filename labels; it excludes unknown language and subtitles without Spanish audio. Tracks are not probed before playback. Turn it off to allow other languages."),color=Muted,fontSize=12.sp)
         Text(tr("La clave se guarda cifrada para tu cuenta en esta TV. No se comparte con amigos ni se envía al buscador. Configúrala de nuevo en otros dispositivos.",
             "The key is encrypted for your account on this TV. It is not shared with friends or sent to the search index. Set it up separately on other devices."),color=Muted,fontSize=14.sp)
         NativeTextField(draft,{ draft=it },if(state.nativeSourceConfigured) tr("Nueva API key de TorBox · reemplazar","New TorBox API key · replace") else "TorBox API key",password=true,modifier=Modifier.fillMaxWidth())

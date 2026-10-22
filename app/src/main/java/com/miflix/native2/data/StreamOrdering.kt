@@ -25,13 +25,16 @@ internal object StreamOrdering {
         stream.audioLanguages.joinToString(" "), "${stream.name}\n${stream.title}\n${stream.filename}")
     fun hasEnglishAudio(stream: StreamChoice): Boolean = StreamLanguagePriority.hasEnglishAudio(
         stream.audioLanguages.joinToString(" "),"${stream.name}\n${stream.title}\n${stream.filename}")
+    fun nativeRP77(stream:StreamChoice)=NativeVodPolicyRP77.nativeEntry(stream.nativeSource!=null,stream.url,stream.sourceUrl)
+    fun nativeAllowedRP77(stream:StreamChoice,preferredAudio:String,spanishOnly:Boolean)=!nativeRP77(stream) || NativeVodPolicyRP77.accepts(
+        preferredAudio,spanishOnly,stream.audioLanguages.joinToString(" "),"${stream.name}\n${stream.title}\n${stream.filename}")
     private fun hasAudioRP62(stream:StreamChoice,language:String)=StreamLanguagePriority.hasAudio(
         stream.audioLanguages.joinToString(" "),"${stream.name}\n${stream.title}\n${stream.filename}",language)
     /** Provider-neutral automatic selection: language precedes resolution, size and add-on order. */
-    fun best(streams: List<StreamChoice>,preferredAudio: String = "",bandwidthBps: Long=0,durationSeconds: Int=0,providerOrder:List<String> = emptyList(),secondaryAudio:String = ""): StreamChoice? =
-        sorted(streams,preferredAudio,bandwidthBps,durationSeconds,providerOrder,secondaryAudio).firstOrNull()
-    fun fallbackCandidates(streams: List<StreamChoice>,preferredAudio: String,bandwidthBps: Long=0,durationSeconds: Int=0,providerOrder:List<String> = emptyList(),secondaryAudio:String = ""): List<StreamChoice> {
-        val rows=sorted(streams,preferredAudio,bandwidthBps,durationSeconds,providerOrder,secondaryAudio)
+    fun best(streams: List<StreamChoice>,preferredAudio: String = "",bandwidthBps: Long=0,durationSeconds: Int=0,providerOrder:List<String> = emptyList(),secondaryAudio:String = "",nativeSizeAscending:Boolean=false,nativeSpanishOnly:Boolean=false): StreamChoice? =
+        sorted(streams,preferredAudio,bandwidthBps,durationSeconds,providerOrder,secondaryAudio,nativeSizeAscending,nativeSpanishOnly).firstOrNull()
+    fun fallbackCandidates(streams: List<StreamChoice>,preferredAudio: String,bandwidthBps: Long=0,durationSeconds: Int=0,providerOrder:List<String> = emptyList(),secondaryAudio:String = "",nativeSizeAscending:Boolean=false,nativeSpanishOnly:Boolean=false): List<StreamChoice> {
+        val rows=sorted(streams,preferredAudio,bandwidthBps,durationSeconds,providerOrder,secondaryAudio,nativeSizeAscending,nativeSpanishOnly)
         if(secondaryAudio.isNotBlank()) {
             // Exhaust primary-language sources before secondary, then unknown releases.
             val primary=rows.filter {hasAudioRP62(it,preferredAudio)}.distinctBy {it.url}
@@ -46,10 +49,10 @@ internal object StreamOrdering {
         val unknown=rows.filter {languageRank(it)==2}.distinctBy {it.url}.take((fallbackLimit-english.size).coerceAtLeast(0))
         return (spanish+english+unknown).distinctBy {it.url}
     }
-    fun sorted(streams: List<StreamChoice>, preferredAudio: String = "",bandwidthBps: Long=0,durationSeconds: Int=0,providerOrder:List<String> = emptyList(),secondaryAudio:String = ""): List<StreamChoice> {
+    fun sorted(streams: List<StreamChoice>, preferredAudio: String = "",bandwidthBps: Long=0,durationSeconds: Int=0,providerOrder:List<String> = emptyList(),secondaryAudio:String = "",nativeSizeAscending:Boolean=false,nativeSpanishOnly:Boolean=false): List<StreamChoice> {
         val spanish = StreamLanguagePriority.prefersSpanish(preferredAudio)
         val english = StreamLanguagePriority.prefersEnglish(preferredAudio)
-        return streams.filter { playable(it) }
+        return streams.filter { playable(it) && nativeAllowedRP77(it,preferredAudio,nativeSpanishOnly) }
             .sortedWith(compareBy<StreamChoice> { if(secondaryAudio.isNotBlank()) {
                     when {hasAudioRP62(it,preferredAudio) ->0;hasAudioRP62(it,secondaryAudio) ->1;languageRank(it)==2 ->2;else ->3}
                 } else if(spanish) languageRank(it) else if(english) {if(hasEnglishAudio(it)) 0 else if(languageRank(it)==2) 1 else 2} else 0 }
@@ -58,7 +61,7 @@ internal object StreamOrdering {
                 .thenBy {providerOrder.indexOf(it.addonName).let {index ->if(index<0) Int.MAX_VALUE else index}}
                 .thenBy {if(bandwidthBps>0 && !AdaptiveSourcePolicy.fits(AdaptiveSourcePolicy.rate(bytes(it),durationSeconds,quality(it)),bandwidthBps)) 1 else 0}
                 .thenBy {if(bandwidthBps>0 && !AdaptiveSourcePolicy.fits(AdaptiveSourcePolicy.rate(bytes(it),durationSeconds,quality(it)),bandwidthBps)) AdaptiveSourcePolicy.rate(bytes(it),durationSeconds,quality(it)) else 0L}
-                .thenByDescending { quality(it) }.thenByDescending { bytes(it) })
+                .thenByDescending { quality(it) }.thenByDescending { NativeVodPolicyRP77.sizeKey(bytes(it),nativeSizeAscending && nativeRP77(it)) })
             .distinctBy { it.addonName to it.url }
     }
 }

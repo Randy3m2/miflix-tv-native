@@ -1,0 +1,30 @@
+BruniO RP77 — TorBox nativo: latino + calidad/tamaño por perfil
+versionCode 22181 / versionName 2.0.0-rp77
+Aplicar SOBRE RP76 respetando rutas. No requiere borrar archivos. TorBox sigue siendo opcional en Settings, con su QR local de RP76, sin pantalla de configuración al inicio.
+
+IDIOMA
+La decisión usa Playback audio, nunca el idioma de la interfaz.
+Con Playback audio en español, el motor prioriza etiquetas latino/es-419/es-MX y otras regiones latinoamericanas, antes de España, castellano y español sin región. Esa prioridad va antes de la resolución y el tamaño. No garantiza que las etiquetas correspondan a las pistas reales: estas se conocen al reproducir.
+
+Se refuerza la búsqueda con consultas 'latino' para el título original y traducido, más las consultas generales. Máximo cuatro consultas como antes. Las consultas generales permiten encontrar títulos con región solo en el nombre del archivo. No se añade una búsqueda por IMDb a servidores Magis.
+
+Settings > Sources > Motor nativo:
+- Solo español cuando el audio es español: activado por defecto en esta revisión, se puede apagar por perfil. Descarta resultados NATIVOS sin evidencia de audio español, incluidos inglés, MULTI sin idiomas identificados y subtítulos españoles sin audio español. Si no hay resultados etiquetados como españoles, no inventa una coincidencia ni recurre al inglés nativo mientras el filtro esté encendido. Para permitirlo, apaga el filtro.
+- Orden: calidad de mayor a menor; dentro de la misma calidad, elige tamaño menor primero o mayor primero. Mayor primero conserva el orden anterior por defecto. Los límites de GB siguen aplicando; si habilitaste selección adaptativa por conexión, esa política existente se conserva.
+- La prioridad latino aplica automáticamente al seleccionar Playback audio en español; no altera los resultados de un perfil con audio inglés por el idioma de la interfaz.
+
+El filtro estricto y el orden por tamaño se aplican solo al motor nativo TorBox; no eliminan ni filtran los resultados de tus otros add-ons. Si deseas ver únicamente esos resultados, activa Solo motor nativo. TorBox y Knaben siguen siendo dependencias externas. No se instala P2P en la TV.
+
+POR PERFIL
+Se descubrió que Playback audio aún se guardaba globalmente. Desde esta revisión se guarda por cuenta/perfil; las opciones de filtro/orden nativo también. El valor compartido anterior se toma como valor inicial de migración, porque no existe un historial individual que recuperar. A partir de ahora cambiar el audio de un perfil no cambia el del otro. El idioma de la interfaz permanece separado. No se cambia el ámbito anterior de subtítulos/autoplay ni de la API key de TorBox (esta sigue siendo por cuenta en la TV).
+
+CACHE Y CONTINUE WATCHING
+Los filtros y tamaño forman parte de la clave de caché y del contexto de enlace recordado. Cambiar opciones invalida el trabajo pendiente y no reutiliza una selección de la configuración anterior. Se reconoce un enlace nativo materializado por su identidad brunio-native original, para conservar los filtros al reutilizarlo. Se preservan los controles de recaps, errores y panel RP74 y los canales RP73.
+
+VALIDACION
+NativeVodRP77Check.java: compilado y ejecutado con JDK 17, PASS (evidencia de idioma, subtítulos/idioma desconocido, prioridad regional, tamaño, identidad nativa y consultas acotadas).
+NativeProfileRP77Check.py: PASS (preferencias por perfil, cableado al audio, filtros en archivos/listas, claves de caché y memoria).
+Se añaden pruebas JUnit Kotlin de selección, orden, fallback, archivos de un pack y separación de caché para que se ejecuten en tu CI. No se ejecutaron localmente: no hay compilador Kotlin/Android SDK configurados. Análisis sintáctico sin diagnósticos nuevos frente a los archivos anteriores, no equivale a compilar Android.
+
+No hay APK generado ni prueba con cuenta real TorBox. Falta compilar y probar en TV, especialmente dos perfiles con idiomas distintos, títulos Latino/España, resultados sin etiquetas, ambos órdenes de tamaño, Continue Watching y fallback.
+Sin SQL, Supabase ni Vercel. Preferencias locales, sin telemetría ni sondeo nuevo.

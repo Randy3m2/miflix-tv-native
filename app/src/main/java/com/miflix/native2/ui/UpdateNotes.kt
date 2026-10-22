@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP69: corrige el import de Text en Más opciones para usar TV Material, la dependencia existente del proyecto." to "RP69: fixes the More options Text import to use the project's existing TV Material dependency.",
         "RP68: menú Más opciones de detalles renovado, negro, con portada, grupos de acciones e iconos; solo la acción enfocada se rellena de blanco." to "RP68: redesigned black details More options panel with artwork, action groups and icons; only the focused action is filled white.",
         "RP67: Split Screen comparte el primer canal en la actividad de amigos; navegación vertical restaura la tarjeta elegida por fila sin enfocar tarjetas vecinas transitorias." to "RP67: Split Screen shares the first channel in friend activity; vertical navigation restores each row's chosen card without transient neighbouring-card focus.",
         "RP66: corrige compilación de My List al usar una animación local de foco de 80 ms en lugar de FastMotion privado." to "RP66: fixes My List compilation by using a local 80 ms focus animation instead of the private FastMotion value.",

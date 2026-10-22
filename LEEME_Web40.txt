@@ -1,0 +1,12 @@
+BruniO Web v40 · Explore / Invalid action
+Aplicar sobre Web v39 conservando rutas. No cambia Android TV.
+
+Causa compatible con la captura: la web pide action=home y la función desplegada devuelve Invalid action. La nueva rama existe en el código de v39, pero el servidor que responde no la reconoce.
+
+1. Subir web/ y volver a desplegar Vercel. Explore detecta una sola vez por página si home no está soportado y carga automáticamente el catálogo discover anterior, con filtros y paginación normales. Los errores de sesión o red se conservan y no activan este fallback.
+2. Para tener las 15 filas nuevas y Cargar 6 más: desplegar supabase/functions/brunio-catalog/index.ts Y home.ts. Desde la raíz del proyecto: supabase functions deploy brunio-catalog
+3. Recargar la web después del despliegue de Supabase para volver a detectar home.
+
+No requiere SQL ni cambios en tablas/secrets. Si hay modificaciones propias posteriores en index.ts, conservarlas e integrar el import homeShelves y la rama action=home antes de Invalid action.
+
+Verificación: sintaxis JS y prueba automatizada con servidor simulado (Invalid action, sesión vencida y error de red). No se desplegó en tu Supabase/Vercel desde aquí. El modo de compatibilidad restaura el catálogo anterior; las 15 filas necesitan la función actualizada.

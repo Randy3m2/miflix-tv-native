@@ -1,7 +1,7 @@
 'use strict';
 // Home pagination is by shelves; search and My List retain their title pagination.
-const home39={key:'',shelves:[],next:0,more:true,busy:false,seen:new Map()};
-function isHome39(){return view==='explore'&&!$('search').value.trim()&&!$('genre').value&&!$('year').value&&!selectedPerson&&!$('cinemaSearch38')?.open&&['popularity.desc','added.desc'].includes($('sort').value);}
+const home39={unsupported:false,key:'',shelves:[],next:0,more:true,busy:false,seen:new Map()};
+function isHome39(){return !home39.unsupported&&view==='explore'&&!$('search').value.trim()&&!$('genre').value&&!$('year').value&&!selectedPerson&&!$('cinemaSearch38')?.open&&['popularity.desc','added.desc'].includes($('sort').value);}
 function homeSeed39(){return Object.entries(recentProgress).filter(([id,p])=>/^tmdb:(movie|series):[1-9][0-9]*$/.test(id)&&(Number(p.position)>=5||Number(p.percent)>0)).sort((a,b)=>Number(b[1].updatedAt||0)-Number(a[1].updatedAt||0))[0]?.[0]||'';}
 function homeKey39(){return [session?.user.id,selected(),language,activeProvider,filter,$('region').value,homeSeed39()].join('|');}
 function homeFresh39(data,key){
@@ -31,7 +31,16 @@ load=async function(reset){
   items=[...new Map(home39.shelves.flatMap(s=>s.items).map(x=>[x.cloudId,x])).values()];hasMore=home39.more;
   $('status').textContent=data.partial?cinemaWords('Algunas filas no respondieron. Vuelve a cargar el inicio para reintentar.','Some rows did not respond. Reload home to retry.'):'';
   loading=false;render();
- }catch(e){if(ticket===generation){$('status').textContent=e.message;loading=false;home39.more=true;render();}}
+ }catch(e){if(ticket===generation){
+  if(/^invalid action$/i.test(String(e?.message||'').trim())){
+   // Older deployed functions support discover but do not yet support home.
+   // Detect once per page; do not hide authentication/network errors or repeat failed requests.
+   home39.unsupported=true;home39.key='';home39.shelves=[];home39.busy=false;loading=false;
+   $('more').textContent=t('Ver más');$('more').disabled=false;
+   return await homeLoad39(true);
+  }
+  $('status').textContent=e.message;loading=false;home39.more=true;render();
+ }}
  finally{if(ticket===generation){home39.busy=false;loading=false;$('more').disabled=false;}}
 };
 const homeRender39=render;

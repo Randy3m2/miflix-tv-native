@@ -1,6 +1,6 @@
 'use strict';
 // Public app shell only. Never cache Supabase, TorBox media, authenticated data or private links.
-const CACHE='brunio-shell-39',FILES=['./','index.html','app.js?v=39','experience.js?v=39','live.js?v=39','style.css?v=39','cinema.css?v=39','cinema.js?v=39','player-ui.css?v=39','player-ui.js?v=39','audio-state.js?v=39','search38.js?v=39','home39.js?v=39','manifest.webmanifest','brunio-logo.png','icon-192.png','icon-512.png'];
+const CACHE='brunio-shell-40',FILES=['./','index.html','app.js?v=40','experience.js?v=40','live.js?v=40','style.css?v=40','cinema.css?v=40','cinema.js?v=40','player-ui.css?v=40','player-ui.js?v=40','audio-state.js?v=40','search38.js?v=40','home39.js?v=40','manifest.webmanifest','brunio-logo.png','icon-192.png','icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('brunio-shell-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{

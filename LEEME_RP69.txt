@@ -1,0 +1,6 @@
+BruniO Android TV RP69 · 22173
+Aplicar app/ sobre RP68, respetando rutas. Corrige DetailOptionsRP68.kt: androidx.tv.material3.Text, igual que Screens.kt. No agrega dependencias ni cambia el diseño de RP68.
+
+Incluye Web v40: ver LEEME_Web40.txt. Explore vuelve al catálogo anterior cuando el servidor no reconoce home. Las 15 filas nuevas requieren desplegar brunio-catalog con index.ts y home.ts, y después recargar la web. Desplegar web/ en Vercel. Sin SQL.
+
+Validación: import comparado con Screens.kt y dependencia tv-material:1.1.0; prueba automatizada de compatibilidad Explore y sintaxis JavaScript pasaron. No se compiló APK ni se desplegó Supabase/Vercel desde aquí.

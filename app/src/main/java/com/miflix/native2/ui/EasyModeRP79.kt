@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.miflix.native2.model.MediaSummary
+import kotlinx.coroutines.launch
 
 /** Basic navigation only; profile recovery requires the fifteen-second logo gesture. */
 @Composable

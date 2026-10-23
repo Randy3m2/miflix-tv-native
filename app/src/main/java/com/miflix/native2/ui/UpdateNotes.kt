@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP86: corrige el import de launch en detalles de Modo fácil para el desplazamiento de la cabecera." to "RP86: fixes the launch import in Easy details used to restore the header scroll position.",
         "RP85: Live abre el hub y solo la tarjeta Live TV inicia un canal; detalles de Modo fácil sin cabecera recortada, episodios horizontales con Visto, teclado ES/EN sin sugerencias inferiores y fila Películas de La Vega." to "RP85: Live opens the hub and only the Live TV tile starts a channel; Easy details restore the full header, horizontal episode cards with Watched, an ES/EN keyboard without lower suggestions, and La Vega movies.",
         "RP84: nueva fuente Live Sports de fábrica y enlaces ordenados por resolución descendente, luego bitrate; conserva el orden recibido cuando faltan datos." to "RP84: updated default Live Sports source and links ordered by descending resolution, then bitrate; preserves provider order when metadata is missing.",
         "RP83: salida de Modo fácil en 15 s con cuenta regresiva alternativa; cinco filas; continuación y episodios vistos; español verificado opcional; respaldo por cuenta y perfil; Live TV inicia con panel lateral." to "RP83: 15-second Easy mode exit with alternate countdown; five rows; episode resume and watched marks; optional verified Spanish; account/profile settings backup; Live TV starts with its channel panel.",

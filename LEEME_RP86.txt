@@ -1,0 +1,8 @@
+BruniO RP86 / 22190 / 2.0.0-rp86
+Hotfix sobre RP85. Extraer en la raíz conservando las rutas.
+
+Añade el import kotlinx.coroutines.launch que faltaba en EasyModeRP79.kt.
+Con ello scope.launch resuelve su extensión y su bloque permite las llamadas suspend withFrameNanos y scrollToItem que originaron los tres diagnósticos.
+No cambia el comportamiento de RP85.
+Sin SQL ni Vercel; no se generó APK.
+Revisión del cambio de import y sintaxis realizada; compilación Android y prueba en TV pendientes.

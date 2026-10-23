@@ -1,0 +1,7 @@
+BruniO RP82 / 22186 — parche sobre RP81.
+Extraer en la raíz conservando rutas.
+
+Incluye: detalles de Modo fácil con carátula, sinopsis completa, título y datos disponibles; Seguir viendo también abre detalles antes de reproducir; historial no se muestra ni se registra en Modo fácil. Historial normal conservado.
+
+Sin SQL ni Vercel. No genera APK. Compilación Kotlin y prueba en TV pendientes.
+Este parche aborda esas dos últimas solicitudes; no incluye aún los cambios anteriores del temporizador, sincronización de ajustes, audio estricto ni inicio automático de Live TV.

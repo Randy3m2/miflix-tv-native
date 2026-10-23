@@ -1641,11 +1641,12 @@ class AppState(context: Context) {
         set(value) { liveProviderTab=if(value) "sports" else "nauta" }
     var liveCategoryId by mutableStateOf<String?>(null)
     fun searchHistoryOwner()="search_history_${session?.userId ?: "local"}_${activeProfile.id}"
-    fun searchHistory(): List<String> = runCatching {
+    fun searchHistory(): List<String> = if(easyModeRP79) emptyList() else runCatching {
         val a=org.json.JSONArray(playbackPrefs.getString(searchHistoryOwner(),"[]"))
         (0 until a.length()).map { a.getString(it) }.take(10)
     }.getOrDefault(emptyList())
     fun rememberSearch(query: String) {
+        if(easyModeRP79) return
         val next=com.miflix.native2.data.SearchHistory.remember(searchHistory(),query)
         playbackPrefs.edit().putString(searchHistoryOwner(),org.json.JSONArray(next).toString()).apply()
     }

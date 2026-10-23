@@ -104,7 +104,7 @@ private fun EasyHomeRP79(state:AppState,owner:String) {
     LazyColumn(Modifier.fillMaxSize().padding(horizontal=30.dp),verticalArrangement=Arrangement.spacedBy(22.dp),contentPadding=PaddingValues(top=16.dp,bottom=32.dp)) {
         item(key="easy-heading") {Text(tr("¿Qué quieres ver?","What would you like to watch?"),color=Color.White,fontSize=32.sp,fontWeight=FontWeight.Bold)}
         if(state.continueWatching.isNotEmpty()) item(key="easy-continue") {
-            EasyShelfRP79(tr("Seguir viendo","Continue Watching"),state.continueWatching.toList()) {item ->state.launch {state.easyResumeRP79(item)}}
+            EasyShelfRP79(tr("Seguir viendo","Continue Watching"),state.continueWatching.toList()) {item ->state.launch {state.open(item)}}
         }
         item(key="easy-movies") {EasyShelfRP79(tr("Películas populares","Popular movies"),state.movies.toList()) {item ->state.launch {state.open(item)}}}
         item(key="easy-series") {EasyShelfRP79(tr("Series populares","Popular series"),state.series.toList()) {item ->state.launch {state.open(item)}}}
@@ -179,9 +179,26 @@ private fun EasyGridRP79(rows:List<MediaSummary>,modifier:Modifier=Modifier,onOp
 @Composable
 private fun EasyDetailsRP79(state:AppState) {
     val item=state.selected ?: return
-    val details=state.details
+    val details=state.details?.takeIf {it.summary.cloudId==item.cloudId}
+    val summary=details?.summary ?: item
     LazyColumn(Modifier.fillMaxSize().padding(horizontal=32.dp),verticalArrangement=Arrangement.spacedBy(18.dp),contentPadding=PaddingValues(top=20.dp,bottom=32.dp)) {
-        item {Text(item.title,color=Color.White,fontSize=32.sp,fontWeight=FontWeight.Bold)}
+        item(key="easy-artwork:${item.cloudId}") {
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(28.dp),verticalAlignment=Alignment.Top) {
+                AsyncImage(
+                    model=summary.poster ?: item.poster,
+                    contentDescription=tr("Carátula de ","Poster for ")+item.title,
+                    modifier=Modifier.width(180.dp).height(270.dp).clip(RoundedCornerShape(18.dp)).background(Color(0xFF222222)),
+                    contentScale=ContentScale.Fit
+                )
+                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                    Text(summary.title,color=Color.White,fontSize=32.sp,lineHeight=38.sp,fontWeight=FontWeight.Bold)
+                    val metadata=listOfNotNull(summary.year.takeIf {it.isNotBlank()},details?.runtimeText?.takeIf {it.isNotBlank()}).joinToString(" · ")
+                    if(metadata.isNotBlank()) Text(metadata,color=Muted,fontSize=21.sp)
+                    Text(summary.overview.ifBlank {item.overview}.ifBlank {tr("Sinopsis no disponible.","Synopsis unavailable.")},
+                        color=Color(0xFFE4E4E4),fontSize=23.sp,lineHeight=32.sp)
+                }
+            }
+        }
         if(details==null) item {Text(tr("Cargando…","Loading…"),color=Muted,fontSize=22.sp)}
         else {
             item {

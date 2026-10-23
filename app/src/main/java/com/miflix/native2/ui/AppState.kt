@@ -1262,6 +1262,7 @@ class AppState(context: Context) {
         applyProfileAddons()
     }
 
+    internal var normalLiveEntryRP85 by mutableStateOf(false)
     internal var liveAutoEntryRP83 by mutableStateOf(false)
     internal var livePanelPlaybackRP83:String?=null
     private var currentScreen by mutableStateOf(Screen.SPLASH)
@@ -1269,7 +1270,10 @@ class AppState(context: Context) {
         get()=currentScreen
         set(value) {
             val destination=if(easyModeRP79 && !com.miflix.native2.data.EasyModePolicyRP79.allowsScreen(value.name)) Screen.HOME else value
-            if(destination==Screen.LIVE_TV && currentScreen!=Screen.LIVE_TV && currentScreen!=Screen.PLAYER) liveAutoEntryRP83=true
+            if(destination==Screen.LIVE_TV && currentScreen!=Screen.PLAYER) {
+                if(easyModeRP79) {if(currentScreen!=Screen.LIVE_TV) liveAutoEntryRP83=true}
+                else {normalLiveEntryRP85=true;liveAutoEntryRP83=false}
+            }
             if(destination!=Screen.LIVE_TV && destination!=Screen.PLAYER) liveAutoEntryRP83=false
             currentScreen=destination
             if(destination==Screen.FRIENDS) refreshFriendsTab()

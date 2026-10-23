@@ -843,6 +843,32 @@ class TmdbRepository(var token: String) {
         return rows
     }
 
+    /** Action stars and war films, balanced so a popular actor cannot fill the whole shelf. */
+    internal suspend fun laVegaMoviesRP85():List<MediaSummary> {
+        val locale=language;val key="la-vega-rp85:$locale"
+        discoveryCache.get(key)?.let {return it}
+        val groups=coroutineScope {
+            val actors=listOf("Jason Statham","Jean-Claude Van Damme","Dwayne Johnson").map {name ->async {
+                try {
+                    val people=filterPeople(name)
+                    val actor=people.firstOrNull {FlexibleSearch.normalize(it.name)==FlexibleSearch.normalize(name)}
+                    if(actor==null) emptyList() else parseList(get("/discover/movie",mapOf(
+                        "language" to locale,"include_adult" to "false","with_cast" to actor.id.toString(),
+                        "with_genres" to "28|53|10752","sort_by" to "popularity.desc","vote_count.gte" to "20")),"movie",12)
+                } catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
+            }}
+            val war=async {
+                try {discoverMovieGenre(10752,pages=1,limit=12)}
+                catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
+            }
+            actors.awaitAll()+listOf(war.await())
+        }
+        val balanced=(0 until (groups.maxOfOrNull {it.size} ?: 0)).flatMap {index ->groups.mapNotNull {it.getOrNull(index)}}
+            .distinctBy {it.cloudId}.filter {it.type=="movie"}.take(24)
+        if(balanced.isNotEmpty() && language==locale) discoveryCache.put(key,balanced)
+        return balanced
+    }
+
     suspend fun familiarCatalog(kind: String): List<MediaSummary> {
         val locale=language
         val key="familiar:$locale:$kind"

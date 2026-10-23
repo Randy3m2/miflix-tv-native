@@ -4,8 +4,10 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyRow
@@ -57,7 +59,7 @@ internal fun EasyNavigationRP79(state:AppState,onMoveDown:()->Unit={}) {
             FocusButton(label,primary=state.screen==screen,horizontalPadding=16.dp) {state.screen=screen}
         }
         FocusButton("Live TV",primary=state.screen==Screen.LIVE_TV && !state.easyMlbRP80,horizontalPadding=16.dp) {
-            state.easyMlbRP80=false;state.screen=Screen.LIVE_TV
+            state.easyMlbRP80=false;state.liveAutoEntryRP83=true;state.screen=Screen.LIVE_TV
         }
         FocusButton("MLB",primary=state.screen==Screen.LIVE_TV && state.easyMlbRP80,horizontalPadding=16.dp) {
             state.easyMlbRP80=true;state.screen=Screen.LIVE_TV
@@ -195,48 +197,69 @@ private fun EasyDetailsRP79(state:AppState) {
     val details=state.details?.takeIf {it.summary.cloudId==item.cloudId}
     val summary=details?.summary ?: item
     val saved=state.progress[item.cloudId]
-    LazyColumn(Modifier.fillMaxSize().padding(horizontal=32.dp),verticalArrangement=Arrangement.spacedBy(18.dp),contentPadding=PaddingValues(top=20.dp,bottom=32.dp)) {
+    val scroll=rememberLazyListState()
+    val scope=rememberCoroutineScope()
+    val playFocus=remember(item.cloudId) {androidx.compose.ui.focus.FocusRequester()}
+    var synopsisOpen by remember(item.cloudId) {mutableStateOf(false)}
+    var synopsisOverflow by remember(item.cloudId) {mutableStateOf(false)}
+    var headerFocusedRP85 by remember(item.cloudId) {mutableStateOf(false)}
+    val synopsis=summary.overview.ifBlank {item.overview}.ifBlank {tr("Sinopsis no disponible.","Synopsis unavailable.")}
+    LaunchedEffect(item.cloudId,details?.summary?.cloudId) {
+        scroll.scrollToItem(0)
+        if(details!=null) {withFrameNanos {};runCatching {playFocus.requestFocus()}}
+    }
+    if(synopsisOpen) EasySynopsisRP85(item.title,synopsis) {synopsisOpen=false}
+    fun showHeader() {scope.launch {withFrameNanos {};scroll.scrollToItem(0)}}
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal=28.dp).onPreviewKeyEvent {event ->
+        if(headerFocusedRP85 && event.key==Key.DirectionUp && event.type==KeyEventType.KeyDown) showHeader()
+        false
+    },state=scroll,
+        verticalArrangement=Arrangement.spacedBy(18.dp),contentPadding=PaddingValues(top=12.dp,bottom=32.dp)) {
+        // Artwork and primary actions share a bounded header. Returning focus to Play restores its top.
         item(key="easy-artwork:${item.cloudId}") {
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(28.dp),verticalAlignment=Alignment.Top) {
-                AsyncImage(
-                    model=summary.poster ?: item.poster,
-                    contentDescription=tr("Carátula de ","Poster for ")+item.title,
-                    modifier=Modifier.width(180.dp).height(270.dp).clip(RoundedCornerShape(18.dp)).background(Color(0xFF222222)),
-                    contentScale=ContentScale.Fit
-                )
-                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(16.dp)) {
-                    Text(summary.title,color=Color.White,fontSize=32.sp,lineHeight=38.sp,fontWeight=FontWeight.Bold)
+            Row(Modifier.fillMaxWidth().onFocusChanged {headerFocusedRP85=it.hasFocus}.focusGroup(),horizontalArrangement=Arrangement.spacedBy(24.dp),verticalAlignment=Alignment.Top) {
+                AsyncImage(summary.poster ?: item.poster,tr("Carátula de ","Poster for ")+item.title,
+                    Modifier.width(176.dp).height(264.dp).clip(RoundedCornerShape(18.dp)).background(Color(0xFF222222)),contentScale=ContentScale.Fit)
+                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                    Text(summary.title,color=Color.White,fontSize=28.sp,lineHeight=34.sp,fontWeight=FontWeight.Bold,maxLines=2,overflow=TextOverflow.Ellipsis)
                     val metadata=listOfNotNull(summary.year.takeIf {it.isNotBlank()},details?.runtimeText?.takeIf {it.isNotBlank()}).joinToString(" · ")
-                    if(metadata.isNotBlank()) Text(metadata,color=Muted,fontSize=21.sp)
-                    Text(summary.overview.ifBlank {item.overview}.ifBlank {tr("Sinopsis no disponible.","Synopsis unavailable.")},
-                        color=Color(0xFFE4E4E4),fontSize=23.sp,lineHeight=32.sp)
+                    if(metadata.isNotBlank()) Text(metadata,color=Muted,fontSize=19.sp,lineHeight=24.sp)
+                    Text(synopsis,color=Color(0xFFE4E4E4),fontSize=21.sp,lineHeight=27.sp,maxLines=2,overflow=TextOverflow.Ellipsis,
+                        onTextLayout={synopsisOverflow=it.hasVisualOverflow})
+                    if(synopsisOverflow) FocusButton(tr("Leer sinopsis completa","Read full synopsis"),onFocused={if(it) showHeader()}) {synopsisOpen=true}
+                    if(details==null) Text(tr("Cargando…","Loading…"),color=Muted,fontSize=22.sp)
+                    else Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
+                        if(!state.selectedUpcoming) FocusButton(tr("Reproducir","Play"),Modifier.focusRequester(playFocus),onFocused={if(it) showHeader()}) {state.launch {state.easyResumeRP79(item)}}
+                        FocusButton(if(item.cloudId in state.favorites) tr("Quitar de Mi lista","Remove from My List") else tr("Guardar en Mi lista","Save to My List"),
+                            onFocused={if(it) showHeader()}) {state.toggleFavorite(item);state.launch {state.pushCloud()}}
+                    }
                 }
             }
         }
-        if(details==null) item {Text(tr("Cargando…","Loading…"),color=Muted,fontSize=22.sp)}
-        else {
-            item {
-                Row(horizontalArrangement=Arrangement.spacedBy(18.dp)) {
-                    if(!state.selectedUpcoming) FocusButton(tr("Reproducir","Play")) {state.launch {state.easyResumeRP79(item)}}
-                    FocusButton(if(item.cloudId in state.favorites) tr("Quitar de Mi lista","Remove from My List") else tr("Guardar en Mi lista","Save to My List")) {
-                        state.toggleFavorite(item);state.launch {state.pushCloud()}
-                    }
+        if(details!=null && item.type=="series") {
+            if(saved!=null && saved.episode>0) item(key="easy-resume-position") {
+                Text(tr("Te quedaste en el episodio ","You left off at episode ")+saved.episode+" · "+tr("Temporada ","Season ")+saved.season,
+                    color=Color.White,fontSize=26.sp,lineHeight=32.sp,fontWeight=FontWeight.SemiBold)
+            }
+            item(key="easy-seasons") {
+                Row(horizontalArrangement=Arrangement.spacedBy(18.dp),verticalAlignment=Alignment.CenterVertically) {
+                    if(state.currentSeason>1) FocusButton("‹") {state.launch {state.loadSeason(state.currentSeason-1)}}
+                    Text(tr("Temporada ","Season ")+state.currentSeason,color=Color.White,fontSize=26.sp)
+                    if(state.currentSeason<details.seasonCount) FocusButton("›") {state.launch {state.loadSeason(state.currentSeason+1)}}
                 }
             }
-            if(item.type=="series") {
-                if(saved!=null && saved.episode>0) item(key="easy-resume-position") {
-                    Text(tr("Te quedaste en el episodio ","You left off at episode ")+saved.episode+" · "+tr("Temporada ","Season ")+saved.season,
-                        color=Color.White,fontSize=26.sp,lineHeight=32.sp,fontWeight=FontWeight.SemiBold)
-                }
-                item {
-                    Row(horizontalArrangement=Arrangement.spacedBy(18.dp),verticalAlignment=Alignment.CenterVertically) {
-                        if(state.currentSeason>1) FocusButton("‹") {state.launch {state.loadSeason(state.currentSeason-1)}}
-                        Text(tr("Temporada ","Season ")+state.currentSeason,color=Color.White,fontSize=26.sp)
-                        if(state.currentSeason<details.seasonCount) FocusButton("›") {state.launch {state.loadSeason(state.currentSeason+1)}}
+            item(key="easy-episodes:${state.currentSeason}") {
+                val episodes=state.episodes.toList()
+                val start=saved?.takeIf {it.season==state.currentSeason}?.let {p ->episodes.indexOfFirst {it.episode==p.episode}.coerceAtLeast(0)} ?: 0
+                key(item.cloudId,state.currentSeason) {
+                    val episodeScroll=rememberLazyListState(initialFirstVisibleItemIndex=start)
+                    LaunchedEffect(episodes.size,start) {if(episodes.isNotEmpty()) episodeScroll.scrollToItem(start)}
+                    LazyRow(state=episodeScroll,horizontalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(6.dp)) {
+                        items(episodes,key={"${it.season}:${it.episode}"}) {episode ->
+                            val play={state.launch {state.playEpisode(episode)};Unit}
+                            EpisodeCard(episode,hidden=false,onLongClick=play,watchedRP85=state.episodeWatched(item,episode),largeRP85=true,onClick=play)
+                        }
                     }
-                }
-                items(state.episodes.toList(),key={"${it.season}:${it.episode}"}) {episode ->
-                    FocusButton((if(state.episodeWatched(item,episode)) "✓ " else "")+"${episode.episode}. ${episode.title}",modifier=Modifier.fillMaxWidth().heightIn(min=64.dp)) {state.launch {state.playEpisode(episode)}}
                 }
             }
         }

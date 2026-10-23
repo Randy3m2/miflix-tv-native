@@ -55,7 +55,7 @@ private val hubCatalogRP41=PlaybackLinkCache<String,List<LiveCategory>>(4) {Syst
 internal fun LiveHubRP41(state:AppState) {
     val context=LocalContext.current
     val owner="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
-    var section by remember(owner) {mutableStateOf(LiveHubMemoryRP46.section(owner).let {if(it=="nuvio") "others" else it})}
+    var section by remember(owner) {mutableStateOf(if(state.normalLiveEntryRP85) "hub" else LiveHubMemoryRP46.section(owner).let {if(it=="nuvio") "others" else it})}
     var customChannelsRP45 by remember(owner) {mutableStateOf(false)}
     var configuring by remember {mutableStateOf(false)}
     var sportsQrRP71 by remember {mutableStateOf(false)}
@@ -63,6 +63,9 @@ internal fun LiveHubRP41(state:AppState) {
     val first=remember {FocusRequester()}
     val contentFocusRP44=remember {FocusRequester()}
     fun changeSectionRP46(value:String) {LiveHubMemoryRP46.section(owner,value);section=value}
+    LaunchedEffect(state.normalLiveEntryRP85) {
+        if(state.normalLiveEntryRP85) {changeSectionRP46("hub");state.normalLiveEntryRP85=false}
+    }
     fun back() {changeSectionRP46(if(section=="nauta-source") "others" else "hub")}
     BackHandler {if(section!="hub") back() else state.screen=Screen.HOME}
     LaunchedEffect(section) {if(section=="hub") {withFrameNanos {};runCatching {first.requestFocus()}}}
@@ -92,6 +95,7 @@ internal fun LiveHubRP41(state:AppState) {
                             HubTileRP41(board,index,key,Modifier.weight(1f).fillMaxHeight().then(if(index==0) Modifier.focusRequester(first) else Modifier)) {
                                 when(key) {
                                     "scores"->state.showLiveScoresRP11=true
+                                    "tv"->{state.liveAutoEntryRP83=true;changeSectionRP46("tv")}
                                     else->changeSectionRP46(key)
                                 }
                             }
@@ -100,7 +104,7 @@ internal fun LiveHubRP41(state:AppState) {
                 }
             }
             }
-        } else if(section=="tv") key(owner) {UnifiedLiveTVRP32(state,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())}
+        } else if(section=="tv") key(owner) {LiveAutoStartRP83(state) {UnifiedLiveTVRP32(state,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())}}
         else if(section=="nauta-source") NautaSourceScreenRP71(state,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())
         else if(section=="lidom") HubLidomRP41(state,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())
         else key(section,revision) {HubSportsRP41(state,section,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup()) {changeSectionRP46("nauta-source")}}

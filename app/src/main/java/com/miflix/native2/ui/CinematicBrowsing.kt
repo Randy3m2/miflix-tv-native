@@ -217,32 +217,49 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
     fun replace(value: String) {apply(SearchTextEditor.replace(value))}
     fun insert(value: String) {apply(SearchTextEditor.insert(query,cursor,value))}
     fun submit() {state.rememberSearch(query);runCatching {resultsFocus.requestFocus()}}
+    fun acceptVoiceRP85(result:androidx.activity.result.ActivityResult) {
+        if(result.resultCode==android.app.Activity.RESULT_OK && voiceOwnerRP81==state.searchHistoryOwner()) {
+            val heard=result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS).orEmpty()
+                .map {it.trim().take(120)}.filter {it.isNotBlank()}
+                .distinctBy {com.miflix.native2.data.SearchQueryRP81.normalize(it)}.take(5)
+            voiceAlternativesRP81=heard
+            heard.firstOrNull()?.let {replace(it)}
+        }
+    }
+    fun voiceIntentRP85(automatic:Boolean):android.content.Intent {
+        val intent=android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE,if(easySearchRP80) com.miflix.native2.data.BilingualInputRP85.fallbackLocale(state.audioLanguage,state.interfaceLanguage) else state.voiceLocaleRP81)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS,5)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT,tr("Di un título, actor o director","Say a title, actor or director"))
+        if(automatic) {
+            // Literal keys avoid requiring a newer compile SDK; unsupported recognizers may ignore them.
+            intent.putExtra("android.speech.extra.ENABLE_LANGUAGE_DETECTION",true)
+                .putStringArrayListExtra("android.speech.extra.LANGUAGE_DETECTION_ALLOWED_LANGUAGES",ArrayList(com.miflix.native2.data.BilingualInputRP85.voiceLanguages().toList()))
+            if(android.os.Build.VERSION.SDK_INT>=34) intent
+                .putExtra("android.speech.extra.ENABLE_LANGUAGE_SWITCH","balanced")
+                .putStringArrayListExtra("android.speech.extra.LANGUAGE_SWITCH_ALLOWED_LANGUAGES",ArrayList(com.miflix.native2.data.BilingualInputRP85.voiceLanguages().toList()))
+        }
+        return intent
+    }
+    val fallbackVoiceRP85=androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) {result ->acceptVoiceRP85(result)}
     val voice=androidx.activity.compose.rememberLauncherForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) { result ->
-        if(result.resultCode==android.app.Activity.RESULT_OK) {
-            if(voiceOwnerRP81==state.searchHistoryOwner()) {
-                val heard=result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS).orEmpty()
-                    .map {it.trim().take(120)}.filter {it.isNotBlank()}
-                    .distinctBy {com.miflix.native2.data.SearchQueryRP81.normalize(it)}.take(5)
-                voiceAlternativesRP81=heard
-                heard.firstOrNull()?.let {replace(it)}
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) {result ->
+        if(result.resultCode==android.app.Activity.RESULT_OK) acceptVoiceRP85(result)
+        else if(easySearchRP80 && voiceOwnerRP81==state.searchHistoryOwner() && result.resultCode in 1..5) {
+            // One retry without switching flags for an actual recognizer error; never restart after Cancel.
+            runCatching {fallbackVoiceRP85.launch(voiceIntentRP85(false))}.onFailure {
+                state.error=tr("No se pudo iniciar el micrófono.","Could not start voice input.")
             }
         }
     }
     fun dictate() {
         voiceOwnerRP81=owner;voiceAlternativesRP81=emptyList()
-        val intent=android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE,state.voiceLocaleRP81)
-            .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS,5)
-            .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT,tr("Di un título, actor o director","Say a title, actor or director"))
-        try {
-            voice.launch(intent)
-        } catch(e: android.content.ActivityNotFoundException) {
+        try {voice.launch(voiceIntentRP85(easySearchRP80))}
+        catch(e:android.content.ActivityNotFoundException) {
             state.error=tr("Esta TV no tiene un servicio de dictado disponible.","No voice input service is available on this TV.")
-        } catch(e: Exception) {
-            state.error=tr("No se pudo iniciar el micrófono.","Could not start voice input.")
-        }
+        } catch(e:Exception) {state.error=tr("No se pudo iniciar el micrófono.","Could not start voice input.")}
     }
     LaunchedEffect(Unit) {withFrameNanos { };runCatching {keyboardFocus.requestFocus()}}
     LaunchedEffect(query,state.interfaceLanguage,owner) {
@@ -281,7 +298,8 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
                         if(event.type==KeyEventType.KeyDown) {
                             if(code==67) apply(SearchTextEditor.backspace(query,cursor)) else cursor=SearchTextEditor.move(query,cursor,if(code==21) -1 else 1)
                         };true
-                    } else if(event.type==KeyEventType.KeyDown && event.nativeKeyEvent.unicodeChar>=32 && !event.nativeKeyEvent.isCtrlPressed) {
+                    } else if(event.type==KeyEventType.KeyDown && event.nativeKeyEvent.unicodeChar>=32 && !event.nativeKeyEvent.isCtrlPressed &&
+                        (!easySearchRP80 || com.miflix.native2.data.BilingualInputRP85.accepts(event.nativeKeyEvent.unicodeChar))) {
                         insert(String(Character.toChars(event.nativeKeyEvent.unicodeChar)));true
                     } else false
                 }.focusable().tvClick {keyboardFocus.requestFocus()}.clickable {keyboardFocus.requestFocus()}
@@ -301,7 +319,7 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
                 LazyColumn(Modifier.width(if(easySearchRP80) 250.dp else 220.dp).fillMaxHeight(),verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=20.dp)) {
                     item {
                         Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                            "abcdefghijklmnopqrstuvwxyz1234567890".chunked(6).forEachIndexed { row,letters ->
+                            (if(easySearchRP80) com.miflix.native2.data.BilingualInputRP85.keyboard() else "abcdefghijklmnopqrstuvwxyz1234567890").chunked(6).forEachIndexed { row,letters ->
                                 Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
                                     letters.forEachIndexed { col,letter -> SearchKey(letter.toString(),Modifier.weight(1f)
                                         .then(if(row==0 && col==0) Modifier.focusRequester(keyboardFocus) else Modifier)) {insert(letter.toString())} }
@@ -313,7 +331,7 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
                                 SearchKey("←",Modifier.weight(1f)) {cursor=SearchTextEditor.move(query,cursor,-1)}
                                 SearchKey("→",Modifier.weight(1f)) {cursor=SearchTextEditor.move(query,cursor,1)}
                             }
-                            Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                            if(!easySearchRP80) Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
                                 SearchKey(if(state.voiceLocaleRP81=="es-MX") "✓ ES" else "ES",Modifier.weight(1f)) {state.setVoiceLocaleRP81("es-MX")}
                                 SearchKey(if(state.voiceLocaleRP81=="en-US") "✓ EN" else "EN",Modifier.weight(1f)) {state.setVoiceLocaleRP81("en-US")}
                             }
@@ -324,7 +342,7 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
                             }
                         }
                     }
-                    if(display.isNotEmpty()) item {
+                    if(!easySearchRP80 && display.isNotEmpty()) item {
                         Column(verticalArrangement=Arrangement.spacedBy(5.dp)) {
                             Text(tr("Sugerencias de títulos","Title suggestions"),color=Muted,fontSize=12.sp)
                             display.take(5).forEach {title ->

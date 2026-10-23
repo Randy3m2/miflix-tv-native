@@ -2386,19 +2386,21 @@ private fun TrailerCard(trailer: TrailerSummary, onClick: () -> Unit) {
 }
 
 @Composable
-private fun EpisodeCard(ep: EpisodeSummary, hidden: Boolean, onLongClick: () -> Unit, onClick: () -> Unit) {
+internal fun EpisodeCard(ep: EpisodeSummary, hidden: Boolean, onLongClick: () -> Unit, watchedRP85:Boolean=false, largeRP85:Boolean=false, onClick: () -> Unit) {
     var focused by remember(ep.season,ep.episode) {mutableStateOf(false)}
-    Box(Modifier.width(328.dp).height(225.dp),contentAlignment=Alignment.Center) {
-        Box(Modifier.width(316.dp).height(213.dp).clip(RoundedCornerShape(14.dp))
+    Box(Modifier.width(if(largeRP85) 368.dp else 328.dp).height(if(largeRP85) 265.dp else 225.dp),contentAlignment=Alignment.Center) {
+        Box(Modifier.width(if(largeRP85) 356.dp else 316.dp).height(if(largeRP85) 253.dp else 213.dp).clip(RoundedCornerShape(14.dp))
             .background(Color(0xFF1B1B1B)).border(if(focused) 2.dp else 0.dp,Color.White,RoundedCornerShape(14.dp))
             .onFocusChanged {focused=it.isFocused}.focusable().tvPlaybackClick(onClick,onLongClick).clickable(onClick=onClick)) {
             EpisodeArtwork(ep,hidden,Modifier.fillMaxSize())
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x08000000),Color(0x55000000),Color(0xF5000000)))))
+            if(watchedRP85) Text(tr("✓ Visto","✓ Watched"),color=Color.White,fontSize=if(largeRP85) 18.sp else 13.sp,
+                modifier=Modifier.align(Alignment.TopEnd).padding(10.dp).background(Color(0xD9000000),RoundedCornerShape(20.dp)).padding(horizontal=12.dp,vertical=7.dp))
             Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
                 Text("S${ep.season} · E${ep.episode}",color=Color(0xFFE1E1E1),fontSize=11.sp)
-                Text(if(hidden) tr("No visto","Not watched") else ep.title,color=Color.White,fontSize=17.sp,lineHeight=20.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Text(if(hidden) tr("No visto","Not watched") else ep.title,color=Color.White,fontSize=if(largeRP85) 22.sp else 17.sp,lineHeight=if(largeRP85) 27.sp else 20.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 Text(if(hidden) tr("Mantén pulsado para ver las opciones","Hold for episode options") else ep.overview.ifBlank {tr("Sin sinopsis disponible","Synopsis unavailable")},
-                    color=Color(0xFFE7E7E7),fontSize=12.sp,lineHeight=16.sp,maxLines=3,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    color=Color(0xFFE7E7E7),fontSize=if(largeRP85) 16.sp else 12.sp,lineHeight=if(largeRP85) 21.sp else 16.sp,maxLines=3,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
                     if(!hidden && ep.rating>0) Text("★ %.1f".format(ep.rating),color=Color(0xFFFFD16B),fontSize=11.sp)
                     if(ep.airDate.isNotBlank()) Text(ep.airDate,color=Color(0xFFD0D0D0),fontSize=10.sp)

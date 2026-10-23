@@ -39,7 +39,7 @@ import android.content.Context
 
 @Composable
 fun LiveScreen(state:AppState) {
-    LiveAutoStartRP83(state) { LiveHubRP41(state) }
+    LiveHubRP41(state)
 }
 
 @Composable

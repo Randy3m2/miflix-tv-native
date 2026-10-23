@@ -1,0 +1,48 @@
+BruniO RP85 / 22189 / 2.0.0-rp85
+Parche sobre RP84. Extraer en la raíz conservando rutas. No contiene APK.
+
+MODO NORMAL: LIVE
+- La pestaña superior Live abre el hub de cuadros, sin iniciar un canal.
+- La reproducción automática del último canal y el panel lateral solo se activan al elegir el cuadro Live TV.
+- Atrás desde un canal vuelve al área anterior sin volver a iniciar otro canal automáticamente.
+- Se conserva el regreso a NBA/MLB/etc. tras cerrar un partido. Los partidos mantienen su comportamiento de reproducción existente.
+
+MODO FÁCIL: DETALLES
+- Carátula, título, resumen y acciones comparten una cabecera de altura controlada.
+- Al volver a las acciones superiores, se restaura el inicio del contenido para evitar que la carátula quede recortada.
+- Las sinopsis largas ofrecen Leer sinopsis completa. Esa ventana permite desplazarse con Arriba/Abajo, cerrar con el botón o con Atrás.
+- Episodios en una fila horizontal, reutilizando la tarjeta del modo normal, con miniatura, título y sinopsis; tamaños más grandes en Modo fácil.
+- Episodios vistos: distintivo ✓ Visto, sin reemplazar ni ocultar su tarjeta.
+- La fila se sitúa en el episodio guardado de la temporada correspondiente cuando termina de cargar.
+- Se conserva la salida de Modo fácil con 15 segundos y las demás mejoras de RP83/RP84.
+
+MODO FÁCIL: BUSCADOR
+- Teclado combinado de inglés y español, con ñ, vocales acentuadas y ü. Sin botones ES/EN.
+- No muestra Sugerencias de títulos debajo del teclado. Se conservan los resultados a la derecha y las alternativas de transcripción del micrófono.
+- Pide al servicio de voz detección de español latino/inglés; en Android 14+ también pide cambio automático entre esos dos idiomas.
+- La detección depende del servicio de voz y los modelos instalados. Un servicio antiguo puede ignorar las opciones; en ese caso el idioma inicial sigue el audio del perfil o la interfaz, limitado a ES/EN.
+- Si el reconocedor devuelve un error explícito, se reintenta una vez sin las opciones automáticas. Cancelar la ventana de voz no vuelve a abrirla.
+- No se puede garantizar reconocimiento bilingüe automático en todas las TVs sin soporte del reconocedor.
+Referencia: https://developer.android.com/reference/android/speech/RecognizerIntent
+- El buscador normal conserva sus controles y sugerencias anteriores.
+
+MODO FÁCIL: HOME
+- Nueva fila Películas de La Vega, junto a las cinco filas existentes.
+- Mezcla películas de acción/thriller de Jason Statham, Jean-Claude Van Damme y Dwayne Johnson con películas de guerra.
+- Resuelve los nombres de los actores en TMDB; no depende de IDs de persona introducidos a mano.
+- Combina las selecciones de forma equilibrada y elimina duplicados. El contenido y su disponibilidad dependen de los datos que devuelva TMDB.
+- Consultas acotadas y cacheadas; no añade polling, tablas ni consultas a Supabase para esta fila.
+
+VERIFICACIÓN
+79 comprobaciones Java ejecutadas para entrada de texto, caracteres españoles y selección de idiomas permitidos.
+Sintaxis revisada en los archivos/bloques Kotlin modificados; los diagnósticos heredados del parser se compararon con el estado anterior.
+Pendientes: compilación Kotlin/Android, dictado real, catálogo TMDB con tu configuración y prueba de navegación/reproducción en TV. No se generó ningún build.
+No requiere SQL nuevo ni Vercel. El SQL de respaldo de RP83 continúa siendo necesario para esa función.
+
+COMPROBAR EN TV
+1. Pulsar Live: debe verse el hub sin reproducir nada. Elegir Live TV: debe iniciar el canal y mostrar su panel.
+2. Entrar a MLB/NBA, reproducir un partido y volver: debe regresar a la misma categoría.
+3. En Modo fácil, bajar hasta episodios y volver a Reproducir/Guardar: la cabecera debe reaparecer completa.
+4. Revisar tarjetas horizontales, ✓ Visto y Leer sinopsis completa.
+5. Buscar con teclado en español/inglés; no debe haber botones ES/EN ni sugerencias bajo el teclado. Probar Voz en la TV.
+6. Revisar Películas de La Vega, manteniendo las demás filas.

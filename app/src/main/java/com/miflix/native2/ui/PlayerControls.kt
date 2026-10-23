@@ -217,7 +217,7 @@ private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seek
 
 @Composable
 internal fun PlayerOptionsDialog(menu: String, player: Player, tracks: Tracks, speed: Float,
-    onSpeed: (Float) -> Unit, externalSubtitles: List<SubtitleChoice>, subtitleLoading: Boolean, onExternalSubtitle: (SubtitleChoice) -> Unit, series: Boolean, party: Boolean, onEpisodes: () -> Unit, onParty: () -> Unit, onTiming: () -> Unit, onClose: () -> Unit) {
+    onSpeed: (Float) -> Unit, externalSubtitles: List<SubtitleChoice>, subtitleLoading: Boolean, onExternalSubtitle: (SubtitleChoice) -> Unit, series: Boolean, party: Boolean, onEpisodes: () -> Unit, onParty: () -> Unit, onTiming: () -> Unit, spanishOnlyRP83:Boolean=false, onClose: () -> Unit) {
     var audioStatus by remember(player,menu) { mutableStateOf("") }
     var pendingAudio by remember(player,menu) { mutableStateOf<TrackSelectionOverride?>(null) }
     LaunchedEffect(player,pendingAudio) {
@@ -248,14 +248,17 @@ internal fun PlayerOptionsDialog(menu: String, player: Player, tracks: Tracks, s
                     else -> {
                         val type=if(menu=="audio") C.TRACK_TYPE_AUDIO else C.TRACK_TYPE_TEXT
                         item { FocusButton(if(type==C.TRACK_TYPE_TEXT) tr("Desactivados","Off") else tr("Automático","Automatic"),modifier=Modifier.focusRequester(first)) {
-                            player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().clearOverridesOfType(type).setTrackTypeDisabled(type,type==C.TRACK_TYPE_TEXT).build();onClose()
+                            val auto=player.trackSelectionParameters.buildUpon().clearOverridesOfType(type).setTrackTypeDisabled(type,type==C.TRACK_TYPE_TEXT)
+                            if(type==C.TRACK_TYPE_AUDIO && spanishOnlyRP83) auto.setPreferredAudioLanguages("es-419","es-MX","es-ES","es")
+                            player.trackSelectionParameters=auto.build();onClose()
                         } }
                         if(type==C.TRACK_TYPE_TEXT) item { FocusButton(tr("Sincronizar subtítulos","Subtitle timing")) { onTiming() } }
                         var count=0
                         tracks.groups.filter { it.type==type }.forEach { group ->
                             for(index in 0 until group.length) {
-                                count++
                                 val format=group.getTrackFormat(index)
+                                if(type==C.TRACK_TYPE_AUDIO && spanishOnlyRP83 && com.miflix.native2.data.SpanishAudioRP83.rank(format.language,format.label)<0) continue
+                                count++
                                 val supported=group.isTrackSupported(index,true)
                                 val limited=supported && !group.isTrackSupported(index)
                                 val label=listOfNotNull(format.label?.takeIf { it.isNotBlank() },format.language?.takeIf { it.isNotBlank() },format.codecs?.takeIf { it.isNotBlank() },if(format.channelCount>0) "${format.channelCount} ch" else null).distinct().joinToString(" · ").ifBlank { "${tr("Pista","Track")} $count" }

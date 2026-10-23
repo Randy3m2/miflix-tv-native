@@ -64,7 +64,7 @@ class AppState(context: Context) {
         {lastSourcePrefsRP16.edit().putString("rows",it).apply()})
     private fun lastSourceKeyRP16(item:MediaSummary,season:Int,episode:Int)=LastPlaybackSourceRP16.key(
         localExtrasScope(),item.cloudId,season,episode,
-        org.json.JSONArray(listOf(easyModeRP79,audioLanguage,secondaryAudioLanguageRP62,streamSizeBytes,nativeSourceEnabled,nativeRevision,nativeOnlyRP75,nativeSpanishOnlyRP77,nativeSizeAscendingRP77,
+        org.json.JSONArray(listOf(easyModeRP79,easySpanishOnlyRP83,audioLanguage,secondaryAudioLanguageRP62,streamSizeBytes,nativeSourceEnabled,nativeRevision,nativeOnlyRP75,nativeSpanishOnlyRP77,nativeSizeAscendingRP77,
             org.json.JSONArray(streamRepo.manifests()))).toString())
     internal fun rememberSuccessfulPlaybackRP16(req:PlayerRequest) {
         if(req.live || req.momentEndMs>0 || watchParty!=null || playerRequest?.playbackId!=req.playbackId || req.sourceMemoryKeyRP16.isBlank()) return
@@ -195,7 +195,7 @@ class AppState(context: Context) {
     internal fun exportLocalBackupRC100():org.json.JSONObject=org.json.JSONObject()
         .put("brunioLocalBackup",100).put("extras",localExtras.export(ratingsKey()))
         .put("homeOrder",org.json.JSONArray(homeRowOrder)).put("hiddenRows",org.json.JSONArray(hiddenHomeRows.toList()))
-        .put("interface",interfaceLanguage).put("audio",audioLanguage).put("subtitle",subtitleLanguage)
+        .put("interface",interfaceLanguage).put("audio",playbackPrefs.getString(profileAudioKeyRP77(),legacyAudioRP77) ?: legacyAudioRP77).put("subtitle",subtitleLanguage)
         .put("autoplay",autoplayNext).put("nextLink",autoplayNextLink).put("adaptive",adaptiveSource)
         .put("previousLiveChannel",previousLiveChannelEnabled)
         .put("tasteProfile",tasteProfile.data(ratingsKey())).put("tastePrompt",tasteSetupPromptEnabled)
@@ -213,7 +213,7 @@ class AppState(context: Context) {
         if(body.has("previousLiveChannel")) body.getBoolean("previousLiveChannel")
         body.getInt("subtitleColor");body.getInt("focusColor");require(body.getDouble("subtitleScale") in 0.8..1.4)
     }
-    internal suspend fun importLocalBackupRC100(body:org.json.JSONObject) {
+    internal suspend fun importLocalBackupRC100(body:org.json.JSONObject,reloadHome:Boolean=true) {
         validateLocalBackupRC100(body)
         localExtras.importData(ratingsKey(),body.getJSONObject("extras"))
         val order=body.getJSONArray("homeOrder");saveHomeRowOrder((0 until order.length()).map {order.getString(it)})
@@ -227,7 +227,10 @@ class AppState(context: Context) {
         saveSubtitleStyle(body.getInt("subtitleColor"),body.getDouble("subtitleScale").toFloat())
         focusColor=body.getInt("focusColor");FocusTheme.argb=focusColor;playbackPrefs.edit().putInt("focus_color",focusColor).apply()
         restoreCustomFilterRC100()
-        setInterfaceLanguage(body.getString("interface"))
+        if(reloadHome) setInterfaceLanguage(body.getString("interface")) else {
+            playbackPrefs.edit().putString(interfaceLanguageKey(),body.getString("interface")).apply()
+            applyProfileInterfaceLanguage()
+        }
     }
     private val cinemaStats=LocalCinemaStats(playbackPrefs)
     fun recordViewing(req:PlayerRequest,ms:Long) {
@@ -368,7 +371,7 @@ class AppState(context: Context) {
     private var audioRevisionRP77 by mutableIntStateOf(0)
     private fun profileAudioKeyRP77()="audio_rp77:${localExtrasScope()}"
     var audioLanguage:String
-        get() {audioRevisionRP77;return playbackPrefs.getString(profileAudioKeyRP77(),legacyAudioRP77) ?: legacyAudioRP77}
+        get() {audioRevisionRP77;if(easyModeRP79 && easySpanishOnlyRP83) return "es";return playbackPrefs.getString(profileAudioKeyRP77(),legacyAudioRP77) ?: legacyAudioRP77}
         set(value) {playbackPrefs.edit().putString(profileAudioKeyRP77(),value).apply();audioRevisionRP77++}
     private var secondaryAudioRevisionRP62 by mutableIntStateOf(0)
     private fun secondaryAudioKeyRP62()="secondary_audio_rp62:${localExtrasScope()}"
@@ -980,7 +983,7 @@ class AppState(context: Context) {
         val s=profileSocialSession() ?: return
         val epoch=partyEpoch
         fun valid()=partyEpoch==epoch && isCurrentSocialSession(s)
-        social.publishAvatar(s,activeProfile.avatarValue ?: ProfileAvatars[(activeProfile.id.hashCode() and Int.MAX_VALUE)%4].key)
+        if(cloudIdentityReadyRP83) social.publishAvatar(s,activeProfile.avatarValue ?: ProfileAvatars[(activeProfile.id.hashCode() and Int.MAX_VALUE)%4].key)
         pendingPartyCode?.let { code ->
             val decision=try { social.requestAccess(s,code) } catch(e: Exception) {
                 if(e is CancellationException) throw e
@@ -1259,11 +1262,15 @@ class AppState(context: Context) {
         applyProfileAddons()
     }
 
+    internal var liveAutoEntryRP83 by mutableStateOf(false)
+    internal var livePanelPlaybackRP83:String?=null
     private var currentScreen by mutableStateOf(Screen.SPLASH)
     var screen: Screen
         get()=currentScreen
         set(value) {
             val destination=if(easyModeRP79 && !com.miflix.native2.data.EasyModePolicyRP79.allowsScreen(value.name)) Screen.HOME else value
+            if(destination==Screen.LIVE_TV && currentScreen!=Screen.LIVE_TV && currentScreen!=Screen.PLAYER) liveAutoEntryRP83=true
+            if(destination!=Screen.LIVE_TV && destination!=Screen.PLAYER) liveAutoEntryRP83=false
             currentScreen=destination
             if(destination==Screen.FRIENDS) refreshFriendsTab()
         }
@@ -1739,6 +1746,12 @@ class AppState(context: Context) {
         easyRevisionRP79
         return !kidsMode && playbackPrefs.getBoolean(com.miflix.native2.data.EasyModePolicyRP79.key(session?.userId,activeProfile.id),false)
     }
+    private var easySpanishRevisionRP83 by mutableIntStateOf(0)
+    val easySpanishOnlyRP83:Boolean get() {easySpanishRevisionRP83;return playbackPrefs.getBoolean("easy_spanish_rp83:${localExtrasScope()}",true)}
+    fun saveEasySpanishOnlyRP83(value:Boolean) {
+        playbackPrefs.edit().putBoolean("easy_spanish_rp83:${localExtrasScope()}",value).apply()
+        easySpanishRevisionRP83++;invalidatePlaybackWork()
+    }
     private val easyStreamsRP79=StreamRepository("").apply {
         setManifests(com.miflix.native2.data.EasyModePolicyRP79.sourceManifests())
     }
@@ -1779,6 +1792,7 @@ class AppState(context: Context) {
         partyClosedNotice=false;partyJoinedNotice=null;changelogOpen=false
         screen=Screen.HOME
         if(enabled) {saveEasySnapshotRP79();presenceEvents.stopForEasyMode(actor)}
+        else {extrasLoaded=false;launch {flushSettingsRP83()};launch {if(!easyModeRP79) loadHome()}}
     }
     suspend fun loadEasyHomeRP79() = supervisorScope {
         val owner="${localExtrasScope()}:${interfaceLanguage}"
@@ -1964,6 +1978,7 @@ class AppState(context: Context) {
 
     suspend fun syncFromCloud() {
         val s = session ?: return
+        cloudIdentityReadyRP83=false
         clearAccountManifests()
         val (remoteProfiles, remoteSetup) = cloud.account(s)
         if(session?.userId!=s.userId) return
@@ -1980,23 +1995,31 @@ class AppState(context: Context) {
         val neededKids=profiles.none {it.isKids || it.id==KidsContentPolicy.PROFILE_ID}
         ensureKidsProfile()
         if (remoteProfiles.isEmpty() || neededKids) runCatching { cloud.upsertProfiles(s, profiles.toList()) }
-        val wanted = local.profileId()
+        val wanted = playbackPrefs.getString("selected_profile_rp83:${s.userId}",null)?.takeIf {id ->profiles.any {it.id==id}}
+            ?: cloud.lastProfileRP83 ?: local.profileId()
         activeProfile = profiles.firstOrNull { it.id == wanted }
             ?: profiles.firstOrNull { it.primary }
             ?: profiles.first()
+        restoreSettingsRP83()
         applyProfileInterfaceLanguage()
         applyProfileAddons()
         restoreCustomFilterRC100()
         restoreProfileSocialLocalRP1()
         local.saveProfileId(activeProfile.id)
+        playbackPrefs.edit().putString("selected_profile_rp83:${s.userId}",activeProfile.id).apply()
 
         val (fav, prog) = cloud.profileState(s, activeProfile.id)
         favorites.clear(); favorites.addAll(fav)
         progress.clear(); progress.putAll(prog)
+        easyHomeOwnerRP79=""
         extrasLoaded = false
+        cloudIdentityReadyRP83=true
+        flushSettingsRP83()
     }
 
     suspend fun selectProfile(p: Profile) {
+        flushSettingsRP83()
+        cloudIdentityReadyRP83=false
         easyHomeOwnerRP79=""
         if(p.id!=activeProfile.id) {
             profileSocialSession()?.let {presenceEvents.queue(it,"","",0,0,null,System.currentTimeMillis())}
@@ -2008,6 +2031,7 @@ class AppState(context: Context) {
         playerRequest=null;sourceSelection=null;miniPlayer=false;selected=null;details=null;profilePhotoEditor=null
         favorites.clear();progress.clear();continueWatching.clear();kidsContinue.clear();notifications.clear()
         activeProfile = p
+        restoreSettingsRP83()
         applyProfileInterfaceLanguage()
         applyProfileAddons()
         restoreCustomFilterRC100()
@@ -2016,12 +2040,17 @@ class AppState(context: Context) {
         contextTitle=null;socialProfileEditor=false;localCastPairing=false
         if(kidsMode) detachParty()
         local.saveProfileId(p.id)
+        session?.let {playbackPrefs.edit().putString("selected_profile_rp83:${it.userId}",p.id).apply()}
         session?.let {
             val (fav, prog) = cloud.profileState(it, p.id)
             favorites.clear(); favorites.addAll(fav)
             progress.clear(); progress.putAll(prog)
         }
         extrasLoaded = false
+        cloudIdentityReadyRP83=session!=null
+        easyHomeOwnerRP79=""
+        flushSettingsRP83(force=true)
+        if(easyModeRP79) loadEasyHomeRP79()
         screen = Screen.HOME
     }
 
@@ -2463,7 +2492,7 @@ class AppState(context: Context) {
             details=loaded
             val today=java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US).format(java.util.Date())
             if(loaded.releaseDate.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))  ) selectedUpcoming=loaded.releaseDate>today
-            if(item.type=="series" && loaded.seasonCount>0) loadSeason(1)
+            if(item.type=="series" && loaded.seasonCount>0) loadSeason(if(easyModeRP79) (progress[item.cloudId]?.season ?: 1).coerceIn(1,loaded.seasonCount) else 1)
         } catch(e: CancellationException) { throw e }
         catch(e: Exception) { if(ticket==detailsEpoch) error=e.message }
     }
@@ -3530,12 +3559,186 @@ class AppState(context: Context) {
     private fun <T> MutableList<T>.replaceWith(rows: Collection<T>) {
         clear(); addAll(rows)
     }
+    private var cloudIdentityReadyRP83=false
+    var settingsBackupStatusRP83 by mutableStateOf("")
+        private set
+    private var restoringSettingsRP83=false
+    private val settingsMutexRP83=Mutex()
+    private val settingsReadyRP83=mutableSetOf<String>()
+    private val settingsDirtyRP83=mutableSetOf<String>()
+    private val settingsRevisionRP83=mutableMapOf<String,Long>()
+    private val settingsSignatureRP83=mutableMapOf<String,String>()
+    private var settingsJobRP83:kotlinx.coroutines.Job?=null
+    private fun settingsOwnerRP83()="${session?.userId.orEmpty()}:${activeProfile.id}"
+    private fun settingsStoresRP83():List<Pair<String,android.content.SharedPreferences>> = listOf(
+        "playback" to playbackPrefs,
+        "extras" to appContext.getSharedPreferences("brunio_local_extras",Context.MODE_PRIVATE),
+        "taste" to appContext.getSharedPreferences("brunio_taste",Context.MODE_PRIVATE),
+        "live" to livePrefs,
+        "favorites" to LiveLibrary.prefs(appContext),
+        "channels" to appContext.getSharedPreferences("brunio_custom_channels_rp45",Context.MODE_PRIVATE),
+        "lists" to appContext.getSharedPreferences("brunio_m3u_lists_rp61",Context.MODE_PRIVATE),
+        "lastLive" to appContext.getSharedPreferences("brunio_live_last_rp41",Context.MODE_PRIVATE)
+    )
+    private fun settingsStoreKeyRP83(store:String,key:String)=SettingsKeysRP83.allows(store,key,session?.userId,activeProfile.id)
+    private fun settingsSnapshotRP83():org.json.JSONObject {
+        val stores=org.json.JSONObject()
+        for((name,prefs) in settingsStoresRP83()) {
+            val values=org.json.JSONObject()
+            for((key,value) in prefs.all.toSortedMap()) if(settingsStoreKeyRP83(name,key)) {
+                val type=when(value) {is Boolean->"b";is Int->"i";is Long->"l";is Float->"f";is String->"s";is Set<*>->"set";else->continue}
+                values.put(key,org.json.JSONObject().put("t",type).put("v",if(value is Set<*>) org.json.JSONArray(value.filterIsInstance<String>().sorted()) else value))
+            }
+            stores.put(name,values)
+        }
+        return org.json.JSONObject().put("schema",83).put("backup",exportLocalBackupRC100()).put("stores",stores)
+            .also {require(it.toString().toByteArray(Charsets.UTF_8).size<=2_000_000) {"Settings backup exceeds 2 MB"}}
+    }
+    private suspend fun applySettingsRP83(body:org.json.JSONObject) {
+        require(body.getInt("schema")==83)
+        val backup=body.getJSONObject("backup")
+        validateLocalBackupRC100(backup)
+        val stores=body.getJSONObject("stores")
+        // Validate all remote values before changing preferences; unrecognised keys never reach an editor.
+        for((name,_) in settingsStoresRP83()) {
+            val values=stores.optJSONObject(name) ?: continue
+            values.keys().forEach {key ->if(settingsStoreKeyRP83(name,key)) {
+                val row=values.getJSONObject(key)
+                when(row.getString("t")) {
+                    "b" -> row.getBoolean("v")
+                    "i" -> row.getInt("v")
+                    "l" -> row.getLong("v")
+                    "f" -> require(row.getDouble("v").isFinite())
+                    "s" -> require(row.getString("v").length<=1_800_000)
+                    "set" -> {val a=row.getJSONArray("v");require(a.length()<=10000);for(i in 0 until a.length()) a.getString(i)}
+                    else -> error("Invalid saved setting")
+                }
+            }}
+        }
+        val oldEasyRP83=easyModeRP79
+        val oldActorRP83=profileSocialSession()
+        restoringSettingsRP83=true
+        try {
+            for((name,prefs) in settingsStoresRP83()) {
+                val values=stores.optJSONObject(name) ?: continue
+                val edit=prefs.edit()
+                // Snapshot semantics also preserve intentionally removed/reset settings.
+                prefs.all.keys.filter {settingsStoreKeyRP83(name,it) && !values.has(it)}.forEach {edit.remove(it)}
+                values.keys().forEach {key ->if(settingsStoreKeyRP83(name,key)) {
+                    val row=values.getJSONObject(key)
+                    when(row.getString("t")) {
+                        "b" -> edit.putBoolean(key,row.getBoolean("v"))
+                        "i" -> edit.putInt(key,row.getInt("v"))
+                        "l" -> edit.putLong(key,row.getLong("v"))
+                        "f" -> edit.putFloat(key,row.getDouble("v").toFloat())
+                        "s" -> edit.putString(key,row.getString("v"))
+                        "set" -> {val a=row.getJSONArray("v");edit.putStringSet(key,(0 until a.length()).map {a.getString(it)}.toSet())}
+                    }
+                }}
+                edit.apply()
+            }
+            easyRevisionRP79++;easySpanishRevisionRP83++;secondaryAudioRevisionRP62++;voiceRevisionRP81++
+            simpleHomeRevision++;unwatchedVisibilityRevisionRP20++;contentWarningsRevisionRP31++;addonOrderRevision++;profileAddonRevision++
+            streamSizeLimitGb=(playbackPrefs.getString("stream_size_gb","0")?.toDoubleOrNull() ?: 0.0).coerceIn(0.0,500.0)
+            rememberLastProfile=playbackPrefs.getBoolean("remember_last_profile",false)
+            hiddenAvatars=playbackPrefs.getStringSet("hidden_avatars",emptySet()).orEmpty().toSet()
+            LiveLibrary.revision++;CustomChannelsRP45.changesRP48.value++
+            importLocalBackupRC100(backup,reloadHome=false)
+            applyProfileAddons()
+            if(easyModeRP79 && !oldEasyRP83) {
+                invalidatePlaybackWork();detachParty();miniPlayer=false;playerRequest=null;sourceSelection=null
+                contextTitle=null;showLiveScoresRP11=false;pendingPartyCode=null
+                if(screen !in listOf(Screen.SPLASH,Screen.PROFILES)) screen=Screen.HOME
+                presenceEvents.stopForEasyMode(oldActorRP83)
+            }
+        } finally {restoringSettingsRP83=false}
+    }
+    internal suspend fun restoreSettingsRP83(discardLocal:Boolean=false) = settingsMutexRP83.withLock {
+        val account=session ?: return@withLock
+        val profile=activeProfile.id;val owner=settingsOwnerRP83()
+        settingsReadyRP83.remove(owner)
+        val pendingKey="settings_pending_rp83:$owner"
+        val revisionKey="settings_revision_rp83:$owner"
+        val pending=!discardLocal && (owner in settingsDirtyRP83 || playbackPrefs.getBoolean(pendingKey,false))
+        val knownRevision=settingsRevisionRP83[owner] ?: playbackPrefs.getLong(revisionKey,-1L)
+        try {
+            val (body,revision)=cloud.settingsRP83(account,profile)
+            if(settingsOwnerRP83()!=owner) return@withLock
+            if(pending && body!=null && knownRevision!=revision) {
+                settingsBackupStatusRP83=tr("Hay ajustes locales pendientes y una copia diferente en la cuenta. Puedes conservar los locales o usar Restaurar ajustes de la cuenta.","Local settings are pending and the account copy differs. Keep using local settings or choose Restore account settings.")
+                return@withLock
+            }
+            if(body!=null && !pending) {
+                applySettingsRP83(body)
+                if(settingsOwnerRP83()!=owner) return@withLock
+                settingsDirtyRP83.remove(owner)
+                playbackPrefs.edit().remove(pendingKey).apply()
+            }
+            settingsRevisionRP83[owner]=revision
+            playbackPrefs.edit().putLong(revisionKey,revision).apply()
+            settingsReadyRP83.add(owner)
+            if(body==null || pending) {settingsDirtyRP83.add(owner);playbackPrefs.edit().putBoolean(pendingKey,true).apply()}
+            else if(owner !in settingsDirtyRP83) settingsSignatureRP83[owner]=settingsSnapshotRP83().toString()
+            settingsBackupStatusRP83=tr("Ajustes recuperados de tu cuenta","Settings restored from your account")
+        } catch(e:CancellationException) {throw e} catch(_:Exception) {
+            if(settingsOwnerRP83()==owner) {
+                settingsReadyRP83.remove(owner)
+                settingsBackupStatusRP83=tr("Respaldo pendiente. Revisa conexión y ejecuta supabase_rp83_settings.sql.","Backup pending. Check your connection and run supabase_rp83_settings.sql.")
+            }
+        }
+    }
+    internal suspend fun flushSettingsRP83(force:Boolean=false) = settingsMutexRP83.withLock {
+        val account=session ?: return@withLock
+        val owner=settingsOwnerRP83();val profile=activeProfile.id
+        if(restoringSettingsRP83 || owner !in settingsReadyRP83) return@withLock
+        try {
+            val snapshot=settingsSnapshotRP83();val signature=snapshot.toString()
+            if(!force && signature==settingsSignatureRP83[owner]) {settingsDirtyRP83.remove(owner);playbackPrefs.edit().remove("settings_pending_rp83:$owner").apply();return@withLock}
+            val revision=cloud.saveSettingsRP83(account,profile,snapshot,settingsRevisionRP83[owner] ?: 0L)
+            if(owner!=settingsOwnerRP83()) return@withLock
+            settingsRevisionRP83[owner]=revision;settingsSignatureRP83[owner]=signature
+            val stillCurrent=settingsSnapshotRP83().toString()==signature
+            playbackPrefs.edit().putLong("settings_revision_rp83:$owner",revision).putBoolean("settings_pending_rp83:$owner",!stillCurrent).apply()
+            if(stillCurrent) settingsDirtyRP83.remove(owner)
+            settingsBackupStatusRP83=tr("Ajustes guardados en tu cuenta ✓","Settings saved to your account ✓")
+        } catch(e:CancellationException) {throw e} catch(_:Exception) {
+            if(owner==settingsOwnerRP83()) settingsBackupStatusRP83=tr("No se guardaron los ajustes. Reintenta; si cambiaron en otro dispositivo, restaura la copia de la cuenta.","Settings were not saved. Retry; if changed on another device, restore the account copy.")
+        }
+    }
+    suspend fun saveSettingsNowRP83() {
+        if(settingsOwnerRP83() !in settingsReadyRP83) restoreSettingsRP83()
+        flushSettingsRP83(force=true)
+    }
+    private fun scheduleSettingsRP83() {
+        if(restoringSettingsRP83 || session==null) return
+        val owner=settingsOwnerRP83()
+        settingsDirtyRP83.add(owner)
+        playbackPrefs.edit().putBoolean("settings_pending_rp83:$owner",true).apply()
+        settingsJobRP83?.cancel()
+        settingsJobRP83=appScope.launch {
+            delay(1500)
+            if(owner==settingsOwnerRP83()) flushSettingsRP83()
+        }
+    }
+    private val settingsListenersRP83=mutableListOf<Pair<android.content.SharedPreferences,android.content.SharedPreferences.OnSharedPreferenceChangeListener>>()
+    init {
+        for((name,prefs) in settingsStoresRP83()) {
+            if(name=="lastLive") continue // Save with the next settings/background flush, not on every channel zap.
+            val listener=android.content.SharedPreferences.OnSharedPreferenceChangeListener {_,key ->
+                if(key!=null && settingsStoreKeyRP83(name,key)) scheduleSettingsRP83()
+            }
+            settingsListenersRP83.add(prefs to listener)
+            prefs.registerOnSharedPreferenceChangeListener(listener)
+        }
+    }
+
 }
 
 enum class Screen {
     SPLASH, HOME, SEARCH, MOVIES, SERIES, COLLECTIONS, OSCARS, COLLECTION_DETAIL, PLATFORM_DETAIL,
     GENRES, GENRE_DETAIL, YEAR_DETAIL, MY_LIST, SETTINGS, PROFILES, WATCH_PARTY, PAIR_DEVICE,
     DETAILS, CUSTOM_FILTER, FRANCHISE, PLAYER, MULTIVIEW, LIVE_TV, LIDOM, FRIENDS, TRAKT, NOTIFICATIONS, DIRECTOR_DETAIL
+
 }
 
 data class PlayerRequest(

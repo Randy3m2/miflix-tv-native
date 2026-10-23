@@ -1,0 +1,66 @@
+import com.miflix.native2.data.EasyExitHoldRP80;
+import com.miflix.native2.data.SpanishAudioRP83;
+import com.miflix.native2.data.SettingsKeysRP83;
+import com.miflix.native2.data.EasyModePolicyRP79;
+public final class RP83PolicyCheck {
+    private static int checks;
+    private static void check(boolean result,String message) {checks++;if(!result) throw new AssertionError(message);}
+    public static void main(String[] args) {
+        EasyExitHoldRP80 gate=new EasyExitHoldRP80();
+        check(EasyExitHoldRP80.HOLD_MS==15000L,"15 second requirement");
+        check(gate.down(23,1000L,0),"initial OK starts hold");
+        check(gate.secondsLeft(1000L)==15,"initial countdown");
+        check(!gate.down(23,10000L,1),"repeat never resets hold");
+        check(gate.secondsLeft(15001L)==1,"one second left rounds up");
+        check(!gate.up(23,15999L),"14999ms must not exit");
+        gate.down(23,1000L,0);
+        check(gate.up(23,16000L),"15000ms exits exactly");
+        gate.down(23,500L,0);gate.cancel();
+        check(!gate.up(23,50000L),"lost focus/background cancels");
+        gate.down(23,500L,0);
+        check(!gate.up(66,50000L),"different key must not exit");
+        gate.down(23,500L,0);
+        check(!gate.up(23,499L),"backwards clock cannot exit");
+        check(!gate.down(23,100L,1),"orphan repeats cannot start a hold");
+        check(gate.down(23,200L,0),"new hold works after interruption");
+        check(gate.up(23,1000000L),"long holds work");
+        check(!gate.up(23,1000001L),"release cannot fire twice");
+        check(SpanishAudioRP83.rank("es-419",null)==0,"Latin region");
+        check(SpanishAudioRP83.rank("es_MX",null)==0,"underscore Latin region");
+        check(SpanishAudioRP83.rank("es-DO",null)==0,"Dominican Spanish");
+        check(SpanishAudioRP83.rank("spa","Español Latino")==0,"Latino label");
+        check(SpanishAudioRP83.rank("es-ES",null)==1,"Spain Spanish");
+        check(SpanishAudioRP83.rank("es",null)==2,"generic Spanish");
+        check(SpanishAudioRP83.rank("spa",null)==2,"ISO 639-2 Spanish");
+        check(SpanishAudioRP83.rank("und","Español")==2,"explicit track label");
+        check(SpanishAudioRP83.rank(null,null)<0,"unlabelled cannot be verified");
+        check(SpanishAudioRP83.rank("und","Dolby 5.1")<0,"codec is not language");
+        check(SpanishAudioRP83.rank("en","Español Latino")<0,"known English outranks a misleading label");
+        check(SpanishAudioRP83.rank("ko","Korean")<0,"Korean rejected in strict Spanish");
+        check(SpanishAudioRP83.rank("pt","Português")<0,"Portuguese rejected");
+        check(SpanishAudioRP83.rank("en-US",null)<0,"English rejected");
+        check(SpanishAudioRP83.rank("es-419",null)<SpanishAudioRP83.rank("es-ES",null),"Latino before Spain");
+        check(SettingsKeysRP83.allows("playback","audio_rp77:ratings_account_profile","account","profile"),"own audio is backed up");
+        check(!SettingsKeysRP83.allows("playback","audio_rp77:ratings_account_other","account","profile"),"another profile stays separate");
+        check(!SettingsKeysRP83.allows("playback","audio_rp77:ratings_other_profile","account","profile"),"another account stays separate");
+        check(SettingsKeysRP83.allows("playback","addon_limit_rp7:account:profile:deepflix","account","profile"),"own provider limits");
+        check(!SettingsKeysRP83.allows("playback","addon_limit_rp7:account:profile2:deepflix","account","profile"),"similar profile prefix cannot leak");
+        String easy=EasyModePolicyRP79.key("account","profile");
+        check(SettingsKeysRP83.allows("playback",easy,"account","profile"),"Easy mode restored");
+        check(!SettingsKeysRP83.allows("playback",easy+":watching","account","profile"),"4-second playback snapshots never trigger backup");
+        check(!SettingsKeysRP83.allows("playback","search_history_account_profile","account","profile"),"history excluded");
+        check(!SettingsKeysRP83.allows("playback","native_token","account","profile"),"API credentials excluded");
+        check(!SettingsKeysRP83.allows("playback","session","account","profile"),"session tokens excluded");
+        check(SettingsKeysRP83.allows("playback","interface:ratings_account_profile","account","profile"),"own interface language restored");
+        check(!SettingsKeysRP83.allows("playback","interface:ratings_account_profile2","account","profile"),"another interface language excluded");
+        check(SettingsKeysRP83.allows("favorites","favorites:account:profile","account","profile"),"own channel favorites restored");
+        check(!SettingsKeysRP83.allows("favorites","favorites:account:profile2","account","profile"),"other channel favorites excluded");
+        check(SettingsKeysRP83.allows("channels","account:profile:removedRP50","account","profile"),"channel removals restored");
+        check(SettingsKeysRP83.allows("extras","profile:ratings_account_profile","account","profile"),"own lists and local extras");
+        check(!SettingsKeysRP83.allows("taste","stats:ratings_account_profile","account","profile"),"viewing stats never trigger settings backup");
+        check(!SettingsKeysRP83.allows("taste","cache:popular","account","profile"),"catalog cache excluded");
+        check(SettingsKeysRP83.allows("live","sports_manifest","account","profile"),"sports configuration restored");
+        check(!SettingsKeysRP83.allows("other","accessToken","account","profile"),"unknown preference files rejected");
+        System.out.println("PASS: "+checks+" timing, audio and settings ownership checks");
+    }
+}

@@ -1,0 +1,55 @@
+BruniO RP83 / versionCode 22187 / 2.0.0-rp83
+Parche sobre RP82. Extraer en la raíz del repositorio conservando todas las rutas.
+No incluye APK ni modifica Vercel.
+
+PRIMERO: SUPABASE
+Ejecuta supabase_rp83_settings.sql una vez en el SQL Editor de tu proyecto.
+Reutiliza miflix_user_state y sus políticas RLS por propietario. No elimina tablas ni datos.
+El script comprueba que RLS ya esté habilitado y añade una función autenticada para guardar ajustes.
+No uses políticas públicas ni desactives RLS. El script no se ha ejecutado contra tu proyecto desde aquí.
+Si no está instalado, las demás mejoras siguen disponibles, pero el respaldo no podrá guardarse.
+
+MODO FÁCIL
+- Mantener OK sobre BruniO durante 15 segundos y soltar abre la confirmación de salida.
+- Alternativa para controles que interrumpen las pulsaciones: tocar BruniO, esperar 15 segundos y elegir Desactivar modo fácil.
+- Atrás cancela la ventana. Perder foco cancela la pulsación; poner la app en segundo plano cancela la cuenta regresiva.
+- Home queda limitado a Seguir viendo, Películas populares, Series populares, Novelas que atrapan y Clásicos de siempre. Seguir viendo se muestra cuando hay progreso.
+- Películas: carátula y sinopsis antes de reproducir, también desde Seguir viendo.
+- Series: temporada guardada, texto Te quedaste en el episodio X, número de temporada y ✓ en episodios vistos; botones más grandes.
+- Buscador sin mostrar ni registrar historial en este modo. Se conserva el historial del modo normal.
+- Español verificado activado de fábrica en Modo fácil, para películas y series. Prioriza pistas latinas, luego España y español genérico. No aplica a Live TV ni MLB.
+- El reproductor inicia con audio silenciado hasta elegir una pista compatible identificada como español. No acepta pistas sin idioma o etiqueta verificable ni restaura una elección anterior en inglés. El selector manual muestra solo español en este modo estricto.
+- Si no hay español verificable, prueba las fuentes siguientes cuando Autoplay next link esté activo; al agotarlas muestra error. Si está desactivado, se detiene en el error.
+- Las etiquetas de una fuente pueden ser incorrectas; no es reconocimiento del habla ni una garantía del idioma real al 100 %. Una pista española sin etiqueta también puede rechazarse.
+- Puedes apagar esta verificación desde Settings > System antes de activar Modo fácil. Tu preferencia de audio del modo normal se conserva.
+
+RESPALDO Y RECUPERACIÓN
+- Requiere iniciar sesión. Se restaura antes de cargar el perfil: idioma de interfaz/audio/subtítulos, Modo fácil, opciones de reproducción, orden/visibilidad de Home, estilos, listas locales, preferencias de add-ons y sus límites, configuración deportiva, canales/listas manuales y favoritos de canales.
+- Los cambios de ajustes se agrupan durante 1.5 segundos. También se comprueban al cambiar perfil o pasar a segundo plano. No se añade polling.
+- No se envían los snapshots de progreso de cada cuatro segundos, caches, estadísticas, historial de búsqueda ni claves de sesión/TorBox. TorBox debe configurarse otra vez después de desinstalar.
+- Los ajustes locales pendientes se marcan en el dispositivo para no descartarlos automáticamente al reiniciar la app. Si la cuenta cambió desde otro dispositivo, se conserva el estado local y se informa del conflicto en Settings; Restaurar ajustes de la cuenta aplica expresamente la copia remota.
+- Settings > System muestra el estado, Guardar ajustes ahora y Restaurar ajustes de la cuenta. Restaurar reemplaza la configuración local por la copia guardada.
+- Antes de desinstalar, espera a que diga Ajustes guardados en tu cuenta. Sin conexión, un cierre forzado o una desinstalación antes de subir los cambios no permite garantizar su conservación.
+- Límite del respaldo: 2 MB por perfil. Listas M3U demasiado grandes pueden superar el límite y deben reducirse; se muestra estado de respaldo pendiente/no guardado.
+- Amigos, nombres de usuario, avatares y progreso ya usan almacenamiento de cuenta/perfil. Se mantienen los identificadores sociales existentes; se recupera el último perfil guardado y no se publica un avatar predeterminado si falló la carga de identidad.
+- No se pueden recuperar ajustes o fotos antiguos que se borraron y nunca llegaron a Supabase. No se ha inspeccionado tu base de datos real.
+
+LIVE TV
+- Al entrar desde el menú principal, intenta el último canal guardado y abre el panel lateral.
+- Admite el último canal de Nauta, IPTV y canales personalizados/Tirso/IPTV +/listas propias.
+- Si no se puede resolver el último, intenta Nauta; si Nauta no responde, usa una entrada disponible de Tirso.
+- Mantiene la categoría del canal guardado cuando está disponible. El catálogo sigue disponible si no se puede iniciar.
+- Volver atrás desde el reproductor no dispara otra reproducción automática; permite usar el hub y sus deportes.
+
+VERIFICACIÓN
+- 49 comprobaciones ejecutadas con Java 17: límites de pulsación, repeticiones/cancelaciones, prioridad de audio y separación de claves de ajustes por cuenta/perfil.
+- Revisión de sintaxis Kotlin de archivos/bloques modificados y conexiones entre pantallas; diagnósticos heredados del parser comparados con RP82.
+- Pendientes: compilación Kotlin/Android, migración SQL en Supabase y prueba de APK/controles reales en TV. No se generó ningún build.
+
+PRUEBAS RECOMENDADAS EN TV
+1. Mantener BruniO 14 segundos: no debe salir. Mantener 15 segundos y soltar: debe abrir la confirmación. Probar también tocar y esperar.
+2. Cancelar con Atrás y repetir; poner la app en segundo plano durante la cuenta y volver a intentarlo.
+3. Entrar a una serie con progreso en otra temporada, comprobar el texto y las marcas ✓.
+4. Reproducir una fuente multiaudio con español; otra solo en inglés; otra sin etiquetas. Comprobar el aviso cuando se agotan fuentes.
+5. Cambiar ajustes en dos perfiles, esperar guardado e iniciar sesión en otra instalación antes de desinstalar la original; comprobar amigos y avatar en el mismo perfil.
+6. Entrar a Live TV, comprobar canal/panel, cambiar categoría, volver atrás y abrir un deporte desde el hub.

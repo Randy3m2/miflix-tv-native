@@ -38,6 +38,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         val observer=androidx.lifecycle.LifecycleEventObserver { _, _ ->
             state.appForeground=lifecycle?.currentState?.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)==true
             state.publishSocialPresenceEvent()
+            if(!state.appForeground) state.launch {state.flushSettingsRP83()}
         }
         lifecycle?.addObserver(observer)
         onDispose { lifecycle?.removeObserver(observer);state.appForeground=false;state.publishSocialPresenceEvent() }

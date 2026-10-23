@@ -14,6 +14,8 @@ import java.util.Locale
 import java.util.TimeZone
 
 class SupabaseRepository(private val url: String, private val key: String) {
+    var lastProfileRP83:String?=null
+        private set
     private val favoriteBaselines = mutableMapOf<String, Set<String>>()
     private val syncMutex = kotlinx.coroutines.sync.Mutex()
     private fun headers(session: CloudSession? = null) = buildMap {
@@ -43,8 +45,10 @@ class SupabaseRepository(private val url: String, private val key: String) {
     }
 
     suspend fun account(session: CloudSession): Pair<List<Profile>, PrivateSetup> {
+        lastProfileRP83=null
         val row = readRow(session, "__account__") ?: return emptyList<Profile>() to PrivateSetup()
         val state = row.optJSONObject("state") ?: JSONObject()
+        lastProfileRP83=state.optString("lastProfileRP83").takeIf {it.isNotBlank()}
         val setupObj = state.optJSONObject("privateSetup") ?: JSONObject()
         val addonManifests = setupObj.optJSONArray("addonManifests")?.let { a ->
             (0 until a.length()).map { a.optString(it) }.filter { it.isNotBlank() }
@@ -59,7 +63,7 @@ class SupabaseRepository(private val url: String, private val key: String) {
         val profiles = (0 until pa.length()).mapNotNull { i ->
             val p = pa.optJSONObject(i) ?: return@mapNotNull null
             val id = p.optString("id").takeIf { it.isNotBlank() } ?: return@mapNotNull null
-            Profile(id, p.optString("name", "Profile"), p.optString("avatarValue"), p.optBoolean("primary", false),p.optBoolean("isKids") || id==KidsContentPolicy.PROFILE_ID)
+            Profile(id, p.optString("name", "Profile"), p.optString("avatarValue").takeUnless {it.isBlank() || it=="null"}, p.optBoolean("primary", false),p.optBoolean("isKids") || id==KidsContentPolicy.PROFILE_ID)
         }
         return profiles to setup
     }
@@ -112,6 +116,15 @@ class SupabaseRepository(private val url: String, private val key: String) {
             headers(session) + ("Prefer" to "resolution=merge-duplicates,return=minimal"),
             body
         )
+    }
+
+    suspend fun settingsRP83(session:CloudSession,profileId:String):Pair<JSONObject?,Long> {
+        val state=readRow(session,profileId)?.optJSONObject("state") ?: JSONObject()
+        return state.optJSONObject("settingsRP83") to state.optLong("settingsRevisionRP83",0L)
+    }
+    suspend fun saveSettingsRP83(session:CloudSession,profileId:String,body:JSONObject,expected:Long):Long {
+        val args=JSONObject().put("p_profile",profileId).put("p_settings",body).put("p_expected",expected)
+        return Http.text("$url/rest/v1/rpc/brunio_save_settings_rp83","POST",headers(session),args.toString()).trim().toLong()
     }
 
     suspend fun profileState(session: CloudSession, profileId: String): Pair<Set<String>, MutableMap<String, PlaybackProgress>> {

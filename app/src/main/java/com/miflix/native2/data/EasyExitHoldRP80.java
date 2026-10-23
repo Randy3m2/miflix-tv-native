@@ -2,7 +2,7 @@ package com.miflix.native2.data;
 
 /** Release-to-confirm gesture. Repeat key-downs never restart or complete the timer. */
 public final class EasyExitHoldRP80 {
-    public static final long HOLD_MS = 60_000L;
+    public static final long HOLD_MS = 15_000L;
     private int key = -1;
     private long startedAt;
 
@@ -20,7 +20,7 @@ public final class EasyExitHoldRP80 {
     }
 
     public long secondsLeft(long now) {
-        if (key == -1) return 60L;
+        if (key == -1) return 15L;
         long elapsed = Math.max(0L, now - startedAt);
         return Math.max(0L, (HOLD_MS - elapsed + 999L) / 1000L);
     }

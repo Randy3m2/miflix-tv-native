@@ -28,10 +28,22 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.miflix.native2.model.MediaSummary
 
-/** Basic navigation only; profile recovery requires the sixty-second logo gesture. */
+/** Basic navigation only; profile recovery requires the fifteen-second logo gesture. */
 @Composable
 internal fun EasyNavigationRP79(state:AppState,onMoveDown:()->Unit={}) {
-    var exit by remember {mutableStateOf(false)}
+    var exit by remember(state.localExtrasScope()) {mutableStateOf(false)}
+    var exitReady by remember(state.localExtrasScope()) {mutableStateOf(false)}
+    var remaining by remember(state.localExtrasScope()) {mutableIntStateOf(15)}
+    LaunchedEffect(exit,state.appForeground) {
+        if(!state.appForeground) {exit=false;exitReady=false;return@LaunchedEffect}
+        if(exit && !exitReady) {
+            val deadline=android.os.SystemClock.elapsedRealtime()+15_000L
+            while(exit && !exitReady) {
+                remaining=((deadline-android.os.SystemClock.elapsedRealtime()+999L)/1000L).coerceIn(0L,15L).toInt()
+                if(remaining==0) exitReady=true else kotlinx.coroutines.delay(100)
+            }
+        }
+    }
     Row(Modifier.fillMaxWidth().heightIn(min=88.dp).background(Color.Black).padding(horizontal=24.dp,vertical=12.dp)
         .onPreviewKeyEvent {event ->
             if(event.key==Key.DirectionDown) {
@@ -39,7 +51,7 @@ internal fun EasyNavigationRP79(state:AppState,onMoveDown:()->Unit={}) {
                 true
             } else false
         },verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-        EasyExitLogoRP80(state) {exit=true}
+        EasyExitLogoRP80(state,onCountdown={exitReady=false;remaining=15;exit=true}) {exitReady=true;remaining=0;exit=true}
         listOf(Screen.HOME to "Home",Screen.SEARCH to tr("🔍 Buscar","🔍 Search"),
             Screen.MY_LIST to tr("Mi lista","My List")).forEach {(screen,label) ->
             FocusButton(label,primary=state.screen==screen,horizontalPadding=16.dp) {state.screen=screen}
@@ -58,7 +70,8 @@ internal fun EasyNavigationRP79(state:AppState,onMoveDown:()->Unit={}) {
             Text(tr("¿Salir del modo fácil?","Exit Easy mode?"),color=Color.White,fontSize=28.sp)
             Text(tr("Volverás a las opciones completas de este perfil.","The full options for this profile will return."),color=Muted,fontSize=19.sp)
             FocusButton(tr("Seguir en modo fácil","Stay in Easy mode"),Modifier.focusRequester(stay)) {exit=false}
-            FocusButton(tr("Desactivar modo fácil","Turn off Easy mode")) {exit=false;state.launch {state.setEasyModeRP79(false)}}
+            if(exitReady) FocusButton(tr("Desactivar modo fácil","Turn off Easy mode")) {exit=false;state.launch {state.setEasyModeRP79(false)}}
+            else Text(tr("Podrás salir en ","You can exit in ")+"$remaining s",color=Color.White,fontSize=23.sp)
         }
     }
 }
@@ -87,9 +100,9 @@ internal fun EasyScreenRP79(state:AppState,screen:Screen) {
             Screen.HOME -> EasyHomeRP79(state,owner)
             Screen.MY_LIST -> EasyListRP79(state,owner)
             Screen.LIVE_TV -> if(state.easyMlbRP80) EasyMlbRP80(state,Modifier.fillMaxSize().padding(horizontal=24.dp,vertical=12.dp))
-            else LiveChannelBrowserRP34(state,"nauta",select={request ->
+            else LiveAutoStartRP83(state) { LiveChannelBrowserRP34(state,"nauta",select={request ->
                 state.openLivePlayer(request.copy(returnScreen=Screen.LIVE_TV))
-            },close={state.screen=Screen.HOME},embeddedRP79=true)
+            },close={state.screen=Screen.HOME},embeddedRP79=true) }
             Screen.DETAILS -> EasyDetailsRP79(state)
             else -> Unit
         }
@@ -181,6 +194,7 @@ private fun EasyDetailsRP79(state:AppState) {
     val item=state.selected ?: return
     val details=state.details?.takeIf {it.summary.cloudId==item.cloudId}
     val summary=details?.summary ?: item
+    val saved=state.progress[item.cloudId]
     LazyColumn(Modifier.fillMaxSize().padding(horizontal=32.dp),verticalArrangement=Arrangement.spacedBy(18.dp),contentPadding=PaddingValues(top=20.dp,bottom=32.dp)) {
         item(key="easy-artwork:${item.cloudId}") {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(28.dp),verticalAlignment=Alignment.Top) {
@@ -210,6 +224,10 @@ private fun EasyDetailsRP79(state:AppState) {
                 }
             }
             if(item.type=="series") {
+                if(saved!=null && saved.episode>0) item(key="easy-resume-position") {
+                    Text(tr("Te quedaste en el episodio ","You left off at episode ")+saved.episode+" · "+tr("Temporada ","Season ")+saved.season,
+                        color=Color.White,fontSize=26.sp,lineHeight=32.sp,fontWeight=FontWeight.SemiBold)
+                }
                 item {
                     Row(horizontalArrangement=Arrangement.spacedBy(18.dp),verticalAlignment=Alignment.CenterVertically) {
                         if(state.currentSeason>1) FocusButton("‹") {state.launch {state.loadSeason(state.currentSeason-1)}}
@@ -218,7 +236,7 @@ private fun EasyDetailsRP79(state:AppState) {
                     }
                 }
                 items(state.episodes.toList(),key={"${it.season}:${it.episode}"}) {episode ->
-                    FocusButton("${episode.episode}. ${episode.title}",modifier=Modifier.fillMaxWidth()) {state.launch {state.playEpisode(episode)}}
+                    FocusButton((if(state.episodeWatched(item,episode)) "✓ " else "")+"${episode.episode}. ${episode.title}",modifier=Modifier.fillMaxWidth().heightIn(min=64.dp)) {state.launch {state.playEpisode(episode)}}
                 }
             }
         }

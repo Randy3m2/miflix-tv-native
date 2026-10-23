@@ -964,9 +964,20 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     if(category=="system" && !state.kidsMode) item(key="easy-rp79") {
                         SettingsSectionCard {
                             Text(tr("Modo fácil","Easy mode"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
-                            Text(tr("Solo Home, Buscar, Mi lista, Live TV y MLB. Texto grande, reproductor básico y sin Friends ni Party en segundo plano. Para salir, mantén pulsado BruniO durante 60 segundos y suelta.",
-                                "Only Home, Search, My List, Live TV and MLB. Large text, basic playback and no background Friends or Party. Hold BruniO for 60 seconds, then release to exit."),color=Muted,fontSize=16.sp)
+                            Text(tr("Solo Home, Buscar, Mi lista, Live TV y MLB. Texto grande, reproductor básico y sin Friends ni Party en segundo plano. Para salir, mantén pulsado BruniO durante 15 segundos y suelta, o toca el logo y espera la cuenta regresiva.",
+                                "Only Home, Search, My List, Live TV and MLB. Large text, basic playback and no background Friends or Party. Hold BruniO for 15 seconds, then release, or tap the logo and wait for the countdown to exit."),color=Muted,fontSize=16.sp)
+                            FocusButton(tr("Español verificado en Modo fácil: ","Verified Spanish in Easy mode: ")+if(state.easySpanishOnlyRP83) "ON" else "OFF") {state.saveEasySpanishOnlyRP83(!state.easySpanishOnlyRP83)}
+                            Text(tr("Películas y series: rechaza pistas sin idioma verificable; no garantiza que la fuente esté etiquetada correctamente. No aplica a canales ni MLB.","Movies and series: rejects tracks without verifiable language; source labels can still be incorrect. Does not apply to channels or MLB."),color=Muted,fontSize=16.sp)
                             FocusButton(tr("Activar para este perfil","Enable for this profile")) {state.launch {state.setEasyModeRP79(true)}}
+                        }
+                    }
+                    if(category=="system" && state.session!=null) item(key="settings-backup-rp83") {
+                        SettingsSectionCard {
+                            Text(tr("Respaldo de ajustes","Settings backup"),color=Color.White,fontSize=24.sp)
+                            Text(state.settingsBackupStatusRP83.ifBlank {tr("Se guarda por cuenta y perfil al cambiar ajustes.","Saved per account and profile when settings change.")},color=Muted,fontSize=17.sp)
+                            FocusButton(tr("Guardar ajustes ahora","Save settings now")) {state.launch {state.saveSettingsNowRP83()}}
+                            FocusButton(tr("Restaurar ajustes de la cuenta","Restore account settings")) {state.launch {state.restoreSettingsRP83(discardLocal=true)}}
+                            Text(tr("Restaura la copia guardada en tu cuenta sobre los ajustes locales. La clave TorBox, los enlaces temporales y el historial de búsqueda permanecen locales.","Restore replaces local settings with the saved account copy. TorBox keys, temporary stream links and search history stay local."),color=Muted,fontSize=15.sp)
                         }
                     }
                     if(category=="system") item(key="setting-0") {
@@ -1337,6 +1348,7 @@ fun WatchPartyScreen(state: AppState,onBack: () -> Unit) = PartyLobby(state,onBa
 fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     val context = LocalContext.current
     val mini=state.miniPlayer && state.screen!=Screen.PLAYER
+    val strictSpanishRP83=state.easyModeRP79 && state.easySpanishOnlyRP83 && !request.live
     val savedSeriesTracks=remember(request.playbackId) {state.localExtras.trackChoice(state.localExtrasScope(),request.item)}
     val timing=remember(request.playbackId) { com.miflix.native2.player.SubtitleTiming().also {it.delayMs=savedSeriesTracks?.optLong("delay",0L) ?: 0L} }
     var timingMs by remember(request.playbackId) { mutableStateOf(savedSeriesTracks?.optLong("delay",0L) ?: 0L) }
@@ -1344,6 +1356,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     val playbackView = LocalView.current
     var quickReactions by remember(request.playbackId) { mutableStateOf(false) }
     var firstFrame by remember(request.playbackId) {mutableStateOf(false)}
+    var spanishVerifiedRP83 by remember(request.playbackId) {mutableStateOf(false)}
     var hadPlaybackError by remember(request.playbackId) {mutableStateOf(false)}
     var controlsVisible by remember(request.playbackId) { mutableStateOf((!request.live || request.sportsRecordingRP72) && !LiveChannelNavigationRP40.startHidden(request)) }
     var controlInteraction by remember { mutableStateOf(0) }
@@ -1351,10 +1364,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var channelStepJobRP40 by remember {mutableStateOf<kotlinx.coroutines.Job?>(null)}
     var surfaceFocusedRP34 by remember {mutableStateOf(false)}
     val surfaceFocus = remember { FocusRequester() }
-    LaunchedEffect(firstFrame) {if(firstFrame) {withFrameNanos {};runCatching {surfaceFocus.requestFocus()} }}
     val playFocus = remember { FocusRequester() }
     var sportsTargetRP44 by remember(request.playbackId) {mutableStateOf<BrowserChannelRP34?>(null)}
-    var playerMenu by remember(request.playbackId) { mutableStateOf<String?>(null) }
+    var playerMenu by remember(request.playbackId) { mutableStateOf<String?>(if(state.livePanelPlaybackRP83==request.playbackId) "channels" else null) }
+    LaunchedEffect(firstFrame,playerMenu) {if(firstFrame && playerMenu==null) {withFrameNanos {};runCatching {surfaceFocus.requestFocus()} }}
     var resizeMode by remember { mutableStateOf(androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT) }
     var maximized by remember { mutableStateOf(true) }
     var speed by remember(request.playbackId) { mutableStateOf(1f) }
@@ -1437,11 +1450,12 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 listOf("es-419","es-MX","es-AR","es-CO","es-DO","es-CL","es-PE","es-VE","es-EC","es-ES","es")
                 else if(com.miflix.native2.data.StreamLanguagePriority.prefersKorean(code)) listOf("ko-KR","ko")
                 else listOf(code).filter {it.isNotBlank()}
-            val audioPreferences=(audioCodes(state.audioLanguage)+audioCodes(state.secondaryAudioLanguageRP62)+
+            val audioPreferences=if(strictSpanishRP83) audioCodes("es") else (audioCodes(state.audioLanguage)+audioCodes(state.secondaryAudioLanguageRP62)+
                 if(state.secondaryAudioLanguageRP62.isBlank() && com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(state.audioLanguage)) listOf("en") else emptyList()).distinct()
             trackBuilder.setPreferredAudioLanguages(*audioPreferences.toTypedArray())
             if (preferredText != null) trackBuilder.setPreferredTextLanguage(normalizeMediaLanguage(preferredText))
-            savedSeriesTracks?.optString("audio")?.takeIf {it.isNotBlank()}?.let {trackBuilder.setPreferredAudioLanguage(it)}
+            if(!strictSpanishRP83) savedSeriesTracks?.optString("audio")?.takeIf {it.isNotBlank()}?.let {trackBuilder.setPreferredAudioLanguage(it)}
+            if(strictSpanishRP83) {volume=0f;trackBuilder.setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,true)}
             trackBuilder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT,seriesTextOff)
             trackSelectionParameters = trackBuilder.build()
             videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
@@ -1555,8 +1569,21 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         state.launch {
             try {
                 val advanced=state.tryNextPlaybackSource(request,position,playing)
-                if(!advanced && state.playerRequest?.playbackId==request.playbackId) playbackError=message
+                if(!advanced && state.playerRequest?.playbackId==request.playbackId) {if(strictSpanishRP83) player.pause();playbackError=message}
             } finally {advancingSource=false}
+        }
+    }
+    LaunchedEffect(player,strictSpanishRP83) {
+        if(strictSpanishRP83) {
+            var readyWait=0L
+            while(!spanishVerifiedRP83 && playbackError==null) {
+                delay(250)
+                if(player.playbackState==Player.STATE_READY && state.appForeground) readyWait+=250
+                if(readyWait>=2500) {
+                    advanceSourceOrShow(tr("Esta fuente no ofrece una pista de español verificable y compatible.","This source offers no verifiable, supported Spanish audio track."))
+                    break
+                }
+            }
         }
     }
     LaunchedEffect(player,request.playbackId) {
@@ -1616,7 +1643,31 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
             override fun onTracksChanged(value: androidx.media3.common.Tracks) {
                 tracks = value
-                if(!restoredSeriesAudio && savedSeriesTracks!=null && value.groups.any {it.type==C.TRACK_TYPE_AUDIO}) {
+                if(strictSpanishRP83) {
+                    val audioGroups=value.groups.filter {it.type==C.TRACK_TYPE_AUDIO}
+                    if(audioGroups.isNotEmpty()) {
+                        val candidates=audioGroups.flatMap {group -> (0 until group.length).filter {group.isTrackSupported(it)}.mapNotNull {index ->
+                            val format=group.getTrackFormat(index)
+                            val rank=com.miflix.native2.data.SpanishAudioRP83.rank(format.language,format.label)
+                            if(rank<0) null else Triple(group,index,rank)
+                        }}
+                        val selectedSpanish=candidates.firstOrNull {it.first.isTrackSelected(it.second)}
+                        val best=if(spanishVerifiedRP83 && selectedSpanish!=null) selectedSpanish else candidates.minByOrNull {it.third}
+                        if(best==null) {
+                            spanishVerifiedRP83=false;player.volume=0f
+                            advanceSourceOrShow(tr("No se pudo verificar audio español en esta fuente. Probando otra…","Spanish audio could not be verified for this source. Trying another…"))
+                            return
+                        }
+                        val group=best.first;val index=best.second
+                        if(!group.isTrackSelected(index) || C.TRACK_TYPE_AUDIO in player.trackSelectionParameters.disabledTrackTypes) {
+                            spanishVerifiedRP83=false;player.volume=0f
+                            player.trackSelectionParameters=player.trackSelectionParameters.buildUpon()
+                                .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,false)
+                                .setOverrideForType(androidx.media3.common.TrackSelectionOverride(group.mediaTrackGroup,index)).build()
+                        } else {if(!spanishVerifiedRP83 && firstFrame) state.rememberSuccessfulPlaybackRP16(request);spanishVerifiedRP83=true;player.volume=1f}
+                    } else {spanishVerifiedRP83=false;player.volume=0f}
+                }
+                if(!strictSpanishRP83 && !restoredSeriesAudio && savedSeriesTracks!=null && value.groups.any {it.type==C.TRACK_TYPE_AUDIO}) {
                     restoredSeriesAudio=true
                     val language=savedSeriesTracks.optString("audio")
                     val label=savedSeriesTracks.optString("audioLabel")
@@ -1666,7 +1717,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 updateScreenAwake()
             }
 
-            override fun onRenderedFirstFrame() {state.sportsStartedRP71(request);if(!firstFrame) state.rememberSuccessfulPlaybackRP16(request);state.recordSuccessfulLiveChannel(request);if(!firstFrame) LiveHubPlaybackRP41.remember(context,state,request);state.socialPlaybackStarted(request,player.currentPosition,player.duration);if(!firstFrame) state.markLidomSourceWorking(request);firstFrame=true;state.finishPlaybackLoading(request.playbackId)}
+            override fun onRenderedFirstFrame() {state.sportsStartedRP71(request);if(!firstFrame && (!strictSpanishRP83 || spanishVerifiedRP83)) state.rememberSuccessfulPlaybackRP16(request);state.recordSuccessfulLiveChannel(request);if(!firstFrame) LiveHubPlaybackRP41.remember(context,state,request);state.socialPlaybackStarted(request,player.currentPosition,player.duration);if(!firstFrame) state.markLidomSourceWorking(request);firstFrame=true;state.finishPlaybackLoading(request.playbackId)}
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if(playbackState==Player.STATE_READY) state.socialPlaybackReady(request,player.currentPosition,player.duration)
                 if (playbackState == Player.STATE_ENDED) {
@@ -1674,7 +1725,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                     if(state.watchParty==null && !request.live && request.momentEndMs<=0) state.localExtras.episodeEnded(request.playbackId,request.item.type=="series")
                     ended = true; paused = false
                     val duration = player.duration.coerceAtLeast(0)
-                    if (duration > 0) state.updateProgress(request, duration, duration, ended = true)
+                    if (duration > 0 && (!strictSpanishRP83 || spanishVerifiedRP83)) state.updateProgress(request, duration, duration, ended = true)
                     state.launch { state.traktMarkWatched(request,duration,duration) }
                     state.launch { runCatching { state.pushCloud() } }
                 }
@@ -1691,7 +1742,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             parkCurrentPlayback()
             val lastPosition=player.currentPosition
             val lastDuration=player.duration.coerceAtLeast(0)
-            state.updateProgress(request, lastPosition, lastDuration)
+            if(!strictSpanishRP83 || spanishVerifiedRP83) state.updateProgress(request, lastPosition, lastDuration)
             if(!state.isSourceFallbackReplacement(request)) {
                 state.launch { state.traktMarkWatched(request,lastPosition,lastDuration) }
                 state.launch { runCatching { state.pushCloud() } }
@@ -1714,7 +1765,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             if(player.isPlaying && state.appForeground) state.recordViewing(request,(now-lastTick).coerceIn(0,6000))
             lastTick=now
             val d = player.duration
-            if (d > 0) state.updateProgress(request, player.currentPosition, d)
+            if (d > 0 && (!strictSpanishRP83 || spanishVerifiedRP83)) state.updateProgress(request, player.currentPosition, d)
             if (d > 0 && player.currentPosition.toDouble()/d>=0.8) state.launch { state.traktMarkWatched(request,player.currentPosition,d) }
         }
     }
@@ -1967,7 +2018,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             if(state.easyModeRP79 && !com.miflix.native2.data.EasyModePolicyRP79.allowsPlayerMenu(playerMenu)) playerMenu=null
         }
         if(playerMenu in listOf("content","speed","audio","subtitles")) PlayerOptionsDialog(playerMenu!!, player, tracks, speed,
-            onSpeed={ speed=it; player.setPlaybackSpeed(it) },
+            onSpeed={ speed=it; player.setPlaybackSpeed(it) },spanishOnlyRP83=strictSpanishRP83,
             externalSubtitles=externalSubtitles.filter { extra -> request.stream.subtitles.none { it.url==extra.url } }, subtitleLoading=subtitleLoading,
             onExternalSubtitle={ selected ->
                 player.currentMediaItem?.let { media ->

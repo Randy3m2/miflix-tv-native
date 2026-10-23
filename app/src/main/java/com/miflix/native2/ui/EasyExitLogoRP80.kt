@@ -26,17 +26,18 @@ import androidx.tv.material3.Text
 import com.miflix.native2.data.EasyExitHoldRP80
 import kotlinx.coroutines.delay
 
-/** A continuous sixty-second hold, followed by release, opens the existing confirmation. */
+/** A continuous fifteen-second hold, followed by release, opens the existing confirmation. */
 @Composable
-internal fun EasyExitLogoRP80(state:AppState,unlock:()->Unit) {
+internal fun EasyExitLogoRP80(state:AppState,onCountdown:()->Unit,unlock:()->Unit) {
     val owner=state.localExtrasScope()
     val gate=remember(owner) {EasyExitHoldRP80()}
     val focus=remember {FocusRequester()}
     val latestUnlock by rememberUpdatedState(unlock)
+    val latestCountdown by rememberUpdatedState(onCountdown)
     var focused by remember(owner) {mutableStateOf(false)}
     var held by remember(owner) {mutableStateOf(false)}
-    var remaining by remember(owner) {mutableLongStateOf(60L)}
-    fun cancel() {gate.cancel();held=false;remaining=60L}
+    var remaining by remember(owner) {mutableLongStateOf(15L)}
+    fun cancel() {gate.cancel();held=false;remaining=15L}
     DisposableEffect(gate) {onDispose {gate.cancel()}}
     LaunchedEffect(state.appForeground) {if(!state.appForeground) cancel()}
     LaunchedEffect(held) {
@@ -58,11 +59,11 @@ internal fun EasyExitLogoRP80(state:AppState,unlock:()->Unit) {
         } else {
             if(!state.appForeground || key.isCanceled) cancel()
             else if(key.action==android.view.KeyEvent.ACTION_DOWN) {
-                if(gate.down(key.keyCode,key.eventTime,key.repeatCount)) {held=true;remaining=60L}
+                if(gate.down(key.keyCode,key.eventTime,key.repeatCount)) {held=true;remaining=15L}
             } else if(key.action==android.view.KeyEvent.ACTION_UP) {
                 val done=gate.up(key.keyCode,key.eventTime)
-                held=false;remaining=60L
-                if(done) latestUnlock()
+                held=false;remaining=15L
+                if(done) latestUnlock() else latestCountdown()
             }
             true
         }
@@ -72,14 +73,14 @@ internal fun EasyExitLogoRP80(state:AppState,unlock:()->Unit) {
             val down=awaitFirstDown()
             down.consume()
             focus.requestFocus()
-            gate.down(0,android.os.SystemClock.uptimeMillis(),0);held=true;remaining=60L
+            gate.down(0,android.os.SystemClock.uptimeMillis(),0);held=true;remaining=15L
             val up=waitForUpOrCancellation()
             val done=if(up!=null) gate.up(0,android.os.SystemClock.uptimeMillis()) else false
             up?.consume();cancel()
-            if(done) latestUnlock()
+            if(done) latestUnlock() else if(up!=null) latestCountdown()
         }
-    }.semantics {contentDescription=tr("BruniO · Mantén OK 60 segundos y suelta para salir del modo fácil",
-        "BruniO · Hold OK for 60 seconds, then release to exit Easy mode")}
+    }.semantics {contentDescription=tr("BruniO · Mantén OK 15 segundos y suelta para salir del modo fácil",
+        "BruniO · Hold OK for 15 seconds, then release to exit Easy mode")}
         .background(if(focused) Color.White else Panel,RoundedCornerShape(30.dp))
         .border(1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(30.dp))
         .padding(horizontal=14.dp,vertical=10.dp),horizontalAlignment=Alignment.CenterHorizontally) {

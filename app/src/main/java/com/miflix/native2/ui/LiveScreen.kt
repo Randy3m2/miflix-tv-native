@@ -38,7 +38,9 @@ import kotlinx.coroutines.delay
 import android.content.Context
 
 @Composable
-fun LiveScreen(state:AppState) = LiveHubRP41(state)
+fun LiveScreen(state:AppState) {
+    LiveAutoStartRP83(state) { LiveHubRP41(state) }
+}
 
 @Composable
 private fun LegacyLiveScreenRP41(state: AppState) {
@@ -50,7 +52,7 @@ private fun LegacyLiveScreenRP41(state: AppState) {
     var showFavorites by remember { mutableStateOf(false) }
     val sports=provider=="sports"
     val iptv=provider.startsWith("iptv")
-    var sportsManifest by remember { mutableStateOf(SportsSourceRP71.read(context)) }
+    var sportsManifest by remember { mutableStateOf(prefs.getString("sports_manifest", "https://sportsfree-us2.highfly.to/manifest.json").orEmpty()) }
     var editManifest by remember { mutableStateOf(false) }
     val manifest = if(sports) sportsManifest else state.calendarLiveManifest(provider)
     var categories by remember { mutableStateOf<List<LiveCategory>>(emptyList()) }

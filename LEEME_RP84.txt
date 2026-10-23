@@ -1,0 +1,18 @@
+BruniO RP84 / versionCode 22188 / 2.0.0-rp84
+Parche sobre RP83. Extraer conservando las rutas. No contiene APK.
+
+- Live Sports usa el último manifest que enviaste, con la configuración quality-high, hideTip y hideEpg.
+- Sustituye automáticamente la URL premium de fábrica anterior y la variante previa con onlyLive. También migra las URLs gratuitas antiguas ya reconocidas por la aplicación.
+- Conserva otros manifests configurados manualmente. Si usas otro y deseas cambiarlo, pega la nueva URL desde Sports Settings/QR.
+- Ordena los enlaces de Highfly en LiveRepository antes de mostrarlos o seleccionar los primeros cinco para los reintentos: resolución descendente y luego bitrate descendente.
+- Reconoce datos explícitos de resolución/altura/anchura y etiquetas como 4K/UHD, FHD, 1080p60, 720p o HD; bitrate explícito en bits/s o etiquetas Mbps/kbps.
+- Cuando faltan ambas métricas, conserva el orden recibido del proveedor. Los enlaces sin resolución conocida quedan detrás de aquellos con resolución identificada; dentro de cada resolución usa bitrate y mantiene empates estables.
+- No deduce bitrate a partir del tamaño del archivo ni abre streams o playlists HLS para medirlos. No añade llamadas a Supabase ni consultas extra al proveedor.
+- El cambio de orden se limita a los manifests del dominio Highfly usados en LiveRepository; no reordena Nauta ni playlists IPTV/M3U.
+- Conserva URLs y encabezados de reproducción, selección manual, Change Source y el máximo existente de cinco intentos automáticos.
+
+VERIFICACIÓN
+38 comprobaciones Java ejecutadas: migración de la fuente, preservación de fuentes personalizadas, etiquetas de resolución y bitrate, orden estable y límite de reintentos. Revisión de sintaxis Kotlin del repositorio.
+No fue posible obtener el manifest desde el servicio de consulta web de este entorno. La disponibilidad de la fuente y sus campos reales requieren prueba en la TV.
+Compilación Kotlin/Android y reproducción real pendientes. No se generó APK ni se desplegó nada.
+No requiere SQL nuevo ni Vercel. El respaldo de RP83 sigue requiriendo su SQL anterior.

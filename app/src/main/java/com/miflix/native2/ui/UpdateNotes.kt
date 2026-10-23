@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP84: nueva fuente Live Sports de fábrica y enlaces ordenados por resolución descendente, luego bitrate; conserva el orden recibido cuando faltan datos." to "RP84: updated default Live Sports source and links ordered by descending resolution, then bitrate; preserves provider order when metadata is missing.",
         "RP83: salida de Modo fácil en 15 s con cuenta regresiva alternativa; cinco filas; continuación y episodios vistos; español verificado opcional; respaldo por cuenta y perfil; Live TV inicia con panel lateral." to "RP83: 15-second Easy mode exit with alternate countdown; five rows; episode resume and watched marks; optional verified Spanish; account/profile settings backup; Live TV starts with its channel panel.",
         "RP82: Modo fácil muestra carátula y sinopsis antes de reproducir, también desde Seguir viendo. No muestra ni guarda historial de búsqueda en ese modo." to "RP82: Easy mode shows poster and synopsis before playback, including Continue Watching. Search history is hidden and not recorded in this mode.",
         "RP81: búsqueda por actores/directores y títulos en español o inglés en ambos modos; dictado latino con selector ES/EN por perfil y transcripciones alternativas." to "RP81: actor/director and Spanish/English title search in both modes; Latin Spanish voice input with profile-scoped ES/EN selection and alternate transcriptions.",

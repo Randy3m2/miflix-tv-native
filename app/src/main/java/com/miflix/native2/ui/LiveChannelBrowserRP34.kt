@@ -66,6 +66,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     val categoryListRP40=rememberLazyListState()
     val channelList=rememberLazyListState(restoredRP40?.scrollIndex ?: 0,restoredRP40?.scrollOffset ?: 0)
     var initialFocus by remember {mutableStateOf(true)}
+    var pendingChannelFocusRP88 by remember {mutableStateOf<String?>(null)}
     var loadedSelectionRP74 by remember {mutableStateOf("")}
     var categories by remember {mutableStateOf<List<BrowserCategoryRP34>>(emptyList())}
     var selected by remember {mutableStateOf("")}
@@ -121,12 +122,13 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
         categories=(tirsoCategoriesRP51+found+IptvRepository.sources.map {(provider,source) ->
             BrowserCategoryRP34(provider,LiveCategory("tv","iptv:all","IPTV · "+source.first,paginated=true,searchable=true),"")
         }+localCategoryRP48).distinctBy {it.key}
-        selected=if(restoredRP40?.category?.value?.id=="favorites") "favorites" else categories.firstOrNull {it.key==restoredRP40?.category?.key}?.key
+        selected=if(state.easyModeRP79 && !initialFocus && (selected=="favorites" || categories.any {it.key==selected})) selected
+            else if(restoredRP40?.category?.value?.id=="favorites") "favorites" else categories.firstOrNull {it.key==restoredRP40?.category?.key}?.key
             ?: categories.firstOrNull {initialProvider==CustomChannelsRP45.provider && it.provider==CustomChannelsRP45.provider}?.key
             ?: categories.firstOrNull {it.provider==current?.liveProvider && current?.liveProvider in IptvRepository.sources}?.key
             ?: categories.firstOrNull {isMostViewedRP37(it.value)}?.key ?: categories.firstOrNull()?.key ?: "favorites"
         categoryListRP40.scrollToItem((categories.indexOfFirst {it.key==selected}+1).coerceAtLeast(0))
-        if(!initialFocus) {withFrameNanos {};runCatching {first.requestFocus()}}
+        if(!initialFocus && !state.easyModeRP79) {withFrameNanos {};runCatching {first.requestFocus()}}
         // Keep the initial provider usable while the other catalog loads. Only metadata:
         // event lists and playback URLs are requested when the user selects them.
         val otherProvider=if(initialProvider=="sports") "nauta" else "sports"
@@ -135,7 +137,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
             val catalog=browserCategoryCacheRP34.get(manifest)
                 ?: repo.categories(manifest).also {browserCategoryCacheRP34.put(manifest,it)}
             val extra=catalog.map {BrowserCategoryRP34(otherProvider,it,if(otherProvider=="sports") tr("Deportes","Sports") else "Nauta")}
-            categories=(categories.filter {it.provider==CustomChannelsRP45.provider && it.value.id!="custom-rp48"}+extra+
+            categories=(categories.filter {it.provider !in IptvRepository.sources && !(it.provider==CustomChannelsRP45.provider && it.value.id=="custom-rp48")}+extra+
                 categories.filter {it.provider in IptvRepository.sources}+
                 categories.filter {it.provider==CustomChannelsRP45.provider && it.value.id=="custom-rp48"}).distinctBy {it.key}
         } catch(e:CancellationException) {throw e} catch(_:Exception) {
@@ -193,6 +195,21 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     val displayed=remember(candidatesRP74,searchNamesRP74,search) {
         val query=IptvPlaylist.searchKey(search)
         candidatesRP74.filter {search.isBlank() || searchNamesRP74[it.key].orEmpty().contains(query) || it.value.number.toString()==search.trim()}
+    }
+    fun activateCategoryRP88(key:String) {
+        selected=key
+        if(state.easyModeRP79) {initialFocus=false;pendingChannelFocusRP88=key}
+    }
+    LaunchedEffect(selected,loadedSelectionRP74,loading,displayed,pendingChannelFocusRP88) {
+        val pending=pendingChannelFocusRP88 ?: return@LaunchedEffect
+        if(pending!=selected) {pendingChannelFocusRP88=null;return@LaunchedEffect}
+        if(!state.easyModeRP79 || loading || loadedSelectionRP74!=pending) return@LaunchedEffect
+        if(displayed.isNotEmpty()) {
+            channelList.scrollToItem(0)
+            withFrameNanos { }
+            runCatching {firstChannel.requestFocus()}
+        }
+        pendingChannelFocusRP88=null
     }
     LaunchedEffect(displayed,loading,loadedSelectionRP74) {
         if(initialFocus && !loading && selected.isNotBlank() && loadedSelectionRP74==selected) {
@@ -263,11 +280,11 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                 }.background(Color(0xF00C0C0C)).padding(12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     Text(tr("CATEGORÍAS","CATEGORIES"),color=Muted,fontSize=12.sp)
                     LazyColumn(Modifier.weight(1f),state=categoryListRP40,verticalArrangement=Arrangement.spacedBy(5.dp),contentPadding=PaddingValues(bottom=18.dp)) {
-                        item(key="favorites") {BrowserCategoryRowRP34(tr("♥ Favoritos","♥ Favorites"),selected=="favorites",Modifier.then(if(selected=="favorites") Modifier.focusRequester(first) else Modifier),{selected="favorites"})}
+                        item(key="favorites") {BrowserCategoryRowRP34(tr("♥ Favoritos","♥ Favorites"),selected=="favorites",Modifier.then(if(selected=="favorites") Modifier.focusRequester(first) else Modifier),{selected="favorites"},onActivate={activateCategoryRP88("favorites")})}
                         items(categories,key={it.key}) {c ->
                             BrowserCategoryRowRP34(c.value.name,selected==c.key,
                                 Modifier.then(if(c.key==selected) Modifier.focusRequester(first) else Modifier),
-                                {selected=c.key},c.sourceLabel)
+                                {selected=c.key},c.sourceLabel,onActivate={activateCategoryRP88(c.key)})
                         }
                     }
                     if(catalogWarningRP39.isNotBlank()) {
@@ -355,10 +372,10 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
 }
 
 @Composable
-private fun BrowserCategoryRowRP34(title:String,selected:Boolean,modifier:Modifier,onSelect:()->Unit,source:String="",activateOnly:Boolean=false) {
+private fun BrowserCategoryRowRP34(title:String,selected:Boolean,modifier:Modifier,onSelect:()->Unit,source:String="",activateOnly:Boolean=false,onActivate:()->Unit=onSelect) {
     var focused by remember {mutableStateOf(false)}
     Column(modifier.fillMaxWidth().clip(RoundedCornerShape(9.dp)).background(if(focused) Color.White else if(selected) Color(0xFF292929) else Color.Transparent)
-        .onFocusChanged {focused=it.isFocused;if(it.isFocused && !activateOnly) onSelect()}.focusable().tvClick(onSelect).clickable(onClick=onSelect).padding(horizontal=12.dp,vertical=12.dp)) {
+        .onFocusChanged {focused=it.isFocused;if(it.isFocused && !activateOnly) onSelect()}.focusable().tvClick(onActivate).clickable(onClick=onActivate).padding(horizontal=12.dp,vertical=12.dp)) {
         Text(title,color=if(focused) Color.Black else Color.White,fontSize=14.sp,maxLines=2)
         if(source.isNotBlank()) Text(source,color=if(focused) Color.DarkGray else Muted,fontSize=10.sp)
     }

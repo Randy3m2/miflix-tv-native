@@ -38,6 +38,10 @@ import java.util.Locale
 import java.util.UUID
 
 class AppState(context: Context) {
+    private val rapidPlaybackRP87=RapidActionRP87()
+    private val latestPlaybackRP87=LatestPlaybackRP87()
+    internal val playerReleaseRP87=PlayerReleaseRP87()
+    init {LocalCrashRP87.install(context)}
     init { com.miflix.native2.data.AwardSelections.configure(context.assets.open("awards_catalog.json").bufferedReader().use {it.readText()}) }
     private val appContext=context.applicationContext
     internal var focusScorePinRP15:(() -> Unit)?=null
@@ -195,7 +199,8 @@ class AppState(context: Context) {
     internal fun exportLocalBackupRC100():org.json.JSONObject=org.json.JSONObject()
         .put("brunioLocalBackup",100).put("extras",localExtras.export(ratingsKey()))
         .put("homeOrder",org.json.JSONArray(homeRowOrder)).put("hiddenRows",org.json.JSONArray(hiddenHomeRows.toList()))
-        .put("interface",interfaceLanguage).put("audio",playbackPrefs.getString(profileAudioKeyRP77(),legacyAudioRP77) ?: legacyAudioRP77).put("subtitle",subtitleLanguage)
+        .put("interface",interfaceLanguage).put("audio",playbackPrefs.getString(profileAudioKeyRP77(),legacyAudioRP77) ?: legacyAudioRP77).put("subtitle",playbackPrefs.getString(profileSubtitleKeyRP78(),legacySubtitleRP78) ?: legacySubtitleRP78)
+        .put("easySubtitle",playbackPrefs.getString(easySubtitleKeyRP87(),"es") ?: "es")
         .put("autoplay",autoplayNext).put("nextLink",autoplayNextLink).put("adaptive",adaptiveSource)
         .put("previousLiveChannel",previousLiveChannelEnabled)
         .put("tasteProfile",tasteProfile.data(ratingsKey())).put("tastePrompt",tasteSetupPromptEnabled)
@@ -207,6 +212,7 @@ class AppState(context: Context) {
         for(key in listOf("homeOrder","hiddenRows")) {val a=body.getJSONArray(key);require(a.length()<=100);for(i in 0 until a.length()) require(a.getString(i).length in 1..100)}
         require(body.getString("interface") in listOf("en","es"))
         require(body.getString("audio").length<=10 && body.getString("subtitle").length<=10)
+        if(body.has("easySubtitle")) require(body.getString("easySubtitle").length in 1..10)
         for(key in listOf("autoplay","nextLink","adaptive")) body.getBoolean(key)
         body.optJSONObject("tasteProfile")?.let {tasteProfile.validate(it)}
         if(body.has("tastePrompt")) body.getBoolean("tastePrompt")
@@ -219,7 +225,11 @@ class AppState(context: Context) {
         val order=body.getJSONArray("homeOrder");saveHomeRowOrder((0 until order.length()).map {order.getString(it)})
         val hidden=body.getJSONArray("hiddenRows")
         playbackPrefs.edit().putStringSet("hidden_home_rows:${ratingsKey()}",(0 until hidden.length()).map {hidden.getString(it)}.toSet()).apply();homeOrderRevision++
-        savePlaybackPreferences(body.getString("audio"),body.getString("subtitle"),body.getBoolean("autoplay"))
+        savePlaybackPreferences(body.getString("audio"),
+            if(easyModeRP79) body.optString("easySubtitle","es") else body.getString("subtitle"),body.getBoolean("autoplay"))
+        playbackPrefs.edit().putString(profileSubtitleKeyRP78(),body.getString("subtitle"))
+            .putString(easySubtitleKeyRP87(),body.optString("easySubtitle","es")).apply()
+        subtitleRevisionRP78++
         saveAutoplayNextLink(body.getBoolean("nextLink"));saveAdaptiveSource(body.getBoolean("adaptive"))
         body.optJSONObject("tasteProfile")?.let {tasteProfile.restore(ratingsKey(),it)}
         if(body.has("tastePrompt")) saveTasteSetupPrompt(body.getBoolean("tastePrompt"))
@@ -334,6 +344,7 @@ class AppState(context: Context) {
         invalidatePlaybackWork()
     }
     private fun invalidatePlaybackWork() {
+        latestPlaybackRP87.cancel()
         playbackWork.invalidate(); sourceFallback=null; rememberedStartRP16=null; sourceSelection=null; busyMessage=null;playbackLoading=null
         playbackSubtitleJobs.values.forEach { it.cancel() }; playbackSubtitleJobs.clear()
     }
@@ -387,9 +398,18 @@ class AppState(context: Context) {
     private val legacySubtitleRP78=playbackPrefs.getString("subtitle","es") ?: "es"
     private var subtitleRevisionRP78 by mutableIntStateOf(0)
     private fun profileSubtitleKeyRP78()="subtitle_rp78:${localExtrasScope()}"
+    private fun easySubtitleKeyRP87()="easy_subtitle_rp87:${localExtrasScope()}"
     var subtitleLanguage:String
-        get() {subtitleRevisionRP78;return playbackPrefs.getString(profileSubtitleKeyRP78(),legacySubtitleRP78) ?: legacySubtitleRP78}
-        set(value) {playbackPrefs.edit().putString(profileSubtitleKeyRP78(),value).apply();subtitleRevisionRP78++}
+        get() {
+            subtitleRevisionRP78
+            return com.miflix.native2.data.EasySubtitleRP87.profileLanguage(easyModeRP79,
+                playbackPrefs.getString(profileSubtitleKeyRP78(),legacySubtitleRP78),
+                playbackPrefs.getString(easySubtitleKeyRP87(),null))
+        }
+        set(value) {
+            val key=if(easyModeRP79) easySubtitleKeyRP87() else profileSubtitleKeyRP78()
+            playbackPrefs.edit().putString(key,value).apply();subtitleRevisionRP78++
+        }
     var subtitleColor by mutableStateOf(playbackPrefs.getInt("subtitleColor",android.graphics.Color.WHITE))
     var subtitleScale by mutableStateOf(playbackPrefs.getFloat("subtitleScale",1f).coerceIn(0.8f,1.4f))
     fun saveSubtitleStyle(color: Int, scale: Float) {
@@ -828,6 +848,29 @@ class AppState(context: Context) {
     val trakt = TraktRepository(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY)
     var nickname by mutableStateOf("")
     val partyMembers = mutableStateListOf<SocialPerson>()
+    val recentPartyMembersRP88=mutableStateListOf<SocialPerson>()
+    private var recentPartyRoomRP88:String?=null
+    var partyReturnBusyRP88 by mutableStateOf(false)
+        private set
+    var partyReturnPulseRP88 by mutableIntStateOf(0)
+        private set
+    suspend fun bringFriendBackRP88(friendId:String) {
+        val actor=profileSocialSession() ?: return
+        val room=watchParty ?: return
+        val epoch=partyEpoch
+        if(easyModeRP79 || partyRole!=PartyRole.HOST || room.hostUserId!=actor.userId || friendId==actor.userId || partyReturnBusyRP88) return
+        if(!rapidPlaybackRP87.accept("${localExtrasScope()}:party-return:$friendId",android.os.SystemClock.uptimeMillis())) return
+        val member=partyMembers.any {it.id==friendId}
+        if(!member && recentPartyMembersRP88.none {it.id==friendId} && friendActivity.none {it.id==friendId}) return
+        partyReturnBusyRP88=true
+        try {
+            if(member) social.send(actor,room.roomCode,"playback","return:"+friendId)
+            else social.inviteParty(actor,room.roomCode,friendId)
+            if(sameParty(epoch,actor.userId,room.roomCode)) partyStatus=if(member)
+                tr("Solicitud de regreso enviada","Return request sent") else tr("Invitación para volver enviada","Return invitation sent")
+        } finally {partyReturnBusyRP88=false}
+    }
+
     val partyInvitations = mutableStateListOf<PartyInvitation>()
     var partyOptionsBusy by mutableStateOf(false)
         private set
@@ -1633,6 +1676,7 @@ class AppState(context: Context) {
     }
     fun openLivePlayer(req: PlayerRequest) {
         require(!kidsMode) {tr("TV en vivo no está disponible en Kids.","Live TV is not available in Kids.") }
+        if(!rapidPlaybackRP87.accept("${localExtrasScope()}:live:${req.liveProvider}:${req.liveChannelId}:${req.stream.url}",android.os.SystemClock.uptimeMillis())) return
         val playback=if(req.liveProvider=="sports" && com.miflix.native2.data.SportsRecordingPolicyRP72.recording(req.liveChannelId,req.item.title,req.item.overview)) req.copy(sportsRecordingRP72=true) else req
         invalidatePlaybackWork()
         if(req.liveProvider.isNotBlank() && req.liveProvider!="lidom" && liveProviderTab!=req.liveProvider) { liveProviderTab=req.liveProvider;liveCategoryId=null }
@@ -1662,7 +1706,15 @@ class AppState(context: Context) {
         playbackPrefs.edit().putString(searchHistoryOwner(),org.json.JSONArray(next).toString()).apply()
     }
     var searchQuery by mutableStateOf("")
-    var playerRequest by mutableStateOf<PlayerRequest?>(null)
+    private var currentPlayerRequestRP87 by mutableStateOf<PlayerRequest?>(null)
+    var playerRequest:PlayerRequest?
+        get()=currentPlayerRequestRP87
+        set(value) {
+            if(value?.playbackId!=currentPlayerRequestRP87?.playbackId) {
+                try {playerReleaseRP87.beforeReplace(value!=null)} catch(e:Exception) {LocalCrashRP87.record(appContext,e)}
+            }
+            currentPlayerRequestRP87=value
+        }
     internal var playbackLoading by mutableStateOf<PlaybackLoading?>(null)
         private set
     fun beginPlaybackLoading(item: MediaSummary,season: Int=0,episode: Int=0,art: String?=null) {
@@ -2602,20 +2654,24 @@ class AppState(context: Context) {
 
     suspend fun playMovie(fromStart: Boolean=false) {
         val item = selected ?: return
+        if(!rapidPlaybackRP87.accept("${localExtrasScope()}:playMovie:${item.cloudId}:$fromStart",android.os.SystemClock.uptimeMillis())) return
+        latestPlaybackRP87.cancel()
         beginPlaybackLoading(item)
-        val generation=playbackWork.generation
+        val entryTicket=playbackWork.begin()
         val d = details ?:  tmdb.details(item).also { details = it }
-        if(generation!=playbackWork.generation || selected?.cloudId!=item.cloudId) return
+        if(!playbackWork.current(entryTicket) || selected?.cloudId!=item.cloudId) return
         val imdb = d.imdbId ?: throw IllegalStateException(tr("IMDb ID no disponible","IMDb ID unavailable"))
         playResolved(item, imdb, 0, 0,if(fromStart) 0L else null)
     }
 
     suspend fun playEpisode(ep: EpisodeSummary, fromStart: Boolean=false) {
         val item = selected ?: return
+        if(!rapidPlaybackRP87.accept("${localExtrasScope()}:playEpisode:${item.cloudId}:${ep.season}:${ep.episode}:$fromStart",android.os.SystemClock.uptimeMillis())) return
+        latestPlaybackRP87.cancel()
         beginPlaybackLoading(item,ep.season,ep.episode,ep.still)
-        val generation=playbackWork.generation
+        val entryTicket=playbackWork.begin()
         val d = details ?:  tmdb.details(item).also { details = it }
-        if(generation!=playbackWork.generation || selected?.cloudId!=item.cloudId) return
+        if(!playbackWork.current(entryTicket) || selected?.cloudId!=item.cloudId) return
         val imdb = d.imdbId ?: throw IllegalStateException(tr("IMDb ID no disponible","IMDb ID unavailable"))
         playResolved(item, imdb, ep.season, ep.episode,if(fromStart) 0L else null)
     }
@@ -2658,13 +2714,13 @@ class AppState(context: Context) {
             if (item.type == "series") (if (resume) saved!!.episode else 1) else 0)
     }
 
-    private suspend fun chooseSources(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeMs: Long? = null) {
+    private suspend fun chooseSources(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeMs: Long? = null) = latestPlaybackRP87.run {
         val ticket=playbackWork.begin(); val owner=session?.userId; val profile=activeProfile.id
         fun valid()=playbackWork.current(ticket) && session?.userId==owner && activeProfile.id==profile
         sourceSelection=null; busyMessage=tr("Buscando todos los enlaces…","Finding all playback links…"); error=null
         try {
             val links=resolvePlaybackSources(item,imdb,season,episode)
-            if(!valid()) return
+            if(!valid()) return@run
             if(links.isEmpty()) error=tr("No hay enlaces que cumplan los filtros. Revisa Size Limit en Settings.","No links match your filters. Check Size Limit in Settings.")
             else sourceSelection=SourceSelection(item,imdb,season,episode,links,resumeMs,ticket.generation,ticket.sequence)
         } catch(e: CancellationException) { throw e } catch(e: Exception) { if(valid()) error=e.message } finally { if(valid()) busyMessage=null }
@@ -2683,6 +2739,7 @@ class AppState(context: Context) {
     }
 
     suspend fun playSelectedSource(selection: SourceSelection, stream: StreamChoice) {
+        if(!rapidPlaybackRP87.accept("${localExtrasScope()}:source:${stream.url}",android.os.SystemClock.uptimeMillis())) return
         val ticket=PlaybackWorkGate.Ticket(selection.workGeneration,selection.workSequence)
         if(sourceSelection!=selection || !playbackWork.current(ticket)) return
         if(stream !in selection.streams || !StreamFilters.allowed(stream,selection.item.type,selection.item.year,streamSizeBytes,selection.item.title)) return
@@ -2982,7 +3039,7 @@ class AppState(context: Context) {
         return subtitleRepo.resolve(imdb,req.item.type,req.season,req.episode,req.stream,preferredLanguage=subtitleLanguage)
     }
 
-    private suspend fun playResolved(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeOverride: Long? = null, selectedStream: StreamChoice? = null, fallbackStreams: List<StreamChoice> = emptyList(), onStarted: ((PlayerRequest) -> Unit)? = null) = coroutineScope {
+    private suspend fun playResolved(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeOverride: Long? = null, selectedStream: StreamChoice? = null, fallbackStreams: List<StreamChoice> = emptyList(), onStarted: ((PlayerRequest) -> Unit)? = null) = latestPlaybackRP87.run {
         if(kidsMode) require(tmdb.kidsAllowed(item)) { tr("Este título no está disponible en Kids.","This title is not available in Kids.") }
         if(randomEpisodeCloud!=item.cloudId) randomEpisodeCloud=null
         val ticket=playbackWork.begin()
@@ -3011,7 +3068,7 @@ class AppState(context: Context) {
         } }
         runCatching {
             val streams = streamsJob.await()
-            if(!valid()) return@coroutineScope
+            if(!valid()) return@run
             val bandwidth=if(adaptiveSource) androidx.media3.exoplayer.upstream.DefaultBandwidthMeter.getSingletonInstance(appContext).bitrateEstimate else 0L
             val seconds=(details?.takeIf {it.summary.cloudId==item.cloudId}?.runtimeMinutes ?: 0)*60
             val chosen = rememberedRP16 ?: selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2(),secondaryAudioLanguageRP62,nativeSizeAscendingRP77,nativeSpanishOnlyRP77)
@@ -3032,7 +3089,7 @@ class AppState(context: Context) {
                 .sortedWith(compareBy<SubtitleChoice> {
                     when {com.miflix.native2.data.StreamLanguagePriority.languageMatches(it.lang,subtitleLanguage) ->0;it.lang.lowercase(Locale.US) in setOf("es","spa") ->1;it.lang.lowercase(Locale.US) in setOf("en","eng") ->2;else ->3}
                 }.thenBy { it.label })
-            if(!valid()) return@coroutineScope
+            if(!valid()) return@run
             val enriched = best.copy(subtitles = mergedSubs)
             val key = if (item.type == "series") "${item.cloudId}:s${season}e${episode}" else item.cloudId
             val saved = progress[key] ?: progress[item.cloudId]
@@ -3314,6 +3371,7 @@ class AppState(context: Context) {
         session?.let { socialPrefs.edit().remove(socialRoomKey()).apply() }
         watchParty=null; partyRole=null;partyFollowHost=true; pendingPartyCode=null; accessRequests.clear()
         partyMessages.clear(); floatingEvents.clear(); partyMembers.clear(); lastEventId=-1
+        recentPartyMembersRP88.clear();recentPartyRoomRP88=null;partyReturnPulseRP88=0
         knownPartyMembers=null; partyJoinedNotice=null; joinedNoticeSequence++;sharedSourcePlaybackId=null
         partyPlaybackNotice=null;playbackNoticeSequence++
         partyStatus=""; error=null; partyClosedNotice=false
@@ -3402,15 +3460,31 @@ class AppState(context: Context) {
         val before=knownPartyMembers
         if(partyRole==PartyRole.HOST && before!=null) members.filter { it.id!=s.userId && it.id !in before }.forEach { showJoined(it.nickname) }
         knownPartyMembers=members.map { it.id }.toSet()
+        if(recentPartyRoomRP88!=p.roomCode) {recentPartyMembersRP88.clear();recentPartyRoomRP88=p.roomCode}
+        val recent=(members+recentPartyMembersRP88).distinctBy {it.id}.take(32)
+        recentPartyMembersRP88.clear();recentPartyMembersRP88.addAll(recent)
         partyMembers.clear(); partyMembers.addAll(members)
         val events=social.events(s,p.roomCode,lastEventId)
         if(!valid()) return
-        if(lastEventId<0) { partyMessages.clear(); partyMessages.addAll(events.filter {it.kind!="playback"}); lastEventId=events.lastOrNull()?.id ?: 0 }
-        else {
+        val firstPollRP88=lastEventId<0
+        if(firstPollRP88) {partyMessages.clear();partyMessages.addAll(events.filter {it.kind!="playback"});lastEventId=events.lastOrNull()?.id ?: 0}
+        run {
             for(event in events) {
-                lastEventId=event.id
+                lastEventId=maxOf(lastEventId,event.id)
+                if(firstPollRP88 && event.kind!="playback") continue
                 if(event.kind=="playback") {
-                    if(event.userId!=s.userId && PartyPlaybackNoticePolicy.accepts(event.kind,event.body,event.createdAt,System.currentTimeMillis())) {
+                    if(partyRole==PartyRole.GUEST && com.miflix.native2.data.PartyReturnPolicyRP88.accepts(
+                            event.userId,fresh.hostUserId,event.body,s.userId,event.createdAt,System.currentTimeMillis())) {
+                        val latest=cloud.readWatchParty(s,p.roomCode)
+                        if(!valid()) return
+                        if(latest!=null && latest.hostUserId==event.userId) {
+                            watchParty=latest;partyFollowHost=true;parkedPlaybackId=null
+                            switchToPartyState(latest,openPlayer=true)
+                            if(valid()) partyReturnPulseRP88++
+                        }
+                        continue
+                    }
+                    if(!firstPollRP88 && event.userId!=s.userId && PartyPlaybackNoticePolicy.accepts(event.kind,event.body,event.createdAt,System.currentTimeMillis())) {
                         val name=members.firstOrNull {it.id==event.userId}?.nickname ?: tr("Invitado","Guest")
                         showPlaybackNotice(name,event.body)
                     }

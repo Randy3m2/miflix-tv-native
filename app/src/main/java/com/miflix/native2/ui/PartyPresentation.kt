@@ -142,6 +142,7 @@ internal fun PartyMembersOverlay(state: AppState,modifier: Modifier=Modifier,pla
 internal fun PartyRoomSheet(state: AppState,onCreate: () -> Unit,onRefreshRequests: () -> Unit,onSwitchCurrent: () -> Unit,onWatchParty: () -> Unit,close: () -> Unit) {
     var selectedFriend by remember {mutableStateOf<com.miflix.native2.data.FriendActivity?>(null)}
     var invite by remember {mutableStateOf(false)}
+    var bringBack by remember {mutableStateOf(false)}
     var qr by remember {mutableStateOf(false)}
     var confirmShare by remember {mutableStateOf(false)}
     var chat by remember {mutableStateOf(false)}
@@ -180,6 +181,13 @@ internal fun PartyRoomSheet(state: AppState,onCreate: () -> Unit,onRefreshReques
             }
             item {FocusButton(tr("QR y enlace de invitación","QR & invite link"),modifier=Modifier.fillMaxWidth()) {qr=true}}
             if(host) item {FocusButton(tr("+ Invitar un amigo","+ Invite a friend"),modifier=Modifier.fillMaxWidth()) {invite=true}}
+            if(host) item {
+                Column(Modifier.fillMaxWidth().background(Color(0xFF101014),RoundedCornerShape(20.dp)).padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                    Text(tr("Juntos otra vez","Back together"),color=Color.White,fontSize=20.sp,fontWeight=FontWeight.Bold)
+                    Text(tr("Trae a tu amigo al contenido y al momento del party.","Bring your friend back to the party's content and timeline."),color=Muted,fontSize=13.sp)
+                    FocusButton(tr("Traer un amigo de vuelta","Bring friend BACK to the party"),modifier=Modifier.fillMaxWidth()) {bringBack=true}
+                }
+            }
             if(host) {
                 item {PartyToggle(tr("Solo yo controlo el party","Only I control party playback"),tr("Los invitados pueden pausar localmente y volver a sincronizarse.","Guests can pause locally and rejoin the host timeline."),room.hostOnlyControls,!state.partyOptionsBusy) {
                     state.launch {state.socialAction {state.configureParty(hostOnly=!room.hostOnlyControls)}}
@@ -234,6 +242,28 @@ internal fun PartyRoomSheet(state: AppState,onCreate: () -> Unit,onRefreshReques
             }
         }
         item {Text(tr("La invitación aparece cuando tu amigo actualiza Friends. Invitarlo autoriza su entrada.","Your friend sees the invitation when they refresh Friends. Inviting them approves their entry."),color=Muted,fontSize=12.sp)}
+    }
+    if(bringBack && room!=null && host) PlayerSideSheet(tr("Volver al party","Back to the party"),{bringBack=false}) {
+        val candidates=(state.partyMembers+state.recentPartyMembersRP88+
+            state.friendActivity.map {com.miflix.native2.data.SocialPerson(it.id,it.nickname,it.avatar)})
+            .distinctBy {it.id}.filter {it.id!=room.hostUserId}
+        if(candidates.isEmpty()) item {Text(tr("Invita un amigo para ver sus opciones aquí.","Invite a friend to see their options here."),color=Muted)}
+        items(candidates,key={it.id}) {friend ->
+            Column(Modifier.fillMaxWidth().background(Color(0xFF101014),RoundedCornerShape(16.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                    ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(40.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(friend.nickname,color=Color.White,fontSize=18.sp,fontWeight=FontWeight.Bold)
+                        Text(if(state.partyMembers.any {it.id==friend.id}) tr("Sincronizar con el host","Sync with the host") else tr("Invitar a volver","Invite back"),color=Muted,fontSize=12.sp)
+                    }
+                }
+                FocusButton(if(state.partyReturnBusyRP88) tr("Enviando…","Sending…") else tr("Traer de vuelta","Bring back"),modifier=Modifier.fillMaxWidth()) {
+                    if(!state.partyReturnBusyRP88) state.launch {state.socialAction {state.bringFriendBackRP88(friend.id)}}
+                }
+            }
+        }
+        item {Text(tr("Si ya salió del party, recibirá una nueva invitación.","If they left the party, they will receive a new invitation."),color=Muted,fontSize=12.sp)}
+        if(state.partyStatus.isNotBlank()) item {Text(state.partyStatus,color=Color.White,fontSize=13.sp)}
     }
     if(confirmShare) PlayerSideSheet(tr("Compartir mi enlace","Share my stream"),{confirmShare=false}) {
         item {Text(tr("El enlace puede incluir acceso de tu proveedor/debrid. Solo los miembros admitidos lo recibirán. Podrían copiarlo mientras sea válido.","The link may include access to your provider/debrid account. Only admitted members can receive it. They could copy it while it remains valid."),color=Color.White,fontSize=17.sp)}

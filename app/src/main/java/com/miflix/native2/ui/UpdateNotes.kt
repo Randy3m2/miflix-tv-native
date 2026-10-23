@@ -12,6 +12,8 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP88: update unificado: regreso de amigos al party, protección al cambiar fuentes rápidamente y foco de categorías a canales en Modo fácil; incluye subtítulos en español de RP87." to "RP88: unified update: bring friends back to the party, rapid source-switch protection and category-to-channel focus in Easy mode; includes RP87 Spanish subtitles.",
+        "RP87: subtítulos en español por defecto en Modo fácil, separados por perfil y de las preferencias del modo normal." to "RP87: Spanish subtitles by default in Easy mode, separated by profile and from normal-mode preferences.",
         "RP86: corrige el import de launch en detalles de Modo fácil para el desplazamiento de la cabecera." to "RP86: fixes the launch import in Easy details used to restore the header scroll position.",
         "RP85: Live abre el hub y solo la tarjeta Live TV inicia un canal; detalles de Modo fácil sin cabecera recortada, episodios horizontales con Visto, teclado ES/EN sin sugerencias inferiores y fila Películas de La Vega." to "RP85: Live opens the hub and only the Live TV tile starts a channel; Easy details restore the full header, horizontal episode cards with Watched, an ES/EN keyboard without lower suggestions, and La Vega movies.",
         "RP84: nueva fuente Live Sports de fábrica y enlaces ordenados por resolución descendente, luego bitrate; conserva el orden recibido cuando faltan datos." to "RP84: updated default Live Sports source and links ordered by descending resolution, then bitrate; preserves provider order when metadata is missing.",

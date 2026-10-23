@@ -1391,8 +1391,11 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var showEpisodes by remember(request.playbackId) { mutableStateOf(false) }
     var episodesResumeAfterClose by remember(request.playbackId) { mutableStateOf(false) }
     val subtitles = request.stream.subtitles
-    val seriesTextOff=savedSeriesTracks?.optBoolean("textOff") ?: (state.subtitleLanguage=="off")
-    val preferredText = if(seriesTextOff) null else savedSeriesTracks?.optString("text")?.takeIf {it.isNotBlank()} ?: state.subtitleLanguage.takeUnless {it=="off"}
+    // Easy mode has its own default; normal-mode series history must not override it.
+    val preferredText = com.miflix.native2.data.EasySubtitleRP87.seriesLanguage(
+        state.easyModeRP79,state.subtitleLanguage,savedSeriesTracks?.optString("text"),
+        savedSeriesTracks?.optBoolean("textOff") ?: (state.subtitleLanguage=="off"))
+    val seriesTextOff=preferredText==null
     var paused by remember(request.playbackId) { mutableStateOf(false) }
     var pauseSynopsis by remember(request.playbackId) { mutableStateOf(false) }
     var pauseInfoDismissed by remember(request.playbackId) { mutableStateOf(false) }
@@ -1414,6 +1417,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var cancelAutoplay by remember(request.playbackId) { mutableStateOf(false) }
 
     val player = remember(request.playbackId) {
+        state.playerReleaseRP87.beforeReplace()
         val renderers = if(request.live) androidx.media3.exoplayer.DefaultRenderersFactory(context).setEnableDecoderFallback(true)
             else com.miflix.native2.player.TimedTextRenderers(context,timing).setEnableDecoderFallback(true)
         val httpFactory = DefaultHttpDataSource.Factory()
@@ -1426,7 +1430,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             .setMediaSourceFactory(DefaultMediaSourceFactory(dataFactory))
             .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder()
                 .setBufferDurationsMs(15000,50000,1000,1500)
-                .setPrioritizeTimeOverSizeThresholds(true).build())
+                // Bound compressed buffering when switching high-bitrate sources on small TVs.
+                .setTargetBufferBytes(48*1024*1024)
+                .setPrioritizeTimeOverSizeThresholds(false).build())
             .build().apply {
             setSeekBackIncrementMs(10_000)
             setSeekForwardIncrementMs(10_000)
@@ -1465,6 +1471,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     }
 
     fun parkCurrentPlayback() {
+        if(state.playerRequest?.playbackId!=request.playbackId) return
         val position=player.currentPosition.coerceAtLeast(0L)
         applyingRemote=true;player.pause();applyingRemote=false
         if(state.parkPlayback(request,position) && state.partyRole==PartyRole.HOST) {
@@ -1475,6 +1482,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }
     }
     fun userPlayback(playing: Boolean) {
+        if(state.playerRequest?.playbackId!=request.playbackId) return
         if(playing) state.unparkPlayback(request)
         if(player.playWhenReady==playing) return
         player.playWhenReady=playing
@@ -1628,6 +1636,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         var restoredSeriesAudio=false
         val listener = object : Player.Listener {
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                if(state.playerRequest?.playbackId!=request.playbackId) return
                 if(request.liveProvider=="sports" && state.nextSportsSourceRP71(request)) return
                 // Some IPTV endpoints have no extension and return generic content types.
                 // Retry HLS once only when automatic container detection failed, never on HTTP/auth errors.
@@ -1642,6 +1651,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 } else playbackError=playerFailureDetails(error)
             }
             override fun onTracksChanged(value: androidx.media3.common.Tracks) {
+                if(state.playerRequest?.playbackId!=request.playbackId) return
                 tracks = value
                 if(strictSpanishRP83) {
                     val audioGroups=value.groups.filter {it.type==C.TRACK_TYPE_AUDIO}
@@ -1701,6 +1711,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 }
             }
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                if(state.playerRequest?.playbackId!=request.playbackId) return
                 paused = !playWhenReady && player.playbackState != Player.STATE_ENDED
                 if(paused) { controlsVisible=true; controlInteraction++ }
                 if(state.partyRole == PartyRole.GUEST && !applyingRemote && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST) {
@@ -1717,8 +1728,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 updateScreenAwake()
             }
 
-            override fun onRenderedFirstFrame() {state.sportsStartedRP71(request);if(!firstFrame && (!strictSpanishRP83 || spanishVerifiedRP83)) state.rememberSuccessfulPlaybackRP16(request);state.recordSuccessfulLiveChannel(request);if(!firstFrame) LiveHubPlaybackRP41.remember(context,state,request);state.socialPlaybackStarted(request,player.currentPosition,player.duration);if(!firstFrame) state.markLidomSourceWorking(request);firstFrame=true;state.finishPlaybackLoading(request.playbackId)}
+            override fun onRenderedFirstFrame() {if(state.playerRequest?.playbackId!=request.playbackId) return;state.sportsStartedRP71(request);if(!firstFrame && (!strictSpanishRP83 || spanishVerifiedRP83)) state.rememberSuccessfulPlaybackRP16(request);state.recordSuccessfulLiveChannel(request);if(!firstFrame) LiveHubPlaybackRP41.remember(context,state,request);state.socialPlaybackStarted(request,player.currentPosition,player.duration);if(!firstFrame) state.markLidomSourceWorking(request);firstFrame=true;state.finishPlaybackLoading(request.playbackId)}
             override fun onPlaybackStateChanged(playbackState: Int) {
+                if(state.playerRequest?.playbackId!=request.playbackId) return
                 if(playbackState==Player.STATE_READY) state.socialPlaybackReady(request,player.currentPosition,player.duration)
                 if (playbackState == Player.STATE_ENDED) {
                     state.socialPlaybackEnded(request)
@@ -1735,19 +1747,34 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         paused = !player.playWhenReady
         tracks = player.currentTracks
         updateScreenAwake()
-        onDispose {
+        val leaseRP87=state.playerReleaseRP87.bind {replacing ->
             try {
-            playbackView.keepScreenOn = previousKeepScreenOn
-            player.removeListener(listener)
-            parkCurrentPlayback()
-            val lastPosition=player.currentPosition
-            val lastDuration=player.duration.coerceAtLeast(0)
-            if(!strictSpanishRP83 || spanishVerifiedRP83) state.updateProgress(request, lastPosition, lastDuration)
-            if(!state.isSourceFallbackReplacement(request)) {
-                state.launch { state.traktMarkWatched(request,lastPosition,lastDuration) }
-                state.launch { runCatching { state.pushCloud() } }
-            }
+                playbackView.keepScreenOn=previousKeepScreenOn
+                player.removeListener(listener)
+                if(replacing) player.pause() else parkCurrentPlayback()
+                val lastPosition=player.currentPosition
+                val lastDuration=player.duration.coerceAtLeast(0)
+                if(!strictSpanishRP83 || spanishVerifiedRP83) state.updateProgress(request,lastPosition,lastDuration)
+                if(!replacing && !state.isSourceFallbackReplacement(request)) {
+                    state.launch {state.traktMarkWatched(request,lastPosition,lastDuration)}
+                    state.launch {runCatching {state.pushCloud()}}
+                }
             } finally {player.release()}
+        }
+        onDispose {state.playerReleaseRP87.dispose(leaseRP87)}
+    }
+
+    LaunchedEffect(player,state.partyReturnPulseRP88) {
+        if(state.partyReturnPulseRP88>0 && state.partyRole==PartyRole.GUEST && state.playerRequest?.playbackId==request.playbackId) {
+            state.watchParty?.let {remote ->
+                guestPlaybackIntent=null;guestIntentUntil=0L;guestIntentSequence++
+                applyingRemote=true
+                try {
+                    if(!request.live && player.isCurrentMediaItemSeekable) player.seekTo(partyTargetPosition(remote))
+                    player.setPlaybackSpeed(1f)
+                    player.playWhenReady=remote.playing
+                } finally {applyingRemote=false}
+            }
         }
     }
 
@@ -1760,7 +1787,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         var lastTick=android.os.SystemClock.elapsedRealtime()
         while (true) {
             // Capture the five-second Continue Watching threshold promptly; local updates only.
+            if(state.playerRequest?.playbackId!=request.playbackId) break
             delay(if(player.currentPosition<5000L) 1000L else 4000L)
+            if(state.playerRequest?.playbackId!=request.playbackId) break
             val now=android.os.SystemClock.elapsedRealtime()
             if(player.isPlaying && state.appForeground) state.recordViewing(request,(now-lastTick).coerceIn(0,6000))
             lastTick=now

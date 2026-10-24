@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP99: corrige el filtro de grabaciones cuando aún no hay una categoría guardada." to "RP99: fixes the recordings filter when no category has been saved yet.",
         "RP98: Live TV inicia con Noticias (7 canales), o la categoría más pequeña si cambia la lista; conserva el contexto del canal al volver." to "RP98: Live TV initially opens News (7 channels), or the smallest group after playlist changes; preserves channel context when returning.",
         "RP97: lista definitiva de canales con categorías/logos, actualización M3U local por URL/QR, canales LIDOM por nombre y flechas laterales para mostrar controles." to "RP97: final channel catalog/categories/artwork, local M3U updates by URL/QR, LIDOM channel name matching and left/right revealing controls.",
         "RP96: píldora de amigos más pequeña y transparente, lista compacta con avatares y precarga desde 250 ms con hasta 15 segundos de búfer." to "RP96: smaller translucent watched-friends pill, compact avatar list, and prewarm from 250 ms with up to 15 seconds buffered.",

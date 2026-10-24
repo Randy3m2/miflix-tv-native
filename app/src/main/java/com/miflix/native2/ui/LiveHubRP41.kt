@@ -172,7 +172,7 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,openNa
     var nautaWarningRP42 by remember {mutableStateOf("")}
     var iptvF1RP43 by remember {mutableStateOf<List<HubEventRP41>>(emptyList())}
     var iptvWarningRP43 by remember {mutableStateOf("")}
-    var recordingFilterRP97 by remember(ownerRP46) {mutableStateOf(LiveHubMemoryRP46.category(ownerRP46,"recording-sport").ifBlank {"all"})}
+    var recordingFilterRP97 by remember(ownerRP46) {mutableStateOf(LiveHubMemoryRP46.category(ownerRP46,"recording-sport").orEmpty().ifBlank {"all"})}
     val allDisplayedRP97=events+nautaF1RP42+iptvF1RP43
     val recordingModeRP97=section=="others" && (SportsRecordingPolicyRP72.recording(selected?.name,selected?.id,selected?.genre) || allDisplayedRP97.any {SportsRecordingPolicyRP72.recording(it.channel.name,it.channel.description)})
     val recordingKeysRP97=remember(allDisplayedRP97) {allDisplayedRP97.associate {entry ->

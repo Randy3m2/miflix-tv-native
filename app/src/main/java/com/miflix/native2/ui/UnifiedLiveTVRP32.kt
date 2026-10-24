@@ -61,7 +61,7 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
         busy=true;message=""
         if(requested.any {it.provider==CustomChannelsRP45.provider}) {
             val category=active.firstOrNull()?.category?.id.orEmpty()
-            val all=CustomChannelsRP45.list(context,ownerRP46,true)
+            val all=withContext(Dispatchers.IO) {CustomChannelsRP45.list(context,ownerRP46,true)}
             val filtered=all.filter {CustomChannelsRP45.matchesRP61(it,category)}
             rows=filtered.map {TVChannelRP32(CustomChannelsRP45.provider,LiveChannel(it.id,"tv",it.name,it.logo,CustomChannelsRP45.sourceRP61(it),number=it.number))}
             more=false;busy=false
@@ -96,17 +96,10 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
     }
     LaunchedEffect(retry,customRevisionRP48) {
         busy=true;message="";groups=emptyList()
-        val providers=listOf("nauta")
-        var failures=0
-        val loaded=coroutineScope {providers.map {provider ->async {
-            try {permits.withPermit {repo.categories(manifest(provider)).map {TVGroupRP32(provider,it)}}}
-            catch(e:CancellationException) {throw e} catch(_:Exception) {failures++;emptyList()}
-        }}.awaitAll().flatten()}
-        groups=loaded+listOf(TVGroupRP32(CustomChannelsRP45.provider,CustomChannelsRP45.categoryRP48()))+
-            (CustomChannelsRP45.categoriesRP51()+CustomChannelsRP45.categoriesRP61()+M3UListsRP61.categories(context,ownerRP46)).map {TVGroupRP32(CustomChannelsRP45.provider,it)}+
-            IptvRepository.sources.map {(provider,source) ->
-            TVGroupRP32(provider,LiveCategory("tv","iptv:all","IPTV · "+source.first,paginated=true,searchable=true))
-        }
+        withContext(Dispatchers.IO) {CustomChannelsRP45.list(context,ownerRP46,true)}
+        val failures=0
+        groups=(CustomChannelsRP45.categoriesRP51()+M3UListsRP61.categories(context,ownerRP46)).map {TVGroupRP32(CustomChannelsRP45.provider,it)}+
+            listOf(TVGroupRP32(CustomChannelsRP45.provider,CustomChannelsRP45.categoryRP48()))
         val savedRP46=LiveHubMemoryRP46.category(ownerRP46,"tv")
         selected=groups.firstOrNull {it.key==savedRP46}?.key ?: groups.firstOrNull {isMostViewedRP37(it.category)}?.key ?: groups.firstOrNull()?.key.orEmpty()
         busy=false
@@ -161,13 +154,12 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
         if(busy) Text(tr("Cargando canales…","Loading channels…"),color=Color.White)
         if(message.isNotBlank()) Text(message,color=Color.White)
         if(!busy && groups.isEmpty()) FocusButton(tr("Reintentar","Retry")) {retry++}
-        val visible=rows.filter {query.isBlank() || IptvPlaylist.searchKey(it.channel.name).contains(IptvPlaylist.searchKey(query)) || it.channel.number.toString()==query.trim()}
+        val searchNames=remember(rows) {rows.associate {it.key to IptvPlaylist.searchKey(it.channel.name)}}
+        val visible=remember(rows,query,searchNames) {val q=IptvPlaylist.searchKey(query);rows.filter {q.isBlank() || searchNames[it.key].orEmpty().contains(q) || it.channel.number.toString()==query.trim()}}
         LazyVerticalGrid(GridCells.Adaptive(210.dp),modifier=Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(start=4.dp,end=4.dp,top=6.dp,bottom=48.dp)) {
             items(visible,key={it.key}) {entry ->
-                val revision=LiveLibrary.revision
-                val favorite=remember(revision,state.activeProfile.id,state.session?.userId,entry.key) {LiveLibrary.favorites(context,state).any {it.provider==entry.provider && it.channel.id==entry.channel.id}}
                 if(entry.provider==CustomChannelsRP45.provider) HubEventCardRP41(entry.channel.number.takeIf {it>0}?.let {"$it · ${entry.channel.name}"} ?: entry.channel.name,entry.channel.poster,tr("EN VIVO · Mantén OK: opciones","LIVE · Hold OK: options"),onHoldRP48={customManageRP48=CustomChannelsRP45.findRP48(context,ownerRP46,entry.channel.id)},logoRP50=true) {openChannel(entry)}
-                else LiveChannelTile(entry.channel,entry.channel.number.takeIf {it>0} ?: (rows.indexOf(entry)+1),favorite,{openChannel(entry)}) {LiveLibrary.toggle(context,state,entry.provider,entry.channel)}
+                else LiveChannelTile(entry.channel,entry.channel.number.takeIf {it>0} ?: (rows.indexOf(entry)+1),false,{openChannel(entry)}) {LiveLibrary.toggle(context,state,entry.provider,entry.channel)}
             }
             if(more && !busy) item(span={GridItemSpan(maxLineSpan)}) {FocusButton(tr("Cargar más canales","Load more channels")) {scope.launch {page(false)}}}
         }

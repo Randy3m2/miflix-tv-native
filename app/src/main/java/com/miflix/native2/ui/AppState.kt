@@ -492,9 +492,9 @@ class AppState(context: Context) {
     }
     fun calendarLiveManifest(kind: String): String = when(kind) {
         com.miflix.native2.data.NuvioTestConfigRP49.PROVIDER -> error("This source has been removed")
-        "iptv", "iptv:do", "iptv:tur", "iptv:mx", "iptv:es", "iptv:us" -> IptvRepository.manifest(kind)
+        "iptv", "iptv:do", "iptv:tur", "iptv:mx", "iptv:es", "iptv:us" -> com.miflix.native2.data.FinalCatalogRP97.MANIFEST
         "sports" -> com.miflix.native2.data.SportsSourceRP71.read(appContext)
-        else -> "https://stremio-addon-wheat.vercel.app/manifest.json"
+        else -> com.miflix.native2.data.FinalCatalogRP97.MANIFEST
     }
     suspend fun openCalendarEvent(event: CalendarEvent) {
         require(!kidsMode) {"Calendar playback is not available in Kids."}
@@ -847,6 +847,7 @@ class AppState(context: Context) {
             }
         }
     }
+    init {com.miflix.native2.data.FinalCatalogRP97.initialize(context)}
     private val livePrefs = context.getSharedPreferences("miflix_live", Context.MODE_PRIVATE)
     val socialIdentityId:String? get()=session?.let {ProfileSocialIdentityRP1.actor(it.userId,activeProfile.id,activeProfile.primary)}
     private fun profileSocialSession(account:CloudSession?=session):CloudSession? = if(kidsMode || easyModeRP79) null else account?.let {ProfileSocialIdentityRP1.session(it,activeProfile)}
@@ -1095,6 +1096,7 @@ class AppState(context: Context) {
     private val updates = UpdateRepository()
     private val subtitleRepo = SubtitleRepository()
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    init {appScope.launch(Dispatchers.IO) {runCatching {com.miflix.native2.data.FinalCatalogRP97.rows()}}}
 
     private val presenceEvents = com.miflix.native2.data.EventPresencePublisher(appContext,social,appScope)
     var socialReadyPlaybackId by mutableStateOf("")
@@ -1315,7 +1317,8 @@ class AppState(context: Context) {
                     discardPreparedVideoRP91(keepRetry=true)
                     val timing=com.miflix.native2.player.SubtitleTiming()
                     val request=PlayerRequest(plan.item,best,plan.season,plan.episode,plan.position)
-                    val gate=WarmLoadControlRP91()
+                    val memory=appContext.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
+                    val gate=WarmLoadControlRP91(lowMemory=memory==null || memory.isLowRamDevice || memory.memoryClass<=128)
                     val player=createWarmPlaybackRP92(appContext,this,request,timing,gate) {validWarmRetryRP92(plan)}
                     if(!validWarmRetryRP92(plan)) {player.release();return}
                     val entry=PreparedVideoRP91(plan.identity,plan.imdb,request,candidate.url,player,timing,gate,android.os.SystemClock.elapsedRealtime())
@@ -1897,7 +1900,8 @@ class AppState(context: Context) {
     fun openLivePlayer(req: PlayerRequest) {
         require(!kidsMode) {tr("TV en vivo no está disponible en Kids.","Live TV is not available in Kids.") }
         if(!rapidPlaybackRP87.accept("${localExtrasScope()}:live:${req.liveProvider}:${req.liveChannelId}:${req.stream.url}",android.os.SystemClock.uptimeMillis())) return
-        val playback=if(req.liveProvider=="sports" && com.miflix.native2.data.SportsRecordingPolicyRP72.recording(req.liveChannelId,req.item.title,req.item.overview)) req.copy(sportsRecordingRP72=true) else req
+        val canonicalRP97=if(req.liveChannelId.startsWith(com.miflix.native2.data.FinalPlaylistRP97.PREFIX)) req.copy(liveProvider=CustomChannelsRP45.provider) else req
+        val playback=if(req.liveProvider=="sports" && com.miflix.native2.data.SportsRecordingPolicyRP72.recording(req.liveChannelId,req.item.title,req.item.overview)) req.copy(sportsRecordingRP72=true) else canonicalRP97
         invalidatePlaybackWork()
         if(req.liveProvider.isNotBlank() && req.liveProvider!="lidom" && liveProviderTab!=req.liveProvider) { liveProviderTab=req.liveProvider;liveCategoryId=null }
         miniPlayer=false;selected=playback.item;playerRequest=playback;screen=Screen.PLAYER
@@ -3899,7 +3903,7 @@ class AppState(context: Context) {
         "taste" to appContext.getSharedPreferences("brunio_taste",Context.MODE_PRIVATE),
         "live" to livePrefs,
         "favorites" to LiveLibrary.prefs(appContext),
-        "channels" to appContext.getSharedPreferences("brunio_custom_channels_rp45",Context.MODE_PRIVATE),
+        "channels" to appContext.getSharedPreferences("brunio_custom_channels_rp97",Context.MODE_PRIVATE),
         "lists" to appContext.getSharedPreferences("brunio_m3u_lists_rp61",Context.MODE_PRIVATE),
         "lastLive" to appContext.getSharedPreferences("brunio_live_last_rp41",Context.MODE_PRIVATE)
     )

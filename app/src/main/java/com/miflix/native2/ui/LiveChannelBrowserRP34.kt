@@ -100,18 +100,23 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
         if(localCatalogRP74==null) return@LaunchedEffect
         loading=true;message="";catalogWarningRP39="";categories=emptyList();selected=""
         val localCategoryRP48=BrowserCategoryRP34(CustomChannelsRP45.provider,CustomChannelsRP45.categoryRP48(),"")
-        val nautaSourceCategoriesRP71=listOf(CustomChannelsRP45.categoryNautaSourceRP71())+localChannelsRP74.filter {CustomChannelsRP45.matchesRP61(it,"nauta-source:Todos")}.map {it.category}.distinct().sorted().map {LiveCategory("tv","nauta-source:"+it,"Nauta Source · "+it)}
+        val nautaSourceCategoriesRP71=emptyList<LiveCategory>()
         val tirsoCategoriesRP51=(CustomChannelsRP45.categoriesRP51()+CustomChannelsRP45.categoriesRP61()+M3UListsRP61.categories(context,localOwnerRP48)+nautaSourceCategoriesRP71).map {BrowserCategoryRP34(CustomChannelsRP45.provider,it,"")}
         categories=tirsoCategoriesRP51+listOf(localCategoryRP48)
-        if(initialProvider==CustomChannelsRP45.provider) {
+        if(initialProvider!="sports") {
             val currentChannel=current?.liveChannelId?.let {localByIdRP74[it]}
             selected=categories.firstOrNull {it.key==restoredRP40?.category?.key}?.key
                 ?: categories.firstOrNull {c ->currentChannel!=null && CustomChannelsRP45.matchesRP61(currentChannel,c.value.id)}?.key
                 ?: tirsoCategoriesRP51.firstOrNull()?.key ?: localCategoryRP48.key
             loading=false
+            try {
+                val manifest=state.calendarLiveManifest("sports")
+                val catalog=browserCategoryCacheRP34.get(manifest) ?: repo.categories(manifest).also {browserCategoryCacheRP34.put(manifest,it)}
+                categories=(categories+catalog.map {BrowserCategoryRP34("sports",it,tr("Deportes","Sports"))}).distinctBy {it.key}
+            } catch(e:CancellationException) {throw e} catch(_:Exception) { }
             return@LaunchedEffect
         }
-        val providers=listOf(if(initialProvider=="sports") "sports" else "nauta")
+        val providers=listOf("sports")
         val found=coroutineScope {providers.map {provider ->async {
             try {permits.withPermit {
                 val manifest=state.calendarLiveManifest(provider)
@@ -129,21 +134,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
             ?: categories.firstOrNull {isMostViewedRP37(it.value)}?.key ?: categories.firstOrNull()?.key ?: "favorites"
         categoryListRP40.scrollToItem((categories.indexOfFirst {it.key==selected}+1).coerceAtLeast(0))
         if(!initialFocus && !state.easyModeRP79) {withFrameNanos {};runCatching {first.requestFocus()}}
-        // Keep the initial provider usable while the other catalog loads. Only metadata:
-        // event lists and playback URLs are requested when the user selects them.
-        val otherProvider=if(initialProvider=="sports") "nauta" else "sports"
-        try {
-            val manifest=state.calendarLiveManifest(otherProvider)
-            val catalog=browserCategoryCacheRP34.get(manifest)
-                ?: repo.categories(manifest).also {browserCategoryCacheRP34.put(manifest,it)}
-            val extra=catalog.map {BrowserCategoryRP34(otherProvider,it,if(otherProvider=="sports") tr("Deportes","Sports") else "Nauta")}
-            categories=(categories.filter {it.provider !in IptvRepository.sources && !(it.provider==CustomChannelsRP45.provider && it.value.id=="custom-rp48")}+extra+
-                categories.filter {it.provider in IptvRepository.sources}+
-                categories.filter {it.provider==CustomChannelsRP45.provider && it.value.id=="custom-rp48"}).distinctBy {it.key}
-        } catch(e:CancellationException) {throw e} catch(_:Exception) {
-            catalogWarningRP39=if(otherProvider=="sports") tr("No se pudieron cargar las categorías de deportes.","Could not load sports categories.")
-                else tr("No se pudieron cargar las categorías de TV.","Could not load TV categories.")
-        }
+
     }
     LaunchedEffect(selected,search,localCatalogRP74,if(group?.provider==CustomChannelsRP45.provider || selected=="favorites") customRevisionRP48 else 0L) {
         generation++;resolving=false;more=false;channels=emptyList();offset=0;message="";loadedSelectionRP74=""
@@ -384,12 +375,13 @@ private fun BrowserCategoryRowRP34(title:String,selected:Boolean,modifier:Modifi
 @Composable
 private fun BrowserChannelRowRP34(channel:LiveChannel,number:Int,favorite:Boolean,playing:Boolean,click:()->Unit,favoriteHold:()->Unit,optionsHold:()->Unit,easyRP79:Boolean=false,modifier:Modifier=Modifier) {
     var focused by remember(channel.id) {mutableStateOf(false)}
+    var logoFailedRP97 by remember(channel.poster) {mutableStateOf(false)}
     Row(modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(if(focused) Color(0xFF292929) else Color.Transparent)
         .border(if(focused) 1.dp else 0.dp,if(focused) Color.White else Color.Transparent,RoundedCornerShape(8.dp))
         .onFocusChanged {focused=it.isFocused}.tvChannelTimedClickRP54(click,favoriteHold,optionsHold).focusable().padding(horizontal=10.dp,vertical=9.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
         Box(Modifier.size(40.dp),contentAlignment=Alignment.Center) {
-            if(channel.poster!=null) AsyncImage(channel.poster,null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+            if(channel.poster!=null && !logoFailedRP97) AsyncImage(channel.poster,null,Modifier.fillMaxSize(),contentScale=ContentScale.Fit,onError={logoFailedRP97=true})
             else Text(channel.name.take(2),color=Color.White,fontSize=16.sp)
         }
         Text(number.toString(),color=Muted,fontSize=12.sp)

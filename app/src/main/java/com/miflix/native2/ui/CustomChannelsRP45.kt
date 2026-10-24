@@ -18,7 +18,7 @@ internal object CustomChannelsRP45 {
     const val provider="custom:rp45"
     private const val FACTORY="magma:rp51:"
     private const val PLUS="iptvplus:rp61:"
-    private fun includedIdRP61(id:String)=id.startsWith(FACTORY) || id.startsWith(PLUS) || id.startsWith("m3ulist:")
+    private fun includedIdRP61(id:String)=id.startsWith(com.miflix.native2.data.FinalPlaylistRP97.PREFIX) || id.startsWith(FACTORY) || id.startsWith(PLUS) || id.startsWith("m3ulist:")
     private const val OLD_FACTORY="tvclub:rp50:"
     val changesRP48=MutableStateFlow(0L)
     private var appContextRP61:Context?=null
@@ -35,11 +35,11 @@ internal object CustomChannelsRP45 {
     }
     fun categoryNautaSourceRP71()=LiveCategory("tv","nauta-source:Todos","Nauta Source")
     fun categoryRP48()=LiveCategory("tv","custom-rp48","Others")
-    fun categoriesRP51()=listOf("Todos","General","Cine","24/7","Deportes","Infantiles","España","Cultura").map {LiveCategory("tv","tirso:"+it,if(it=="Todos") "Tirso TV" else it)}
-    fun categoriesRP61()=listOf("Todos","General","Cine","Series","Deportes","Infantiles","España","Cultura","Noticias","Novelas","Música","Religión","Adultos").map {
-        LiveCategory("tv","iptvplus:"+it,if(it=="Todos") "IPTV +" else "IPTV + · "+it)
-    }
+    fun categoriesRP51()=com.miflix.native2.data.FinalCatalogRP97.categories()
+    fun categoriesRP61()=emptyList<LiveCategory>()
     fun matchesRP61(c:CustomChannelRP45,category:String):Boolean = when {
+        category=="final-all" -> c.id.startsWith(com.miflix.native2.data.FinalPlaylistRP97.PREFIX)
+        category.startsWith("final-group:") -> c.id.startsWith(com.miflix.native2.data.FinalPlaylistRP97.PREFIX) && category==com.miflix.native2.data.FinalPlaylistRP97.categoryId(c.category)
         category.startsWith("nauta-source:") -> !c.id.startsWith(PLUS) && !c.id.startsWith("m3ulist:") && (category=="nauta-source:Todos" || c.category==category.removePrefix("nauta-source:"))
         category.startsWith("m3ulist:") -> M3UListsRP61.matches(c,category)
         category=="tirso:Todos" -> c.id.startsWith(FACTORY)
@@ -48,30 +48,27 @@ internal object CustomChannelsRP45 {
         category.startsWith("iptvplus:") -> c.id.startsWith(PLUS) && c.category==category.removePrefix("iptvplus:")
         else -> !includedIdRP61(c.id)
     }
-    fun sourceRP61(c:CustomChannelRP45)=if(c.sourceName.isNotBlank()) c.sourceName else if(c.id.startsWith(PLUS)) "IPTV +" else if(c.id.startsWith(FACTORY)) "Tirso TV" else "Others"
+    fun sourceRP61(c:CustomChannelRP45)=if(c.id.startsWith(com.miflix.native2.data.FinalPlaylistRP97.PREFIX)) c.category else if(c.sourceName.isNotBlank()) c.sourceName else if(c.id.startsWith(PLUS)) "IPTV +" else if(c.id.startsWith(FACTORY)) "Tirso TV" else "Others"
     fun labelRP50(c:CustomChannelRP45)=if(c.number>0) "${c.number} · ${c.name}" else c.name
     fun channelsRP48(context:Context,owner:String)=list(context,owner).map {LiveChannel(it.id,"tv",it.name,it.logo,"Tirso TV",number=it.number)}
     fun findRP48(context:Context,owner:String,id:String)=list(context,owner,true).firstOrNull {it.id==id}
     fun owner(state:AppState)="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
-    private fun prefs(context:Context)=context.getSharedPreferences("brunio_custom_channels_rp45",Context.MODE_PRIVATE)
+    private fun prefs(context:Context)=context.getSharedPreferences("brunio_custom_channels_rp97",Context.MODE_PRIVATE)
+    private var finalRevisionRP97=-1L
     private fun bundled(context:Context):List<CustomChannelRP45> {
-        included?.let {return it}
-        return try {
-            listOf("tvclub_channels_rp50.json" to FACTORY,"tirso_additions_rp73.json" to FACTORY,"iptv_plus_rp61.json" to PLUS).flatMap { (asset,prefix) ->
-                val a=runCatching {JSONArray(context.assets.open(asset).bufferedReader().use {it.readText()})}.getOrElse {JSONArray()}
-                (0 until a.length()).mapNotNull {i ->
-                    val o=a.getJSONObject(i);val n=o.optInt("number");val name=o.optString("name");val url=o.optString("url")
-                    if(n>0 && CustomChannelServerRP45.valid(name,url)) CustomChannelRP45(prefix+n,name,url,n,
-                        o.optString("logo").takeIf {it.startsWith("https://") || it.startsWith("file:///android_asset/") } ?: logoRP50(context,url,name),o.optString("category","General")) else null
-                }
-            }.distinctBy {it.id}.also {included=it}
-        } catch(_:Exception) {emptyList()}
+        val revision=com.miflix.native2.data.FinalCatalogRP97.revision
+        included?.takeIf {finalRevisionRP97==revision}?.let {return it}
+        return com.miflix.native2.data.FinalCatalogRP97.rows().map {
+            CustomChannelRP45(it.id,it.name,it.url,it.number,it.logo,it.category,it.headers,"Live TV")
+        }.also {included=it;finalRevisionRP97=revision}
     }
     private fun stored(context:Context,owner:String):List<CustomChannelRP45> = try {
         val array=JSONArray(prefs(context).getString(owner,"[]"))
         (0 until array.length()).mapNotNull {i ->
-            val o=array.getJSONObject(i);val name=o.optString("name");val url=o.optString("url")
-            if(CustomChannelServerRP45.valid(name,url)) CustomChannelRP45(o.getString("id"),name,url,ChannelMetadataRP50.number(url),logoRP50(context,url,name),o.optString("category","Personal"),o.optJSONObject("headers")?.let {h ->h.keys().asSequence().associateWith {h.getString(it)}} ?: emptyMap(),o.optString("sourceName")) else null
+            val o=array.getJSONObject(i)
+            if(o.optInt("catalogRP97")!=97) return@mapNotNull null
+            val name=o.optString("name");val url=o.optString("url")
+            if(CustomChannelServerRP45.valid(name,url)) CustomChannelRP45(o.getString("id"),name,url,o.optInt("number",ChannelMetadataRP50.number(url)),o.optString("logo").takeIf {it.isNotBlank()} ?: logoRP50(context,url,name),o.optString("category","Personal"),o.optJSONObject("headers")?.let {h ->h.keys().asSequence().associateWith {h.getString(it)}} ?: emptyMap(),o.optString("sourceName")) else null
         }
     } catch(_:Exception) {emptyList()}
     private fun removed(context:Context,owner:String):Set<String> = try {
@@ -93,7 +90,7 @@ internal object CustomChannelsRP45 {
         if(id!=null && existing==null) return false
         val rows=stored(context,owner).toMutableList()
         if(existing==null && rows.count {!includedIdRP61(it.id)}>=100) return false
-        val value=CustomChannelRP45(existing?.id ?: java.util.UUID.randomUUID().toString(),name.trim(),url.trim(),logo=logoRP50(context,url.trim(),name.trim()),category=existing?.category ?: "Personal",headers=existing?.headers ?: emptyMap(),sourceName=existing?.sourceName.orEmpty())
+        val value=CustomChannelRP45(existing?.id ?: java.util.UUID.randomUUID().toString(),name.trim(),url.trim(),number=existing?.number ?: ChannelMetadataRP50.number(url),logo=existing?.logo ?: logoRP50(context,url.trim(),name.trim()),category=existing?.category ?: "Personal",headers=existing?.headers ?: emptyMap(),sourceName=existing?.sourceName.orEmpty())
         rows.removeAll {it.id==value.id};rows.add(value)
         return write(context,owner,rows,removed(context,owner)-value.id)
     }
@@ -102,7 +99,7 @@ internal object CustomChannelsRP45 {
         return write(context,owner,stored(context,owner).filter {it.id!=id},hidden)
     }
     private fun write(context:Context,owner:String,rows:List<CustomChannelRP45>,hidden:Set<String>):Boolean {
-        val array=JSONArray();rows.forEach {array.put(JSONObject().put("id",it.id).put("name",it.name).put("url",it.url).put("category",it.category).put("headers",JSONObject(it.headers)).put("sourceName",it.sourceName))}
+        val array=JSONArray();rows.forEach {array.put(JSONObject().put("catalogRP97",97).put("id",it.id).put("name",it.name).put("url",it.url).put("number",it.number).put("logo",it.logo ?: "").put("category",it.category).put("headers",JSONObject(it.headers)).put("sourceName",it.sourceName))}
         val deleted=JSONArray();hidden.forEach {deleted.put(it)}
         val saved=prefs(context).edit().putString(owner,array.toString()).putString(owner+":removedRP50",deleted.toString()).commit()
         if(saved) changesRP48.value=changesRP48.value+1

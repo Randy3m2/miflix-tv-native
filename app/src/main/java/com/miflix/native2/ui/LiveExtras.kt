@@ -34,14 +34,27 @@ internal object LiveLibrary {
     var revision by mutableIntStateOf(0)
     fun prefs(context: Context)=context.getSharedPreferences("brunio_live_library",Context.MODE_PRIVATE)
     private fun key(state: AppState)="favorites:${state.session?.userId ?: "local"}:${state.activeProfile.id}"
-    fun favorites(context: Context,state: AppState): List<FavoriteChannel> = runCatching {
-        val array=JSONArray(prefs(context).getString(key(state),"[]"))
-        (0 until array.length()).map { i -> val o=array.getJSONObject(i)
-            FavoriteChannel(o.getString("provider"),LiveChannel(o.getString("id"),o.optString("type","tv"),o.getString("name"),o.optString("poster").takeIf { it.isNotBlank() },o.optString("description"),o.optInt("number"),o.optString("tvgId"))) }
-    }.getOrDefault(emptyList())
+    fun favorites(context:Context,state:AppState):List<FavoriteChannel> {
+        val saved=runCatching {
+            val array=JSONArray(prefs(context).getString(key(state),"[]"))
+            (0 until array.length()).map {i ->val o=array.getJSONObject(i)
+                FavoriteChannel(o.getString("provider"),LiveChannel(o.getString("id"),o.optString("type","tv"),o.getString("name"),o.optString("poster").takeIf {it.isNotBlank()},o.optString("description"),o.optInt("number"),o.optString("tvgId")))
+            }
+        }.getOrDefault(emptyList())
+        if(saved.isEmpty()) return emptyList()
+        val rows=CustomChannelsRP45.list(context,CustomChannelsRP45.owner(state),true)
+        val ids=rows.associateBy {it.id};val names=rows.groupBy {FinalPlaylistRP97.nameKey(it.name)}
+        return saved.mapNotNull {favorite ->
+            if(favorite.provider=="sports") favorite else {
+                val match=ids[favorite.channel.id] ?: names[FinalPlaylistRP97.nameKey(favorite.channel.name)]?.singleOrNull()
+                match?.let {FavoriteChannel(CustomChannelsRP45.provider,LiveChannel(it.id,"tv",it.name,it.logo,it.category,it.number))}
+            }
+        }.distinctBy {it.provider+":"+it.channel.id}
+    }
     fun toggle(context: Context,state: AppState,provider: String,channel: LiveChannel) {
+        val canonical=if(channel.id.startsWith(FinalPlaylistRP97.PREFIX)) CustomChannelsRP45.provider else provider
         val rows=favorites(context,state).toMutableList()
-        if(!rows.removeAll { it.provider==provider && it.channel.id==channel.id }) rows.add(FavoriteChannel(provider,channel))
+        if(!rows.removeAll { it.provider==canonical && it.channel.id==channel.id }) rows.add(FavoriteChannel(canonical,channel))
         val a=JSONArray();rows.forEach { (p,c) -> a.put(JSONObject().put("provider",p).put("id",c.id).put("type",c.type).put("name",c.name).put("poster",c.poster.orEmpty()).put("description",c.description).put("number",c.number).put("tvgId",c.tvgId)) }
         prefs(context).edit().putString(key(state),a.toString()).apply();revision++
     }

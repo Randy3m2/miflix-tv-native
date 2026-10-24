@@ -12,7 +12,7 @@ import java.security.MessageDigest
 import java.util.UUID
 
 internal object M3UListsRP61 {
-    private fun prefs(c:Context)=c.getSharedPreferences("brunio_m3u_lists_rp61",Context.MODE_PRIVATE)
+    private fun prefs(c:Context)=c.getSharedPreferences("brunio_m3u_lists_rp97",Context.MODE_PRIVATE)
     private var cacheOwner=""
     private var cacheRaw:String?=null
     private var cacheRows:List<JSONObject> = emptyList()

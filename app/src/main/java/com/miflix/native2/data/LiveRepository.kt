@@ -12,6 +12,7 @@ class LiveRepository {
     private fun enc(s: String) = URLEncoder.encode(s, "UTF-8").replace("+", "%20")
 
     suspend fun categories(manifest: String): List<LiveCategory> {
+        if(manifest==FinalCatalogRP97.MANIFEST) return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {FinalCatalogRP97.categories()}
         if(IptvRepository.isPlaylist(manifest)) return IptvRepository.categories(manifest)
         val json = JSONObject(Http.text(manifest, timeoutMs = 20000))
         val catalogs = json.optJSONArray("catalogs") ?: return emptyList()
@@ -40,6 +41,7 @@ class LiveRepository {
     }
 
     suspend fun channels(manifest: String, category: LiveCategory, skip: Int = 0, search: String = ""): List<LiveChannel> {
+        if(manifest==FinalCatalogRP97.MANIFEST) return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {FinalCatalogRP97.channels(category,skip,search)}
         if(IptvRepository.isPlaylist(manifest)) return IptvRepository.channels(category,skip,search,manifest)
         val extra = buildList {
             if (search.isNotBlank() && category.searchable) add("search=${enc(search.trim())}")
@@ -57,6 +59,7 @@ class LiveRepository {
     }
 
     suspend fun streams(manifest: String, channel: LiveChannel): List<StreamChoice> {
+        if(manifest==FinalCatalogRP97.MANIFEST) return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {FinalCatalogRP97.streams(channel)}
         if(IptvRepository.isPlaylist(manifest)) return IptvRepository.streams(channel,manifest)
         val j = JSONObject(Http.text(LiveManifestUrlRP49.resource(manifest,"stream/${enc(channel.type)}/${enc(channel.id)}.json"), timeoutMs = 25000))
         val rows = j.optJSONArray("streams") ?: return emptyList()

@@ -8,12 +8,7 @@ import kotlinx.coroutines.withContext
 
 internal object IptvRepository {
     const val PLAYLIST="https://iptv-org.github.io/iptv/countries/do.m3u"
-    val sources=linkedMapOf(
-        "iptv:do" to ("Dominicana" to PLAYLIST),
-        "iptv:tur" to ("Türkiye" to "https://iptv-org.github.io/iptv/languages/tur.m3u"),
-        "iptv:mx" to ("México" to "https://iptv-org.github.io/iptv/countries/mx.m3u"),
-        "iptv:es" to ("España" to "https://iptv-org.github.io/iptv/countries/es.m3u"),
-        "iptv:us" to ("USA" to "https://iptv-org.github.io/iptv/countries/us.m3u"))
+    val sources=linkedMapOf<String,Pair<String,String>>()
     fun isPlaylist(url: String)=sources.values.any { it.second==url }
     fun manifest(provider: String)=sources[provider]?.second ?: PLAYLIST
     private class Feed(val url: String) {

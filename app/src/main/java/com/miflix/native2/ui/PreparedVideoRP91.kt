@@ -8,17 +8,17 @@ import com.miflix.native2.data.WarmVideoPolicyRP91
 import com.miflix.native2.player.SubtitleTiming
 
 /** The same allocator/control is retained when the player becomes visible. */
-internal class WarmLoadControlRP91(private val normal:LoadControl=DefaultLoadControl.Builder()
+internal class WarmLoadControlRP91(private val lowMemory:Boolean=false,private val normal:LoadControl=DefaultLoadControl.Builder()
     .setBufferDurationsMs(15000,50000,1000,1500).setTargetBufferBytes(48*1024*1024)
     .setPrioritizeTimeOverSizeThresholds(false).build()):LoadControl by normal {
     @Volatile private var warming=true
     fun activate() {warming=false}
     override fun shouldContinueLoading(parameters:LoadControl.Parameters):Boolean {
-        if(warming && !WarmVideoPolicyRP91.continueWarm(parameters.bufferedDurationUs,normal.getAllocator(parameters.playerId).totalBytesAllocated)) return false
+        if(warming && !WarmVideoPolicyRP91.continueWarm(parameters.bufferedDurationUs,normal.getAllocator(parameters.playerId).totalBytesAllocated,lowMemory)) return false
         return normal.shouldContinueLoading(parameters)
     }
     override fun shouldStartPlayback(parameters:LoadControl.Parameters):Boolean {
-        if(warming) return parameters.bufferedDurationUs>=1_000_000L || normal.getAllocator(parameters.playerId).totalBytesAllocated>=WarmVideoPolicyRP91.BUFFER_BYTES
+        if(warming) return parameters.bufferedDurationUs>=1_000_000L || normal.getAllocator(parameters.playerId).totalBytesAllocated>=WarmVideoPolicyRP91.bufferBytes(lowMemory)
         return normal.shouldStartPlayback(parameters)
     }
 }

@@ -14,7 +14,10 @@ internal object LiveChannelNavigationRP40 {
     private var hiddenPlaybackId:String?=null
     private fun owner(state:AppState)="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
     fun save(state:AppState,snapshot:LiveBrowseSnapshotRP40) {
-        val key=owner(state);snapshots.remove(key);snapshots[key]=snapshot
+        val rows=snapshot.rows.map {if(it.value.id.startsWith(FinalPlaylistRP97.PREFIX)) it.copy(provider=CustomChannelsRP45.provider) else it}
+        val finalOnly=rows.isNotEmpty() && rows.all {it.value.id.startsWith(FinalPlaylistRP97.PREFIX)}
+        val normalized=snapshot.copy(rows=rows,category=if(finalOnly) snapshot.category.copy(provider=CustomChannelsRP45.provider) else snapshot.category)
+        val key=owner(state);snapshots.remove(key);snapshots[key]=normalized
         while(snapshots.size>6) snapshots.remove(snapshots.keys.first())
     }
     fun matching(state:AppState,request:PlayerRequest?):LiveBrowseSnapshotRP40? {

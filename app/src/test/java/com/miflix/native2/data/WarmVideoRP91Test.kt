@@ -5,9 +5,17 @@ import org.junit.Test
 
 class WarmVideoRP91Test {
     @Test fun warmBufferStopsOnEitherThreshold() {
-        assertTrue(WarmVideoPolicyRP91.continueWarm(4_999_999,1000))
-        assertFalse(WarmVideoPolicyRP91.continueWarm(5_000_000,1000))
-        assertFalse(WarmVideoPolicyRP91.continueWarm(1000,16*1024*1024))
+        assertTrue(WarmVideoPolicyRP91.continueWarm(14_999_999,1000))
+        assertFalse(WarmVideoPolicyRP91.continueWarm(15_000_000,1000))
+        assertFalse(WarmVideoPolicyRP91.continueWarm(1000,32*1024*1024))
+    }
+    @Test fun lowerRamTvKeepsThePreviousMemoryBudget() {
+        assertEquals(16*1024*1024,WarmVideoPolicyRP91.bufferBytes(true))
+        assertEquals(32*1024*1024,WarmVideoPolicyRP91.bufferBytes(false))
+        assertFalse(WarmVideoPolicyRP91.continueWarm(1_000_000,16*1024*1024,true))
+        assertTrue(WarmVideoPolicyRP91.continueWarm(1_000_000,16*1024*1024,false))
+        assertFalse(WarmVideoPolicyRP91.continueWarm(15_000_000,1000,true))
+        assertEquals(250L,DetailsPrefetchRP90.DELAY_MS)
     }
     @Test fun handoffRequiresFreshEntryAndIdenticalResumePosition() {
         assertTrue(WarmVideoPolicyRP91.fresh(59_999,120_000,120_000))

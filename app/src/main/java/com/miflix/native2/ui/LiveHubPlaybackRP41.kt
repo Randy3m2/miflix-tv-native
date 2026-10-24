@@ -48,35 +48,9 @@ internal object LiveHubPlaybackRP41 {
         if(saved!=null && saved.optString("provider")==CustomChannelsRP45.provider) {
             CustomChannelsRP45.findRP48(context,CustomChannelsRP45.owner(state),saved.optString("id"))?.let {if(openCustom(it)) return}
         }
-        if(saved!=null) {
-            val provider=saved.optString("provider")
-            if(provider=="nauta" || provider in IptvRepository.sources) {
-                val restored=try {kotlinx.coroutines.withTimeoutOrNull(3_000L) {
-                    val channel=LiveChannel(saved.optString("id"),saved.optString("type","tv"),saved.optString("name"),saved.optString("poster").takeIf {it.isNotBlank()},saved.optString("description"))
-                    val categories=repo.categories(state.calendarLiveManifest(provider))
-                    val category=categories.firstOrNull {it.id==saved.optString("catId") && it.genre.orEmpty()==saved.optString("catGenre")} ?: categories.firstOrNull {isMostViewedRP37(it)} ?: categories.firstOrNull()
-                    if(category==null) false else {
-                        val rows=try {repo.channels(state.calendarLiveManifest(provider),category)} catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
-                        startChannel(provider,channel,category,rows)
-                    }
-                }} catch(e:CancellationException) {throw e} catch(_:Exception) {false}
-                if(restored==true) return
-            }
-        }
         if(!current()) return
-        try {
-            kotlinx.coroutines.withTimeoutOrNull(6_000L) {
-                val manifest=state.calendarLiveManifest("nauta")
-                val categories=repo.categories(manifest)
-                val category=categories.firstOrNull {isMostViewedRP37(it)} ?: categories.firstOrNull()
-                if(category!=null) {
-                    val rows=repo.channels(manifest,category)
-                    for(channel in rows.shuffled().take(5)) {if(!current()) return@withTimeoutOrNull;if(startChannel("nauta",channel,category,rows)) return@withTimeoutOrNull}
-                }
-            }
-        } catch(e:CancellationException) {throw e} catch(_:Exception) { }
-        if(!current()) return
-        CustomChannelsRP45.list(context,CustomChannelsRP45.owner(state)).firstOrNull {it.id.startsWith("magma:rp51:")}?.let {if(openCustom(it)) return}
+        val rows=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {CustomChannelsRP45.list(context,CustomChannelsRP45.owner(state))}
+        (rows.firstOrNull {com.miflix.native2.data.FinalPlaylistRP97.nameKey(it.category)=="republicadominicana"} ?: rows.firstOrNull())?.let {if(openCustom(it)) return}
         if(current()) error("No playable TV channel")
     }
 }

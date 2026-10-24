@@ -967,6 +967,9 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
             Row(Modifier.weight(1f).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(22.dp)) {
                 LazyColumn(Modifier.weight(.7f).fillMaxHeight(),state=settingsScroll,
                     contentPadding=PaddingValues(top=4.dp,bottom=42.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                    if(category=="system" && !state.kidsMode) item(key="final-m3u-rp97") {
+                        SettingsSectionCard(onFocused={helpTitle=tr("Canales Live TV","Live TV channels");helpDescription=tr("Actualiza la lista M3U por URL Raw, sin otra build. El QR funciona en la red local y conserva la última copia válida si falla la descarga.","Update the M3U using a Raw URL without another build. QR works on the local network; failed downloads retain the last valid copy.");visualHelp=null}) {FinalM3USettingsRP97(state)}
+                    }
                     if(category=="system" && !state.kidsMode) item(key="easy-rp79") {
                         SettingsSectionCard {
                             Text(tr("Modo fácil","Easy mode"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
@@ -1225,7 +1228,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     if(category=="playback") item(key="setting-prefetch-rp90") {
                         SettingsSectionCard(onFocused={
                             visualHelp=null;helpTitle=tr("Precargar enlaces","Preload sources")
-                            helpDescription=tr("Tras 1 segundo elige una fuente y prepara hasta 5 segundos de vídeo, sin sonido. Play reutiliza ese reproductor. Hasta cinco fuentes si Autoplay next link está activado. Consume datos; solo modo normal, por perfil.","After 1 second selects a source and prepares up to 5 seconds of video silently. Play reuses that player. Tries up to five sources if Autoplay next link is enabled. Uses data; normal mode only, per profile.")
+                            helpDescription=tr("Tras 250 ms elige una fuente y prepara hasta 15 segundos de vídeo, sin sonido. Play reutiliza ese reproductor. Hasta cinco fuentes si Autoplay next link está activado. Consume datos; solo modo normal, por perfil.","After 250 ms selects a source and prepares up to 15 seconds of video silently. Play reuses that player. Tries up to five sources if Autoplay next link is enabled. Uses data; normal mode only, per profile.")
                             helpIndex=-1
                         }) {
                             Text(tr("Inicio más rápido","Faster playback start"),color=Color.White,fontSize=22.sp)
@@ -2030,6 +2033,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         else if (dismissKey == code) {
             if (event.type == KeyEventType.KeyUp) dismissKey = null
             true
+        } else if(com.miflix.native2.data.LiveRemotePolicyRP97.revealControls(request.live,request.sportsRecordingRP72,code,controlsVisible,surfaceFocusedRP34,
+            playerMenu!=null || showEpisodes || showQueue || showPartyActions || showAccessRequests || state.sourceSelection!=null)) {
+            if(event.type==KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount==0) {controlsVisible=true;controlInteraction++;dismissKey=code}
+            true
         } else if(request.live && !request.sportsRecordingRP72 && (!controlsVisible || surfaceFocusedRP34) &&
             code in listOf(android.view.KeyEvent.KEYCODE_DPAD_CENTER,android.view.KeyEvent.KEYCODE_ENTER,android.view.KeyEvent.KEYCODE_NUMPAD_ENTER) &&
             !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu==null && state.sourceSelection==null) {
@@ -2052,12 +2059,6 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                     } else LiveChannelNavigationRP40.step(state,request,if(code==android.view.KeyEvent.KEYCODE_DPAD_UP) 1 else -1) {sportsTargetRP44=it}
                 }
             }
-            true
-        } else if(request.live && !request.sportsRecordingRP72 && (firstFrame || hadPlaybackError) && (!controlsVisible || surfaceFocusedRP34) &&
-            code==android.view.KeyEvent.KEYCODE_DPAD_RIGHT && event.type==KeyEventType.KeyDown &&
-            !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu==null && state.sourceSelection==null) {
-            dismissKey=code;pauseInfoDismissed=true;pauseSynopsis=false;controlsVisible=false
-            playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else "channels"
             true
         } else if (event.type == KeyEventType.KeyDown && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu == null && !quickReactions && state.sourceSelection == null) {
             val wasHidden = !controlsVisible

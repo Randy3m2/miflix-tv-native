@@ -45,12 +45,15 @@ internal object LiveHubPlaybackRP41 {
             state.openLivePlayer(CustomChannelsRP45.request(channel))
             return true
         }
-        if(saved!=null && saved.optString("provider")==CustomChannelsRP45.provider) {
-            CustomChannelsRP45.findRP48(context,CustomChannelsRP45.owner(state),saved.optString("id"))?.let {if(openCustom(it)) return}
-        }
         if(!current()) return
         val rows=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {CustomChannelsRP45.list(context,CustomChannelsRP45.owner(state))}
-        (rows.firstOrNull {com.miflix.native2.data.FinalPlaylistRP97.nameKey(it.category)=="republicadominicana"} ?: rows.firstOrNull())?.let {if(openCustom(it)) return}
+        if(saved!=null) {
+            val previous=rows.firstOrNull {it.id==saved.optString("id")}
+                ?: rows.filter {com.miflix.native2.data.FinalPlaylistRP97.nameKey(it.name)==com.miflix.native2.data.FinalPlaylistRP97.nameKey(saved.optString("name"))}.singleOrNull()
+            previous?.let {if(openCustom(it)) return}
+        }
+        val initialGroup=com.miflix.native2.data.FinalPlaylistRP97.initialGroup(com.miflix.native2.data.FinalCatalogRP97.rows())
+        (rows.firstOrNull {it.category==initialGroup} ?: rows.firstOrNull())?.let {if(openCustom(it)) return}
         if(current()) error("No playable TV channel")
     }
 }

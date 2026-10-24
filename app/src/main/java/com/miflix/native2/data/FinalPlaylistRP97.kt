@@ -25,6 +25,11 @@ internal object FinalPlaylistRP97 {
     private fun hash(value:String)=MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8)).take(12).joinToString("") {"%02x".format(it)}
     fun refreshUrl(source:String,stamp:Long):String = if(java.net.URI(source).host.equals("raw.githubusercontent.com",true))
         source+(if(source.contains('?')) "&" else "?")+"brunio_refresh="+stamp else source
+    fun initialGroup(rows:List<FinalEntryRP97>):String? {
+        val counts=rows.groupingBy {it.category}.eachCount()
+        return counts.keys.firstOrNull {nameKey(it)=="noticias" && counts.getValue(it)<=24}
+            ?: counts.minByOrNull {it.value}?.key
+    }
     fun categoryId(name:String)="final-group:"+hash(name)
     fun parse(raw:String):List<FinalEntryRP97> {
         require(raw.toByteArray(Charsets.UTF_8).size<=4*1024*1024) {"M3U maximum: 4 MB"}

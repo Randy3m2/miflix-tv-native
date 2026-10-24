@@ -50,7 +50,8 @@ internal object FinalCatalogRP97 {
     }
     fun categories():List<LiveCategory> {
         val groups=rows().map {it.category}.distinct()
-        val ordered=groups.sortedBy {if(FinalPlaylistRP97.nameKey(it)=="republicadominicana") 0 else 1}
+        val initial=FinalPlaylistRP97.initialGroup(rows())
+        val ordered=groups.sortedBy {when {it==initial ->0;FinalPlaylistRP97.nameKey(it)=="republicadominicana" ->1;else ->2}}
         return ordered.map {LiveCategory("tv",FinalPlaylistRP97.categoryId(it),it,genre=it,searchable=true)}+
             LiveCategory("tv","final-all","Todos",searchable=true)
     }

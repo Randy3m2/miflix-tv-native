@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP91: preparación real de vídeo tras 1 segundo: una fuente, búfer limitado y reutilización del reproductor al pulsar Play, sin sonido ni presencia anticipada." to "RP91: real video preparation after 1 second: one source, bounded buffering and player handoff on Play, without sound or early presence.",
         "RP90: precarga opcional por perfil desde Settings → Reproducción en los detalles del modo normal; Play reutiliza la búsqueda y la caché, sin reproducir vídeo ni publicar presencia antes de tiempo." to "RP90: optional per-profile source prefetch in normal-mode details from Settings → Playback; Play reuses lookup/cache without starting video or publishing presence early.",
         "RP89: barra para adelantar/retroceder en Modo fácil, siguiente episodio al terminar con enfoque directo y selección/búsqueda de subtítulos en español." to "RP89: Easy mode seek bar, focused next-episode action at the end, and Spanish subtitle selection/lookup.",
         "RP88: update unificado: regreso de amigos al party, protección al cambiar fuentes rápidamente y foco de categorías a canales en Modo fácil; incluye subtítulos en español de RP87." to "RP88: unified update: bring friends back to the party, rapid source-switch protection and category-to-channel focus in Easy mode; includes RP87 Spanish subtitles.",

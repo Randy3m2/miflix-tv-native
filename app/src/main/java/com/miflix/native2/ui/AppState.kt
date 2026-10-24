@@ -344,6 +344,7 @@ class AppState(context: Context) {
         invalidatePlaybackWork()
     }
     private fun invalidatePlaybackWork() {
+        discardPreparedVideoRP91()
         sourceWarmupJobRP90?.cancel();sourceWarmupJobRP90=null;sourceWarmupKeyRP90=null
         latestPlaybackRP87.cancel()
         playbackWork.invalidate(); sourceFallback=null; rememberedStartRP16=null; sourceSelection=null; busyMessage=null;playbackLoading=null
@@ -1187,10 +1188,73 @@ class AppState(context: Context) {
     internal fun saveSourcePrefetchRP90(enabled:Boolean) {
         playbackPrefs.edit().putBoolean(sourcePrefetchKeyRP90(),enabled).apply()
         sourcePrefetchRevisionRP90++
-        if(!enabled) {sourceWarmupJobRP90?.cancel();sourceWarmupJobRP90=null;sourceWarmupKeyRP90=null}
+        if(!enabled) {discardPreparedVideoRP91();sourceWarmupJobRP90?.cancel();sourceWarmupJobRP90=null;sourceWarmupKeyRP90=null}
     }
     private var sourceWarmupJobRP90:kotlinx.coroutines.Job?=null
     private var sourceWarmupKeyRP90:PlaybackCacheKey?=null
+    private data class WarmIdentityRP91(val sources:PlaybackCacheKey,val subtitle:String,val tracks:String)
+    private var preparedVideoRP91:PreparedVideoRP91?=null
+    private fun warmIdentityRP91(item:MediaSummary,imdb:String,season:Int,episode:Int)=WarmIdentityRP91(
+        playbackCacheKey(item,imdb,season,episode),subtitleLanguage,localExtras.trackChoice(localExtrasScope(),item)?.toString().orEmpty())
+    private fun discardPreparedVideoRP91() {
+        val old=preparedVideoRP91 ?: return
+        preparedVideoRP91=null
+        old.expiryJob?.cancel()
+        old.listener?.let {old.player.removeListener(it)}
+        try {old.player.release()} catch(e:Exception) {LocalCrashRP87.record(appContext,e)}
+    }
+    private fun preparedMatchRP91(request:PlayerRequest):PreparedVideoRP91? {
+        val entry=preparedVideoRP91 ?: return null
+        if(!sourcePrefetchEnabledRP90 || easyModeRP79 || kidsMode || watchParty!=null || request.live || request.momentEndMs>0 ||
+            request.item.cloudId!=entry.request.item.cloudId || request.season!=entry.request.season || request.episode!=entry.request.episode ||
+            request.stream.url!=entry.request.stream.url || request.stream.requestHeaders!=entry.request.stream.requestHeaders ||
+            entry.identity!=warmIdentityRP91(request.item,entry.imdb,request.season,request.episode) || entry.player.playerError!=null ||
+            !WarmVideoPolicyRP91.fresh(android.os.SystemClock.elapsedRealtime()-entry.createdAt,entry.request.resumeMs,request.resumeMs)) return null
+        return entry
+    }
+    internal fun preparedTimingRP91(request:PlayerRequest)=preparedMatchRP91(request)?.timing
+    internal fun takePreparedPlayerRP91(request:PlayerRequest):androidx.media3.exoplayer.ExoPlayer? {
+        val entry=preparedMatchRP91(request)
+        if(entry==null) {discardPreparedVideoRP91();return null}
+        preparedVideoRP91=null
+        entry.expiryJob?.cancel()
+        entry.listener?.let {entry.player.removeListener(it)}
+        entry.gate.activate()
+        return entry.player
+    }
+    private suspend fun prepareVideoRP91(item:MediaSummary,imdb:String,season:Int,episode:Int,identity:Any,streams:List<StreamChoice>) {
+        if(detailsWarmupKeyRP90(item)!=identity || playerReleaseRP87.hasActive()) return
+        val progressKey=if(item.type=="series") "${item.cloudId}:s${season}e${episode}" else item.cloudId
+        val saved=progress[progressKey] ?: progress[item.cloudId]?.takeIf {item.type!="series" || (it.season==season && it.episode==episode)}
+        val position=saved?.position ?: 0L
+        val memory=if(position>0) lastSourceRP16.get(lastSourceKeyRP16(item,season,episode))?.takeIf {
+            StreamOrdering.nativeAllowedRP77(it,audioLanguage,nativeSpanishOnlyRP77) && StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) &&
+                runCatching {java.net.URI(it.url).scheme in setOf("http","https")}.getOrDefault(false)
+        } else null
+        val bandwidth=if(adaptiveSource) androidx.media3.exoplayer.upstream.DefaultBandwidthMeter.getSingletonInstance(appContext).bitrateEstimate else 0L
+        val seconds=(details?.runtimeMinutes ?: 0)*60
+        val chosen=memory ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2(),secondaryAudioLanguageRP62,nativeSizeAscendingRP77,nativeSpanishOnlyRP77) ?: return
+        val owner=session?.userId
+        val best=if(chosen.nativeSource==null) chosen else {
+            if(!nativeStore.enabled(owner)) return
+            withTimeoutOrNull(15000L) {nativeSources.materialize(chosen,nativeStore.token(owner)) {detailsWarmupKeyRP90(item)==identity}} ?: return
+        }
+        if(detailsWarmupKeyRP90(item)!=identity || playerReleaseRP87.hasActive()) return
+        discardPreparedVideoRP91()
+        val timing=com.miflix.native2.player.SubtitleTiming().also {it.delayMs=localExtras.trackChoice(localExtrasScope(),item)?.optLong("delay",0L) ?: 0L}
+        val request=PlayerRequest(item,best,season,episode,position)
+        val gate=WarmLoadControlRP91()
+        val player=createPlaybackPlayerRP91(appContext,this,request,timing,gate)
+        player.volume=0f;player.playWhenReady=false
+        val entry=PreparedVideoRP91(identity,imdb,request,chosen.url,player,timing,gate,android.os.SystemClock.elapsedRealtime())
+        preparedVideoRP91=entry
+        val listener=object:androidx.media3.common.Player.Listener {
+            override fun onPlayerError(error:androidx.media3.common.PlaybackException) {if(preparedVideoRP91===entry) discardPreparedVideoRP91()}
+        }
+        entry.listener=listener;player.addListener(listener)
+        entry.expiryJob=launch {delay(WarmVideoPolicyRP91.TTL_MS);if(preparedVideoRP91===entry) discardPreparedVideoRP91()}
+    }
+
     private fun warmupTargetRP90(item:MediaSummary):Pair<Int,Int> {
         val saved=progress[item.cloudId]
         val target=DetailsPrefetchRP90.target(item.type,saved?.season ?: 0,saved?.episode ?: 0,saved?.percent ?: 0.0)
@@ -1200,28 +1264,36 @@ class AppState(context: Context) {
         if(!sourcePrefetchEnabledRP90 || easyModeRP79 || kidsMode || item.type !in listOf("movie","series") || !appForeground || screen!=Screen.DETAILS || miniPlayer || watchParty!=null || selectedUpcoming || selected?.cloudId!=item.cloudId) return null
         val imdb=details?.takeIf {it.summary.cloudId==item.cloudId}?.imdbId?.takeIf {it.isNotBlank()} ?: return null
         val target=warmupTargetRP90(item)
-        return playbackCacheKey(item,imdb,target.first,target.second)
+        return warmIdentityRP91(item,imdb,target.first,target.second)
     }
     internal suspend fun prefetchDetailsRP90(item:MediaSummary,identity:Any) {
         delay(DetailsPrefetchRP90.DELAY_MS)
-        if(detailsWarmupKeyRP90(item)!=identity) return
+        // An earlier Play already owns startup; do not start a parallel decoder/materialization.
+        if(playbackLoading!=null || detailsWarmupKeyRP90(item)!=identity) return
         val imdb=details?.imdbId ?: return
         val target=warmupTargetRP90(item)
         val key=playbackCacheKey(item,imdb,target.first,target.second)
-        if(playbackLinkCache.get(key)!=null) return
         val job=kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job] ?: return
         sourceWarmupJobRP90?.takeUnless {it===job}?.cancel()
         sourceWarmupJobRP90=job;sourceWarmupKeyRP90=key
         try {
-            // Shared cache mutex makes an early Play wait for this lookup rather than issue it twice.
-            kotlinx.coroutines.withTimeoutOrNull(12000L) {resolveCachedSourcesRP90(item,imdb,target.first,target.second)}
+            // Keep source selection/materialization shared with an early Play; video buffers asynchronously.
+            val streams=kotlinx.coroutines.withTimeoutOrNull(12000L) {resolveCachedSourcesRP90(item,imdb,target.first,target.second)}.orEmpty()
+            if(streams.isNotEmpty()) prepareVideoRP91(item,imdb,target.first,target.second,identity,streams)
         } catch(e:CancellationException) {throw e} catch(_:Exception) {
             // Speculative failure is silent and is never cached; Play can retry normally.
         } finally {
             if(sourceWarmupJobRP90===job) {sourceWarmupJobRP90=null;sourceWarmupKeyRP90=null}
         }
     }
+    internal fun endVideoWarmupRP91(identity:Any?) {
+        val entry=preparedVideoRP91 ?: return
+        if(entry.identity!=identity) return
+        if(screen==Screen.PLAYER && playerRequest?.let {preparedMatchRP91(it)}!=null) return
+        discardPreparedVideoRP91()
+    }
     internal fun leaveDetailsWarmupRP90(cloudId:String) {
+        if(screen!=Screen.PLAYER || playerRequest?.let {preparedMatchRP91(it)}==null) discardPreparedVideoRP91()
         if(screen!=Screen.DETAILS && screen!=Screen.PLAYER && selected?.cloudId==cloudId && playbackLoading?.item?.cloudId==cloudId) invalidatePlaybackWork()
     }
 
@@ -1769,6 +1841,7 @@ class AppState(context: Context) {
     var playerRequest:PlayerRequest?
         get()=currentPlayerRequestRP87
         set(value) {
+            if(value==null || preparedMatchRP91(value)==null) discardPreparedVideoRP91()
             if(value?.playbackId!=currentPlayerRequestRP87?.playbackId) {
                 try {playerReleaseRP87.beforeReplace(value!=null)} catch(e:Exception) {LocalCrashRP87.record(appContext,e)}
             }
@@ -3115,6 +3188,17 @@ class AppState(context: Context) {
         val rememberedRP16=if(selectedStream==null && watchParty==null && (resumeOverride ?: targetProgressRP16?.position ?: 0L)>0L)
             lastSourceRP16.get(memoryKeyRP16)?.takeIf {StreamOrdering.nativeAllowedRP77(it,audioLanguage,nativeSpanishOnlyRP77) && StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) &&
                 runCatching {java.net.URI(it.url).scheme in setOf("http","https")}.getOrDefault(false)} else null
+        if(selectedStream==null && sourceWarmupKeyRP90==playbackCacheKey(item,imdb,season,episode)) {
+            sourceWarmupJobRP90?.takeUnless {it===kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]}?.join()
+        }
+        if(!valid()) return@run
+        val expectedPositionRP91=resumeOverride ?: targetProgressRP16?.position ?: 0L
+        val preparedRP91=if(selectedStream==null) preparedVideoRP91?.takeIf {entry ->
+            entry.request.item.cloudId==item.cloudId && entry.request.season==season && entry.request.episode==episode &&
+            entry.identity==warmIdentityRP91(item,imdb,season,episode) && entry.player.playerError==null &&
+            WarmVideoPolicyRP91.fresh(android.os.SystemClock.elapsedRealtime()-entry.createdAt,entry.request.resumeMs,expectedPositionRP91)
+        } else null
+        if(preparedRP91==null) discardPreparedVideoRP91()
         val streamsJob = async { if(rememberedRP16!=null) listOf(rememberedRP16) else if (selectedStream != null) (listOf(selectedStream)+fallbackStreams).distinctBy {it.url}.filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) } else resolvePlaybackSources(item,imdb,season,episode) }
         val preferredSubtitleRP78=subtitleLanguage
         val subtitleKey=subtitleKey(item,season,episode)
@@ -3130,18 +3214,18 @@ class AppState(context: Context) {
             if(!valid()) return@run
             val bandwidth=if(adaptiveSource) androidx.media3.exoplayer.upstream.DefaultBandwidthMeter.getSingletonInstance(appContext).bitrateEstimate else 0L
             val seconds=(details?.takeIf {it.summary.cloudId==item.cloudId}?.runtimeMinutes ?: 0)*60
-            val chosen = rememberedRP16 ?: selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2(),secondaryAudioLanguageRP62,nativeSizeAscendingRP77,nativeSpanishOnlyRP77)
+            val chosen = preparedRP91?.request?.stream ?: rememberedRP16 ?: selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2(),secondaryAudioLanguageRP62,nativeSizeAscendingRP77,nativeSpanishOnlyRP77)
                 ?: throw IllegalStateException(if(streamRepo.hasTorrentOnlyResults())
                     tr("Estos complementos solo devolvieron torrents. Se necesitan enlaces directos HTTP/HTTPS.","These add-ons only returned torrents. Direct HTTP/HTTPS links are required.")
                     else tr("No se encontraron enlaces reproducibles","No playable sources found"))
             val automaticFallback=autoplayNextLink && watchParty==null
             val retryRows=if(automaticFallback) {
-                val candidates=StreamOrdering.fallbackCandidates(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2(),secondaryAudioLanguageRP62,nativeSizeAscendingRP77,nativeSpanishOnlyRP77).filter {it.url!=chosen.url}
+                val candidates=StreamOrdering.fallbackCandidates(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2(),secondaryAudioLanguageRP62,nativeSizeAscendingRP77,nativeSpanishOnlyRP77).filter {it.url!=chosen.url && it.url!=preparedRP91?.originalUrl}
                 val ordered=(listOf(chosen)+candidates).distinctBy {it.url}
                 if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(audioLanguage)) ordered else ordered.take(com.miflix.native2.player.SourceFallbackBudget.MAX_ATTEMPTS)
             } else listOf(chosen)
             val budget=com.miflix.native2.player.SourceFallbackBudget(retryRows.size,com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(audioLanguage))
-            val best=materializeAutomaticSource(retryRows,budget,playbackOwner,::valid)
+            val best=preparedRP91?.request?.stream ?: materializeAutomaticSource(retryRows,budget,playbackOwner,::valid)
             val externalSubs = if(subsJob.isCompleted) subsJob.await() else emptyList()
             val mergedSubs = (best.subtitles + externalSubs)
                 .distinctBy { it.url }

@@ -699,6 +699,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
     val saved = state.progress[item.cloudId]
     val warmupRP90=state.detailsWarmupKeyRP90(item)
     LaunchedEffect(warmupRP90) {if(warmupRP90!=null) state.prefetchDetailsRP90(item,warmupRP90)}
+    DisposableEffect(warmupRP90) {onDispose {state.endVideoWarmupRP91(warmupRP90)}}
     DisposableEffect(item.cloudId) {onDispose {state.leaveDetailsWarmupRP90(item.cloudId)}}
     var showLocalListAdd by remember(item.cloudId) {mutableStateOf(false)}
     var showNotToday by remember(item.cloudId) {mutableStateOf(false)}
@@ -1218,14 +1219,14 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     if(category=="playback") item(key="setting-prefetch-rp90") {
                         SettingsSectionCard(onFocused={
                             visualHelp=null;helpTitle=tr("Precargar enlaces","Preload sources")
-                            helpDescription=tr("Busca enlaces tras 2 segundos leyendo los detalles. Play reutiliza la búsqueda. No descarga vídeo. Solo modo normal, por perfil.","Looks up sources after 2 seconds in details. Play reuses the lookup. No video downloads. Normal mode only, per profile.")
+                            helpDescription=tr("Tras 1 segundo elige una fuente y prepara hasta 5 segundos de vídeo, sin sonido. Play reutiliza ese reproductor. Consume datos aunque no lo veas; solo modo normal, por perfil.","After 1 second selects a source and prepares up to 5 seconds of video silently. Play reuses that player. Uses data even if you do not watch; normal mode only, per profile.")
                             helpIndex=-1
                         }) {
                             Text(tr("Inicio más rápido","Faster playback start"),color=Color.White,fontSize=22.sp)
-                            FocusButton(tr("Precargar enlaces al abrir detalles","Preload sources in details")+": "+if(state.sourcePrefetchEnabledRP90) tr("Activado","ON") else tr("Desactivado","OFF"),modifier=Modifier.fillMaxWidth()) {
+                            FocusButton(tr("Preparar vídeo al abrir detalles","Prepare video in details")+": "+if(state.sourcePrefetchEnabledRP90) tr("Activado","ON") else tr("Desactivado","OFF"),modifier=Modifier.fillMaxWidth()) {
                                 state.saveSourcePrefetchRP90(!state.sourcePrefetchEnabledRP90)
                             }
-                            Text(tr("Prepara los enlaces mientras lees la sinopsis. No reproduce ni descarga el vídeo.","Prepares sources while you read the synopsis. Does not play or download video."),color=Muted,fontSize=14.sp)
+                            Text(tr("Prepara unos segundos de vídeo mientras lees la sinopsis, sin sonido. Consume datos.","Silently prepares a few seconds of video while you read the synopsis. Uses data."),color=Muted,fontSize=14.sp)
                         }
                     }
                     if(category=="sources") item(key="setting-8") {
@@ -1359,6 +1360,67 @@ fun ProfilesScreen(state: AppState, onBack: () -> Unit) = ModernProfilesScreenRP
 @Composable
 fun WatchPartyScreen(state: AppState,onBack: () -> Unit) = PartyLobby(state,onBack)
 
+internal fun createPlaybackPlayerRP91(context:android.content.Context,state:AppState,request:PlayerRequest,
+    timing:com.miflix.native2.player.SubtitleTiming,warmGate:WarmLoadControlRP91?=null):ExoPlayer {
+    val strictSpanishRP83=state.easyModeRP79 && state.easySpanishOnlyRP83 && !request.live
+    val trackScope=state.localExtrasScope()+if(state.easyModeRP79) ":easy" else ""
+    val savedSeriesTracks=state.localExtras.trackChoice(trackScope,request.item)
+    val preferredText=com.miflix.native2.data.EasySubtitleRP87.seriesLanguage(state.easyModeRP79,state.subtitleLanguage,
+        savedSeriesTracks?.optString("text"),savedSeriesTracks?.optBoolean("textOff") ?: (state.subtitleLanguage=="off"))
+    val seriesTextOff=preferredText==null
+    val subtitles=request.stream.subtitles
+    val renderers = if(request.live) androidx.media3.exoplayer.DefaultRenderersFactory(context).setEnableDecoderFallback(true)
+            else com.miflix.native2.player.TimedTextRenderers(context,timing).setEnableDecoderFallback(true)
+        val httpFactory = DefaultHttpDataSource.Factory()
+            .setAllowCrossProtocolRedirects(true)
+            .setDefaultRequestProperties(request.stream.requestHeaders)
+        val dataFactory = DefaultDataSource.Factory(context, httpFactory)
+        val result=ExoPlayer.Builder(context, renderers)
+            .apply {if(!request.live) setAudioAttributes(androidx.media3.common.AudioAttributes.Builder().setUsage(androidx.media3.common.C.USAGE_MEDIA).setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MOVIE).build(),true)}
+            .setHandleAudioBecomingNoisy(true)
+            .setMediaSourceFactory(DefaultMediaSourceFactory(dataFactory))
+            .setLoadControl(warmGate ?: androidx.media3.exoplayer.DefaultLoadControl.Builder()
+                .setBufferDurationsMs(15000,50000,1000,1500)
+                .setTargetBufferBytes(48*1024*1024)
+                .setPrioritizeTimeOverSizeThresholds(false).build())
+            .build()
+        return try {result.apply {
+            setSeekBackIncrementMs(10_000)
+            setSeekForwardIncrementMs(10_000)
+            if(request.momentEndMs>0) setSeekParameters(androidx.media3.exoplayer.SeekParameters.EXACT)
+            val builder = MediaItem.Builder().setUri(request.stream.url)
+            if(request.liveMime.isNotBlank()) builder.setMimeType(request.liveMime)
+            if (subtitles.isNotEmpty()) {
+                builder.setSubtitleConfigurations(
+                    subtitles.sortedBy { if(normalizeMediaLanguage(it.lang) == preferredText) 0 else 1 }.take(60).map { s ->
+                        MediaItem.SubtitleConfiguration.Builder(Uri.parse(s.url)).apply {
+                            if (s.lang.isNotBlank()) setLanguage(normalizeMediaLanguage(s.lang))
+                            setLabel(s.label.ifBlank { s.lang.ifBlank { tr("Subtítulo","Subtitle") } })
+                            setMimeType(subtitleMime(s.url))
+                        }.build()
+                    }
+                )
+            }
+            setMediaItem(builder.build(), request.resumeMs)
+            val trackBuilder = TrackSelectionParameters.Builder(context)
+            fun audioCodes(code:String):List<String> = if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(code))
+                listOf("es-419","es-MX","es-AR","es-CO","es-DO","es-CL","es-PE","es-VE","es-EC","es-ES","es")
+                else if(com.miflix.native2.data.StreamLanguagePriority.prefersKorean(code)) listOf("ko-KR","ko")
+                else listOf(code).filter {it.isNotBlank()}
+            val audioPreferences=if(strictSpanishRP83) audioCodes("es") else (audioCodes(state.audioLanguage)+audioCodes(state.secondaryAudioLanguageRP62)+
+                if(state.secondaryAudioLanguageRP62.isBlank() && com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(state.audioLanguage)) listOf("en") else emptyList()).distinct()
+            trackBuilder.setPreferredAudioLanguages(*audioPreferences.toTypedArray())
+            if (preferredText != null) trackBuilder.setPreferredTextLanguage(normalizeMediaLanguage(preferredText))
+            if(!strictSpanishRP83) savedSeriesTracks?.optString("audio")?.takeIf {it.isNotBlank()}?.let {trackBuilder.setPreferredAudioLanguage(it)}
+            if(strictSpanishRP83) {volume=0f;trackBuilder.setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,true)}
+            trackBuilder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT,seriesTextOff)
+            trackSelectionParameters = trackBuilder.build()
+            videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
+            prepare()
+            playWhenReady = if(warmGate!=null || state.isPlaybackParked(request)) false else request.sourceFallbackPlaying ?: if (state.partyRole == PartyRole.GUEST) state.watchParty?.playing ?: true else true
+        }} catch(e:Exception) {result.release();throw e}
+}
+
 @Composable
 fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     val context = LocalContext.current
@@ -1367,7 +1429,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     val playerTrackScopeRP89=state.localExtrasScope()+if(state.easyModeRP79) ":easy" else ""
     val savedSeriesTracks=remember(request.playbackId,playerTrackScopeRP89) {state.localExtras.trackChoice(playerTrackScopeRP89,request.item)}
     val initialSubtitleDelayRP89=if(state.easyModeRP79) 0L else savedSeriesTracks?.optLong("delay",0L) ?: 0L
-    val timing=remember(request.playbackId) { com.miflix.native2.player.SubtitleTiming().also {it.delayMs=initialSubtitleDelayRP89} }
+    val timing=remember(request.playbackId) { state.preparedTimingRP91(request) ?: com.miflix.native2.player.SubtitleTiming().also {it.delayMs=initialSubtitleDelayRP89} }
     var timingMs by remember(request.playbackId) { mutableStateOf(initialSubtitleDelayRP89) }
     var confirmMulti by remember { mutableStateOf(false) }
     val playbackView = LocalView.current
@@ -1407,12 +1469,6 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var showAccessRequests by remember { mutableStateOf(false) }
     var showEpisodes by remember(request.playbackId) { mutableStateOf(false) }
     var episodesResumeAfterClose by remember(request.playbackId) { mutableStateOf(false) }
-    val subtitles = request.stream.subtitles
-    // Easy mode has its own default; normal-mode series history must not override it.
-    val preferredText = com.miflix.native2.data.EasySubtitleRP87.seriesLanguage(
-        state.easyModeRP79,state.subtitleLanguage,savedSeriesTracks?.optString("text"),
-        savedSeriesTracks?.optBoolean("textOff") ?: (state.subtitleLanguage=="off"))
-    val seriesTextOff=preferredText==null
     var paused by remember(request.playbackId) { mutableStateOf(false) }
     var pauseSynopsis by remember(request.playbackId) { mutableStateOf(false) }
     var pauseInfoDismissed by remember(request.playbackId) { mutableStateOf(false) }
@@ -1437,56 +1493,13 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
 
     val player = remember(request.playbackId) {
         state.playerReleaseRP87.beforeReplace()
-        val renderers = if(request.live) androidx.media3.exoplayer.DefaultRenderersFactory(context).setEnableDecoderFallback(true)
-            else com.miflix.native2.player.TimedTextRenderers(context,timing).setEnableDecoderFallback(true)
-        val httpFactory = DefaultHttpDataSource.Factory()
-            .setAllowCrossProtocolRedirects(true)
-            .setDefaultRequestProperties(request.stream.requestHeaders)
-        val dataFactory = DefaultDataSource.Factory(context, httpFactory)
-        ExoPlayer.Builder(context, renderers)
-            .apply {if(!request.live) setAudioAttributes(androidx.media3.common.AudioAttributes.Builder().setUsage(androidx.media3.common.C.USAGE_MEDIA).setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MOVIE).build(),true)}
-            .setHandleAudioBecomingNoisy(true)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(dataFactory))
-            .setLoadControl(androidx.media3.exoplayer.DefaultLoadControl.Builder()
-                .setBufferDurationsMs(15000,50000,1000,1500)
-                // Bound compressed buffering when switching high-bitrate sources on small TVs.
-                .setTargetBufferBytes(48*1024*1024)
-                .setPrioritizeTimeOverSizeThresholds(false).build())
-            .build().apply {
-            setSeekBackIncrementMs(10_000)
-            setSeekForwardIncrementMs(10_000)
-            if(request.momentEndMs>0) setSeekParameters(androidx.media3.exoplayer.SeekParameters.EXACT)
-            val builder = MediaItem.Builder().setUri(request.stream.url)
-            if(request.liveMime.isNotBlank()) builder.setMimeType(request.liveMime)
-            if (subtitles.isNotEmpty()) {
-                builder.setSubtitleConfigurations(
-                    subtitles.sortedBy { if(normalizeMediaLanguage(it.lang) == preferredText) 0 else 1 }.take(60).map { s ->
-                        MediaItem.SubtitleConfiguration.Builder(Uri.parse(s.url)).apply {
-                            if (s.lang.isNotBlank()) setLanguage(normalizeMediaLanguage(s.lang))
-                            setLabel(s.label.ifBlank { s.lang.ifBlank { tr("Subtítulo","Subtitle") } })
-                            setMimeType(subtitleMime(s.url))
-                        }.build()
-                    }
-                )
-            }
-            setMediaItem(builder.build(), request.resumeMs)
-            val trackBuilder = TrackSelectionParameters.Builder(context)
-            fun audioCodes(code:String):List<String> = if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(code))
-                listOf("es-419","es-MX","es-AR","es-CO","es-DO","es-CL","es-PE","es-VE","es-EC","es-ES","es")
-                else if(com.miflix.native2.data.StreamLanguagePriority.prefersKorean(code)) listOf("ko-KR","ko")
-                else listOf(code).filter {it.isNotBlank()}
-            val audioPreferences=if(strictSpanishRP83) audioCodes("es") else (audioCodes(state.audioLanguage)+audioCodes(state.secondaryAudioLanguageRP62)+
-                if(state.secondaryAudioLanguageRP62.isBlank() && com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(state.audioLanguage)) listOf("en") else emptyList()).distinct()
-            trackBuilder.setPreferredAudioLanguages(*audioPreferences.toTypedArray())
-            if (preferredText != null) trackBuilder.setPreferredTextLanguage(normalizeMediaLanguage(preferredText))
-            if(!strictSpanishRP83) savedSeriesTracks?.optString("audio")?.takeIf {it.isNotBlank()}?.let {trackBuilder.setPreferredAudioLanguage(it)}
-            if(strictSpanishRP83) {volume=0f;trackBuilder.setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,true)}
-            trackBuilder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT,seriesTextOff)
-            trackSelectionParameters = trackBuilder.build()
-            videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT
-            prepare()
-            playWhenReady = if(state.isPlaybackParked(request)) false else request.sourceFallbackPlaying ?: if (state.partyRole == PartyRole.GUEST) state.watchParty?.playing ?: true else true
+        val prepared=state.takePreparedPlayerRP91(request)
+        val active=prepared ?: createPlaybackPlayerRP91(context,state,request,timing)
+        if(prepared!=null) {
+            active.volume=1f
+            active.playWhenReady=!state.isPlaybackParked(request) && (request.sourceFallbackPlaying ?: true)
         }
+        active
     }
 
     fun parkCurrentPlayback() {
@@ -1824,6 +1837,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 }
             } finally {player.release()}
         }
+        // A prepared player already discovered its tracks before this visible listener was installed.
+        if(player.currentTracks.groups.isNotEmpty()) listener.onTracksChanged(player.currentTracks)
         onDispose {state.playerReleaseRP87.dispose(leaseRP87)}
     }
 

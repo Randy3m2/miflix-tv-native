@@ -15,6 +15,7 @@ public final class PlayerReleaseRP87 {
         }
     }
     private Lease active;
+    public boolean hasActive() {return active!=null;}
     public Lease bind(Cleanup cleanup) {beforeReplace();active=new Lease(cleanup);return active;}
     public void beforeReplace() {beforeReplace(true);}
     public void beforeReplace(boolean replacing) {Lease old=active;active=null;if(old!=null) old.close(replacing);}

@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP95: estadísticas NBA y MLB en un panel lateral del reproductor, selector de partido y equipo, y vídeo visible a la izquierda." to "RP95: NBA and MLB stats in a player sidebar, game and team selectors, and video remaining visible on the left.",
         "RP94: pruebas de precarga compatibles con los nombres de hilo decorados por coroutines en CI." to "RP94: warm-construction tests support coroutine-decorated thread names in CI.",
         "RP93: avatares de amigos que ya vieron el contenido en Details, caché de 15 minutos y privacidad por perfil." to "RP93: friends who watched avatars in Details, 15-minute cache and per-profile sharing privacy.",
         "RP92: construcción de la precarga fuera del hilo de interfaz y lectura ligera de ajustes de pistas para reducir las pausas en detalles; hasta cinco fuentes de precarga con reintentos silenciosos." to "RP92: builds the warm player off the UI thread and captures lightweight track-setting snapshots to reduce details-screen stalls; up to five warm sources with silent retries.",

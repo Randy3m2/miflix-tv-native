@@ -1456,6 +1456,12 @@ internal fun createPlaybackPlayerRP91(context:android.content.Context,state:AppS
 fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     val context = LocalContext.current
     val mini=state.miniPlayer && state.screen!=Screen.PLAYER
+    val statsAllowedRP95=com.miflix.native2.data.SportsStatsRP95.available(request.live,request.sportsRecordingRP72,request.liveProvider,request.item.title+" "+request.item.overview)
+    var statsOpenRP95 by remember(request.playbackId) {mutableStateOf(false)}
+    var statsGameRP95 by remember(request.liveChannelId,request.item.cloudId) {mutableStateOf<com.miflix.native2.data.LiveScoreRP11?>(null)}
+    val statsRepoRP95=remember {com.miflix.native2.data.SportsStatsRP95()}
+    val statsVideoFocusRP95=remember {FocusRequester()}
+    LaunchedEffect(mini,state.easyModeRP79,statsAllowedRP95) {if(mini || state.easyModeRP79 || !statsAllowedRP95) statsOpenRP95=false}
     val strictSpanishRP83=state.easyModeRP79 && state.easySpanishOnlyRP83 && !request.live
     val playerTrackScopeRP89=state.localExtrasScope()+if(state.easyModeRP79) ":easy" else ""
     val savedSeriesTracks=remember(request.playbackId,playerTrackScopeRP89) {state.localExtras.trackChoice(playerTrackScopeRP89,request.item)}
@@ -1477,7 +1483,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     val playFocus = remember { FocusRequester() }
     var sportsTargetRP44 by remember(request.playbackId) {mutableStateOf<BrowserChannelRP34?>(null)}
     var playerMenu by remember(request.playbackId) { mutableStateOf<String?>(if(state.livePanelPlaybackRP83==request.playbackId) "channels" else null) }
-    LaunchedEffect(firstFrame,playerMenu) {if(firstFrame && playerMenu==null) {withFrameNanos {};runCatching {surfaceFocus.requestFocus()} }}
+    LaunchedEffect(firstFrame,playerMenu,statsOpenRP95) {if(firstFrame && playerMenu==null && !statsOpenRP95) {withFrameNanos {};runCatching {if(controlsVisible) playFocus.requestFocus() else surfaceFocus.requestFocus()} }}
     var resizeMode by remember { mutableStateOf(androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT) }
     var maximized by remember { mutableStateOf(true) }
     var speed by remember(request.playbackId) { mutableStateOf(1f) }
@@ -1998,8 +2004,13 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         else exitArmedAt=now
     }
     LaunchedEffect(exitArmedAt) { if(exitArmedAt!=0L) { delay(2200);exitArmedAt=0L } }
+    fun closeStatsRP95() {
+        statsOpenRP95=false;controlsVisible=true;controlInteraction++
+        channelMenuScopeRP34.launch {withFrameNanos {};runCatching {playFocus.requestFocus()}}
+    }
     BackHandler(enabled=!mini) {
-        if (quickReactions) { quickReactions=false;controlsVisible=true;controlInteraction++ }
+        if(statsOpenRP95) closeStatsRP95()
+        else if (quickReactions) { quickReactions=false;controlsVisible=true;controlInteraction++ }
         else if (playerMenu != null) {if(playerMenu in listOf("audio","subtitles","timing")) state.localExtras.rememberTracks(playerTrackScopeRP89,request.item,player,timingMs);playerMenu = null}
         else if (showEpisodes) { showEpisodes=false; if(episodesResumeAfterClose) player.play() }
         else if(request.live) {parkCurrentPlayback();state.miniPlayer=false;state.playerRequest=null;state.screen=Screen.LIVE_TV}
@@ -2011,7 +2022,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
 
     Box(Modifier.fillMaxSize().consumeOpeningPress().background(Color.Black).focusRequester(surfaceFocus).onFocusChanged {surfaceFocusedRP34=it.isFocused}.onPreviewKeyEvent { event ->
         if(event.type==KeyEventType.KeyDown) state.localExtras.touch()
-        if(mini || quickReactions) return@onPreviewKeyEvent false
+        if(mini || quickReactions || statsOpenRP95) return@onPreviewKeyEvent false
         val code = event.nativeKeyEvent.keyCode
         if(code!=android.view.KeyEvent.KEYCODE_BACK && event.type==KeyEventType.KeyDown && code !in listOf(android.view.KeyEvent.KEYCODE_DPAD_CENTER,android.view.KeyEvent.KEYCODE_ENTER)) exitArmedAt=0L
         if(code==android.view.KeyEvent.KEYCODE_BACK) false
@@ -2078,7 +2089,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                     isFocusable = false
                     setOnTouchListener { _, event ->
                         if(event.action==android.view.MotionEvent.ACTION_UP) {
-                            pauseInfoDismissed=true; pauseSynopsis=false; controlsVisible=true; controlInteraction++
+                            if(statsOpenRP95) closeStatsRP95()
+                            else {pauseInfoDismissed=true; pauseSynopsis=false; controlsVisible=true; controlInteraction++}
                         }
                         true
                     }
@@ -2100,7 +2112,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                     }
                 }
             },
-            modifier = if(maximized) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(horizontal=40.dp,vertical=24.dp)
+            modifier = if(statsOpenRP95 && !mini) Modifier.fillMaxHeight().fillMaxWidth(.64f).align(Alignment.CenterStart)
+                else if(maximized) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(horizontal=40.dp,vertical=24.dp)
         ) }
         if(!firstFrame && !hadPlaybackError && playbackError==null && state.playbackLoading==null) PlaybackArtwork(state,request)
         if(!state.easyModeRP79) ContentWarningOverlayRP31(state,request,firstFrame,visible=!mini && state.appForeground && playerMenu==null && !showEpisodes && !showPartyActions,
@@ -2213,7 +2226,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 FocusButton(tr("Continuar","Continue")) { state.launch { state.leaveWatchParty();state.beginMultiView(request) } }
             }
         }
-        if((firstFrame || hadPlaybackError) && controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !showEpisodes && !showPartyActions && !ended) {
+        if(!statsOpenRP95 && (firstFrame || hadPlaybackError) && controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !showEpisodes && !showPartyActions && !ended) {
             CompactPlayerControls(request, paused, positionMs, durationMs, speed, maximized, playFocus,
                 badgePlayerRP26=player,easyModeRP79=state.easyModeRP79,
                 previousChannelVisible=request.live && !request.sportsRecordingRP72 && state.previousLiveChannelEnabled,
@@ -2234,6 +2247,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 onEpisodes={ if(request.liveProvider=="lidom") state.showLidomSources(request) else if(request.live) playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else "channels" else { episodesResumeAfterClose=false;showEpisodes=true } },onQueue={ showQueue=true },
                 onMoment={momentNotice=false;showMomentComposer=true},onInfo={ playerMenu="info" },onPip={ parkCurrentPlayback();playerMenu=null;controlsVisible=false;state.miniPlayer=true;state.screen=Screen.HOME },
                 onScores={state.showLiveScoresRP11=true},
+                onStatsRP95={if(statsAllowedRP95) {playerMenu=null;controlsVisible=false;statsOpenRP95=true}},
                 channelFavoriteRP36={if(request.live) LiveFavoriteRP36(state,request) {controlInteraction++}},
                 onMultiView={ if(state.watchParty!=null || state.pendingPartyCode!=null) confirmMulti=true else state.beginMultiView(request) })
         }
@@ -2428,6 +2442,14 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
 
 
         } // full-size controls
+        if(statsOpenRP95 && statsAllowedRP95 && !mini && !state.easyModeRP79) {
+            Box(Modifier.fillMaxHeight().fillMaxWidth(.64f).align(Alignment.CenterStart)) {
+                FocusButton(tr("Estadísticas · ×","Stats · ×"),modifier=Modifier.align(Alignment.BottomEnd).padding(20.dp).focusRequester(statsVideoFocusRP95)) {closeStatsRP95()}
+            }
+            SportsStatsPanelRP95(state,request.item.title,statsRepoRP95,statsGameRP95,
+                select={statsGameRP95=it},onClose={closeStatsRP95()},videoFocus=statsVideoFocusRP95,
+                modifier=Modifier.align(Alignment.CenterEnd).fillMaxWidth(.36f))
+        }
         if(!mini && exitArmedAt!=0L) Text(tr("Presiona dos veces para salir","Double tap to exit"),color=Color.White,fontSize=18.sp,
             modifier=Modifier.align(Alignment.TopCenter).padding(top=32.dp).background(Color(0xE6222222),RoundedCornerShape(16.dp)).padding(horizontal=24.dp,vertical=14.dp))
     }

@@ -53,7 +53,7 @@ internal fun CompactPlayerControls(
     onResize: () -> Unit, onMenu: (String) -> Unit, onLinks: () -> Unit, onSeek: (Long) -> Unit,
     seekable: Boolean, party: Boolean, onParty: () -> Unit, onChat: () -> Unit, onReactions: () -> Unit, onQuickReactions: () -> Unit, onClose: () -> Unit, onMaximize: () -> Unit,
     nextAvailable: Boolean, onNext: () -> Unit, onEpisodes: () -> Unit, onQueue: () -> Unit, onInfo: () -> Unit, onPip: () -> Unit, onMultiView: () -> Unit, onMoment: () -> Unit,
-    previousChannelVisible:Boolean=false,previousChannelAvailable:Boolean=false,previousChannelName:String="",onPreviousChannel:()->Unit={},onScores:()->Unit={},channelFavoriteRP36: @Composable ()->Unit={},badgePlayerRP26:androidx.media3.exoplayer.ExoPlayer?=null,easyModeRP79:Boolean=false
+    previousChannelVisible:Boolean=false,previousChannelAvailable:Boolean=false,previousChannelName:String="",onPreviousChannel:()->Unit={},onScores:()->Unit={},onStatsRP95:()->Unit={},channelFavoriteRP36: @Composable ()->Unit={},badgePlayerRP26:androidx.media3.exoplayer.ExoPlayer?=null,easyModeRP79:Boolean=false
 ) {
     if(easyModeRP79) {
         val easySeekFocusRP89=remember {FocusRequester()}
@@ -81,6 +81,7 @@ internal fun CompactPlayerControls(
     Box(Modifier.fillMaxSize()) {
         Row(Modifier.align(Alignment.TopEnd).padding(top=20.dp,end=24.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
             PlayerIconButton("score",tr("PIN Live score","PIN Live score"),modifier=if(request.live && !request.sportsRecordingRP72) Modifier.focusRequester(playFocus) else Modifier,onInteraction=onInteraction,onClick=onScores,onLabel={focusedLabel=it})
+            if(com.miflix.native2.data.SportsStatsRP95.available(request.live,request.sportsRecordingRP72,request.liveProvider,request.item.title+" "+request.item.overview)) PlayerIconButton("stats",tr("Estadísticas NBA / MLB","NBA / MLB stats"),onInteraction=onInteraction,onClick=onStatsRP95,onLabel={focusedLabel=it})
             if(!request.live) PlayerIconButton("info",tr("Información técnica","Playback info"),onInteraction=onInteraction,onClick=onInfo,onLabel={ focusedLabel=it })
             if(!request.live && seekable) PlayerIconButton("moment",tr("Grabar momento","Mark a moment"),onInteraction=onInteraction,onClick=onMoment,onLabel={ focusedLabel=it })
             PlayerIconButton("pip",tr("Ventana flotante","Picture in Picture"),onInteraction=onInteraction,onClick=onPip,onLabel={ focusedLabel=it })
@@ -149,6 +150,7 @@ private fun PlayerGlyph(icon: String, color: Color, modifier: Modifier) {
         fun line(x1:Float,y1:Float,x2:Float,y2:Float)=drawLine(color,Offset(w*x1,h*y1),Offset(w*x2,h*y2),2.dp.toPx())
         fun rectangle(x:Float,y:Float,a:Float,b:Float)=drawRect(color,Offset(w*x,h*y),Size(w*a,h*b),style=stroke)
         when(icon) {
+            "stats" -> {rectangle(.14f,.55f,.16f,.30f);rectangle(.42f,.33f,.16f,.52f);rectangle(.70f,.12f,.16f,.73f)}
             "play" -> drawPath(Path().apply { moveTo(w*.28f,h*.15f); lineTo(w*.85f,h*.5f); lineTo(w*.28f,h*.85f); close() },color)
             "pause" -> { drawRect(color,Offset(w*.22f,h*.17f),Size(w*.18f,h*.66f)); drawRect(color,Offset(w*.60f,h*.17f),Size(w*.18f,h*.66f)) }
             "previous" -> { drawPath(Path().apply {moveTo(w*.84f,h*.15f);lineTo(w*.30f,h*.5f);lineTo(w*.84f,h*.85f);close()},color);drawRect(color,Offset(w*.14f,h*.15f),Size(w*.10f,h*.70f)) }

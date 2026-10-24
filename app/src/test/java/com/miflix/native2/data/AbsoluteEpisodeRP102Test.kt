@@ -30,9 +30,9 @@ class AbsoluteEpisodeRP102Test {
         val special=EpisodeSummary(0,1,"Special","",null,0.0,"")
         assertEquals(220,AbsoluteEpisodeRP102.flatten(46260,rows(listOf(220))+special).size)
     }
-    @Test fun unrelatedShowsAndShippudenAreNotChanged() {
-        val source=rows(listOf(4,5));assertSame(source,AbsoluteEpisodeRP102.flatten(31910,source))
-        assertFalse(AbsoluteEpisodeRP102.enabled(31910));assertFalse(AbsoluteEpisodeRP102.enabled(1))
+    @Test fun unrelatedShowsAreNotChanged() {
+        val source=rows(listOf(4,5));assertSame(source,AbsoluteEpisodeRP102.flatten(1,source))
+        assertFalse(AbsoluteEpisodeRP102.enabled(61709));assertFalse(AbsoluteEpisodeRP102.enabled(1))
     }
     @Test(expected=IllegalArgumentException::class) fun incompleteMetadataIsRejected() {AbsoluteEpisodeRP102.flatten(12971,rows(listOf(290)))}
     @Test(expected=IllegalArgumentException::class) fun duplicateCoordinatesAreRejected() {
@@ -46,5 +46,21 @@ class AbsoluteEpisodeRP102Test {
         val index=result.indexOfFirst {it.season==1 && it.episode==52}
         assertEquals(2,result[index+1].season);assertEquals(1,result[index+1].episode)
         assertEquals(53,result[index+1].absoluteEpisodeRP102)
+    }
+    @Test fun shippudenHas500ContinuousEntriesAndPreservesCanonicalKeys() {
+        val source=rows(List(20) {25})
+        val result=AbsoluteEpisodeRP102.flatten(31910,source.reversed())
+        assertEquals((1..500).toList(),result.map {it.absoluteEpisodeRP102})
+        assertEquals(source,result.map {it.copy(absoluteEpisodeRP102=0)})
+        assertEquals(26,result.first {it.season==2 && it.episode==1}.absoluteEpisodeRP102)
+        assertEquals(500,AbsoluteEpisodeRP102.count(31910))
+    }
+    @Test fun shippudenSpecialsDoNotTakeEpisodeNumbers() {
+        val special=EpisodeSummary(0,1,"Special","",null,0.0,"")
+        val result=AbsoluteEpisodeRP102.flatten(31910,rows(List(20) {25})+special)
+        assertEquals(500,result.size);assertEquals(500,result.last().absoluteEpisodeRP102)
+    }
+    @Test(expected=IllegalArgumentException::class) fun partialShippudenMetadataIsRejected() {
+        AbsoluteEpisodeRP102.flatten(31910,rows(listOf(499)))
     }
 }

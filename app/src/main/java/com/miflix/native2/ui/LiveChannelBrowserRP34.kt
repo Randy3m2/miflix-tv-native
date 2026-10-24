@@ -216,13 +216,13 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
         }
     }
     // Full metadata remains available for navigation; publish list slots in small batches.
-    var publishedRP100 by remember(selected,search,displayed) {mutableIntStateOf(minOf(20,displayed.size))}
+    var publishedRP100 by remember(selected,search,displayed) {mutableIntStateOf(minOf(10,displayed.size))}
     LaunchedEffect(selected,search,displayed) {
         val playingIndex=if(initialFocus) displayed.indexOfFirst {it.provider==current?.liveProvider && it.value.id==current?.liveChannelId} else -1
         if(playingIndex>=publishedRP100) publishedRP100=playingIndex+1
         while(publishedRP100<displayed.size) {
             delay(100)
-            publishedRP100=minOf(displayed.size,publishedRP100+40)
+            publishedRP100=minOf(displayed.size,publishedRP100+10)
         }
     }
     fun activateCategoryRP88(key:String) {

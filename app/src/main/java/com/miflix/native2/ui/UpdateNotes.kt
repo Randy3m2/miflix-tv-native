@@ -12,6 +12,8 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP90: precarga opcional por perfil desde Settings → Reproducción en los detalles del modo normal; Play reutiliza la búsqueda y la caché, sin reproducir vídeo ni publicar presencia antes de tiempo." to "RP90: optional per-profile source prefetch in normal-mode details from Settings → Playback; Play reuses lookup/cache without starting video or publishing presence early.",
+        "RP89: barra para adelantar/retroceder en Modo fácil, siguiente episodio al terminar con enfoque directo y selección/búsqueda de subtítulos en español." to "RP89: Easy mode seek bar, focused next-episode action at the end, and Spanish subtitle selection/lookup.",
         "RP88: update unificado: regreso de amigos al party, protección al cambiar fuentes rápidamente y foco de categorías a canales en Modo fácil; incluye subtítulos en español de RP87." to "RP88: unified update: bring friends back to the party, rapid source-switch protection and category-to-channel focus in Easy mode; includes RP87 Spanish subtitles.",
         "RP87: subtítulos en español por defecto en Modo fácil, separados por perfil y de las preferencias del modo normal." to "RP87: Spanish subtitles by default in Easy mode, separated by profile and from normal-mode preferences.",
         "RP86: corrige el import de launch en detalles de Modo fácil para el desplazamiento de la cabecera." to "RP86: fixes the launch import in Easy details used to restore the header scroll position.",

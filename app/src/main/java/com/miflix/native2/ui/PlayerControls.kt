@@ -56,13 +56,18 @@ internal fun CompactPlayerControls(
     previousChannelVisible:Boolean=false,previousChannelAvailable:Boolean=false,previousChannelName:String="",onPreviousChannel:()->Unit={},onScores:()->Unit={},channelFavoriteRP36: @Composable ()->Unit={},badgePlayerRP26:androidx.media3.exoplayer.ExoPlayer?=null,easyModeRP79:Boolean=false
 ) {
     if(easyModeRP79) {
+        val easySeekFocusRP89=remember {FocusRequester()}
         Box(Modifier.fillMaxSize()) {
             Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
                 .background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xF0000000))))
                 .padding(30.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
                 Text(request.item.title,color=Color.White,fontSize=28.sp,maxLines=2)
+                if(!request.live || request.sportsRecordingRP72) {
+                    Text(tr("Usa ← y → en la barra para retroceder o adelantar","Use ← and → on the bar to seek"),color=Muted,fontSize=18.sp)
+                    PlayerSeekBar(position,duration,seekable,easySeekFocusRP89,playFocus,onInteraction,onSeek,largeRP89=true)
+                }
                 Row(horizontalArrangement=Arrangement.spacedBy(18.dp),verticalAlignment=Alignment.CenterVertically) {
-                    if(!request.live || request.sportsRecordingRP72) FocusButton(if(paused) tr("Reproducir","Play") else tr("Pausar","Pause"),Modifier.focusRequester(playFocus)) {onInteraction();onPlay()}
+                    if(!request.live || request.sportsRecordingRP72) FocusButton(if(paused) tr("Reproducir","Play") else tr("Pausar","Pause"),Modifier.focusRequester(playFocus).focusProperties {if(seekable) up=easySeekFocusRP89}) {onInteraction();onPlay()}
                     else FocusButton(tr("Canales","Channels"),Modifier.focusRequester(playFocus)) {onInteraction();onMenu("channels")}
                     FocusButton(tr("Idioma de audio","Audio language")) {onInteraction();onMenu("audio")}
                     if(!request.live && duration>0) Text(playbackTime(position)+" / "+playbackTime(duration),color=Color.White,fontSize=20.sp)
@@ -174,7 +179,7 @@ private fun PlayerGlyph(icon: String, color: Color, modifier: Modifier) {
 
 /** Left/right seeks ten seconds while this bar has focus; up/down uses normal TV navigation. */
 @Composable
-private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seekFocus: FocusRequester, playFocus: FocusRequester, onInteraction: () -> Unit, onSeek: (Long) -> Unit) {
+private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seekFocus: FocusRequester, playFocus: FocusRequester, onInteraction: () -> Unit, onSeek: (Long) -> Unit,largeRP89:Boolean=false) {
     var focused by remember {mutableStateOf(false)}
     var dragging by remember {mutableStateOf(false)}
     var preview by remember {mutableStateOf<Long?>(null)}
@@ -184,14 +189,14 @@ private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seek
     val fraction=if(duration>0) (shown.toFloat()/duration).coerceIn(0f,1f) else 0f
     LaunchedEffect(position,dragging) {if(!dragging && preview?.let {kotlin.math.abs(position-it)<1000L}==true) preview=null}
     LaunchedEffect(preview,dragging) {if(preview!=null && !dragging) {kotlinx.coroutines.delay(1500);preview=null} }
-    Box(Modifier.fillMaxWidth().height(30.dp).focusRequester(seekFocus).focusProperties {down=playFocus}
+    Box(Modifier.fillMaxWidth().height(if(largeRP89) 52.dp else 30.dp).focusRequester(seekFocus).focusProperties {down=playFocus}
         .onFocusChanged {focused=it.isFocused;if(it.isFocused) interaction()}
         .semantics {contentDescription=playbackTime(shown)+" / "+playbackTime(duration)}
         .onPreviewKeyEvent {event ->
             val code=event.nativeKeyEvent.keyCode
             if(code==android.view.KeyEvent.KEYCODE_DPAD_LEFT || code==android.view.KeyEvent.KEYCODE_DPAD_RIGHT) {
                 if(event.type==KeyEventType.KeyDown && enabled) {
-                    interaction();val target=((preview ?: position)+if(code==android.view.KeyEvent.KEYCODE_DPAD_LEFT) -10000L else 10000L).coerceIn(0L,duration)
+                    interaction();val target=com.miflix.native2.data.EasyPlaybackRP89.seekTarget(preview ?: position,duration,if(code==android.view.KeyEvent.KEYCODE_DPAD_LEFT) -1 else 1)
                     preview=target;latestSeek(target)
                 };true
             } else false
@@ -205,9 +210,9 @@ private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seek
                 onDrag={change,_ -> if(enabled && size.width>0) {change.consume();interaction();preview=(change.position.x/size.width*duration).toLong().coerceIn(0L,duration)}}
             )
         }) {
-        Text(playbackTime(shown)+" / "+playbackTime(duration),color=Color.White,fontSize=12.sp,lineHeight=16.sp,
+        Text(playbackTime(shown)+" / "+playbackTime(duration),color=Color.White,fontSize=if(largeRP89) 19.sp else 12.sp,lineHeight=if(largeRP89) 24.sp else 16.sp,
             modifier=Modifier.align(Alignment.TopEnd).background(Color(0xA0000000),RoundedCornerShape(5.dp)).padding(horizontal=7.dp,vertical=2.dp))
-        Canvas(Modifier.align(Alignment.BottomCenter).padding(bottom=2.dp).fillMaxWidth().height(if(focused || dragging) 8.dp else 5.dp)) {
+        Canvas(Modifier.align(Alignment.BottomCenter).padding(bottom=2.dp).fillMaxWidth().height(if(largeRP89) {if(focused || dragging) 12.dp else 8.dp} else if(focused || dragging) 8.dp else 5.dp)) {
             drawRoundRect(Color(0xFF555555),cornerRadius=androidx.compose.ui.geometry.CornerRadius(size.height))
             if(fraction>0) drawRoundRect(Color.White,size=Size(size.width*fraction,size.height),cornerRadius=androidx.compose.ui.geometry.CornerRadius(size.height))
             if((focused || dragging) && enabled) drawCircle(Color.White,7.dp.toPx(),Offset(size.width*fraction,size.height/2))

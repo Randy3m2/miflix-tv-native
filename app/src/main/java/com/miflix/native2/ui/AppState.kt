@@ -344,6 +344,7 @@ class AppState(context: Context) {
         invalidatePlaybackWork()
     }
     private fun invalidatePlaybackWork() {
+        sourceWarmupJobRP90?.cancel();sourceWarmupJobRP90=null;sourceWarmupKeyRP90=null
         latestPlaybackRP87.cancel()
         playbackWork.invalidate(); sourceFallback=null; rememberedStartRP16=null; sourceSelection=null; busyMessage=null;playbackLoading=null
         playbackSubtitleJobs.values.forEach { it.cancel() }; playbackSubtitleJobs.clear()
@@ -576,11 +577,20 @@ class AppState(context: Context) {
         return null
     }
     suspend fun playNext(req: PlayerRequest, ep: EpisodeSummary) {
-        if(partyRole == PartyRole.GUEST) return
-        val imdb = tmdb.details(req.item).imdbId ?: return
-        selected = req.item; details = tmdb.details(req.item); currentSeason = ep.season
-        episodes.clear(); episodes.addAll(tmdb.season(req.item.id,ep.season))
-        playResolved(req.item,imdb,ep.season,ep.episode,resumeOverride = 0)
+        if(partyRole==PartyRole.GUEST || playerRequest?.playbackId!=req.playbackId) return
+        if(!rapidPlaybackRP87.accept("${localExtrasScope()}:next:${req.playbackId}:${ep.season}:${ep.episode}",android.os.SystemClock.uptimeMillis())) return
+        latestPlaybackRP87.cancel()
+        val ticket=playbackWork.begin()
+        val owner=localExtrasScope()
+        fun valid()=playbackWork.current(ticket) && owner==localExtrasScope() && playerRequest?.playbackId==req.playbackId
+        val detail=tmdb.details(req.item)
+        if(!valid()) return
+        val imdb=detail.imdbId ?: return
+        val rows=tmdb.season(req.item.id,ep.season)
+        if(!valid()) return
+        selected=req.item;details=detail;currentSeason=ep.season
+        episodes.clear();episodes.addAll(rows)
+        playResolved(req.item,imdb,ep.season,ep.episode,resumeOverride=0)
     }
     private val partyPlaybackMutex=Mutex()
     suspend fun requestPartyPlayback(req: PlayerRequest, playing: Boolean) {
@@ -1171,10 +1181,59 @@ class AppState(context: Context) {
         android.os.SystemClock.elapsedRealtime()
     }
     private val playbackCacheMutex=Mutex()
+    private var sourcePrefetchRevisionRP90 by mutableIntStateOf(0)
+    private fun sourcePrefetchKeyRP90()="source_prefetch_rp90:${localExtrasScope()}"
+    internal val sourcePrefetchEnabledRP90:Boolean get() {sourcePrefetchRevisionRP90;return playbackPrefs.getBoolean(sourcePrefetchKeyRP90(),false)}
+    internal fun saveSourcePrefetchRP90(enabled:Boolean) {
+        playbackPrefs.edit().putBoolean(sourcePrefetchKeyRP90(),enabled).apply()
+        sourcePrefetchRevisionRP90++
+        if(!enabled) {sourceWarmupJobRP90?.cancel();sourceWarmupJobRP90=null;sourceWarmupKeyRP90=null}
+    }
+    private var sourceWarmupJobRP90:kotlinx.coroutines.Job?=null
+    private var sourceWarmupKeyRP90:PlaybackCacheKey?=null
+    private fun warmupTargetRP90(item:MediaSummary):Pair<Int,Int> {
+        val saved=progress[item.cloudId]
+        val target=DetailsPrefetchRP90.target(item.type,saved?.season ?: 0,saved?.episode ?: 0,saved?.percent ?: 0.0)
+        return target[0] to target[1]
+    }
+    internal fun detailsWarmupKeyRP90(item:MediaSummary):Any? {
+        if(!sourcePrefetchEnabledRP90 || easyModeRP79 || kidsMode || item.type !in listOf("movie","series") || !appForeground || screen!=Screen.DETAILS || miniPlayer || watchParty!=null || selectedUpcoming || selected?.cloudId!=item.cloudId) return null
+        val imdb=details?.takeIf {it.summary.cloudId==item.cloudId}?.imdbId?.takeIf {it.isNotBlank()} ?: return null
+        val target=warmupTargetRP90(item)
+        return playbackCacheKey(item,imdb,target.first,target.second)
+    }
+    internal suspend fun prefetchDetailsRP90(item:MediaSummary,identity:Any) {
+        delay(DetailsPrefetchRP90.DELAY_MS)
+        if(detailsWarmupKeyRP90(item)!=identity) return
+        val imdb=details?.imdbId ?: return
+        val target=warmupTargetRP90(item)
+        val key=playbackCacheKey(item,imdb,target.first,target.second)
+        if(playbackLinkCache.get(key)!=null) return
+        val job=kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job] ?: return
+        sourceWarmupJobRP90?.takeUnless {it===job}?.cancel()
+        sourceWarmupJobRP90=job;sourceWarmupKeyRP90=key
+        try {
+            // Shared cache mutex makes an early Play wait for this lookup rather than issue it twice.
+            kotlinx.coroutines.withTimeoutOrNull(12000L) {resolveCachedSourcesRP90(item,imdb,target.first,target.second)}
+        } catch(e:CancellationException) {throw e} catch(_:Exception) {
+            // Speculative failure is silent and is never cached; Play can retry normally.
+        } finally {
+            if(sourceWarmupJobRP90===job) {sourceWarmupJobRP90=null;sourceWarmupKeyRP90=null}
+        }
+    }
+    internal fun leaveDetailsWarmupRP90(cloudId:String) {
+        if(screen!=Screen.DETAILS && screen!=Screen.PLAYER && selected?.cloudId==cloudId && playbackLoading?.item?.cloudId==cloudId) invalidatePlaybackWork()
+    }
+
     private fun playbackCacheKey(item: MediaSummary,imdb: String,season: Int,episode: Int)=PlaybackCacheKey(
         session?.userId,activeProfile.id,item.cloudId,imdb,season,episode,item.year,item.title,
         streamRepo.manifests().toList(),nativeSourceEnabled,nativeRevision,nativeOnlyRP75,nativeSpanishOnlyRP77,nativeSizeAscendingRP77,streamSizeBytes,audioLanguage,secondaryAudioLanguageRP62,easyModeRP79)
-    private suspend fun resolvePlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = playbackCacheMutex.withLock {
+    private suspend fun resolvePlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int):List<StreamChoice> {
+        val key=playbackCacheKey(item,imdb,season,episode)
+        if(sourceWarmupKeyRP90!=null && sourceWarmupKeyRP90!=key) sourceWarmupJobRP90?.cancel()
+        return resolveCachedSourcesRP90(item,imdb,season,episode)
+    }
+    private suspend fun resolveCachedSourcesRP90(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = playbackCacheMutex.withLock {
         val key=playbackCacheKey(item,imdb,season,episode)
         playbackLinkCache.get(key)?.let { return@withLock StreamOrdering.sorted(it,audioLanguage,providerOrder=sourceProviderOrderRP2(),secondaryAudio=secondaryAudioLanguageRP62,nativeSizeAscending=nativeSizeAscendingRP77,nativeSpanishOnly=nativeSpanishOnlyRP77) }
         val streams=fetchPlaybackSources(item,imdb,season,episode)
@@ -2531,6 +2590,7 @@ class AppState(context: Context) {
     private val detailsCache=linkedMapOf<String,Pair<Long,MediaDetails>>()
     suspend fun open(item: MediaSummary,upcoming: Boolean=false) {
         if(kidsMode && !tmdb.kidsAllowed(item)) {error=tr("Este título no está disponible en Kids.","This title is not available in Kids.");return}
+        if(selected?.cloudId!=item.cloudId) invalidatePlaybackWork()
         val ticket=++detailsEpoch
         val language=tmdb.language
         val cacheKey="$language:${item.cloudId}"
@@ -2549,8 +2609,7 @@ class AppState(context: Context) {
             val today=java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US).format(java.util.Date())
             if(loaded.releaseDate.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))  ) selectedUpcoming=loaded.releaseDate>today
             if(item.type=="series" && loaded.seasonCount>0) loadSeason(if(easyModeRP79) (progress[item.cloudId]?.season ?: 1).coerceIn(1,loaded.seasonCount) else 1)
-        } catch(e: CancellationException) { throw e }
-        catch(e: Exception) { if(ticket==detailsEpoch) error=e.message }
+        } catch(e: CancellationException) { throw e } catch(e: Exception) { if(ticket==detailsEpoch) error=e.message }
     }
 
     fun remindMe(item: MediaSummary) {

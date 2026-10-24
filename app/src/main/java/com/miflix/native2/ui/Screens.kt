@@ -168,8 +168,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     LaunchedEffect(discoveryOwner,effectiveMood,discoveryRetry,state.appForeground) {
         if(!state.appForeground) return@LaunchedEffect
         discoveryRows=emptyList();discoveryLoading=true;discoveryError=false
-        try {val contextual=state.discoveryRun(effectiveMood);discoveryRows=state.freshDiscoveryRows("mood:$effectiveMood",(if(discoveryMood.isEmpty()) state.forYou+contextual else contextual).distinctBy {it.cloudId})}
-        catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {discoveryError=true} finally {discoveryLoading=false}
+        try {val contextual=state.discoveryRun(effectiveMood);discoveryRows=state.freshDiscoveryRows("mood:$effectiveMood",(if(discoveryMood.isEmpty()) state.forYou+contextual else contextual).distinctBy {it.cloudId})} catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {discoveryError=true} finally {discoveryLoading=false}
     }
     if(showTrailers) DiscoveryTrailers(state,(state.forYou+state.trending+state.movies+state.series).distinctBy {it.cloudId},mood=discoveryMood) {showTrailers=false}
     val genreScroll=rememberLazyListState()
@@ -698,6 +697,9 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
     val item = state.selected ?: return
     val details = state.details
     val saved = state.progress[item.cloudId]
+    val warmupRP90=state.detailsWarmupKeyRP90(item)
+    LaunchedEffect(warmupRP90) {if(warmupRP90!=null) state.prefetchDetailsRP90(item,warmupRP90)}
+    DisposableEffect(item.cloudId) {onDispose {state.leaveDetailsWarmupRP90(item.cloudId)}}
     var showLocalListAdd by remember(item.cloudId) {mutableStateOf(false)}
     var showNotToday by remember(item.cloudId) {mutableStateOf(false)}
     if(showLocalListAdd) LocalListsRC100(state,item) {showLocalListAdd=false}
@@ -1213,6 +1215,19 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
 
                         }
                     }
+                    if(category=="playback") item(key="setting-prefetch-rp90") {
+                        SettingsSectionCard(onFocused={
+                            visualHelp=null;helpTitle=tr("Precargar enlaces","Preload sources")
+                            helpDescription=tr("Busca enlaces tras 2 segundos leyendo los detalles. Play reutiliza la búsqueda. No descarga vídeo. Solo modo normal, por perfil.","Looks up sources after 2 seconds in details. Play reuses the lookup. No video downloads. Normal mode only, per profile.")
+                            helpIndex=-1
+                        }) {
+                            Text(tr("Inicio más rápido","Faster playback start"),color=Color.White,fontSize=22.sp)
+                            FocusButton(tr("Precargar enlaces al abrir detalles","Preload sources in details")+": "+if(state.sourcePrefetchEnabledRP90) tr("Activado","ON") else tr("Desactivado","OFF"),modifier=Modifier.fillMaxWidth()) {
+                                state.saveSourcePrefetchRP90(!state.sourcePrefetchEnabledRP90)
+                            }
+                            Text(tr("Prepara los enlaces mientras lees la sinopsis. No reproduce ni descarga el vídeo.","Prepares sources while you read the synopsis. Does not play or download video."),color=Muted,fontSize=14.sp)
+                        }
+                    }
                     if(category=="sources") item(key="setting-8") {
                         SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Stream Add-ons";helpDescription="Use the main profile add-ons or configure sources for this profile on this TV.";helpIndex=8 }) {
                 Text(tr("Complementos de reproducción","Stream Add-ons"), color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold)
@@ -1349,9 +1364,11 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     val context = LocalContext.current
     val mini=state.miniPlayer && state.screen!=Screen.PLAYER
     val strictSpanishRP83=state.easyModeRP79 && state.easySpanishOnlyRP83 && !request.live
-    val savedSeriesTracks=remember(request.playbackId) {state.localExtras.trackChoice(state.localExtrasScope(),request.item)}
-    val timing=remember(request.playbackId) { com.miflix.native2.player.SubtitleTiming().also {it.delayMs=savedSeriesTracks?.optLong("delay",0L) ?: 0L} }
-    var timingMs by remember(request.playbackId) { mutableStateOf(savedSeriesTracks?.optLong("delay",0L) ?: 0L) }
+    val playerTrackScopeRP89=state.localExtrasScope()+if(state.easyModeRP79) ":easy" else ""
+    val savedSeriesTracks=remember(request.playbackId,playerTrackScopeRP89) {state.localExtras.trackChoice(playerTrackScopeRP89,request.item)}
+    val initialSubtitleDelayRP89=if(state.easyModeRP79) 0L else savedSeriesTracks?.optLong("delay",0L) ?: 0L
+    val timing=remember(request.playbackId) { com.miflix.native2.player.SubtitleTiming().also {it.delayMs=initialSubtitleDelayRP89} }
+    var timingMs by remember(request.playbackId) { mutableStateOf(initialSubtitleDelayRP89) }
     var confirmMulti by remember { mutableStateOf(false) }
     val playbackView = LocalView.current
     var quickReactions by remember(request.playbackId) { mutableStateOf(false) }
@@ -1410,6 +1427,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var segments by remember(request.playbackId) { mutableStateOf(PlaybackSegments()) }
     var episodeInfo by remember(request.playbackId) { mutableStateOf<EpisodeSummary?>(null) }
     var upcoming by remember(request.playbackId) { mutableStateOf<EpisodeSummary?>(null) }
+    var nextEpisodeLoadingRP89 by remember(request.playbackId) {mutableStateOf(request.item.type=="series")}
+    var nextEpisodeErrorRP89 by remember(request.playbackId) {mutableStateOf(false)}
     var recommendations by remember(request.playbackId) { mutableStateOf<List<MediaSummary>>(emptyList()) }
     var rateAtEnd by remember(request.playbackId) { mutableStateOf(false) }
     var ended by remember(request.playbackId) { mutableStateOf(false) }
@@ -1507,7 +1526,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
             if(request.item.type == "series") {
                 state.launch { episodeInfo = runCatching { state.tmdb.episodeInfo(request.item,request.season,request.episode) }.getOrNull() }
-                state.launch { upcoming = runCatching { state.nextEpisode(request) }.getOrNull() }
+                nextEpisodeLoadingRP89=true
+                try {upcoming=state.nextEpisode(request);nextEpisodeErrorRP89=false} catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {nextEpisodeErrorRP89=true} finally {nextEpisodeLoadingRP89=false}
             }
         }
     }
@@ -1561,11 +1581,54 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         if(pending!=null && pending.playbackId!=request.playbackId) player.pause()
     }
     LaunchedEffect(player) { showEpisodes = false }
+    // Easy mode prefers full Spanish captions, even when the audio is already Spanish.
+    fun easySpanishTextRP89():Pair<androidx.media3.common.Tracks.Group,Int>? = player.currentTracks.groups
+        .filter {it.type==C.TRACK_TYPE_TEXT}.flatMap {group ->
+            (0 until group.length).filter {group.isTrackSupported(it)}.mapNotNull {index ->
+                val format=group.getTrackFormat(index)
+                val rank=com.miflix.native2.data.EasyPlaybackRP89.subtitleRank(format.language,format.label,(format.selectionFlags and C.SELECTION_FLAG_FORCED)!=0)
+                if(rank<0) null else Triple(group,index,rank)
+            }
+        }.minByOrNull {it.third}?.let {it.first to it.second}
+    LaunchedEffect(player,tracks,state.easyModeRP79,state.subtitleLanguage) {
+        if(state.easyModeRP79 && !request.live && com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(state.subtitleLanguage) && state.playerRequest?.playbackId==request.playbackId) {
+            val spanishTextRP89=easySpanishTextRP89()
+            if(spanishTextRP89==null && C.TRACK_TYPE_TEXT !in player.trackSelectionParameters.disabledTrackTypes) {
+                player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT,true).build()
+            }
+            spanishTextRP89?.let {(group,index) ->
+                if(!group.isTrackSelected(index) || C.TRACK_TYPE_TEXT in player.trackSelectionParameters.disabledTrackTypes) {
+                    player.trackSelectionParameters=player.trackSelectionParameters.buildUpon()
+                        .setTrackTypeDisabled(C.TRACK_TYPE_TEXT,false)
+                        .setOverrideForType(androidx.media3.common.TrackSelectionOverride(group.mediaTrackGroup,index)).build()
+                }
+            }
+        }
+    }
+    LaunchedEffect(player,firstFrame,state.easyModeRP79,state.subtitleLanguage) {
+        if(!firstFrame || !state.easyModeRP79 || request.live || !com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(state.subtitleLanguage) || easySpanishTextRP89()!=null) return@LaunchedEffect
+        val owner=state.localExtrasScope()
+        val choices=try {kotlinx.coroutines.withTimeoutOrNull(8000L) {state.playbackSubtitles(request)}.orEmpty()} catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {emptyList()}
+        if(owner!=state.localExtrasScope() || state.playerRequest?.playbackId!=request.playbackId || player.playbackState==Player.STATE_ENDED || easySpanishTextRP89()!=null) return@LaunchedEffect
+        val selected=choices.filter {com.miflix.native2.data.SpanishAudioRP83.rank(it.lang,it.label)>=0}
+            .minByOrNull {com.miflix.native2.data.SpanishAudioRP83.rank(it.lang,it.label)} ?: return@LaunchedEffect
+        val media=player.currentMediaItem ?: return@LaunchedEffect
+        val label="BruniO · ${selected.label.ifBlank {"Español"}}"
+        val sidecar=MediaItem.SubtitleConfiguration.Builder(Uri.parse(selected.url)).setLabel(label)
+            .setLanguage("es").setMimeType(subtitleMime(selected.url)).setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build()
+        val position=player.currentPosition.coerceAtLeast(0L)
+        val playing=player.playWhenReady
+        pendingSubtitleLabel=label
+        player.trackSelectionParameters=player.trackSelectionParameters.buildUpon()
+            .clearOverridesOfType(C.TRACK_TYPE_TEXT).setPreferredTextLanguage("es").setTrackTypeDisabled(C.TRACK_TYPE_TEXT,false).build()
+        player.setMediaItem(media.buildUpon().setSubtitleConfigurations(listOf(sidecar)).build(),position)
+        player.prepare()
+        player.playWhenReady=playing
+    }
     LaunchedEffect(playerMenu,request.playbackId) {
         if(playerMenu=="subtitles" && externalSubtitles.isEmpty()) {
             subtitleLoading=true
-            try { externalSubtitles=runCatching { state.playbackSubtitles(request) }.getOrDefault(emptyList()) }
-            finally { subtitleLoading=false }
+            try { externalSubtitles=runCatching { state.playbackSubtitles(request) }.getOrDefault(emptyList()) } finally { subtitleLoading=false }
         }
     }
 
@@ -1891,7 +1954,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     LaunchedEffect(exitArmedAt) { if(exitArmedAt!=0L) { delay(2200);exitArmedAt=0L } }
     BackHandler(enabled=!mini) {
         if (quickReactions) { quickReactions=false;controlsVisible=true;controlInteraction++ }
-        else if (playerMenu != null) {if(playerMenu in listOf("audio","subtitles","timing")) state.localExtras.rememberTracks(state.localExtrasScope(),request.item,player,timingMs);playerMenu = null}
+        else if (playerMenu != null) {if(playerMenu in listOf("audio","subtitles","timing")) state.localExtras.rememberTracks(playerTrackScopeRP89,request.item,player,timingMs);playerMenu = null}
         else if (showEpisodes) { showEpisodes=false; if(episodesResumeAfterClose) player.play() }
         else if(request.live) {parkCurrentPlayback();state.miniPlayer=false;state.playerRequest=null;state.screen=Screen.LIVE_TV}
         else if (paused && !pauseInfoDismissed) {
@@ -2066,10 +2129,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             onEpisodes={ episodesResumeAfterClose=player.playWhenReady; player.pause(); showEpisodes=true },
             onParty={ openPlayerParty() },
             onTiming={ playerMenu="timing" },
-            onClose={ state.localExtras.rememberTracks(state.localExtrasScope(),request.item,player,timingMs);playerMenu=null; controlInteraction++ })
+            onClose={ state.localExtras.rememberTracks(playerTrackScopeRP89,request.item,player,timingMs);playerMenu=null; controlInteraction++ })
         if(playerMenu=="timing") SubtitleTimingDialog(timingMs,apply={ value ->
             timingMs=value;timing.delayMs=value
-            state.localExtras.rememberTracks(state.localExtrasScope(),request.item,player,value)
+            state.localExtras.rememberTracks(playerTrackScopeRP89,request.item,player,value)
             // Explicit user adjustment, not a recovery loop. Re-read subtitle cues at this position.
             if(player.isCurrentMediaItemSeekable) player.seekTo(player.currentPosition)
         },close={ playerMenu=null;controlInteraction++ })
@@ -2205,11 +2268,26 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
         }
         if(!state.easyModeRP79 && rateAtEnd) RatingDialog(state,request.item) { rateAtEnd=false; state.launch { recommendations=state.recommendationsFor(request.item) } }
-        if(state.easyModeRP79 && ended && state.playbackLoading==null) PlayerMenuDialog(onDismissRequest=onClose) {
-            Column(Modifier.width(560.dp).background(Panel,RoundedCornerShape(20.dp)).padding(26.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
-                Text(tr("Terminó la reproducción","Playback ended"),color=Color.White,fontSize=28.sp)
-                upcoming?.let {next -> FocusButton(tr("Siguiente episodio","Next episode")) {cancelAutoplay=true;state.launch {state.playNext(request,next)}}}
-                FocusButton(tr("Volver","Back")) {cancelAutoplay=true;onClose()}
+        if(state.easyModeRP79 && ended && state.playbackLoading==null) PlayerMenuDialog(onDismissRequest={cancelAutoplay=true;onClose()}) {
+            val endFocusRP89=remember {FocusRequester()}
+            LaunchedEffect(upcoming,nextEpisodeLoadingRP89,nextEpisodeErrorRP89) {withFrameNanos {};runCatching {endFocusRP89.requestFocus()}}
+            Column(Modifier.width(580.dp).background(Color(0xFA101010),RoundedCornerShape(24.dp)).padding(30.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+                Text(tr("Terminaste este episodio","Episode finished").takeIf {request.item.type=="series"} ?: tr("Terminó la reproducción","Playback ended"),color=Color.White,fontSize=30.sp)
+                upcoming?.let {next ->
+                    Text("${tr("Siguiente","Next")}: S${next.season} · E${next.episode}",color=Muted,fontSize=22.sp)
+                    FocusButton(tr("Siguiente episodio","Next episode")+if(state.autoplayNext && !cancelAutoplay) " · ${countdown}s" else "",
+                        modifier=Modifier.fillMaxWidth().heightIn(min=64.dp).focusRequester(endFocusRP89),primary=true) {
+                        cancelAutoplay=true;state.launch {state.socialAction {state.playNext(request,next)}}
+                    }
+                }
+                if(nextEpisodeLoadingRP89) Text(tr("Buscando el siguiente episodio…","Finding the next episode…"),color=Muted,fontSize=20.sp)
+                if(nextEpisodeErrorRP89) FocusButton(tr("Reintentar siguiente episodio","Retry next episode"),modifier=Modifier.fillMaxWidth().focusRequester(endFocusRP89)) {
+                    if(!nextEpisodeLoadingRP89) state.launch {
+                        nextEpisodeLoadingRP89=true
+                        try {upcoming=state.nextEpisode(request);nextEpisodeErrorRP89=false} catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {nextEpisodeErrorRP89=true} finally {nextEpisodeLoadingRP89=false}
+                    }
+                }
+                FocusButton(tr("Volver","Back"),modifier=Modifier.fillMaxWidth().then(if(upcoming==null && !nextEpisodeErrorRP89) Modifier.focusRequester(endFocusRP89) else Modifier)) {cancelAutoplay=true;onClose()}
             }
         }
         if(!state.easyModeRP79 && request.momentEndMs<=0 && ended && state.playbackLoading==null && state.partyRole != PartyRole.GUEST && !rateAtEnd && !showQueue && !showPartyActions) {

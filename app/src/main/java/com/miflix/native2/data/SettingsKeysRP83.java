@@ -21,7 +21,7 @@ public final class SettingsKeysRP83 {
                 if(GLOBAL.contains(key) || key.equals(EasyModePolicyRP79.key(account,profile))) return true;
                 if(key.equals("watched_episodes_"+user+"_"+profile)) return true;
                 for(String prefix:Arrays.asList("interface:","audio_rp77:","subtitle_rp78:","secondary_audio_rp62:",
-                    "easy_spanish_rp83:","easy_subtitle_rp87:","voice_rp81:","simple_home:","home_order:","hidden_home_rows:","unwatched_visible:","content_warnings_rp31:")) {
+                    "source_prefetch_rp90:","easy_spanish_rp83:","easy_subtitle_rp87:","voice_rp81:","simple_home:","home_order:","hidden_home_rows:","unwatched_visible:","content_warnings_rp31:")) {
                     if(key.equals(prefix+scope)) return true;
                 }
                 return key.equals("addon_inherit:"+owner) || key.equals("profile_addons:"+owner) ||

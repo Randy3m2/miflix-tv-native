@@ -856,6 +856,24 @@ class AppState(context: Context) {
     }
     private fun socialRoomKey()="room_rp1_${session?.userId}:${activeProfile.id}"
     private val social = SocialRepository(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY)
+    private val watchedFriendsRP93=com.miflix.native2.data.WatchedFriendsRP93(BuildConfig.SUPABASE_URL,BuildConfig.SUPABASE_KEY)
+    internal val watchedFriendsOwnerRP93:String? get()=profileSocialSession()?.userId
+    internal suspend fun friendsWhoWatchedRP93(cloudId:String):List<SocialPerson> {
+        val actor=profileSocialSession() ?: return emptyList()
+        val rows=watchedFriendsRP93.friends(actor,cloudId)
+        return if(isCurrentSocialSession(actor) && !easyModeRP79) rows else emptyList()
+    }
+    internal suspend fun watchedSharingRP93():Boolean? {
+        val actor=profileSocialSession() ?: return null
+        val value=watchedFriendsRP93.sharing(actor)
+        return value.takeIf {isCurrentSocialSession(actor) && !easyModeRP79}
+    }
+    internal suspend fun saveWatchedSharingRP93(value:Boolean):Boolean? {
+        val actor=profileSocialSession() ?: return null
+        val saved=watchedFriendsRP93.saveSharing(actor,value)
+        return saved.takeIf {isCurrentSocialSession(actor) && !easyModeRP79}
+    }
+
     val trakt = TraktRepository(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY)
     var nickname by mutableStateOf("")
     val partyMembers = mutableStateListOf<SocialPerson>()

@@ -771,7 +771,10 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
         ) {
             item(key = "hero") {
                 Column(Modifier.fillMaxWidth().heightIn(min = 300.dp)) {
-                    BackIconButton(onClick = onBack)
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.Top) {
+                        BackIconButton(onClick = onBack)
+                        WatchedFriendsBadgeRP93(state,item)
+                    }
                     Spacer(Modifier.height(14.dp))
                     Text(item.title, color = Color.White, fontSize = 40.sp, lineHeight=46.sp, fontWeight = FontWeight.Black, maxLines = 2, overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     observeCardFreshness(item)?.let {label ->CardFreshnessTag(label,Modifier.padding(top=8.dp))}
@@ -1083,6 +1086,9 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     }}
                     if(category in listOf("playback","appearance","system")) item(key="local-extras-rc100") {
                         SettingsTileRC103(tr("Haz BruniO tuyo","Make BruniO yours"),tr("Temporizador, listas, filtros, memoria de audio y respaldo local.","Sleep timer, lists, filters, track memory and local backup."),"taste") {showLocalExtras=true}
+                    }
+                    if(category=="appearance" && !state.kidsMode && !state.easyModeRP79) item(key="watched-friends-rp93") {
+                        WatchedFriendsSettingRP93(state)
                     }
                     if(category=="appearance") item(key="unwatched-details-rp20") {
                         SettingsSectionCard(onFocused={visualHelp=null;helpTitle=tr("Episodios no vistos","Unwatched episodes");helpDescription=tr("Muestra miniaturas, títulos y sinopsis de todos los episodios no vistos en este perfil. No los marca como vistos. Apagado: conserva la protección contra spoilers.","Show thumbnails, titles and synopses for all unwatched episodes in this profile. Does not mark them watched. Off keeps spoiler protection.");helpIndex=-1}) {

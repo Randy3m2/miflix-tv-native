@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP93: avatares de amigos que ya vieron el contenido en Details, caché de 15 minutos y privacidad por perfil." to "RP93: friends who watched avatars in Details, 15-minute cache and per-profile sharing privacy.",
         "RP92: construcción de la precarga fuera del hilo de interfaz y lectura ligera de ajustes de pistas para reducir las pausas en detalles; hasta cinco fuentes de precarga con reintentos silenciosos." to "RP92: builds the warm player off the UI thread and captures lightweight track-setting snapshots to reduce details-screen stalls; up to five warm sources with silent retries.",
         "RP91: preparación real de vídeo tras 1 segundo: una fuente, búfer limitado y reutilización del reproductor al pulsar Play, sin sonido ni presencia anticipada." to "RP91: real video preparation after 1 second: one source, bounded buffering and player handoff on Play, without sound or early presence.",
         "RP90: precarga opcional por perfil desde Settings → Reproducción en los detalles del modo normal; Play reutiliza la búsqueda y la caché, sin reproducir vídeo ni publicar presencia antes de tiempo." to "RP90: optional per-profile source prefetch in normal-mode details from Settings → Playback; Play reuses lookup/cache without starting video or publishing presence early.",

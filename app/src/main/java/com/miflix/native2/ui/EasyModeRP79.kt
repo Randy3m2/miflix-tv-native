@@ -239,19 +239,19 @@ private fun EasyDetailsRP79(state:AppState) {
         }
         if(details!=null && item.type=="series") {
             if(saved!=null && saved.episode>0) item(key="easy-resume-position") {
-                Text(tr("Te quedaste en el episodio ","You left off at episode ")+saved.episode+" · "+tr("Temporada ","Season ")+saved.season,
+                Text(tr("Te quedaste en el episodio ","You left off at episode ")+(state.episodes.firstOrNull {it.season==saved.season && it.episode==saved.episode}?.absoluteEpisodeRP102?.takeIf {it>0} ?: saved.episode)+(if(com.miflix.native2.data.AbsoluteEpisodeRP102.enabled(item.id)) "" else " · "+tr("Temporada ","Season ")+saved.season),
                     color=Color.White,fontSize=26.sp,lineHeight=32.sp,fontWeight=FontWeight.SemiBold)
             }
             item(key="easy-seasons") {
                 Row(horizontalArrangement=Arrangement.spacedBy(18.dp),verticalAlignment=Alignment.CenterVertically) {
                     if(state.currentSeason>1) FocusButton("‹") {state.launch {state.loadSeason(state.currentSeason-1)}}
-                    Text(tr("Temporada ","Season ")+state.currentSeason,color=Color.White,fontSize=26.sp)
+                    Text(if(com.miflix.native2.data.AbsoluteEpisodeRP102.enabled(item.id)) tr("Serie completa","Complete series") else tr("Temporada ","Season ")+state.currentSeason,color=Color.White,fontSize=26.sp)
                     if(state.currentSeason<details.seasonCount) FocusButton("›") {state.launch {state.loadSeason(state.currentSeason+1)}}
                 }
             }
             item(key="easy-episodes:${state.currentSeason}") {
                 val episodes=state.episodes.toList()
-                val start=saved?.takeIf {it.season==state.currentSeason}?.let {p ->episodes.indexOfFirst {it.episode==p.episode}.coerceAtLeast(0)} ?: 0
+                val start=saved?.let {p ->episodes.indexOfFirst {it.season==p.season && it.episode==p.episode}.coerceAtLeast(0)} ?: 0
                 key(item.cloudId,state.currentSeason) {
                     val episodeScroll=rememberLazyListState(initialFirstVisibleItemIndex=start)
                     LaunchedEffect(episodes.size,start) {if(episodes.isNotEmpty()) episodeScroll.scrollToItem(start)}

@@ -463,7 +463,7 @@ class AppState(context: Context) {
         val imdb=d.imdbId ?: throw IllegalStateException(tr("IMDb no disponible","IMDb unavailable"))
         var started: PlayerRequest?=null
         playResolved(item,imdb,entry.season,entry.episode,resumeOverride=0,onStarted={ newRequest ->
-            if(owner==queueKey()) { started=newRequest;selected=item;details=d;currentSeason=entry.season;removeQueued(entry.id) }
+            if(owner==queueKey()) { started=newRequest;selected=item;details=d;currentSeason=if(com.miflix.native2.data.AbsoluteEpisodeRP102.enabled(item.id) && item.type=="series") 1 else entry.season;removeQueued(entry.id) }
         })
         val active=started ?: return
         if(partyRole==PartyRole.HOST) hostPartyUpdate(active,0L,true)
@@ -572,6 +572,10 @@ class AppState(context: Context) {
         if(req.live || req.item.type != "series") return null
         val today = java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US).format(java.util.Date())
         val current = tmdb.season(req.item.id,req.season)
+        if(com.miflix.native2.data.AbsoluteEpisodeRP102.enabled(req.item.id)) {
+            val index=current.indexOfFirst {it.season==req.season && it.episode==req.episode}
+            return if(index<0) null else current.drop(index+1).firstOrNull {it.airDate.isNotBlank() && it.airDate<=today}
+        }
         current.firstOrNull { it.episode > req.episode && it.airDate.isNotBlank() && it.airDate <= today }?.let { return it }
         val count = tmdb.details(req.item).seasonCount
         if(req.season < count) return tmdb.season(req.item.id,req.season+1).firstOrNull { it.airDate.isNotBlank() && it.airDate <= today }
@@ -589,7 +593,7 @@ class AppState(context: Context) {
         val imdb=detail.imdbId ?: return
         val rows=tmdb.season(req.item.id,ep.season)
         if(!valid()) return
-        selected=req.item;details=detail;currentSeason=ep.season
+        selected=req.item;details=detail;currentSeason=if(com.miflix.native2.data.AbsoluteEpisodeRP102.enabled(req.item.id)) 1 else ep.season
         episodes.clear();episodes.addAll(rows)
         playResolved(req.item,imdb,ep.season,ep.episode,resumeOverride=0)
     }
@@ -972,7 +976,7 @@ class AppState(context: Context) {
     suspend fun watchFriendIndependently(friend: FriendActivity) {
         val item=tmdb.byCloudId(friend.cloudId) ?: error(tr("Contenido no disponible","Content unavailable"))
         val ep=if(item.type=="series" && friend.season>0 && friend.episode>0) {
-            tmdb.season(item.id,friend.season).firstOrNull { it.episode==friend.episode }
+            tmdb.season(item.id,friend.season).firstOrNull { it.season==friend.season && it.episode==friend.episode }
                 ?: error(tr("Episodio no disponible","Episode unavailable"))
         } else null
         if(watchParty!=null || pendingPartyCode!=null) leaveWatchParty()
@@ -1405,7 +1409,15 @@ class AppState(context: Context) {
         if(streams.isNotEmpty() && key==playbackCacheKey(item,imdb,season,episode)) playbackLinkCache.put(key,streams)
         streams
     }
-    private suspend fun fetchPlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = supervisorScope {
+    private suspend fun fetchPlaybackSources(item:MediaSummary,imdb:String,season:Int,episode:Int):List<StreamChoice> {
+        val normal=fetchCanonicalSourcesRP102(item,imdb,season,episode)
+        if(normal.isNotEmpty() || item.type!="series" || !com.miflix.native2.data.AbsoluteEpisodeRP102.enabled(item.id)) return normal
+        val absolute=tmdb.absoluteNumberRP102(item.id,season,episode) ?: return normal
+        if(season==1 && episode==absolute) return normal
+        // Only an empty result triggers the alternate numbering; never mix two episode identities.
+        return fetchCanonicalSourcesRP102(item,imdb,1,absolute)
+    }
+    private suspend fun fetchCanonicalSourcesRP102(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = supervisorScope {
         val owner=session?.userId
         if(easyModeRP79) return@supervisorScope StreamOrdering.sorted(
             easyStreamsRP79.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage),
@@ -1835,7 +1847,7 @@ class AppState(context: Context) {
             if(next.item.type=="series") {
                 val rows=tmdb.season(next.item.id,next.season.coerceAtLeast(1))
                 if(playerRequest?.playbackId==next.playbackId && selected?.cloudId==next.item.cloudId) {
-                    currentSeason=next.season.coerceAtLeast(1);episodes.replaceWith(rows)
+                    currentSeason=if(com.miflix.native2.data.AbsoluteEpisodeRP102.enabled(next.item.id)) 1 else next.season.coerceAtLeast(1);episodes.replaceWith(rows)
                 }
             }
         }}
@@ -2148,7 +2160,7 @@ class AppState(context: Context) {
             val saved=progress[item.cloudId]
             val season=saved?.season?.coerceAtLeast(1) ?: 1
             if(currentSeason!=season) loadSeason(season)
-            val episode=episodes.firstOrNull {it.episode==(saved?.episode ?: 1)} ?: episodes.firstOrNull()
+            val episode=episodes.firstOrNull {it.season==(saved?.season ?: 1) && it.episode==(saved?.episode ?: 1)} ?: episodes.firstOrNull()
             episode?.let {playEpisode(it)}
         }
     }
@@ -3372,7 +3384,7 @@ class AppState(context: Context) {
         val account=session;val profile=activeProfile.id
         fun valid()=session?.userId==account?.userId && activeProfile.id==profile
         val today=java.time.LocalDate.now().toString()
-        val rows=tmdb.season(item.id,season).filter {it.season==season && it.episode>0 && it.airDate.isNotBlank() && it.airDate<=today}
+        val rows=tmdb.season(item.id,season).filter {(com.miflix.native2.data.AbsoluteEpisodeRP102.enabled(item.id) || it.season==season) && it.episode>0 && it.airDate.isNotBlank() && it.airDate<=today}
         if(!valid()) return
         require(rows.isNotEmpty()) {tr("Esta temporada no tiene episodios estrenados.","This season has no released episodes.")}
         profileSyncMutex.lock()
@@ -3381,16 +3393,16 @@ class AppState(context: Context) {
             val now=System.currentTimeMillis()
             val watched=playbackPrefs.getStringSet(watchedEpisodesKey(),emptySet()).orEmpty().toMutableSet()
             for(ep in rows) {
-                val key="${item.cloudId}:s${season}e${ep.episode}"
+                val key="${item.cloudId}:s${ep.season}e${ep.episode}"
                 val duration=progress[key]?.duration?.takeIf {it>0} ?: 1000L
-                progress[key]=PlaybackProgress(100.0,duration,duration,now,season,ep.episode)
+                progress[key]=PlaybackProgress(100.0,duration,duration,now,ep.season,ep.episode)
                 watched.add(key)
             }
             playbackPrefs.edit().putStringSet(watchedEpisodesKey(),watched).apply()
             val current=progress[item.cloudId]
             if(current==null || current.season==season) {
-                val last=rows.maxBy {it.episode}
-                progress[item.cloudId]=progress["${item.cloudId}:s${season}e${last.episode}"]!!
+                val last=rows.last()
+                progress[item.cloudId]=progress["${item.cloudId}:s${last.season}e${last.episode}"]!!
                 continueWatching.removeAll {it.cloudId==item.cloudId};kidsContinue.removeAll {it.cloudId==item.cloudId}
             }
             if(account!=null) cloud.upsertProfile(account,profile,favorites.toSet(),progress.toMap())
@@ -3608,7 +3620,7 @@ class AppState(context: Context) {
             val eps=if(item.type=="series") tmdb.season(item.id,remote.season.coerceAtLeast(1)) else emptyList()
             if(!valid()) return
             selected=item; details=detail
-            if(item.type=="series") { currentSeason=remote.season.coerceAtLeast(1); episodes.clear(); episodes.addAll(eps) }
+            if(item.type=="series") { currentSeason=if(com.miflix.native2.data.AbsoluteEpisodeRP102.enabled(item.id)) 1 else remote.season.coerceAtLeast(1); episodes.clear(); episodes.addAll(eps) }
             val imdb=detail.imdbId ?: return
             playResolved(item,imdb,remote.season,remote.episode,remote.positionMs)
         } finally { if(switchingPartyEpoch==epoch) switchingPartyEpoch=null }

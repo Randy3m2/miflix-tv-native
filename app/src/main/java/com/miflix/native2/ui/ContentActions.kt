@@ -55,7 +55,7 @@ internal fun EpisodeActionsDialog(state: AppState,item: MediaSummary,ep: Episode
             val info:@Composable ()->Unit={
                 Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                     Text(item.title,color=Color(0xFFBBBBBB),fontSize=15.sp)
-                    Text("S${ep.season} E${ep.episode}"+(if(!hidden && ep.rating>0) "  ·  ★ %.1f".format(ep.rating) else ""),color=Color.White,fontSize=14.sp)
+                    Text((if(ep.absoluteEpisodeRP102>0) "E${ep.absoluteEpisodeRP102}" else "S${ep.season} E${ep.episode}")+(if(!hidden && ep.rating>0) "  ·  ★ %.1f".format(ep.rating) else ""),color=Color.White,fontSize=14.sp)
                     Text(if(hidden) tr("No visto","Not watched") else ep.title,color=Color.White,fontSize=34.sp,lineHeight=39.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold)
                     Text(if(hidden) tr("Los detalles de este episodio están ocultos para evitar spoilers.","Episode details are hidden to avoid spoilers.") else ep.overview.ifBlank {tr("Sin sinopsis disponible.","Synopsis unavailable.")},color=Color(0xFFE2E2E2),fontSize=18.sp,lineHeight=25.sp)
                     if(ep.airDate.isNotBlank()) Text(ep.airDate,color=Color(0xFFBBBBBB),fontSize=13.sp)

@@ -6,6 +6,10 @@ import com.miflix.native2.model.MediaDetails
 import com.miflix.native2.model.MediaSummary
 import com.miflix.native2.model.TrailerSummary
 import com.miflix.native2.model.ReleaseNotice
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.CancellationException
@@ -724,7 +728,7 @@ class TmdbRepository(var token: String) {
             cinematographers = j.optJSONObject("credits")?.optJSONArray("crew")?.let {a -> (0 until a.length()).map {a.getJSONObject(it)}.filter {it.optString("job")=="Director of Photography"}.map {it.optString("name")}.distinct()} ?: emptyList(),
             directors = j.optJSONObject("credits")?.optJSONArray("crew")?.let {a -> (0 until a.length()).map {a.getJSONObject(it)}.filter {it.optString("job")=="Director"}.map {it.optString("name")}.distinct()} ?: emptyList(),
             genres = genres,
-            seasonCount = j.optInt("number_of_seasons", 0),
+            seasonCount = if(kind=="tv" && AbsoluteEpisodeRP102.enabled(item.id)) 1 else j.optInt("number_of_seasons", 0),
             releaseInfo = release.take(4).ifBlank { item.year },
             releaseDate = release,
             originCountry = origin,
@@ -736,8 +740,33 @@ class TmdbRepository(var token: String) {
         ).also {if(detailCache.size>=64) detailCache.remove(detailCache.keys.first());detailCache[detailKey]=System.currentTimeMillis() to it}
     }
 
-    suspend fun season(showId: Int, season: Int): List<EpisodeSummary> {
-        val j = get("/tv/$showId/season/$season")
+    private val absoluteLockRP102=Mutex()
+    private val absoluteCacheRP102=linkedMapOf<String,Pair<Long,List<EpisodeSummary>>>()
+    suspend fun season(showId:Int,season:Int):List<EpisodeSummary> =
+        if(AbsoluteEpisodeRP102.enabled(showId) && season>0) completeAnimeRP102(showId) else rawSeasonRP102(showId,season)
+
+    private suspend fun completeAnimeRP102(showId:Int):List<EpisodeSummary> = absoluteLockRP102.withLock {
+        val locale=language
+        val key="$locale:$showId"
+        absoluteCacheRP102[key]?.takeIf {System.currentTimeMillis()-it.first<6*60*60*1000L}?.let {return@withLock it.second}
+        val rows=withContext(Dispatchers.IO) {
+            val data=get("/tv/$showId",mapOf("language" to locale))
+            val seasons=data.optJSONArray("seasons") ?: error("No anime seasons available")
+            val numbers=(0 until seasons.length()).mapNotNull {i ->seasons.optJSONObject(i)?.optInt("season_number")?.takeIf {it>0}}.distinct().sorted()
+            val permits=Semaphore(3)
+            val all=coroutineScope {numbers.map {number ->async {permits.withPermit {rawSeasonRP102(showId,number,locale)}}}.awaitAll().flatten()}
+            AbsoluteEpisodeRP102.flatten(showId,all)
+        }
+        if(absoluteCacheRP102.size>=4) absoluteCacheRP102.remove(absoluteCacheRP102.keys.first())
+        absoluteCacheRP102[key]=System.currentTimeMillis() to rows
+        rows
+    }
+
+    suspend fun absoluteNumberRP102(showId:Int,season:Int,episode:Int):Int? =
+        if(!AbsoluteEpisodeRP102.enabled(showId)) null else completeAnimeRP102(showId).firstOrNull {it.season==season && it.episode==episode}?.absoluteEpisodeRP102
+
+    private suspend fun rawSeasonRP102(showId: Int, season: Int,locale:String=language): List<EpisodeSummary> {
+        val j = get("/tv/$showId/season/$season",mapOf("language" to locale))
         val a = j.optJSONArray("episodes") ?: return emptyList()
         return (0 until a.length()).mapNotNull { i ->
             val x = a.optJSONObject(i) ?: return@mapNotNull null
@@ -756,6 +785,11 @@ class TmdbRepository(var token: String) {
     private val randomSeasons=linkedMapOf<Int,Pair<Long,List<Pair<Int,Int>>>>()
     suspend fun randomEpisode(item: MediaSummary,exclude: Pair<Int,Int>?=null): EpisodeSummary {
         require(item.type=="series")
+        if(AbsoluteEpisodeRP102.enabled(item.id)) {
+            val today=java.time.LocalDate.now().toString()
+            val all=season(item.id,1).filter {RandomEpisodePolicy.aired(it.airDate,today)}
+            return all.filterNot {it.season==exclude?.first && it.episode==exclude?.second}.ifEmpty {all}.random()
+        }
         val now=System.currentTimeMillis()
         val today=java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US).format(java.util.Date())
         val seasons=randomSeasons[item.id]?.takeIf {now-it.first<6*60*60*1000L}?.second ?: run {
@@ -908,7 +942,7 @@ class TmdbRepository(var token: String) {
     }
 
     suspend fun episodeInfo(item: MediaSummary, season: Int, episode: Int): EpisodeSummary? =
-        season(item.id, season).firstOrNull { it.episode == episode }
+        season(item.id, season).firstOrNull { it.season==season && it.episode == episode }
 
     private val cardDatesCache=PlaybackLinkCache<String,Pair<String,String>>(500) {System.currentTimeMillis()}
     internal suspend fun cardDates(item:MediaSummary):Pair<String,String> {

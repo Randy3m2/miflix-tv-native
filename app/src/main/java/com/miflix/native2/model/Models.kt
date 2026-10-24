@@ -69,7 +69,8 @@ data class EpisodeSummary(
     val overview: String,
     val still: String?,
     val rating: Double,
-    val airDate: String
+    val airDate: String,
+    val absoluteEpisodeRP102: Int = 0
 )
 
 data class StreamChoice(

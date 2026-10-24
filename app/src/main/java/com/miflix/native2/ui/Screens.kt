@@ -2514,7 +2514,7 @@ private fun EpisodeListRow(ep: EpisodeSummary, active: Boolean, hidden: Boolean,
         EpisodeArtwork(ep,hidden,Modifier.width(150.dp).height(84.dp).clip(RoundedCornerShape(8.dp)))
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text("S${ep.season} E${ep.episode} · ${if(hidden) tr("No visto","Not watched") else ep.title}", color = if (focused) FocusInk else Color.White, fontSize = 14.sp, lineHeight=17.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text("${if(ep.absoluteEpisodeRP102>0) "E${ep.absoluteEpisodeRP102}" else "S${ep.season} E${ep.episode}"} · ${if(hidden) tr("No visto","Not watched") else ep.title}", color = if (focused) FocusInk else Color.White, fontSize = 14.sp, lineHeight=17.sp, fontWeight = FontWeight.Bold, maxLines = 1)
             Text(if(hidden) tr("Sinopsis oculta para evitar spoilers","Synopsis hidden to avoid spoilers") else ep.overview, color = if (focused) FocusInk.copy(alpha=.8f) else Muted, fontSize = 11.sp, lineHeight=13.sp, maxLines = 2)
         }
         if (active) Text(tr("ACTUAL","NOW"), color = if (focused) FocusInk else Color.White, fontSize = 10.sp, lineHeight=12.sp, fontWeight = FontWeight.Black)
@@ -2573,7 +2573,7 @@ internal fun EpisodeCard(ep: EpisodeSummary, hidden: Boolean, onLongClick: () ->
             if(watchedRP85) Text(tr("✓ Visto","✓ Watched"),color=Color.White,fontSize=if(largeRP85) 18.sp else 13.sp,
                 modifier=Modifier.align(Alignment.TopEnd).padding(10.dp).background(Color(0xD9000000),RoundedCornerShape(20.dp)).padding(horizontal=12.dp,vertical=7.dp))
             Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-                Text("S${ep.season} · E${ep.episode}",color=Color(0xFFE1E1E1),fontSize=11.sp)
+                Text(if(ep.absoluteEpisodeRP102>0) "E${ep.absoluteEpisodeRP102}" else "S${ep.season} · E${ep.episode}",color=Color(0xFFE1E1E1),fontSize=11.sp)
                 Text(if(hidden) tr("No visto","Not watched") else ep.title,color=Color.White,fontSize=if(largeRP85) 22.sp else 17.sp,lineHeight=if(largeRP85) 27.sp else 20.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 Text(if(hidden) tr("Mantén pulsado para ver las opciones","Hold for episode options") else ep.overview.ifBlank {tr("Sin sinopsis disponible","Synopsis unavailable")},
                     color=Color(0xFFE7E7E7),fontSize=if(largeRP85) 16.sp else 12.sp,lineHeight=if(largeRP85) 21.sp else 16.sp,maxLines=3,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
@@ -2759,7 +2759,7 @@ private fun SeasonSelector(state: AppState, count: Int) {
         items((1..count).toList(),key={it}) { season ->
             val anchor=remember {FocusRequester()}
             Box {
-                FocusButton("${tr("Temporada","Season")} $season",primary=state.currentSeason==season,
+                FocusButton(if(state.selected?.let {it.type=="series" && com.miflix.native2.data.AbsoluteEpisodeRP102.enabled(it.id)}==true) tr("Serie completa","Complete series") else "${tr("Temporada","Season")} $season",primary=state.currentSeason==season,
                     modifier=Modifier.focusRequester(anchor),
                     onLongClick={pending?.cancel();menuSeason=season},
                     onFocused={ focused ->

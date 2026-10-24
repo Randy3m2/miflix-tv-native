@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP102: Dragon Ball Z y Naruto original con lista continua de episodios; conserva progreso y busca numeración absoluta si faltan enlaces." to "RP102: continuous episode lists for Dragon Ball Z and original Naruto; preserves progress and tries absolute numbering when links are missing.",
         "RP101: el selector de canales siempre abre en Favoritos, sin cambiar el canal que se reproduce." to "RP101: the channel picker always opens Favorites without changing the playing channel.",
         "RP100: selector de canales con categorías preparadas en segundo plano, caché por perfil y logos ligeros." to "RP100: channel picker with background category indexing, profile-scoped cache and lightweight logos.",
         "RP99: corrige el filtro de grabaciones cuando aún no hay una categoría guardada." to "RP99: fixes the recordings filter when no category has been saved yet.",

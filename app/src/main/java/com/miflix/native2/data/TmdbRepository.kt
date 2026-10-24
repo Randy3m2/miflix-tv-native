@@ -774,7 +774,7 @@ class TmdbRepository(var token: String) {
             val draw=kotlin.random.Random.nextInt(total)
             val pickedSeason=remaining[RandomEpisodePolicy.indexForDraw(remaining.map {it.second}.toIntArray(),draw)].first
             val aired=season(item.id,pickedSeason).filter {RandomEpisodePolicy.aired(it.airDate,today)}
-            val choices=aired.filterNot {it.season==exclude?.first && it.episode==exclude?.second}
+            val choices=aired.filterNot {it.season==exclude?.first && it.episode==exclude.second}
             if(choices.isNotEmpty()) return choices.random()
             remaining.removeAll {it.first==pickedSeason}
             if(remaining.isEmpty() && aired.isNotEmpty()) return aired.random()

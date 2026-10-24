@@ -137,6 +137,8 @@ class UpdateRepository {
             return false
         }
         val uri=FileProvider.getUriForFile(context,context.packageName+".updates",file)
+        // Retain the installer fallback for older TV package installers.
+        @Suppress("DEPRECATION")
         val intent=Intent(Intent.ACTION_INSTALL_PACKAGE).setDataAndType(uri,"application/vnd.android.package-archive")
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
         intent.clipData=ClipData.newRawUri("BruniO update APK",uri)

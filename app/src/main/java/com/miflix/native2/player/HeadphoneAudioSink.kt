@@ -70,6 +70,7 @@ internal fun headphoneAudioProcessor(stereoOutput: () -> Boolean): AudioProcesso
         }
         // Kotlin interface delegation can inherit Java default methods instead of
         // forwarding them. Media3 must flush the mixer, including its pending format.
+        @Suppress("OVERRIDE_DEPRECATION") // Required forwarding for legacy Media3 callers.
         override fun flush() { mixer.flush() }
         override fun flush(streamMetadata: AudioProcessor.StreamMetadata) { mixer.flush(streamMetadata) }
     }

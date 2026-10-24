@@ -1192,11 +1192,28 @@ class AppState(context: Context) {
     }
     private var sourceWarmupJobRP90:kotlinx.coroutines.Job?=null
     private var sourceWarmupKeyRP90:PlaybackCacheKey?=null
-    private data class WarmIdentityRP91(val sources:PlaybackCacheKey,val subtitle:String,val tracks:String)
+    private data class WarmIdentityRP91(val sources:PlaybackCacheKey,val subtitle:String,val tracksRevision:Int)
     private var preparedVideoRP91:PreparedVideoRP91?=null
+    private data class WarmRetryPlanRP92(
+        val item:MediaSummary,val imdb:String,val season:Int,val episode:Int,val identity:Any,
+        val rows:List<StreamChoice>,val position:Long,val createdAt:Long,
+        var next:Int=0,var running:Boolean=false,var job:kotlinx.coroutines.Job?=null,
+        val rejected:MutableSet<String> = linkedSetOf()
+    )
+    private var warmRetryPlanRP92:WarmRetryPlanRP92?=null
+    private fun validWarmRetryRP92(plan:WarmRetryPlanRP92)=warmRetryPlanRP92===plan &&
+        detailsWarmupKeyRP90(plan.item)==plan.identity && !playerReleaseRP87.hasActive() &&
+        android.os.SystemClock.elapsedRealtime()-plan.createdAt in 0 until WarmVideoPolicyRP91.TTL_MS
+
+    internal fun trackSettingsRawRP92(item:MediaSummary,easy:Boolean):String {
+        if(item.type!="series" || !localExtras.enabled("tracks")) return ""
+        val scope=localExtrasScope()+if(easy) ":easy" else ""
+        return runCatching {appContext.getSharedPreferences("brunio_local_extras",Context.MODE_PRIVATE).getString("profile:$scope","{}").orEmpty()}.getOrDefault("")
+    }
     private fun warmIdentityRP91(item:MediaSummary,imdb:String,season:Int,episode:Int)=WarmIdentityRP91(
-        playbackCacheKey(item,imdb,season,episode),subtitleLanguage,localExtras.trackChoice(localExtrasScope(),item)?.toString().orEmpty())
-    private fun discardPreparedVideoRP91() {
+        playbackCacheKey(item,imdb,season,episode),subtitleLanguage,localExtras.revision)
+    private fun discardPreparedVideoRP91(keepRetry:Boolean=false) {
+        if(!keepRetry) {val plan=warmRetryPlanRP92;warmRetryPlanRP92=null;plan?.job?.cancel()}
         val old=preparedVideoRP91 ?: return
         preparedVideoRP91=null
         old.expiryJob?.cancel()
@@ -1217,6 +1234,7 @@ class AppState(context: Context) {
         val entry=preparedMatchRP91(request)
         if(entry==null) {discardPreparedVideoRP91();return null}
         preparedVideoRP91=null
+        val plan=warmRetryPlanRP92;warmRetryPlanRP92=null;plan?.job?.cancel()
         entry.expiryJob?.cancel()
         entry.listener?.let {entry.player.removeListener(it)}
         entry.gate.activate()
@@ -1233,26 +1251,71 @@ class AppState(context: Context) {
         } else null
         val bandwidth=if(adaptiveSource) androidx.media3.exoplayer.upstream.DefaultBandwidthMeter.getSingletonInstance(appContext).bitrateEstimate else 0L
         val seconds=(details?.runtimeMinutes ?: 0)*60
-        val chosen=memory ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2(),secondaryAudioLanguageRP62,nativeSizeAscendingRP77,nativeSpanishOnlyRP77) ?: return
-        val owner=session?.userId
-        val best=if(chosen.nativeSource==null) chosen else {
-            if(!nativeStore.enabled(owner)) return
-            withTimeoutOrNull(15000L) {nativeSources.materialize(chosen,nativeStore.token(owner)) {detailsWarmupKeyRP90(item)==identity}} ?: return
+        val audio=audioLanguage;val secondary=secondaryAudioLanguageRP62;val order=sourceProviderOrderRP2()
+        val ascending=nativeSizeAscendingRP77;val spanish=nativeSpanishOnlyRP77
+        val choices=kotlinx.coroutines.withContext(Dispatchers.Default) {
+            (memory ?: StreamOrdering.best(streams,audio,bandwidth,seconds,order,secondary,ascending,spanish)) to
+                StreamOrdering.fallbackCandidates(streams,audio,bandwidth,seconds,order,secondary,ascending,spanish)
         }
         if(detailsWarmupKeyRP90(item)!=identity || playerReleaseRP87.hasActive()) return
+        val chosen=choices.first ?: return
+        val alternatives=choices.second
+        val ordered=(listOf(chosen)+alternatives).distinctBy {it.url}
+        val candidates=ordered.take(WarmRetryPolicyRP92.limit(ordered.size,autoplayNextLink))
         discardPreparedVideoRP91()
-        val timing=com.miflix.native2.player.SubtitleTiming().also {it.delayMs=localExtras.trackChoice(localExtrasScope(),item)?.optLong("delay",0L) ?: 0L}
-        val request=PlayerRequest(item,best,season,episode,position)
-        val gate=WarmLoadControlRP91()
-        val player=createPlaybackPlayerRP91(appContext,this,request,timing,gate)
-        player.volume=0f;player.playWhenReady=false
-        val entry=PreparedVideoRP91(identity,imdb,request,chosen.url,player,timing,gate,android.os.SystemClock.elapsedRealtime())
-        preparedVideoRP91=entry
-        val listener=object:androidx.media3.common.Player.Listener {
-            override fun onPlayerError(error:androidx.media3.common.PlaybackException) {if(preparedVideoRP91===entry) discardPreparedVideoRP91()}
+        val plan=WarmRetryPlanRP92(item,imdb,season,episode,identity,candidates,position,android.os.SystemClock.elapsedRealtime())
+        warmRetryPlanRP92=plan
+        plan.job=kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]
+        prepareNextWarmRP92(plan)
+    }
+    private fun queueWarmRetryRP92(plan:WarmRetryPlanRP92) {
+        if(!validWarmRetryRP92(plan) || plan.running || plan.next>=plan.rows.size) return
+        val task=appScope.launch(start=kotlinx.coroutines.CoroutineStart.LAZY) {
+            val current=kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]
+            try {prepareNextWarmRP92(plan)} finally {
+                if(sourceWarmupJobRP90===current) {sourceWarmupJobRP90=null;sourceWarmupKeyRP90=null}
+            }
         }
-        entry.listener=listener;player.addListener(listener)
-        entry.expiryJob=launch {delay(WarmVideoPolicyRP91.TTL_MS);if(preparedVideoRP91===entry) discardPreparedVideoRP91()}
+        plan.job=task;sourceWarmupJobRP90=task
+        sourceWarmupKeyRP90=playbackCacheKey(plan.item,plan.imdb,plan.season,plan.episode)
+        task.start()
+    }
+    private suspend fun prepareNextWarmRP92(plan:WarmRetryPlanRP92) {
+        if(plan.running) return
+        plan.running=true
+        try {
+            while(validWarmRetryRP92(plan) && plan.next<plan.rows.size) {
+                val candidate=plan.rows[plan.next++]
+                try {
+                    val owner=session?.userId
+                    val best=if(candidate.nativeSource==null) candidate else {
+                        if(!nativeStore.enabled(owner)) return
+                        withTimeoutOrNull(15000L) {nativeSources.materialize(candidate,nativeStore.token(owner)) {validWarmRetryRP92(plan)}}
+                            ?: throw java.io.IOException("Warm source preparation timed out")
+                    }
+                    if(!validWarmRetryRP92(plan)) return
+                    discardPreparedVideoRP91(keepRetry=true)
+                    val timing=com.miflix.native2.player.SubtitleTiming()
+                    val request=PlayerRequest(plan.item,best,plan.season,plan.episode,plan.position)
+                    val gate=WarmLoadControlRP91()
+                    val player=createWarmPlaybackRP92(appContext,this,request,timing,gate) {validWarmRetryRP92(plan)}
+                    if(!validWarmRetryRP92(plan)) {player.release();return}
+                    val entry=PreparedVideoRP91(plan.identity,plan.imdb,request,candidate.url,player,timing,gate,android.os.SystemClock.elapsedRealtime())
+                    preparedVideoRP91=entry
+                    val listener=object:androidx.media3.common.Player.Listener {
+                        override fun onPlayerError(error:androidx.media3.common.PlaybackException) {
+                            if(preparedVideoRP91!==entry) return
+                            plan.rejected.add(candidate.url)
+                            discardPreparedVideoRP91(keepRetry=true)
+                            queueWarmRetryRP92(plan)
+                        }
+                    }
+                    entry.listener=listener;player.addListener(listener)
+                    entry.expiryJob=launch {delay(WarmVideoPolicyRP91.TTL_MS);if(preparedVideoRP91===entry) discardPreparedVideoRP91()}
+                    return
+                } catch(e:CancellationException) {throw e} catch(_:Exception) {plan.rejected.add(candidate.url)}
+            }
+        } finally {plan.running=false}
     }
 
     private fun warmupTargetRP90(item:MediaSummary):Pair<Int,Int> {
@@ -1287,8 +1350,8 @@ class AppState(context: Context) {
         }
     }
     internal fun endVideoWarmupRP91(identity:Any?) {
-        val entry=preparedVideoRP91 ?: return
-        if(entry.identity!=identity) return
+        val entry=preparedVideoRP91
+        if(entry?.identity!=identity && warmRetryPlanRP92?.identity!=identity) return
         if(screen==Screen.PLAYER && playerRequest?.let {preparedMatchRP91(it)}!=null) return
         discardPreparedVideoRP91()
     }
@@ -1305,9 +1368,17 @@ class AppState(context: Context) {
         if(sourceWarmupKeyRP90!=null && sourceWarmupKeyRP90!=key) sourceWarmupJobRP90?.cancel()
         return resolveCachedSourcesRP90(item,imdb,season,episode)
     }
+    private suspend fun sortPlaybackRowsRP92(rows:List<StreamChoice>,item:MediaSummary?=null):List<StreamChoice> {
+        val audio=audioLanguage;val secondary=secondaryAudioLanguageRP62;val order=sourceProviderOrderRP2()
+        val ascending=nativeSizeAscendingRP77;val spanish=nativeSpanishOnlyRP77;val maxBytes=streamSizeBytes
+        return kotlinx.coroutines.withContext(Dispatchers.Default) {
+            val accepted=if(item==null) rows else rows.filter {StreamFilters.allowed(it,item.type,item.year,maxBytes,item.title)}
+            StreamOrdering.sorted(accepted,audio,providerOrder=order,secondaryAudio=secondary,nativeSizeAscending=ascending,nativeSpanishOnly=spanish)
+        }
+    }
     private suspend fun resolveCachedSourcesRP90(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = playbackCacheMutex.withLock {
         val key=playbackCacheKey(item,imdb,season,episode)
-        playbackLinkCache.get(key)?.let { return@withLock StreamOrdering.sorted(it,audioLanguage,providerOrder=sourceProviderOrderRP2(),secondaryAudio=secondaryAudioLanguageRP62,nativeSizeAscending=nativeSizeAscendingRP77,nativeSpanishOnly=nativeSpanishOnlyRP77) }
+        playbackLinkCache.get(key)?.let {return@withLock sortPlaybackRowsRP92(it)}
         val streams=fetchPlaybackSources(item,imdb,season,episode)
         // Cache successful lists only; account/settings changes cannot publish stale results.
         if(streams.isNotEmpty() && key==playbackCacheKey(item,imdb,season,episode)) playbackLinkCache.put(key,streams)
@@ -1320,8 +1391,8 @@ class AppState(context: Context) {
             audioLanguage,secondaryAudio=secondaryAudioLanguageRP62)
         val native=owner!=null && nativeStore.enabled(owner)
         // Disabled is the default and leaves the existing add-on path unchanged.
-        if(!native) return@supervisorScope StreamOrdering.sorted(
-            streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage), audioLanguage,providerOrder=sourceProviderOrderRP2(),secondaryAudio=secondaryAudioLanguageRP62,nativeSizeAscending=nativeSizeAscendingRP77,nativeSpanishOnly=nativeSpanishOnlyRP77)
+        if(!native) return@supervisorScope sortPlaybackRowsRP92(
+            streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage))
         val token=nativeStore.token(owner)
         val onlyNative=nativeOnlyRP75
         val addon=async {
@@ -1336,7 +1407,7 @@ class AppState(context: Context) {
                     try {tmdb.spanishTitle(item).ifBlank {item.title}} catch(e: CancellationException) {throw e} catch(_: Exception) {item.title}
                 else item.title),item.type,item.year,season,episode,streamSizeBytes,audioLanguage,spanishOnly=nativeSpanishOnlyRP77,sizeAscending=nativeSizeAscendingRP77) }
         } catch(e: kotlinx.coroutines.TimeoutCancellationException) { failure=tr("Motor nativo: tiempo agotado","Native engine: timed out");emptyList() } catch(e: CancellationException) { throw e } catch(e: Exception) { failure=e.message;emptyList() }
-        val links=StreamOrdering.sorted((addon.await()+builtIn).filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) }, audioLanguage,providerOrder=sourceProviderOrderRP2(),secondaryAudio=secondaryAudioLanguageRP62,nativeSizeAscending=nativeSizeAscendingRP77,nativeSpanishOnly=nativeSpanishOnlyRP77)
+        val links=sortPlaybackRowsRP92(addon.await()+builtIn,item)
         if(session?.userId==owner) nativeSourceStatus=failure ?: tr("Motor nativo: ","Native engine: ")+builtIn.size+tr(" enlaces disponibles"," available links")
         if(links.isEmpty() && failure!=null) throw IllegalStateException(failure)
         links
@@ -3188,10 +3259,18 @@ class AppState(context: Context) {
         val rememberedRP16=if(selectedStream==null && watchParty==null && (resumeOverride ?: targetProgressRP16?.position ?: 0L)>0L)
             lastSourceRP16.get(memoryKeyRP16)?.takeIf {StreamOrdering.nativeAllowedRP77(it,audioLanguage,nativeSpanishOnlyRP77) && StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) &&
                 runCatching {java.net.URI(it.url).scheme in setOf("http","https")}.getOrDefault(false)} else null
-        if(selectedStream==null && sourceWarmupKeyRP90==playbackCacheKey(item,imdb,season,episode)) {
-            sourceWarmupJobRP90?.takeUnless {it===kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]}?.join()
+        if(selectedStream==null) {
+            val warmKey=playbackCacheKey(item,imdb,season,episode)
+            var joins=0
+            while(sourceWarmupKeyRP90==warmKey && joins++<WarmRetryPolicyRP92.MAX_ATTEMPTS) {
+                val pending=sourceWarmupJobRP90 ?: break
+                if(pending===kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]) break
+                pending.join()
+                if(sourceWarmupJobRP90===pending) break
+            }
         }
         if(!valid()) return@run
+        val rejectedWarmRP92=warmRetryPlanRP92?.takeIf {it.identity==warmIdentityRP91(item,imdb,season,episode)}?.rejected?.toSet().orEmpty()
         val expectedPositionRP91=resumeOverride ?: targetProgressRP16?.position ?: 0L
         val preparedRP91=if(selectedStream==null) preparedVideoRP91?.takeIf {entry ->
             entry.request.item.cloudId==item.cloudId && entry.request.season==season && entry.request.episode==episode &&
@@ -3199,7 +3278,12 @@ class AppState(context: Context) {
             WarmVideoPolicyRP91.fresh(android.os.SystemClock.elapsedRealtime()-entry.createdAt,entry.request.resumeMs,expectedPositionRP91)
         } else null
         if(preparedRP91==null) discardPreparedVideoRP91()
-        val streamsJob = async { if(rememberedRP16!=null) listOf(rememberedRP16) else if (selectedStream != null) (listOf(selectedStream)+fallbackStreams).distinctBy {it.url}.filter { StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title) } else resolvePlaybackSources(item,imdb,season,episode) }
+        val streamsJob = async {
+            val rows=if(rememberedRP16!=null && rememberedRP16.url !in rejectedWarmRP92) listOf(rememberedRP16)
+                else if(selectedStream!=null) (listOf(selectedStream)+fallbackStreams).distinctBy {it.url}.filter {StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title)}
+                else resolvePlaybackSources(item,imdb,season,episode)
+            if(selectedStream!=null) rows else rows.filter {it.url !in rejectedWarmRP92}
+        }
         val preferredSubtitleRP78=subtitleLanguage
         val subtitleKey=subtitleKey(item,season,episode)
         if(playbackSubtitleJobs.size>=16 && subtitleKey !in playbackSubtitleJobs) {
@@ -3214,7 +3298,7 @@ class AppState(context: Context) {
             if(!valid()) return@run
             val bandwidth=if(adaptiveSource) androidx.media3.exoplayer.upstream.DefaultBandwidthMeter.getSingletonInstance(appContext).bitrateEstimate else 0L
             val seconds=(details?.takeIf {it.summary.cloudId==item.cloudId}?.runtimeMinutes ?: 0)*60
-            val chosen = preparedRP91?.request?.stream ?: rememberedRP16 ?: selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2(),secondaryAudioLanguageRP62,nativeSizeAscendingRP77,nativeSpanishOnlyRP77)
+            val chosen = preparedRP91?.request?.stream ?: rememberedRP16?.takeIf {it.url !in rejectedWarmRP92} ?: selectedStream?.takeIf {it in streams} ?: StreamOrdering.best(streams,audioLanguage,bandwidth,seconds,sourceProviderOrderRP2(),secondaryAudioLanguageRP62,nativeSizeAscendingRP77,nativeSpanishOnlyRP77)
                 ?: throw IllegalStateException(if(streamRepo.hasTorrentOnlyResults())
                     tr("Estos complementos solo devolvieron torrents. Se necesitan enlaces directos HTTP/HTTPS.","These add-ons only returned torrents. Direct HTTP/HTTPS links are required.")
                     else tr("No se encontraron enlaces reproducibles","No playable sources found"))
@@ -3237,7 +3321,7 @@ class AppState(context: Context) {
             val key = if (item.type == "series") "${item.cloudId}:s${season}e${episode}" else item.cloudId
             val saved = progress[key] ?: progress[item.cloudId]
             playerRequest = PlayerRequest(item, enriched, season, episode, resumeOverride ?: saved?.position ?: 0L,sourceMemoryKeyRP16=memoryKeyRP16)
-            if(rememberedRP16!=null) playerRequest?.let {rememberedStartRP16=RememberedStartRP16(it.playbackId,imdb,playbackOwner,playbackProfile,ticket.generation)}
+            if(rememberedRP16!=null && rememberedRP16.url !in rejectedWarmRP92) playerRequest?.let {rememberedStartRP16=RememberedStartRP16(it.playbackId,imdb,playbackOwner,playbackProfile,ticket.generation)}
             playbackLoading=playbackLoading?.copy(playbackId=playerRequest?.playbackId)
             screen = Screen.PLAYER
             playerRequest?.let { onStarted?.invoke(it) }

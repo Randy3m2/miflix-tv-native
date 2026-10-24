@@ -5,6 +5,7 @@ import com.miflix.native2.model.SubtitleChoice
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.ensureActive
 import org.json.JSONObject
 import java.net.URI
 
@@ -84,7 +85,7 @@ class StreamRepository internal constructor(initialManifestUrl:String,
         val manifests = manifestUrls.toList()
         if (manifests.isEmpty()) throw IllegalStateException("No stream add-on is configured")
         val rows = manifests.mapIndexed { index,manifest ->
-            async {
+            async(kotlinx.coroutines.Dispatchers.Default) {
                 try {
                     val raw=resolveOne(manifest,index,imdbId,type,season,episode)
                     val accepted=raw.filter {StreamFilters.allowed(it,type,movieYear,maxBytes,movieTitle)}
@@ -102,7 +103,9 @@ class StreamRepository internal constructor(initialManifestUrl:String,
             }
         }.awaitAll().flatten()
 
-        StreamOrdering.sorted(rows.filter { StreamFilters.allowed(it,type,movieYear,maxBytes,movieTitle) },preferredAudio)
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            StreamOrdering.sorted(rows.filter {StreamFilters.allowed(it,type,movieYear,maxBytes,movieTitle)},preferredAudio)
+        }
     }
 
     private suspend fun resolveOne(manifest: String, index:Int, imdbId: String, type: String, season: Int, episode: Int): List<StreamChoice> = coroutineScope {
@@ -118,7 +121,9 @@ class StreamRepository internal constructor(initialManifestUrl:String,
         if(!manifestInfo.await().streams) return@coroutineScope emptyList()
         val addonName = label(manifest,index)
         val a = json.optJSONArray("streams") ?: return@coroutineScope emptyList()
+        val context=kotlinx.coroutines.currentCoroutineContext()
         torrentCounts[manifest]=(0 until a.length()).count {i ->
+            if(i%32==0) context.ensureActive()
             val row=a.optJSONObject(i)
             row!=null && row.optString("url").let {url ->
                 !url.startsWith("http://") && !url.startsWith("https://") &&
@@ -126,6 +131,7 @@ class StreamRepository internal constructor(initialManifestUrl:String,
             }
         }
         (0 until a.length()).mapNotNull { i ->
+            if(i%32==0) context.ensureActive()
             val s = a.optJSONObject(i) ?: return@mapNotNull null
             val rawUrl=s.optString("url").trim()
             val direct=rawUrl.takeIf {it.startsWith("http://") || it.startsWith("https://")}

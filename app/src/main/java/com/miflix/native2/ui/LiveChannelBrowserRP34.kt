@@ -89,14 +89,14 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     val firstChannel=remember {FocusRequester()}
     val playingChannelFocus=remember {FocusRequester()}
     val categoryListRP40=rememberLazyListState()
-    val channelList=rememberLazyListState(restoredRP40?.scrollIndex ?: 0,restoredRP40?.scrollOffset ?: 0)
+    val channelList=rememberLazyListState()
     var initialFocus by remember {mutableStateOf(true)}
     var pendingChannelFocusRP88 by remember {mutableStateOf<String?>(null)}
     var loadedSelectionRP74 by remember {mutableStateOf("")}
     var categories by remember {mutableStateOf<List<BrowserCategoryRP34>>(emptyList())}
-    var selected by remember {mutableStateOf("")}
+    var selected by remember {mutableStateOf("favorites")}
     var channels by remember {mutableStateOf<List<BrowserChannelRP34>>(emptyList())}
-    var search by remember {mutableStateOf(restoredRP40?.search.orEmpty())}
+    var search by remember {mutableStateOf("")}
     var loading by remember {mutableStateOf(true)}
     var resolving by remember {mutableStateOf(false)}
     var message by remember {mutableStateOf("")}
@@ -119,23 +119,22 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     val localIdsRP48=remember(localByIdRP74) {localByIdRP74.keys}
     var showM3URP61 by remember(localOwnerRP48) {mutableStateOf(false)}
     var customManageRP48 by remember(localOwnerRP48) {mutableStateOf<CustomChannelRP45?>(null)}
+    var favoritesReadyRP101 by remember(localOwnerRP48) {mutableStateOf(false)}
     val favorites by produceState<List<FavoriteChannel>>(emptyList(),revision,customRevisionRP48,localIdsRP48,localOwnerRP48) {
         value=withContext(Dispatchers.IO) {LiveLibrary.favorites(context,state).filter {it.provider!=CustomChannelsRP45.provider || it.channel.id in localIdsRP48}}
+        favoritesReadyRP101=true
     }
     val favoriteKeysRP74=remember(favorites) {favorites.map {BrowserChannelRP34(it.provider,it.channel).key}.toHashSet()}
     val group=remember(categories,selected) {categories.firstOrNull {it.key==selected}}
     LaunchedEffect(retry,customRevisionRP48,localCatalogRP74) {
         if(localCatalogRP74==null) return@LaunchedEffect
-        loading=true;message="";catalogWarningRP39="";categories=emptyList();selected=""
+        loading=true;message="";catalogWarningRP39="";categories=emptyList()
         val localCategoryRP48=BrowserCategoryRP34(CustomChannelsRP45.provider,CustomChannelsRP45.categoryRP48(),"")
         val nautaSourceCategoriesRP71=emptyList<LiveCategory>()
         val tirsoCategoriesRP51=(localSnapshotRP100?.categories.orEmpty()+nautaSourceCategoriesRP71).map {BrowserCategoryRP34(CustomChannelsRP45.provider,it,"")}
         categories=tirsoCategoriesRP51+listOf(localCategoryRP48)
         if(initialProvider!="sports") {
-            val currentChannel=current?.liveChannelId?.let {localByIdRP74[it]}
-            selected=categories.firstOrNull {it.key==restoredRP40?.category?.key}?.key
-                ?: categories.firstOrNull {c ->currentChannel!=null && localSnapshotRP100?.groups?.get(c.value.id)?.any {it.value.id==currentChannel.id}==true}?.key
-                ?: tirsoCategoriesRP51.firstOrNull()?.key ?: localCategoryRP48.key
+            if(selected!="favorites" && categories.none {it.key==selected}) selected="favorites"
             loading=false
             try {
                 val manifest=state.calendarLiveManifest("sports")
@@ -144,6 +143,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
             } catch(e:CancellationException) {throw e} catch(_:Exception) { }
             return@LaunchedEffect
         }
+        loading=false
         val providers=listOf("sports")
         val found=coroutineScope {providers.map {provider ->async {
             try {permits.withPermit {
@@ -155,11 +155,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
         categories=(tirsoCategoriesRP51+found+IptvRepository.sources.map {(provider,source) ->
             BrowserCategoryRP34(provider,LiveCategory("tv","iptv:all","IPTV · "+source.first,paginated=true,searchable=true),"")
         }+localCategoryRP48).distinctBy {it.key}
-        selected=if(state.easyModeRP79 && !initialFocus && (selected=="favorites" || categories.any {it.key==selected})) selected
-            else if(restoredRP40?.category?.value?.id=="favorites") "favorites" else categories.firstOrNull {it.key==restoredRP40?.category?.key}?.key
-            ?: categories.firstOrNull {initialProvider==CustomChannelsRP45.provider && it.provider==CustomChannelsRP45.provider}?.key
-            ?: categories.firstOrNull {it.provider==current?.liveProvider && current?.liveProvider in IptvRepository.sources}?.key
-            ?: categories.firstOrNull {isMostViewedRP37(it.value)}?.key ?: categories.firstOrNull()?.key ?: "favorites"
+        if(selected!="favorites" && categories.none {it.key==selected}) selected="favorites"
         categoryListRP40.scrollToItem((categories.indexOfFirst {it.key==selected}+1).coerceAtLeast(0))
         if(!initialFocus && !state.easyModeRP79) {withFrameNanos {};runCatching {first.requestFocus()}}
 
@@ -244,8 +240,8 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
         }
         pendingChannelFocusRP88=null
     }
-    LaunchedEffect(displayed,loading,loadedSelectionRP74) {
-        if(initialFocus && !loading && selected.isNotBlank() && loadedSelectionRP74==selected) {
+    LaunchedEffect(displayed,loading,loadedSelectionRP74,favoritesReadyRP101) {
+        if(initialFocus && (selected!="favorites" || favoritesReadyRP101) && !loading && selected.isNotBlank() && loadedSelectionRP74==selected) {
             val index=displayed.indexOfFirst {it.provider==current?.liveProvider && it.value.id==current?.liveChannelId}
             if(index>=0) {publishedRP100=maxOf(publishedRP100,index+1);withFrameNanos {};channelList.scrollToItem(index);withFrameNanos {};runCatching {playingChannelFocus.requestFocus()}}
             else {withFrameNanos {};runCatching {first.requestFocus()}}

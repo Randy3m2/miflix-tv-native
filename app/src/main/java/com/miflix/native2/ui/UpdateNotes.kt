@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP123: calendario NBA por mes, logo oficial de F1 y LIDOM Games directo a canales de equipos." to "RP123: monthly NBA calendar, official F1 logo and LIDOM Games opens team channels directly.",
         "RP122: calendario con múltiples suscripciones, flechas juntas y días centrados; tabla de posiciones compacta." to "RP122: multi-subscription calendar, adjacent arrows and centered weekdays; compact standings table.",
         "RP121: Games, Table, Stats y Players para NBA, MLB, F1 y LIDOM; líderes y jugadores con fotos, filtros y caché local." to "RP121: Games, Table, Stats and Players for NBA, MLB, F1 and LIDOM; leaders and players with photos, filters and local caching.",
         "RP120: suscripciones por equipo/liga, calendario con logos y avisos; posiciones NBA, MLB, F1 y LIDOM en Others." to "RP120: team/league subscriptions, calendar logos and alerts; NBA, MLB, F1 and LIDOM standings in Others.",

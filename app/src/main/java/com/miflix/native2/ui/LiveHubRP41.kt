@@ -475,22 +475,5 @@ internal fun EasyMlbRP80(state:AppState,modifier:Modifier) {
 
 @Composable
 private fun LidomGamesRP121(state:AppState,modifier:Modifier) {
-    var addon by androidx.compose.runtime.saveable.rememberSaveable(state.activeProfile.id) {mutableStateOf(true)}
-    var day by androidx.compose.runtime.saveable.rememberSaveable(state.activeProfile.id) {mutableStateOf(java.time.LocalDate.now().toString())}
-    Column(modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-        Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-            FocusButton(tr("Add-on de deportes","Sports add-on"),primary=addon) {addon=true}
-            FocusButton(tr("Canales de equipos","Team channels"),primary=!addon) {addon=false}
-        }
-        if(addon) Row(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
-            FocusButton("‹",horizontalPadding=14.dp) {day=java.time.LocalDate.parse(day).minusDays(1).toString()}
-            FocusButton(tr("Hoy","Today")) {day=java.time.LocalDate.now().toString()}
-            FocusButton("›",horizontalPadding=14.dp) {day=java.time.LocalDate.parse(day).plusDays(1).toString()}
-            Text(day,color=Color.White,fontSize=14.sp)
-        }
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-            if(addon) HubSportsRP41(state,"lidom",Modifier.fillMaxSize(),dayRP121=day) { }
-            else HubLidomRP41(state,Modifier.fillMaxSize())
-        }
-    }
+    HubLidomRP41(state,modifier)
 }

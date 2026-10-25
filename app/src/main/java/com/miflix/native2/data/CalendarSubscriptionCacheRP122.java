@@ -8,7 +8,7 @@ public final class CalendarSubscriptionCacheRP122 {
     }
     public static String signature(Set<String> subscriptions,String feed) {
         List<String> sorted=new ArrayList<>(subscriptions);Collections.sort(sorted);
-        StringBuilder out=new StringBuilder();
+        StringBuilder out=new StringBuilder("nba-monthly-rp123|");
         for(String key:sorted) out.append(key.length()).append(':').append(key);
         return out.append('|').append(feed.length()).append(':').append(feed).toString();
     }

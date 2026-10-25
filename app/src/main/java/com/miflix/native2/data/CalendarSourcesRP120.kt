@@ -31,7 +31,7 @@ internal object CalendarSourcesRP120 {
     val leagues=listOf("NBA","MLB","LIDOM","F1","BOXING","GRAMMYS","OSCARS","MISS_UNIVERSE")
     fun logo(league:String)=when(league) {
         "NBA","MLB" ->"https://a.espncdn.com/i/teamlogos/leagues/500/${league.lowercase()}.png"
-        "F1"->"drawable:calendar_f1_rp120"
+        "F1"->"drawable:calendar_f1_official_rp123"
         "BOXING"->"drawable:calendar_boxing_rp120"
         "GRAMMYS"->"drawable:calendar_music_rp120"
         "OSCARS"->"drawable:calendar_trophy_rp120"
@@ -43,7 +43,7 @@ internal object CalendarSourcesRP120 {
         val a=JSONArray(context.assets.open("calendar_teams_rp120.json").bufferedReader().use {it.readText()})
         return (0 until a.length()).map {a.getJSONObject(it)}.map {CalendarTeamRP120(it.getString("league"),it.optString("id"),it.getString("name"),it.optString("logo"))}
     }
-    private suspend fun json(url:String)=JSONObject(withContext(Dispatchers.IO) {Http.text(url,timeoutMs=8000).also {require(it.length<=2*1024*1024) {"Schedule response too large"}}})
+    private suspend fun json(url:String,maxChars:Int=2*1024*1024)=JSONObject(withContext(Dispatchers.IO) {Http.text(url,timeoutMs=8000).also {require(it.length<=maxChars) {"Schedule response too large"}}})
     suspend fun schedule(league:String,start:LocalDate,end:LocalDate,teams:List<CalendarTeamRP120>):List<SportEventRP120> {
         if(league=="F1") {
             val events=mutableListOf<SportEventRP120>()
@@ -51,18 +51,21 @@ internal object CalendarSourcesRP120 {
             return events.filter {it.date>=start.toString() && it.date<=end.toString()}.map {it.copy(teams=teams.filter {team ->team.league=="F1"}.map {team ->team.id})}
         }
         if(league !in listOf("NBA","MLB","LIDOM")) return emptyList()
+        if(league=="NBA") {
+            val events=mutableListOf<SportEventRP120>()
+            for(url in NbaCalendarRequestsRP123.months(start,end)) {
+                currentCoroutineContext().ensureActive()
+                events+=nba(json(url,maxChars=8*1024*1024))
+            }
+            return events.distinctBy {it.key}.filter {it.day()>=start.toString() && it.day()<=end.toString()}
+        }
         val events=mutableListOf<SportEventRP120>()
         var from=start
         while(!from.isAfter(end)) {
             val to=minOf(from.plusDays(30),end)
-            if(league=="NBA") {
-                val j=json("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${from.toString().replace("-","")}-${to.toString().replace("-","")}&limit=1000")
-                events+=nba(j)
-            } else {
-                val j=json("https://statsapi.mlb.com/api/v1/schedule?sportId=${if(league=="MLB") 1 else 17}"+
-                    (if(league=="LIDOM") "&leagueId=131" else "")+"&startDate=$from&endDate=$to")
-                events+=baseball(j,league,teams)
-            }
+            val j=json("https://statsapi.mlb.com/api/v1/schedule?sportId=${if(league=="MLB") 1 else 17}"+
+                (if(league=="LIDOM") "&leagueId=131" else "")+"&startDate=$from&endDate=$to")
+            events+=baseball(j,league,teams)
             from=to.plusDays(1)
         }
         return events.distinctBy {it.key}
@@ -73,7 +76,7 @@ internal object CalendarSourcesRP120 {
             val e=a.getJSONObject(i);val c=e.getJSONArray("competitions").getJSONObject(0)
             val teams=c.getJSONArray("competitors");val ids=mutableListOf<String>();val logos=mutableListOf<String>()
             for(n in 0 until teams.length()) {val team=teams.getJSONObject(n).getJSONObject("team");ids+=team.optString("id");team.optString("logo").takeIf {it.isNotBlank()}?.let {logos+=it}}
-            val time=Instant.parse(e.getString("date"));val status=e.optJSONObject("status")?.optJSONObject("type")
+            val time=OffsetDateTime.parse(e.getString("date")).toInstant();val status=e.optJSONObject("status")?.optJSONObject("type")
             SportEventRP120(e.optString("id"),"NBA",e.getString("name"),time.toString().take(10),time.toEpochMilli(),ids,logos,
                 timed=c.optBoolean("timeValid",true),cancelled=status?.optString("name").orEmpty().contains("CANCEL",true) || status?.optString("name").orEmpty().contains("POSTPON",true))
         }.getOrNull()}

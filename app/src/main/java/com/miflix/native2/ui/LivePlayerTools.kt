@@ -68,25 +68,100 @@ fun MultiViewScreen(state: AppState) {
     var sound by remember { mutableStateOf(state.multiViewRequests.firstOrNull()?.playbackId) }
     var hd by remember { mutableStateOf(false) }
     var panelRP43 by remember {mutableStateOf(true)}
+    val statsRepoRP130=remember { SportsStatsRP95() }
+    val statsGamesRP130=remember { mutableStateMapOf<String,LiveScoreRP11>() }
+    var teamLogosRP130 by remember {mutableStateOf<Map<String,String>>(emptyMap())}
+    LaunchedEffect(customContextRP48) {
+        teamLogosRP130=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                val rows=org.json.JSONObject(customContextRP48.assets.open("lidom_teams.json").bufferedReader().use {it.readText()}).getJSONArray("teams")
+                (0 until rows.length()).associate {index->
+                    val team=rows.getJSONObject(index);team.getInt("mlb").toString() to team.optString("logo")
+                }
+            }.getOrDefault(emptyMap())
+        }
+    }
+    fun assignStatsRP130(id:String,game:LiveScoreRP11) {
+        if(state.multiViewRequests.none {it.playbackId==id}) return
+        fun logo(team:ScoreTeamRP11)=if(game.league=="LIDOM" && team.logo.isBlank()) team.copy(logo=teamLogosRP130[team.id].orEmpty()) else team
+        statsGamesRP130[id]=game.copy(away=logo(game.away),home=logo(game.home))
+    }
+    val statsOpenRP130=remember { mutableStateMapOf<String,Boolean>() }
+    var statsSourceRP130 by remember { mutableStateOf<String?>(null) }
+    var chooseStatsRP130 by remember { mutableStateOf<String?>(null) }
+    var fourthStatsRP130 by remember { mutableStateOf(false) }
     val first=remember { FocusRequester() }
+    val slotIdsRP130=state.multiViewRequests.map {it.playbackId}
+    LaunchedEffect(slotIdsRP130) {
+        statsGamesRP130.keys.toList().filter {it !in slotIdsRP130}.forEach {statsGamesRP130.remove(it)}
+        statsOpenRP130.keys.toList().filter {it !in slotIdsRP130}.forEach {statsOpenRP130.remove(it)}
+        if(statsSourceRP130 !in slotIdsRP130) statsSourceRP130=slotIdsRP130.firstOrNull()
+        if(chooseStatsRP130 !in slotIdsRP130) chooseStatsRP130=null
+    }
     LaunchedEffect(panelRP43) { withFrameNanos { };runCatching {first.requestFocus()} }
     val view=LocalView.current
     DisposableEffect(view) { val old=view.keepScreenOn;view.keepScreenOn=true;onDispose { view.keepScreenOn=old } }
     fun exit() {players.releaseAll();state.multiViewRequests.clear();state.playerRequest=null;state.miniPlayer=false;state.screen=Screen.LIVE_TV}
-    BackHandler {if(panelRP43) panelRP43=false else exit()}
+    BackHandler {
+        when {
+            chooseStatsRP130!=null ->chooseStatsRP130=null
+            panelRP43 ->panelRP43=false
+            state.multiViewRequests.size==3 && fourthStatsRP130 ->{fourthStatsRP130=false;runCatching {first.requestFocus()}}
+            state.multiViewRequests.size==2 && statsOpenRP130.values.any {it} ->{statsOpenRP130.clear();runCatching {first.requestFocus()}}
+            else ->exit()
+        }
+    }
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black).padding(6.dp)) {
         val slots=youtubeFull?.let {listOf(it)} ?: state.multiViewRequests.toList()
-        BoxWithConstraints(Modifier.fillMaxSize()) {
+        BoxWithConstraints(Modifier.fillMaxSize().padding(bottom=52.dp)) {
             val columns=if(slots.size<=1) 1 else 2
             val rows=if(slots.size>2) 2 else 1
             val tileWidth=(maxWidth-12.dp*(columns-1))/columns
             val tileHeight=(maxHeight-12.dp*(rows-1))/rows
             slots.forEachIndexed { index,req ->
                 key(req.playbackId) {
-                    MultiViewTile(req,if(youtubeFull!=null) req.playbackId==youtubeFull?.playbackId else req.playbackId==sound,hd,players,
-                        Modifier.offset(x=(tileWidth+12.dp)*(index%columns),y=(tileHeight+12.dp)*(index/columns)).width(tileWidth).height(tileHeight),index) {
-                        selected=req.playbackId
+                    Box(Modifier.offset(x=(tileWidth+12.dp)*(index%columns),y=(tileHeight+12.dp)*(index/columns)).width(tileWidth).height(tileHeight)) {
+                        MultiViewTile(req,if(youtubeFull!=null) req.playbackId==youtubeFull?.playbackId else req.playbackId==sound,hd,players,
+                            Modifier.fillMaxSize(),index,statsFooterRP130=youtubeFull==null && slots.size in 2..3) {selected=req.playbackId}
+                        if(youtubeFull==null && SplitStatsPolicyRP130.mode(slots.size)!=0) {
+                            SplitStatsActionRP130("▥ Stats",modifier=Modifier.align(Alignment.BottomEnd).padding(8.dp).height(32.dp),selected=if(slots.size==3) fourthStatsRP130 && statsSourceRP130==req.playbackId else statsOpenRP130[req.playbackId]==true,click={
+                                if(slots.size==3) {statsSourceRP130=req.playbackId;fourthStatsRP130=true}
+                                else statsOpenRP130[req.playbackId]=statsOpenRP130[req.playbackId]!=true
+                                panelRP43=false
+                            })
+                            if(slots.size==2 && statsOpenRP130[req.playbackId]==true) {
+                                val band=((tileHeight-tileWidth*9f/16f)/2f-5.dp).coerceAtLeast(0.dp)
+                                if(band>=96.dp) SplitStatsDockRP130(state,req,statsRepoRP130,statsGamesRP130[req.playbackId],
+                                    {assignStatsRP130(req.playbackId,it)},{chooseStatsRP130=req.playbackId},
+                                    {statsOpenRP130[req.playbackId]=false;runCatching {first.requestFocus()}},
+                                    Modifier.align(Alignment.TopCenter).padding(6.dp).fillMaxWidth().height(band))
+                                else FocusButton(tr("Ver estadísticas","View stats"),modifier=Modifier.align(Alignment.TopStart).padding(8.dp)) {chooseStatsRP130=req.playbackId}
+                            }
+                        }
                     }
+                }
+            }
+        }
+        if(youtubeFull==null && slots.size==3) {
+            val statsReq=slots.firstOrNull {it.playbackId==statsSourceRP130} ?: slots.first()
+            // Fourth cell is data only: never allocates another decoder.
+            Column(Modifier.align(Alignment.BottomEnd).padding(bottom=52.dp)
+                .width((maxWidth-12.dp)/2f).height((maxHeight-64.dp)/2f)
+                .background(Color(0xEA101318),RoundedCornerShape(12.dp))
+                .border(1.dp,Color(0xFF444B55),RoundedCornerShape(12.dp)).padding(6.dp)) {
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)) {
+                    slots.forEachIndexed {slotIndex,slot ->
+                        SplitStatsActionRP130((slotIndex+1).toString()+" · "+slot.item.title,modifier=Modifier.weight(1f),selected=slot.playbackId==statsReq.playbackId,click={
+                            statsSourceRP130=slot.playbackId;fourthStatsRP130=true;panelRP43=false
+                        })
+                    }
+                }
+                if(fourthStatsRP130) key(statsReq.playbackId) {
+                    SplitStatsFullRP130(state,statsReq,statsRepoRP130,statsGamesRP130[statsReq.playbackId],
+                        {assignStatsRP130(statsReq.playbackId,it)},{chooseStatsRP130=statsReq.playbackId},
+                        {fourthStatsRP130=false;runCatching {first.requestFocus()}},first,Modifier.weight(1f))
+                } else Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) {
+                    FocusButton(tr("▥ Stats · elige una pantalla","▥ Stats · choose a screen")) {fourthStatsRP130=true;panelRP43=false}
                 }
             }
         }
@@ -114,7 +189,7 @@ fun MultiViewScreen(state: AppState) {
                 FocusButton(tr("Ocultar panel","Hide panel"),modifier=Modifier.fillMaxWidth()) {panelRP43=false}
                 FocusButton(tr("Salir de SplitScreen","Exit SplitScreen"),modifier=Modifier.fillMaxWidth()) {exit()}
             }
-        } else FocusButton("SplitScreen · ☷",modifier=Modifier.align(Alignment.TopEnd).padding(10.dp).focusRequester(first)) {panelRP43=true}
+        } else SplitStatsActionRP130("SplitScreen · ☷",{panelRP43=true},Modifier.align(Alignment.BottomEnd).padding(horizontal=10.dp,vertical=2.dp).height(40.dp).focusRequester(first),textSize=14)
     }
 
     selected?.let { id ->
@@ -155,6 +230,18 @@ fun MultiViewScreen(state: AppState) {
                 }
                 FocusButton(tr("Cerrar","Close")) { selected=null }
             }
+            }
+        }
+    }
+    chooseStatsRP130?.let {id ->
+        state.multiViewRequests.firstOrNull {it.playbackId==id}?.let {req ->
+            PlayerMenuDialog(onDismissRequest={chooseStatsRP130=null},fullScreen=true) {
+                Box(Modifier.fillMaxSize(),contentAlignment=Alignment.CenterEnd) {
+                    SportsStatsPanelRP95(state,splitStatsTitleRP130(req),statsRepoRP130,statsGamesRP130[id],
+                        {assignStatsRP130(id,it);chooseStatsRP130=null},
+                        {chooseStatsRP130=null;runCatching {first.requestFocus()}},first,
+                        Modifier.fillMaxWidth(.48f).fillMaxHeight().padding(8.dp),leaguesRP130=listOf("NBA","MLB","LIDOM"),selectOnlyRP130=true)
+                }
             }
         }
     }
@@ -244,7 +331,7 @@ private fun MultiViewSourceDialog(state: AppState,req: PlayerRequest,choose: (co
 }
 
 @Composable
-private fun MultiViewTile(req: PlayerRequest, audible: Boolean, hd: Boolean, pool: MultiPlayerPool, modifier: Modifier, order: Int, click: () -> Unit) {
+private fun MultiViewTile(req: PlayerRequest, audible: Boolean, hd: Boolean, pool: MultiPlayerPool, modifier: Modifier, order: Int, statsFooterRP130:Boolean=false, click: () -> Unit) {
     if(req.liveType=="youtube") {
         LidomSplitYoutubeTileRP9(req,audible,modifier,click)
         return
@@ -309,7 +396,7 @@ private fun MultiViewTile(req: PlayerRequest, audible: Boolean, hd: Boolean, poo
     Box(modifier.onFocusChanged { focused=it.hasFocus }.tvClick(click).focusable().clickable(onClick=click)
         .border(if(focused) 3.dp else 1.dp,if(focused) Accent else Color(0xFF444444)).padding(4.dp).background(Color.Black)) {
         player?.let { p -> AndroidView(factory={ ctx -> PlayerView(ctx).apply { setEnableComposeSurfaceSyncWorkaround(true);useController=false;isFocusable=false;descendantFocusability=android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS;player=p } },update={ it.player=p },modifier=Modifier.fillMaxSize()) }
-        Text((if(audible) "♫  " else "")+req.item.title,color=Color.White,fontSize=15.sp,modifier=Modifier.align(Alignment.BottomStart).background(Color(0xB0000000)).padding(8.dp))
+        Text((if(audible) "♫  " else "")+req.item.title,color=Color.White,fontSize=15.sp,modifier=Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(end=if(statsFooterRP130) 110.dp else 0.dp).background(Color(0xB0000000)).padding(8.dp))
         if(error!=null) Text(tr("No se pudo abrir. OK para cambiar o reintentar.","Unable to play. OK to change or retry.")+"\n"+error,color=Color.White,modifier=Modifier.align(Alignment.Center).background(Color.Black).padding(14.dp))
         else if(buffering) Text(tr("Cargando…","Loading…"),color=Color.White,modifier=Modifier.align(Alignment.Center))
     }

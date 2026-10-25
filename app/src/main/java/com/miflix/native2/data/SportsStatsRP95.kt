@@ -18,15 +18,15 @@ internal data class GameStatsRP95(val teams:List<StatsTeamRP95>,val phase:String
 /** Public game data only. No account, playback URL, Supabase, progress or presence dependencies. */
 internal class SportsStatsRP95(private val fetch:suspend(String)->String={StatsHttpRP105.text(it)},
     private val now:()->Long={System.currentTimeMillis()}) {
-    private val scores=mapOf("NBA" to LiveScoresRP11(fetch),"MLB" to LiveScoresRP11(fetch))
+    private val scores=listOf("NBA","MLB","LIDOM").associateWith {LiveScoresRP11(fetch)}
     private val locks=Array(16) {Mutex()}
     private val cache=linkedMapOf<String,GameStatsRP95>()
     suspend fun games(league:String,date:String):List<LiveScoreRP11> = withContext(Dispatchers.Default) {
-        require(league in listOf("NBA","MLB"));scores.getValue(league).games(league,date)
+        require(league in listOf("NBA","MLB","LIDOM"));scores.getValue(league).games(league,date)
     }
     fun cached(game:LiveScoreRP11):GameStatsRP95?=synchronized(cache) {cache["${game.league}:${game.id}"]}
     suspend fun stats(game:LiveScoreRP11,force:Boolean=false):GameStatsRP95=locks[("${game.league}:${game.id}".hashCode() and Int.MAX_VALUE)%locks.size].withLock {
-        require(game.league in listOf("NBA","MLB") && game.id.matches(Regex("[0-9]{1,12}")))
+        require(game.league in listOf("NBA","MLB","LIDOM") && game.id.matches(Regex("[0-9]{1,12}")))
         val key="${game.league}:${game.id}"
         synchronized(cache) {cache[key]}?.takeIf {!force && now()-it.updatedAt in 0 until if(it.final) 300_000L else 30_000L}?.let {return@withLock it}
         val url=if(game.league=="NBA") "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=${game.id}"

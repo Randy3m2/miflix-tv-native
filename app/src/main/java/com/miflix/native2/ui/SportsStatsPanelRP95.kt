@@ -40,9 +40,9 @@ import java.time.LocalDate
 /** Fixed controls and table header; only compact, constant-height table rows scroll. */
 @Composable
 internal fun SportsStatsPanelRP95(state:AppState,title:String,repo:SportsStatsRP95,selected:LiveScoreRP11?,
-    select:(LiveScoreRP11)->Unit,onClose:()->Unit,videoFocus:FocusRequester,modifier:Modifier=Modifier) {
-    var choosing by remember {mutableStateOf(selected==null)}
-    var league by remember {mutableStateOf(selected?.league ?: StatsTablePolicyRP105.preferredLeague(title))}
+    select:(LiveScoreRP11)->Unit,onClose:()->Unit,videoFocus:FocusRequester,modifier:Modifier=Modifier,leaguesRP130:List<String> = listOf("NBA","MLB"),selectOnlyRP130:Boolean=false) {
+    var choosing by remember {mutableStateOf(selectOnlyRP130 || selected==null)}
+    var league by remember {mutableStateOf(selected?.league ?: if("LIDOM" in title.uppercase()) "LIDOM" else StatsTablePolicyRP105.preferredLeague(title))}
     var date by remember {mutableStateOf(selected?.date ?: LiveScoresRP11.today())}
     var games by remember(date) {mutableStateOf<List<LiveScoreRP11>>(emptyList())}
     var gamesBusy by remember {mutableStateOf(false)}
@@ -61,7 +61,7 @@ internal fun SportsStatsPanelRP95(state:AppState,title:String,repo:SportsStatsRP
         gamesBusy=true;gamesError=false
         try {
             coroutineScope {
-                val sports=if(autoMatched) listOf(league) else listOf(league,if(league=="NBA") "MLB" else "NBA")
+                val sports=if(autoMatched) listOf(league) else listOf(league)+leaguesRP130.filter {it!=league}
                 sports.forEach {sport ->launch {
                     try {
                         val rows=repo.games(sport,date)
@@ -98,7 +98,7 @@ internal fun SportsStatsPanelRP95(state:AppState,title:String,repo:SportsStatsRP
         }
         if(choosing) {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                for(sport in listOf("NBA","MLB")) StatsActionRP105(sport,league==sport,Modifier.weight(1f)) {autoMatched=true;league=sport}
+                for(sport in leaguesRP130) StatsActionRP105(sport,league==sport,Modifier.weight(1f)) {autoMatched=true;league=sport}
             }
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
                 StatsActionRP105("‹",false) {autoMatched=true;date=LocalDate.parse(date).minusDays(1).toString()}
@@ -154,7 +154,7 @@ private fun ColumnScope.StatsBoxScoreRP105(game:LiveScoreRP11,data:GameStatsRP95
                 else listOf("hits" to "H","homeRuns" to "HR","rbi" to "RBI","baseOnBalls" to "BB","strikeOuts" to "K","errors" to "E","inningsPitched" to "IP")
             StatsTableRP105(listOf(tr("Valor","Value")),metrics.map {(key,label) ->StatsTableRowRP105(key,label,listOf(values[key] ?: "—"))},1)
         } else {
-            val groups=(if(game.league=="MLB" && tab==1) data.pitching else data.players).filter {
+            val groups=(if(game.league!="NBA" && tab==1) data.pitching else data.players).filter {
                 if(it.teamId.isNotBlank()) it.teamId==currentTeam.id else it.team==data.teams.getOrNull(teamIndex)?.name
             }
             StatsTablePolicyRP105.build(groups,game.league,page)
@@ -178,7 +178,7 @@ private fun ColumnScope.StatsBoxScoreRP105(game:LiveScoreRP11,data:GameStatsRP95
 }
 
 @Composable
-private fun StatsTableRowsRP105(table:StatsTableRP105,first:FocusRequester,header:FocusRequester,teams:FocusRequester,video:FocusRequester,modifier:Modifier) {
+internal fun StatsTableRowsRP105(table:StatsTableRP105,first:FocusRequester,header:FocusRequester,teams:FocusRequester,video:FocusRequester,modifier:Modifier,rowHeightDp:Int=39) {
     val list=rememberLazyListState()
     var tableFocused by remember {mutableStateOf(false)}
     var selectedKey by remember {mutableStateOf(table.rows.firstOrNull()?.key)}
@@ -223,7 +223,7 @@ private fun StatsTableRowsRP105(table:StatsTableRP105,first:FocusRequester,heade
             }
         }.focusable(),state=list,contentPadding=PaddingValues(bottom=8.dp)) {
         itemsIndexed(table.rows,key={_,row ->row.key}) {index,row ->
-            Column(Modifier.fillMaxWidth().height(39.dp)
+            Column(Modifier.fillMaxWidth().height(rowHeightDp.dp)
                 .background(if(tableFocused && index==cursor) Color(0xFF292929) else Color.Transparent)
                 ) {
                 StatsTableCellsRP105(row.name,row.values,photo=row.photo,number=row.number,modifier=Modifier.weight(1f))
@@ -235,7 +235,7 @@ private fun StatsTableRowsRP105(table:StatsTableRP105,first:FocusRequester,heade
 }
 
 @Composable
-private fun StatsTableCellsRP105(name:String,values:List<String>,header:Boolean=false,photo:String="",number:String="",modifier:Modifier=Modifier) {
+internal fun StatsTableCellsRP105(name:String,values:List<String>,header:Boolean=false,photo:String="",number:String="",modifier:Modifier=Modifier) {
     val context=LocalContext.current
     val image=remember(photo,context) {ImageRequest.Builder(context).data(photo).size(64,64).build()}
     Row(modifier.fillMaxWidth().heightIn(min=23.dp).padding(horizontal=4.dp),verticalAlignment=Alignment.CenterVertically) {

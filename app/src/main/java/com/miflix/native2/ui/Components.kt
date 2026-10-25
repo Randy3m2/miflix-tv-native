@@ -419,6 +419,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
     }.focusGroup()
         .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha=.8f),Color.Black.copy(alpha=.35f),Color.Transparent))).padding(horizontal=24.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)) {
+        Row(Modifier.width(136.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
         Image(painterResource(R.drawable.brunio_icon),"BruniO",Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)))
         var profileFocused by remember { mutableStateOf(false) }
         var profileMenu by remember { mutableStateOf(false) }
@@ -450,30 +451,23 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
             }
         }
         }
-        var navOrigin by remember { mutableStateOf(0f) }
-        val bounds=remember { mutableStateMapOf<Screen,Pair<Float,Float>>() }
-        var target by remember { mutableStateOf<Screen?>(null) }
-        var navFocused by remember { mutableStateOf(false) }
-        val x by animateFloatAsState(target?.let { bounds[it] }?.first ?: 0f,tween(100),label="navFocusX")
-        val width by animateFloatAsState(target?.let { bounds[it] }?.second ?: 0f,tween(100),label="navFocusWidth")
-        val density=LocalDensity.current
-        Box(Modifier.weight(1f).height(60.dp).clipToBounds().onGloballyPositioned { navOrigin=it.positionInRoot().x }) {
-            androidx.compose.foundation.lazy.LazyRow(Modifier.fillMaxSize().onFocusChanged { navFocused=it.hasFocus },
-                verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp),
+        } // symmetric profile slot
+        Box(Modifier.weight(1f).height(60.dp)) {
+            androidx.compose.foundation.lazy.LazyRow(Modifier.fillMaxSize(),
+                verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp,Alignment.CenterHorizontally),
                 contentPadding=PaddingValues(horizontal=4.dp,vertical=6.dp)) {
                 items(navItems,key={it.first}) { (destination,label) ->
-                    var focused by remember { mutableStateOf(false) }
-                                        Box(Modifier.onGloballyPositioned { bounds[destination]=Pair(it.positionInRoot().x-navOrigin,it.size.width.toFloat()) }) {
-                        if(destination==Screen.SEARCH) SearchNavigationButton(onFocused={ focused=it; if(it) target=destination }) { if(destination==Screen.LIVE_TV && current==destination && onMoveDown!=null) onMoveDown() else onNavigate(destination) }
-                        else NavigationTab(label,selected=current==destination,onFocused={ focused=it; if(it) target=destination }) { if(destination==Screen.LIVE_TV && current==destination && onMoveDown!=null) onMoveDown() else onNavigate(destination) }
-                    }
+                    val activate={if(destination==Screen.LIVE_TV && current==destination && onMoveDown!=null) onMoveDown() else onNavigate(destination)}
+                    if(destination==Screen.SEARCH) SearchNavigationButton(selected=current==destination,onClick=activate)
+                    else NavigationTab(label,selected=current==destination,onClick=activate)
                 }
             }
-            if(navFocused && width>0) Box(Modifier.align(Alignment.BottomStart)
-                .graphicsLayer { translationX=x }.width(with(density) { width.toDp() }).height(2.dp)
-                .background(Accent,RoundedCornerShape(2.dp)))
         }
-        NotificationButton(notificationCount) { onNavigate(Screen.NOTIFICATIONS) }
+        Row(Modifier.width(136.dp),horizontalArrangement=Arrangement.spacedBy(10.dp,Alignment.End),verticalAlignment=Alignment.CenterVertically) {
+            NotificationButton(notificationCount) {onNavigate(Screen.NOTIFICATIONS)}
+            if(!kids) SettingsNavigationButtonRP106(current==Screen.SETTINGS) {onNavigate(Screen.SETTINGS)}
+        }
+
     }
 }
 
@@ -481,8 +475,8 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
 private fun NotificationButton(count: Int,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     Box(Modifier.size(46.dp).semantics { contentDescription="${tr("Avisos","Alerts")}: $count" }.onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
-        .background(Color.Black,RoundedCornerShape(16.dp))
-        .border(if(focused) 2.dp else 0.dp,Accent,RoundedCornerShape(16.dp)),contentAlignment=Alignment.Center) {
+        .background(GlassNavBrushRP106(focused,false),RoundedCornerShape(50))
+        .border(1.dp,Color.White.copy(alpha=if(focused) .38f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
         BellIcon(Color.White,Modifier.size(25.dp))
         if(count>0) Text(if(count>9) "9+" else count.toString(),color=if(focused) Color.White else Color.Black,fontSize=10.sp,lineHeight=12.sp,
             modifier=Modifier.align(Alignment.TopEnd).background(if(focused) Color(0xFF292929) else Color(0xFFCCCCCC),RoundedCornerShape(8.dp)).padding(horizontal=4.dp,vertical=2.dp))
@@ -504,12 +498,12 @@ private fun BellIcon(color: Color,modifier: Modifier) {
 }
 
 @Composable
-private fun SearchNavigationButton(onFocused: (Boolean) -> Unit = {},onClick: () -> Unit) {
+private fun SearchNavigationButton(onFocused: (Boolean) -> Unit = {},selected:Boolean=false,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     Box(Modifier.size(44.dp).semantics { contentDescription=tr("Buscar","Search") }.onFocusChanged { focused=it.isFocused; onFocused(it.isFocused) }.focusable().tvClick(onClick).clickable(onClick=onClick)
-        .background(if(focused) Accent else Color.Transparent,RoundedCornerShape(16.dp)),contentAlignment=Alignment.Center) {
+        .background(GlassNavBrushRP106(focused,selected),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=if(focused) .36f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
         Canvas(Modifier.size(24.dp)) {
-            val ink=if(focused) FocusInk else Color.White
+            val ink=Color.White
             val center=androidx.compose.ui.geometry.Offset(size.width*.4f,size.height*.4f)
             drawCircle(ink,size.width*.29f,center,style=androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
             drawLine(ink,androidx.compose.ui.geometry.Offset(size.width*.62f,size.height*.62f),
@@ -521,11 +515,42 @@ private fun SearchNavigationButton(onFocused: (Boolean) -> Unit = {},onClick: ()
 @Composable
 internal fun NavigationTab(text: String,selected: Boolean,onFocused: (Boolean) -> Unit = {},onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    Column(Modifier.onFocusChanged { focused=it.isFocused;onFocused(it.isFocused) }.focusable().tvClick(onClick).clickable(onClick=onClick)
-        .background(if(focused) Color(0xFF1B191F) else Color.Transparent,RoundedCornerShape(8.dp)).padding(horizontal=10.dp,vertical=10.dp),
-        horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(7.dp)) {
-        Text(text,color=if(focused || selected) Color.White else Muted,fontSize=15.sp,lineHeight=18.sp,fontWeight=if(focused || selected) FontWeight.Bold else FontWeight.Medium,maxLines=1)
-        Box(Modifier.height(2.dp).width(28.dp).background(if(selected) Accent else Color.Transparent,RoundedCornerShape(2.dp)))
+    Box(Modifier.height(42.dp).onFocusChanged {focused=it.isFocused;onFocused(it.isFocused)}
+        .focusable().tvClick(onClick).clickable(onClick=onClick)
+        .background(GlassNavBrushRP106(focused,selected),RoundedCornerShape(50))
+        .border(1.dp,Color.White.copy(alpha=if(focused) .38f else if(selected) .18f else .06f),RoundedCornerShape(50))
+        .padding(horizontal=14.dp),contentAlignment=Alignment.Center) {
+        Text(text,color=Color.White.copy(alpha=if(focused || selected) 1f else .76f),fontSize=14.sp,lineHeight=18.sp,fontWeight=if(focused || selected) FontWeight.Bold else FontWeight.Medium,maxLines=1)
+    }
+
+}
+
+private fun GlassNavBrushRP106(focused:Boolean,selected:Boolean):Brush {
+    val alpha=if(focused) .30f else if(selected) .19f else .045f
+    return Brush.verticalGradient(listOf(Color.White.copy(alpha=alpha),Color.White.copy(alpha=alpha*.40f)))
+}
+
+@Composable
+private fun SettingsNavigationButtonRP106(selected:Boolean,onClick:()->Unit) {
+    var focused by remember {mutableStateOf(false)}
+    Box(Modifier.size(46.dp).semantics {contentDescription=tr("Ajustes","Settings")}
+        .onFocusChanged {focused=it.isFocused}.focusable().tvClick(onClick).clickable(onClick=onClick)
+        .background(GlassNavBrushRP106(focused,selected),RoundedCornerShape(50))
+        .border(1.dp,Color.White.copy(alpha=if(focused) .38f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
+        Canvas(Modifier.size(24.dp)) {
+            val center=androidx.compose.ui.geometry.Offset(size.width/2f,size.height/2f)
+            val gear=androidx.compose.ui.graphics.Path()
+            for(index in 0 until 32) {
+                val angle=index*Math.PI/16-Math.PI/2
+                val radius=size.minDimension*(if(index%4==1 || index%4==2) .44f else .34f)
+                val x=center.x+kotlin.math.cos(angle).toFloat()*radius
+                val y=center.y+kotlin.math.sin(angle).toFloat()*radius
+                if(index==0) gear.moveTo(x,y) else gear.lineTo(x,y)
+            }
+            gear.close()
+            drawPath(gear,Color.White,style=androidx.compose.ui.graphics.drawscope.Stroke(1.6.dp.toPx()))
+            drawCircle(Color.White,size.minDimension*.13f,center,style=androidx.compose.ui.graphics.drawscope.Stroke(1.6.dp.toPx()))
+        }
     }
 }
 

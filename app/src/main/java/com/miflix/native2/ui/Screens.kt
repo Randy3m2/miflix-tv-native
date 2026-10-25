@@ -358,7 +358,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 if(!simple && (state.localRecommendations(state.comingMovies).isNotEmpty() || state.localRecommendations(state.comingSeries).isNotEmpty())) shelf(key="coming_soon_home") {
                     SpotlightRail(tr("Próximamente","Coming soon"),(state.localRecommendations(state.comingMovies)+state.localRecommendations(state.comingSeries)).distinctBy { it.cloudId }.take(30),onClick={ state.launch { state.open(it,upcoming=true) } })
                 }
-                val order=state.homeRowOrder
+                val order=com.miflix.native2.data.HomeOrderPolicyRP106.order(state.homeRowOrder)
                 homeSections.filter {it.key !in state.hiddenHomeRows &&
                     (it.key!="discovery-retry" || "discovery-picks" !in state.hiddenHomeRows)}.sortedWith(compareBy<HomeSection> {order.indexOf(it.key).let {i ->if(i<0) Int.MAX_VALUE else i}}).forEach {section ->
                     val index=shelfIndex++
@@ -2035,7 +2035,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             true
         } else if(com.miflix.native2.data.LiveRemotePolicyRP97.revealControls(request.live,request.sportsRecordingRP72,code,controlsVisible,surfaceFocusedRP34,
             playerMenu!=null || showEpisodes || showQueue || showPartyActions || showAccessRequests || state.sourceSelection!=null)) {
-            if(event.type==KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount==0) {controlsVisible=true;controlInteraction++;dismissKey=code}
+            if(event.type==KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount==0) {
+                // Reveal on the initial key-down, independently of the release/repeat interval.
+                pauseInfoDismissed=true;pauseSynopsis=false;controlsVisible=true;controlInteraction++;dismissKey=code
+            }
             true
         } else if(request.live && !request.sportsRecordingRP72 && (!controlsVisible || surfaceFocusedRP34) &&
             code in listOf(android.view.KeyEvent.KEYCODE_DPAD_CENTER,android.view.KeyEvent.KEYCODE_ENTER,android.view.KeyEvent.KEYCODE_NUMPAD_ENTER) &&

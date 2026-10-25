@@ -1,5 +1,6 @@
 package com.miflix.native2.ui
 
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
@@ -176,39 +177,58 @@ private fun ColumnScope.StatsBoxScoreRP105(game:LiveScoreRP11,data:GameStatsRP95
 @Composable
 private fun StatsTableRowsRP105(table:StatsTableRP105,first:FocusRequester,header:FocusRequester,video:FocusRequester,modifier:Modifier) {
     val list=rememberLazyListState()
-    val scope=rememberCoroutineScope()
+    var tableFocused by remember {mutableStateOf(false)}
+    var selectedKey by remember {mutableStateOf(table.rows.firstOrNull()?.key)}
     val keys=remember(table.rows) {table.rows.map {it.key}}
-    val requests=remember(keys,first) {keys.indices.map {if(it==0) first else FocusRequester()}}
-    var move by remember {mutableStateOf<Job?>(null)}
-    fun navigate(index:Int) {
-        move?.cancel()
-        move=scope.launch {
-            if(index<0) {runCatching {header.requestFocus()};return@launch}
-            list.scrollToItem(index)
-            withFrameNanos { }
-            runCatching {requests.getOrNull(index)?.requestFocus()}
+    val cursor=keys.indexOf(selectedKey).coerceAtLeast(0)
+    LaunchedEffect(keys) {if(selectedKey !in keys) selectedKey=keys.firstOrNull()}
+    // A single focus target survives lazy-row recycling and every live-data refresh.
+    LaunchedEffect(cursor,tableFocused) {
+        if(!tableFocused || table.rows.isEmpty()) return@LaunchedEffect
+        withFrameNanos { }
+        val layout=list.layoutInfo
+        val visible=layout.visibleItemsInfo
+        val target=visible.firstOrNull {it.index==cursor}
+        if(target!=null) {
+            val overflow=when {
+                target.offset<layout.viewportStartOffset ->target.offset-layout.viewportStartOffset
+                target.offset+target.size>layout.viewportEndOffset ->target.offset+target.size-layout.viewportEndOffset
+                else ->0
+            }
+            if(overflow!=0) list.scrollBy(overflow.toFloat())
+        } else {
+            val start=StatsViewportRP106.firstFor(cursor,list.firstVisibleItemIndex,visible.lastOrNull()?.index ?: list.firstVisibleItemIndex)
+            list.scrollToItem(start)
         }
     }
-    LazyColumn(modifier.fillMaxWidth(),state=list,contentPadding=PaddingValues(bottom=8.dp)) {
-        itemsIndexed(table.rows,key={_,row ->row.key}) {index,row ->
-            var focused by remember(row.key) {mutableStateOf(false)}
-            Column(Modifier.fillMaxWidth().height(39.dp).focusRequester(requests[index])
-                .onFocusChanged {focused=it.isFocused}
-                .onPreviewKeyEvent {event ->
-                    when(event.nativeKeyEvent.keyCode) {
-                        19,20 -> {if(event.type==KeyEventType.KeyDown) navigate(StatsTablePolicyRP105.target(index,if(event.nativeKeyEvent.keyCode==19) -1 else 1,table.rows.size));true}
-                        21 -> {if(event.type==KeyEventType.KeyDown) {move?.cancel();runCatching {video.requestFocus()}};true}
-                        22 -> {if(event.type==KeyEventType.KeyDown) {move?.cancel();runCatching {header.requestFocus()}};true}
-                        else ->false
+    LazyColumn(modifier.fillMaxWidth().focusRequester(first)
+        .onFocusChanged {tableFocused=it.isFocused}
+        .semantics {contentDescription=table.rows.getOrNull(cursor)?.let {it.name+" · "+it.values.joinToString(" · ")} ?: "Stats"}
+        .onPreviewKeyEvent {event ->
+            when(event.nativeKeyEvent.keyCode) {
+                19,20 -> {
+                    if(event.type==KeyEventType.KeyDown) {
+                        val index=keys.indexOf(selectedKey).coerceAtLeast(0)
+                        val next=StatsTablePolicyRP105.target(index,if(event.nativeKeyEvent.keyCode==19) -1 else 1,keys.size)
+                        if(next<0) runCatching {header.requestFocus()} else selectedKey=keys.getOrNull(next)
                     }
-                }.focusable().background(if(focused) Color(0xFF292929) else Color.Transparent)) {
+                    true
+                }
+                21 -> {if(event.type==KeyEventType.KeyDown) runCatching {video.requestFocus()};true}
+                22 -> {if(event.type==KeyEventType.KeyDown) runCatching {header.requestFocus()};true}
+                else ->false
+            }
+        }.focusable(),state=list,contentPadding=PaddingValues(bottom=8.dp)) {
+        itemsIndexed(table.rows,key={_,row ->row.key}) {index,row ->
+            Column(Modifier.fillMaxWidth().height(39.dp)
+                .background(if(tableFocused && index==cursor) Color(0xFF292929) else Color.Transparent)
+                ) {
                 StatsTableCellsRP105(row.name,row.values,photo=row.photo,number=row.number,modifier=Modifier.weight(1f))
                 Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF222222)))
             }
         }
         if(table.rows.isEmpty()) item {Text(tr("Las estadísticas aparecerán cuando estén disponibles.","Stats will appear when available."),color=Muted,fontSize=12.sp,modifier=Modifier.padding(vertical=12.dp))}
     }
-    DisposableEffect(Unit) {onDispose {move?.cancel()}}
 }
 
 @Composable
@@ -247,7 +267,12 @@ private fun StatsActionRP105(label:String,selected:Boolean,modifier:Modifier=Mod
     Box(modifier.height(30.dp).clip(RoundedCornerShape(5.dp))
         .semantics {contentDescription=description}.onFocusChanged {focused=it.isFocused}
         .background(if(focused) Color.White else if(selected) Color(0xFF303036) else Color(0xFF181818))
-        .tvClick(click).focusable().clickable(onClick=click).padding(horizontal=8.dp),contentAlignment=Alignment.Center) {
+        .onPreviewKeyEvent {event ->
+            if(event.nativeKeyEvent.keyCode in listOf(23,66,160)) {
+                if(event.type==KeyEventType.KeyUp && !event.nativeKeyEvent.isCanceled) click()
+                true
+            } else false
+        }.clickable(onClick=click).padding(horizontal=8.dp),contentAlignment=Alignment.Center) {
         Text(label,color=if(focused) Color.Black else Color.White,fontSize=12.sp,fontWeight=if(selected) FontWeight.Bold else FontWeight.Normal,maxLines=1,overflow=TextOverflow.Ellipsis)
     }
 }

@@ -440,8 +440,8 @@ private fun BrowserChannelRowRP34(channel:LiveChannel,number:Int,favorite:Boolea
 internal fun LiveFavoriteRP36(state:AppState,request:PlayerRequest,onInteraction:()->Unit) {
     val context=LocalContext.current
     val revision=LiveLibrary.revision
-    val favorite=remember(revision,state.activeProfile.id,state.session?.userId,request.liveProvider,request.liveChannelId) {
-        LiveLibrary.favorites(context,state).any {it.provider==request.liveProvider && it.channel.id==request.liveChannelId}
+    val favorite by produceState(false,revision,state.activeProfile.id,state.session?.userId,request.liveProvider,request.liveChannelId) {
+        value=withContext(Dispatchers.IO) {LiveLibrary.favorites(context,state).any {it.provider==request.liveProvider && it.channel.id==request.liveChannelId}}
     }
     var focused by remember {mutableStateOf(false)}
     val action=tr(if(favorite) "Quitar de favoritos" else "Agregar a favoritos",if(favorite) "Remove from favorites" else "Add to favorites")

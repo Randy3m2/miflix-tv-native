@@ -12,10 +12,10 @@ import androidx.tv.material3.Text
 
 internal data class HomeSection(val key:String,val content:@Composable ()->Unit)
 internal val HomeRows=listOf(
+    "continue" to "Continue Watching",
     "local_lists" to "My local lists",
     "discovery-controls" to "Mood selector",
     "discovery-picks" to "Mood picks",
-    "continue" to "Continue Watching",
     "streaming" to "Streaming",
     "genres_home" to "Browse by genre",
     "comfort_comedies" to "Comfort comedies",
@@ -49,7 +49,7 @@ internal val HomeRows=listOf(
 @Composable
 internal fun HomeOrderDialog(state:AppState,close:()->Unit) {
     val default=HomeRows.map {it.first}
-    var order by remember {mutableStateOf((state.homeRowOrder+default).distinct().filter {it in default})}
+    var order by remember {mutableStateOf(com.miflix.native2.data.HomeOrderPolicyRP106.order(state.homeRowOrder+default).filter {it in default})}
     PlayerSideSheet(tr("Orden de Home","Home row order"),close) {
         item {CinemaBanner("BRUNIO · HOME STUDIO",tr("Tu Home, a tu manera","Your Home, your way"),tr("Pon primero lo que más disfrutas.","Put what you love first."))}
         item {Text(tr("Mueve las filas. Los cambios se guardan solo para este perfil y dispositivo.","Move rows. Changes are saved for this profile on this device."),color=Muted)}
@@ -58,9 +58,10 @@ internal fun HomeOrderDialog(state:AppState,close:()->Unit) {
             val index=order.indexOf(key)
             Row(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(16.dp)).padding(10.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 Text("${index+1}. "+(HomeRows.firstOrNull {it.first==key}?.second ?: key),color=Color.White,modifier=Modifier.weight(1f).padding(top=12.dp))
-                fun move(delta:Int) {val target=index+delta;if(target in order.indices) {val copy=order.toMutableList();java.util.Collections.swap(copy,index,target);order=copy;state.saveHomeRowOrder(order)}}
-                if(index>0) FocusButton("↑",horizontalPadding=14.dp) {move(-1)}
-                if(index<order.lastIndex) FocusButton("↓",horizontalPadding=14.dp) {move(1)}
+                if(key=="continue") Text(tr("Siempre primero","Always first"),color=Muted,modifier=Modifier.padding(top=12.dp))
+                fun move(delta:Int) {val target=index+delta;if(index>0 && target in 1..order.lastIndex) {val copy=order.toMutableList();java.util.Collections.swap(copy,index,target);order=copy;state.saveHomeRowOrder(order)}}
+                if(index>1) FocusButton("↑",horizontalPadding=14.dp) {move(-1)}
+                if(index>0 && index<order.lastIndex) FocusButton("↓",horizontalPadding=14.dp) {move(1)}
             }
         }
     }

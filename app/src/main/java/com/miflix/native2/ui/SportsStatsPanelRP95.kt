@@ -1,216 +1,253 @@
 package com.miflix.native2.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import com.miflix.native2.data.*
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.*
 import java.time.LocalDate
 
-/** Composed only when open; no jobs or polling survive closing/backgrounding the panel. */
+/** Fixed controls and table header; only compact, constant-height table rows scroll. */
 @Composable
 internal fun SportsStatsPanelRP95(state:AppState,title:String,repo:SportsStatsRP95,selected:LiveScoreRP11?,
     select:(LiveScoreRP11)->Unit,onClose:()->Unit,videoFocus:FocusRequester,modifier:Modifier=Modifier) {
     var choosing by remember {mutableStateOf(selected==null)}
-    var league by remember {mutableStateOf(selected?.league ?: "NBA")}
+    var league by remember {mutableStateOf(selected?.league ?: StatsTablePolicyRP105.preferredLeague(title))}
     var date by remember {mutableStateOf(selected?.date ?: LiveScoresRP11.today())}
-    var games by remember {mutableStateOf<List<LiveScoreRP11>>(emptyList())}
+    var games by remember(date) {mutableStateOf<List<LiveScoreRP11>>(emptyList())}
     var gamesBusy by remember {mutableStateOf(false)}
     var gamesError by remember {mutableStateOf(false)}
     var reload by remember {mutableIntStateOf(0)}
     var autoMatched by remember {mutableStateOf(selected!=null)}
-    var data by remember(selected?.league,selected?.id) {mutableStateOf<GameStatsRP95?>(null)}
+    var data by remember(selected?.league,selected?.id) {mutableStateOf(selected?.let {repo.cached(it)})}
     var stale by remember(selected?.league,selected?.id) {mutableStateOf(false)}
     var loading by remember(selected?.league,selected?.id) {mutableStateOf(false)}
-    var tab by remember(selected?.league,selected?.id) {mutableIntStateOf(0)}
-    var teamIndex by remember(selected?.league,selected?.id) {mutableIntStateOf(0)}
+    var statsRetry by remember {mutableIntStateOf(0)}
     val closeFocus=remember {FocusRequester()}
+    // A data refresh never requests focus. Only entering/changing the panel does.
     LaunchedEffect(choosing,selected?.league,selected?.id) {withFrameNanos {};runCatching {closeFocus.requestFocus()}}
-    LaunchedEffect(date,reload,choosing,state.appForeground) {
+    LaunchedEffect(date,league,reload,choosing,state.appForeground) {
         if(!choosing || !state.appForeground) return@LaunchedEffect
         gamesBusy=true;gamesError=false
         try {
-            val result=coroutineScope {
-                listOf("NBA","MLB").map {sport ->async {
-                    try {repo.games(sport,date)} catch(e:CancellationException) {throw e} catch(_:Exception) {gamesError=true;emptyList()}
-                }}.flatMap {it.await()}
+            coroutineScope {
+                val sports=if(autoMatched) listOf(league) else listOf(league,if(league=="NBA") "MLB" else "NBA")
+                sports.forEach {sport ->launch {
+                    try {
+                        val rows=repo.games(sport,date)
+                        games=games.filterNot {it.league==sport}+rows
+                        if(!autoMatched) SportsStatsRP95.match(title,rows)?.let {
+                            autoMatched=true;select(it);choosing=false
+                        }
+                    } catch(e:CancellationException) {throw e} catch(_:Exception) {gamesError=true}
+                }}
             }
-            games=result
-            if(!autoMatched) {
-                autoMatched=true
-                withContext(Dispatchers.Default) {SportsStatsRP95.match(title,result)}?.let {select(it);league=it.league;choosing=false}
-            }
+            autoMatched=true
         } finally {gamesBusy=false}
     }
-    LaunchedEffect(selected?.league,selected?.id,choosing,state.appForeground) {
+    LaunchedEffect(selected?.league,selected?.id,choosing,state.appForeground,statsRetry) {
         val game=selected ?: return@LaunchedEffect
         if(choosing || !state.appForeground) return@LaunchedEffect
         var failures=0
         while(isActive) {
+            val started=System.nanoTime()
             loading=data==null
             try {
-                val result=repo.stats(game)
+                val result=repo.stats(game,force=true)
                 data=result;stale=false;failures=0
                 if(result.final) break
             } catch(e:CancellationException) {throw e} catch(_:Exception) {stale=true;failures++}
             finally {loading=false}
-            delay(if(failures>0) (60_000L*failures.coerceAtMost(4)) else if(data?.live==false) 60_000L else 30_000L)
+            delay(StatsTablePolicyRP105.pollDelayMs(data?.live!=false,failures,(System.nanoTime()-started)/1_000_000L))
         }
     }
-    Column(modifier.fillMaxHeight().background(Color(0xFF101010)).focusGroup().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.SpaceBetween) {
-            Column(Modifier.weight(1f)) {
-                Text(tr("Estadísticas","Live stats"),color=Color.White,fontSize=23.sp,fontWeight=FontWeight.Bold)
-                Text(if(choosing) tr("Selecciona un partido","Select a game") else selected?.league.orEmpty(),color=Muted,fontSize=12.sp)
-            }
-            FocusButton("×",modifier=Modifier.focusRequester(closeFocus).focusProperties {left=videoFocus},horizontalPadding=14.dp,onClick=onClose)
+    Column(modifier.fillMaxHeight().background(Color(0xFF080808)).focusGroup().padding(horizontal=12.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(7.dp)) {
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            Text(if(choosing) tr("Seleccionar partido","Select game") else (selected?.league.orEmpty()+" · "+tr("Estadísticas","Box score")),color=Color.White,fontSize=16.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
+            StatsActionRP105("×",false,Modifier.width(32.dp).focusRequester(closeFocus).focusProperties {left=videoFocus},description=tr("Cerrar estadísticas","Close stats"),click=onClose)
         }
         if(choosing) {
-            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                for(sport in listOf("NBA","MLB")) StatsTabRP95(sport,league==sport) {league=sport}
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                for(sport in listOf("NBA","MLB")) StatsActionRP105(sport,league==sport,Modifier.weight(1f)) {autoMatched=true;league=sport}
             }
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
-                FocusButton("‹",horizontalPadding=12.dp) {date=LocalDate.parse(date).minusDays(1).toString();autoMatched=true}
-                Text(date,color=Color.White,fontSize=14.sp)
-                FocusButton("›",horizontalPadding=12.dp) {date=LocalDate.parse(date).plusDays(1).toString();autoMatched=true}
+                StatsActionRP105("‹",false) {autoMatched=true;date=LocalDate.parse(date).minusDays(1).toString()}
+                Text(date,color=Color.White,fontSize=13.sp)
+                StatsActionRP105("›",false) {autoMatched=true;date=LocalDate.parse(date).plusDays(1).toString()}
             }
-            if(gamesBusy) Text(tr("Buscando partidos…","Loading games…"),color=Muted,fontSize=13.sp)
-            if(gamesError) Text(tr("No se pudieron cargar todos los partidos.","Some games could not be loaded."),color=Color(0xFFFFC28A),fontSize=12.sp)
-            LazyColumn(Modifier.weight(1f),contentPadding=PaddingValues(top=6.dp,bottom=18.dp,start=3.dp,end=3.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            if(gamesBusy) Text(tr("Buscando partidos…","Loading games…"),color=Muted,fontSize=11.sp)
+            if(gamesError) Text(tr("No se pudieron cargar todos los partidos.","Some games could not be loaded."),color=Color(0xFFFFC28A),fontSize=11.sp)
+            LazyColumn(Modifier.weight(1f).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(4.dp),contentPadding=PaddingValues(bottom=12.dp)) {
                 items(games.filter {it.league==league},key={"${it.league}:${it.id}"}) {game ->
-                    StatsGameCardRP95(game,selected?.league==game.league && selected.id==game.id) {select(game);choosing=false}
+                    StatsActionRP105("${game.away.short} ${game.away.score} – ${game.home.score} ${game.home.short} · ${game.phase}",selected?.league==game.league && selected.id==game.id,Modifier.fillMaxWidth()) {select(game);choosing=false}
                 }
-                if(!gamesBusy && games.none {it.league==league}) item {Text(tr("No hay partidos disponibles en esta fecha.","No games available for this date."),color=Muted,fontSize=14.sp)}
-                item {FocusButton(tr("Actualizar lista","Refresh games"),modifier=Modifier.fillMaxWidth()) {reload++}}
-                if(selected!=null) item {FocusButton(tr("Volver a estadísticas","Back to stats"),modifier=Modifier.fillMaxWidth()) {choosing=false}}
+                if(!gamesBusy && games.none {it.league==league}) item {Text(tr("No hay partidos en esta fecha.","No games on this date."),color=Muted,fontSize=13.sp)}
+                item {StatsActionRP105(tr("Actualizar lista","Refresh games"),false,Modifier.fillMaxWidth()) {reload++}}
+                if(selected!=null) item {StatsActionRP105(tr("Volver a estadísticas","Back to stats"),false,Modifier.fillMaxWidth()) {choosing=false}}
             }
+        } else selected?.let {game ->
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                ScoreTeamCompactRP105(game.away,data?.teams?.getOrNull(0)?.score ?: game.away.score,Modifier.weight(1f))
+                Text("–",color=Muted,fontSize=16.sp)
+                ScoreTeamCompactRP105(game.home,data?.teams?.getOrNull(1)?.score ?: game.home.score,Modifier.weight(1f))
+            }
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                Text(data?.phase ?: game.phase,color=Muted,fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
+                StatsActionRP105(tr("Partido","Game"),false) {choosing=true;autoMatched=true;date=game.date;league=game.league}
+                if(stale) StatsActionRP105("↻",false,description=tr("Reintentar estadísticas","Retry stats")) {statsRetry++}
+            }
+            if(loading) Text(tr("Cargando estadísticas…","Loading stats…"),color=Muted,fontSize=11.sp)
+            if(stale) Text(tr("Sin actualización; conservamos los últimos datos.","Update unavailable; showing last stats."),color=Color(0xFFFFC28A),fontSize=10.sp)
+            key(game.league,game.id) {StatsBoxScoreRP105(game,data,videoFocus)}
+        }
+    }
+}
+
+@Composable
+private fun ColumnScope.StatsBoxScoreRP105(game:LiveScoreRP11,data:GameStatsRP95?,videoFocus:FocusRequester) {
+    var teamIndex by remember {mutableIntStateOf(0)}
+    var tab by remember {mutableIntStateOf(0)}
+    var page by remember(teamIndex,tab) {mutableIntStateOf(0)}
+    val teamFocus=remember {FocusRequester()}
+    val firstRow=remember(teamIndex,tab,page) {FocusRequester()}
+    val tabs=if(game.league=="NBA") listOf(tr("Jugadores","Players"),tr("Equipos","Teams")) else listOf(tr("Bateo","Batting"),tr("Pitcheo","Pitching"),tr("Equipos","Teams"))
+    val currentTeam=if(teamIndex==0) game.away else game.home
+    val table=remember(data,teamIndex,tab,page) {
+        if(data==null) StatsTableRP105(emptyList(),emptyList(),1)
+        else if(tab==tabs.lastIndex) {
+            val values=data.teams.getOrNull(teamIndex)?.values.orEmpty()
+            val metrics=if(game.league=="NBA") listOf("fieldGoalPct" to "FG%","threePointFieldGoalPct" to "3P%","freeThrowPct" to "FT%","totalRebounds" to "REB","assists" to "AST","steals" to "STL","blocks" to "BLK","turnovers" to "TO")
+                else listOf("hits" to "H","homeRuns" to "HR","rbi" to "RBI","baseOnBalls" to "BB","strikeOuts" to "K","errors" to "E","inningsPitched" to "IP")
+            StatsTableRP105(listOf(tr("Valor","Value")),metrics.map {(key,label) ->StatsTableRowRP105(key,label,listOf(values[key] ?: "—"))},1)
         } else {
-            val game=selected
-            if(game!=null) {
-                val current=data
-                val tabs=if(game.league=="NBA") listOf(tr("Jugadores","Players"),tr("Equipos","Teams")) else listOf(tr("Bateo","Batting"),tr("Pitcheo","Pitching"),tr("Equipos","Teams"))
-                // One scrolling column: score/header/rows cannot fight nested scrolling or clip on return.
-                LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(top=6.dp,bottom=22.dp,start=3.dp,end=3.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                    item(key="score") {
-                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.CenterVertically) {
-                            for((index,team) in listOf(game.away,game.home).withIndex()) Column(horizontalAlignment=Alignment.CenterHorizontally) {
-                                AsyncImage(team.logo,null,Modifier.size(34.dp))
-                                Text(team.short,color=Muted,fontSize=12.sp)
-                                Text(current?.teams?.getOrNull(index)?.score ?: team.score,color=Color.White,fontSize=27.sp,fontWeight=FontWeight.Bold)
-                            }
-                        }
+            val groups=(if(game.league=="MLB" && tab==1) data.pitching else data.players).filter {
+                if(it.teamId.isNotBlank()) it.teamId==currentTeam.id else it.team==data.teams.getOrNull(teamIndex)?.name
+            }
+            StatsTablePolicyRP105.build(groups,game.league,page)
+        }
+    }
+    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)) {
+        listOf(game.away,game.home).forEachIndexed {index,team ->
+            StatsActionRP105(team.name,teamIndex==index,Modifier.weight(1f)
+                .then(if(index==teamIndex) Modifier.focusRequester(teamFocus) else Modifier)
+                .focusProperties {left=if(index==0) videoFocus else FocusRequester.Default;down=if(table.rows.isNotEmpty()) firstRow else FocusRequester.Default}) {teamIndex=index}
+        }
+    }
+    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+        tabs.forEachIndexed {index,label ->StatsActionRP105(label,tab==index,Modifier.weight(1f).focusProperties {down=if(table.rows.isNotEmpty()) firstRow else FocusRequester.Default}) {tab=index}}
+        if(table.pages>1) StatsActionRP105("${page.coerceAtMost(table.pages-1)+1}/${table.pages} ›",false,description=tr("Más columnas","More columns")) {page=(page+1)%table.pages}
+    }
+    Text(currentTeam.name,color=Muted,fontSize=10.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+    StatsTableCellsRP105(tr("Jugador / estadística","Player / statistic"),table.columns,header=true)
+    Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF343434)))
+    key(teamIndex,tab,page) {StatsTableRowsRP105(table,firstRow,teamFocus,videoFocus,Modifier.weight(1f))}
+    Text(tr("← Video  ·  → Equipos  ·  Datos pueden adelantarse al video","← Video  ·  → Teams  ·  Data may lead video"),color=Muted,fontSize=9.sp,maxLines=1)
+}
+
+@Composable
+private fun StatsTableRowsRP105(table:StatsTableRP105,first:FocusRequester,header:FocusRequester,video:FocusRequester,modifier:Modifier) {
+    val list=rememberLazyListState()
+    val scope=rememberCoroutineScope()
+    val keys=remember(table.rows) {table.rows.map {it.key}}
+    val requests=remember(keys,first) {keys.indices.map {if(it==0) first else FocusRequester()}}
+    var move by remember {mutableStateOf<Job?>(null)}
+    fun navigate(index:Int) {
+        move?.cancel()
+        move=scope.launch {
+            if(index<0) {runCatching {header.requestFocus()};return@launch}
+            list.scrollToItem(index)
+            withFrameNanos { }
+            runCatching {requests.getOrNull(index)?.requestFocus()}
+        }
+    }
+    LazyColumn(modifier.fillMaxWidth(),state=list,contentPadding=PaddingValues(bottom=8.dp)) {
+        itemsIndexed(table.rows,key={_,row ->row.key}) {index,row ->
+            var focused by remember(row.key) {mutableStateOf(false)}
+            Column(Modifier.fillMaxWidth().height(39.dp).focusRequester(requests[index])
+                .onFocusChanged {focused=it.isFocused}
+                .onPreviewKeyEvent {event ->
+                    when(event.nativeKeyEvent.keyCode) {
+                        19,20 -> {if(event.type==KeyEventType.KeyDown) navigate(StatsTablePolicyRP105.target(index,if(event.nativeKeyEvent.keyCode==19) -1 else 1,table.rows.size));true}
+                        21 -> {if(event.type==KeyEventType.KeyDown) {move?.cancel();runCatching {video.requestFocus()}};true}
+                        22 -> {if(event.type==KeyEventType.KeyDown) {move?.cancel();runCatching {header.requestFocus()}};true}
+                        else ->false
                     }
-                    item(key="phase") {Text(current?.phase ?: game.phase,color=Color.White,fontSize=14.sp)}
-                    item(key="game") {FocusButton(tr("Cambiar partido","Change game"),modifier=Modifier.fillMaxWidth()) {choosing=true;autoMatched=true;date=game.date;league=game.league}}
-                    item(key="team-selector") {
-                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                            for((index,team) in listOf(game.away,game.home).withIndex()) Box(Modifier.weight(1f)) {
-                                StatsTabRP95(team.short,teamIndex==index) {teamIndex=index}
-                            }
-                        }
-                    }
-                    item(key="tabs") {
-                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                            tabs.forEachIndexed {index,label ->Box(Modifier.weight(1f)) {StatsTabRP95(label,tab==index) {tab=index}}}
-                        }
-                    }
-                    if(loading) item(key="loading") {Text(tr("Cargando estadísticas…","Loading stats…"),color=Muted,fontSize=13.sp)}
-                    if(stale) item(key="stale") {Text(tr("Sin actualización. Reintentaremos automáticamente.","Update unavailable. Retrying automatically."),color=Color(0xFFFFC28A),fontSize=12.sp)}
-                    if(current!=null) {
-                        val teamTab=tab==tabs.lastIndex
-                        val allGroups=if(game.league=="MLB" && tab==1) current.pitching else current.players
-                        val teamName=current.teams.getOrNull(teamIndex)?.name.orEmpty()
-                        val teamId=if(teamIndex==0) game.away.id else game.home.id
-                        val groups=allGroups.filter {if(it.teamId.isNotBlank()) it.teamId==teamId else it.team==teamName}
-                        if(teamTab) {
-                            val keys=if(game.league=="NBA") listOf("fieldGoalPct" to "FG%","threePointFieldGoalPct" to "3P%","freeThrowPct" to "FT%","totalRebounds" to "REB","assists" to "AST","steals" to "STL","blocks" to "BLK","turnovers" to "TO")
-                                else listOf("hits" to "H","homeRuns" to "HR","rbi" to "RBI","baseOnBalls" to "BB","strikeOuts" to "K","errors" to "E","inningsPitched" to "IP")
-                            item(key="team-heading") {Text(teamName,color=Color.White,fontSize=16.sp,fontWeight=FontWeight.Bold)}
-                            items(keys,key={it.first}) {(metric,label) ->StatsTeamMetricRP95(label,current.teams.getOrNull(teamIndex)?.values?.get(metric) ?: "—")}
-                        } else {
-                            for((groupIndex,group) in groups.withIndex()) {
-                                item(key="team:$groupIndex") {Text(group.team,color=Color.White,fontSize=16.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=8.dp))}
-                                items(group.rows,key={"$groupIndex:${it.id}"}) {row ->StatsPlayerRowRP95(group.columns,row)}
-                            }
-                            if(groups.all {it.rows.isEmpty()}) item(key="empty") {Text(tr("Las estadísticas aparecerán cuando estén disponibles.","Stats will appear when available."),color=Muted,fontSize=14.sp)}
-                        }
-                        item(key="disclaimer") {Text(tr("Datos en vivo; pueden adelantarse al vídeo.","Live data may be ahead of the video."),color=Muted,fontSize=10.sp)}
-                    }
+                }.focusable().background(if(focused) Color(0xFF292929) else Color.Transparent)) {
+                StatsTableCellsRP105(row.name,row.values,photo=row.photo,number=row.number,modifier=Modifier.weight(1f))
+                Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF222222)))
+            }
+        }
+        if(table.rows.isEmpty()) item {Text(tr("Las estadísticas aparecerán cuando estén disponibles.","Stats will appear when available."),color=Muted,fontSize=12.sp,modifier=Modifier.padding(vertical=12.dp))}
+    }
+    DisposableEffect(Unit) {onDispose {move?.cancel()}}
+}
+
+@Composable
+private fun StatsTableCellsRP105(name:String,values:List<String>,header:Boolean=false,photo:String="",number:String="",modifier:Modifier=Modifier) {
+    val context=LocalContext.current
+    val image=remember(photo,context) {ImageRequest.Builder(context).data(photo).size(64,64).build()}
+    Row(modifier.fillMaxWidth().heightIn(min=23.dp).padding(horizontal=4.dp),verticalAlignment=Alignment.CenterVertically) {
+        Row(Modifier.weight(.52f),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+            if(!header && photo.isNotBlank()) {
+                var failed by remember(photo) {mutableStateOf(false)}
+                Box(Modifier.size(25.dp).clip(CircleShape).background(Color(0xFF242424)),contentAlignment=Alignment.Center) {
+                    Text(name.take(1),color=Muted,fontSize=10.sp)
+                    if(!failed) AsyncImage(image,null,Modifier.fillMaxSize(),onError={failed=true})
                 }
             }
+            if(!header && number.isNotBlank()) Text(number,color=Muted,fontSize=10.sp,maxLines=1)
+            Text(name,color=if(header) Muted else Color.White,fontSize=if(header) 10.sp else 12.sp,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=if(header) FontWeight.Bold else FontWeight.Normal)
         }
+        // Always reserve four numeric slots so headers, partial pages and values align.
+        for(index in 0 until 4) Text(values.getOrElse(index) {""},modifier=Modifier.weight(.12f),color=if(header) Muted else Color.White,fontSize=if(header) 10.sp else 12.sp,maxLines=1,textAlign=TextAlign.Center)
     }
 }
 
 @Composable
-private fun StatsTabRP95(label:String,selected:Boolean,click:()->Unit) {
-    FocusButton((if(selected) "• " else "")+label,horizontalPadding=10.dp,onClick=click)
+private fun ScoreTeamCompactRP105(team:ScoreTeamRP11,score:String,modifier:Modifier) {
+    Row(modifier,verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)) {
+        AsyncImage(team.logo,null,Modifier.size(24.dp))
+        Text(team.short,color=Muted,fontSize=12.sp,maxLines=1,modifier=Modifier.weight(1f))
+        Text(score,color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
+    }
 }
 
 @Composable
-private fun StatsGameCardRP95(game:LiveScoreRP11,selected:Boolean,click:()->Unit) {
+private fun StatsActionRP105(label:String,selected:Boolean,modifier:Modifier=Modifier,description:String=label,click:()->Unit) {
     var focused by remember {mutableStateOf(false)}
-    Column(Modifier.fillMaxWidth().onFocusChanged {focused=it.isFocused}
-        .background(if(focused) Color.White else Color(0xFF1B1B1B),RoundedCornerShape(12.dp))
-        .clickable(onClick=click).padding(12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-        Text((if(selected) "✓ " else "")+game.away.short+" @ "+game.home.short,color=if(focused) Color.Black else Color.White,fontSize=17.sp,fontWeight=FontWeight.Bold)
-        Text("${game.away.score} – ${game.home.score} · ${game.phase}",color=if(focused) Color.DarkGray else Muted,fontSize=13.sp)
-    }
-}
-
-@Composable
-private fun StatsPlayerRowRP95(columns:List<String>,row:StatsRowRP95) {
-    var focused by remember(row.id) {mutableStateOf(false)}
-    var expanded by remember(row.id) {mutableStateOf(false)}
-    val indexes=if(expanded) columns.indices.toList() else {
-        val preferred=if("PTS" in columns) listOf("MIN","PTS","REB","AST") else columns.take(4)
-        preferred.mapNotNull {label ->columns.indexOf(label).takeIf {it>=0}}
-    }
-    Column(Modifier.fillMaxWidth().onFocusChanged {focused=it.isFocused}
-        .background(if(focused) Color.White else Color(0xFF1B1B1B),RoundedCornerShape(10.dp))
-        .clickable {expanded=!expanded}.padding(10.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-        Text(row.name,color=if(focused) Color.Black else Color.White,fontSize=15.sp,maxLines=1,overflow=TextOverflow.Ellipsis,fontWeight=FontWeight.Bold)
-        for(chunk in indexes.chunked(4)) Row(Modifier.fillMaxWidth()) {
-            for(index in chunk) Column(Modifier.weight(1f)) {
-                Text(columns[index],color=if(focused) Color.DarkGray else Muted,fontSize=10.sp)
-                Text(row.values.getOrElse(index) {"—"},color=if(focused) Color.Black else Color.White,fontSize=15.sp)
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatsTeamMetricRP95(label:String,value:String) {
-    var focused by remember {mutableStateOf(false)}
-    Row(Modifier.fillMaxWidth().onFocusChanged {focused=it.isFocused}.focusable()
-        .background(if(focused) Color.White else Color(0xFF1B1B1B),RoundedCornerShape(10.dp)).padding(12.dp),horizontalArrangement=Arrangement.SpaceBetween) {
-        val color=if(focused) Color.Black else Color.White
-        Text(label,color=if(focused) Color.DarkGray else Muted,fontSize=13.sp);Text(value,color=color,fontSize=17.sp)
+    Box(modifier.height(30.dp).clip(RoundedCornerShape(5.dp))
+        .semantics {contentDescription=description}.onFocusChanged {focused=it.isFocused}
+        .background(if(focused) Color.White else if(selected) Color(0xFF303036) else Color(0xFF181818))
+        .tvClick(click).focusable().clickable(onClick=click).padding(horizontal=8.dp),contentAlignment=Alignment.Center) {
+        Text(label,color=if(focused) Color.Black else Color.White,fontSize=12.sp,fontWeight=if(selected) FontWeight.Bold else FontWeight.Normal,maxLines=1,overflow=TextOverflow.Ellipsis)
     }
 }

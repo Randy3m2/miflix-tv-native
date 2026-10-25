@@ -9,25 +9,26 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
-internal data class StatsRowRP95(val id:String,val name:String,val values:List<String>)
+internal data class StatsRowRP95(val id:String,val name:String,val values:List<String>,val photo:String="",val number:String="")
 internal data class StatsGroupRP95(val team:String,val columns:List<String>,val rows:List<StatsRowRP95>,val teamId:String="")
 internal data class StatsTeamRP95(val name:String,val short:String,val logo:String,val score:String,val values:Map<String,String>)
 internal data class GameStatsRP95(val teams:List<StatsTeamRP95>,val phase:String,val final:Boolean,
     val players:List<StatsGroupRP95>,val pitching:List<StatsGroupRP95> = emptyList(),val updatedAt:Long=System.currentTimeMillis(),val live:Boolean=true)
 
 /** Public game data only. No account, playback URL, Supabase, progress or presence dependencies. */
-internal class SportsStatsRP95(private val fetch:suspend(String)->String={Http.text(it,timeoutMs=8000)},
+internal class SportsStatsRP95(private val fetch:suspend(String)->String={StatsHttpRP105.text(it)},
     private val now:()->Long={System.currentTimeMillis()}) {
     private val scores=mapOf("NBA" to LiveScoresRP11(fetch),"MLB" to LiveScoresRP11(fetch))
-    private val lock=Mutex()
+    private val locks=Array(16) {Mutex()}
     private val cache=linkedMapOf<String,GameStatsRP95>()
     suspend fun games(league:String,date:String):List<LiveScoreRP11> = withContext(Dispatchers.Default) {
         require(league in listOf("NBA","MLB"));scores.getValue(league).games(league,date)
     }
-    suspend fun stats(game:LiveScoreRP11):GameStatsRP95=lock.withLock {
+    fun cached(game:LiveScoreRP11):GameStatsRP95?=synchronized(cache) {cache["${game.league}:${game.id}"]}
+    suspend fun stats(game:LiveScoreRP11,force:Boolean=false):GameStatsRP95=locks[("${game.league}:${game.id}".hashCode() and Int.MAX_VALUE)%locks.size].withLock {
         require(game.league in listOf("NBA","MLB") && game.id.matches(Regex("[0-9]{1,12}")))
         val key="${game.league}:${game.id}"
-        cache[key]?.takeIf {now()-it.updatedAt in 0 until if(it.final) 300_000L else 30_000L}?.let {return@withLock it}
+        synchronized(cache) {cache[key]}?.takeIf {!force && now()-it.updatedAt in 0 until if(it.final) 300_000L else 30_000L}?.let {return@withLock it}
         val url=if(game.league=="NBA") "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=${game.id}"
             else "https://statsapi.mlb.com/api/v1.1/game/${game.id}/feed/live?fields="+MLB_FIELDS
         val raw=fetch(url)
@@ -36,15 +37,17 @@ internal class SportsStatsRP95(private val fetch:suspend(String)->String={Http.t
             (if(game.league=="NBA") nba(json,game) else baseball(json,game)).copy(updatedAt=now())
         }
         currentCoroutineContext().ensureActive()
-        cache.remove(key);cache[key]=value
-        while(cache.size>8) cache.remove(cache.keys.first())
+        synchronized(cache) {
+            cache.remove(key);cache[key]=value
+            while(cache.size>8) cache.remove(cache.keys.first())
+        }
         value
     }
     companion object {
         private val sportsTitle=Regex("(?i)\\b(nba|mlb|espn|sports?|deportes?|basketball|baseball|baloncesto|beisbol|béisbol|dsports|tyc|fox sports|tnt sports)\\b")
         internal fun available(live:Boolean,recording:Boolean,provider:String,title:String):Boolean = live && !recording &&
             (provider=="sports" || sportsTitle.containsMatchIn(title))
-        private const val MLB_FIELDS="gamePk,gameData,status,detailedState,abstractGameState,liveData,linescore,currentInning,inningState,inningHalf,outs,balls,strikes,teams,home,away,runs,hits,errors,boxscore,team,name,id,teamStats,batting,pitching,players,person,fullName,batters,pitchers,stats,atBats,rbi,baseOnBalls,strikeOuts,homeRuns,inningsPitched,earnedRuns,numberOfPitches"
+        private const val MLB_FIELDS="gamePk,gameData,status,detailedState,abstractGameState,liveData,linescore,currentInning,inningState,inningHalf,outs,balls,strikes,teams,home,away,runs,hits,errors,boxscore,team,name,id,teamStats,batting,pitching,players,person,fullName,jerseyNumber,batters,pitchers,stats,atBats,rbi,baseOnBalls,strikeOuts,homeRuns,inningsPitched,earnedRuns,numberOfPitches"
         private fun objects(a:JSONArray?)=(0 until (a?.length() ?: 0)).mapNotNull {a?.optJSONObject(it)}
         private fun text(j:JSONObject?,key:String)=if(j==null || j.isNull(key)) "—" else j.optString(key).takeIf {it.isNotBlank()} ?: "—"
         private fun list(j:JSONObject?,key:String)=objects(j?.optJSONArray(key))
@@ -77,7 +80,7 @@ internal class SportsStatsRP95(private val fetch:suspend(String)->String={Http.t
                     val rows=list(table,"athletes").filterNot {it.optBoolean("didNotPlay")}.map {row ->
                         val athlete=row.optJSONObject("athlete") ?: JSONObject()
                         val values=row.optJSONArray("stats") ?: JSONArray()
-                        StatsRowRP95(athlete.optString("id"),athlete.optString("displayName"),columns.indices.map {values.optString(it,"—")})
+                        StatsRowRP95(athlete.optString("id"),athlete.optString("displayName"),columns.indices.map {values.optString(it,"—")},athlete.optJSONObject("headshot")?.optString("href").orEmpty().ifBlank {athlete.optString("id").takeIf {it.matches(Regex("[0-9]+"))}?.let {"https://a.espncdn.com/i/headshots/nba/players/full/$it.png"}.orEmpty()},athlete.optString("jersey"))
                     }
                     StatsGroupRP95(group.optJSONObject("team")?.optString("displayName").orEmpty(),columns,rows,group.optJSONObject("team")?.optString("id").orEmpty())
                 }
@@ -108,7 +111,7 @@ internal class SportsStatsRP95(private val fetch:suspend(String)->String={Http.t
                     val id=order.optInt(index);val row=people.optJSONObject("ID$id") ?: return@mapNotNull null
                     val stats=row.optJSONObject("stats")?.optJSONObject(kind)
                     if(stats==null || stats.length()==0) return@mapNotNull null
-                    StatsRowRP95(id.toString(),row.optJSONObject("person")?.optString("fullName").orEmpty(),keys.map {text(stats,it)})
+                    StatsRowRP95(id.toString(),row.optJSONObject("person")?.optString("fullName").orEmpty(),keys.map {text(stats,it)},if(id>0) "https://img.mlbstatic.com/mlb-photos/image/upload/w_80,q_auto:good,f_auto/v1/people/$id/headshot/67/current" else "",row.optString("jerseyNumber"))
                 }
                 StatsGroupRP95(team.optJSONObject("team")?.optString("name").orEmpty(),labels,rows,team.optJSONObject("team")?.optString("id").orEmpty())
             }

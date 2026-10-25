@@ -1970,13 +1970,13 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         if(state.watchParty==null || !state.partyFollowHost || state.partyRole!=PartyRole.GUEST) player.setPlaybackSpeed(1f)
     }
 
-    LaunchedEffect(playbackError) {
+    LaunchedEffect(playbackError,statsOpenRP95) {
         if(playbackError!=null) {
             hadPlaybackError=true;state.finishPlaybackLoading(request.playbackId)
             if(request.live && !request.sportsRecordingRP72) {
                 // A failed channel is still navigable, even if it never rendered a frame.
                 controlsVisible=false;pauseInfoDismissed=true;pauseSynopsis=false
-                if(playerMenu==null && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && state.sourceSelection==null) {
+                if(!statsOpenRP95 && playerMenu==null && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && state.sourceSelection==null) {
                     withFrameNanos {};runCatching {surfaceFocus.requestFocus()}
                 }
             }
@@ -1984,21 +1984,21 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     }
 
     // Explicit timer also covers controls holding focus on TV remotes.
-    LaunchedEffect(player, controlInteraction, showEpisodes, showQueue, showPartyActions, showAccessRequests, state.sourceSelection, playerMenu, paused, ended, playbackError, mini) {
-        if (!mini && playbackError==null && !paused && !ended && playerMenu == null && !quickReactions && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && state.sourceSelection == null) {
+    LaunchedEffect(player, controlInteraction, showEpisodes, showQueue, showPartyActions, showAccessRequests, state.sourceSelection, playerMenu, paused, ended, playbackError, mini, statsOpenRP95) {
+        if (!statsOpenRP95 && !mini && playbackError==null && !paused && !ended && playerMenu == null && !quickReactions && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && state.sourceSelection == null) {
             delay(3000)
             controlsVisible = false
             runCatching { surfaceFocus.requestFocus() }
         }
     }
 
-    LaunchedEffect(firstFrame,controlsVisible, showEpisodes, showQueue, showPartyActions, showAccessRequests, playerMenu, state.sourceSelection, pauseSynopsis, pauseInfoDismissed, ended, playbackError, mini) {
-        if(firstFrame && !mini && playbackError==null && controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !ended && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu == null && !quickReactions && state.sourceSelection == null) {
+    LaunchedEffect(firstFrame,controlsVisible, showEpisodes, showQueue, showPartyActions, showAccessRequests, playerMenu, state.sourceSelection, pauseSynopsis, pauseInfoDismissed, ended, playbackError, mini, statsOpenRP95) {
+        if(!statsOpenRP95 && firstFrame && !mini && playbackError==null && controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !ended && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu == null && !quickReactions && state.sourceSelection == null) {
             withFrameNanos { }; runCatching { playFocus.requestFocus() }
         }
     }
-    LaunchedEffect(pauseSynopsis, pauseInfoDismissed, mini) {
-        if(!mini && pauseSynopsis && !pauseInfoDismissed) { withFrameNanos { }; runCatching { surfaceFocus.requestFocus() } }
+    LaunchedEffect(pauseSynopsis, pauseInfoDismissed, mini, statsOpenRP95) {
+        if(!statsOpenRP95 && !mini && pauseSynopsis && !pauseInfoDismissed) { withFrameNanos { }; runCatching { surfaceFocus.requestFocus() } }
     }
     var exitArmedAt by remember(request.playbackId) { mutableStateOf(0L) }
     fun requestExit() {

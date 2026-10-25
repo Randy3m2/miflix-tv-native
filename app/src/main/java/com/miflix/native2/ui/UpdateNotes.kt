@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP105: Stats NBA/MLB como tabla compacta, cabecera fija, navegación por todas las filas actualización cada 10 s y sin robo de foco del temporizador del video." to "RP105: compact NBA/MLB box-score tables, fixed headers, complete row navigation 10-second updates and no focus stealing from the video timer.",
         "RP104: selector de canales con 10 entradas iniciales y tandas de 10." to "RP104: channel picker starts with 10 entries and publishes batches of 10.",
         "RP103: Naruto Shippuden también muestra sus 500 episodios en una lista continua, conservando el progreso." to "RP103: Naruto Shippuden also shows its 500 episodes in one continuous list while preserving progress.",
         "RP102: Dragon Ball Z y Naruto original con lista continua de episodios; conserva progreso y busca numeración absoluta si faltan enlaces." to "RP102: continuous episode lists for Dragon Ball Z and original Naruto; preserves progress and tries absolute numbering when links are missing.",

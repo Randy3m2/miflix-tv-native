@@ -2062,7 +2062,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu==null && state.sourceSelection==null) {
             if(event.type==KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount==0) {
                 dismissKey=code;pauseInfoDismissed=true;pauseSynopsis=false;controlsVisible=false
-                playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else "channels"
+                playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else if(request.liveProvider=="sports") "games" else "channels"
             }
             true
         } else if(request.live && !request.sportsRecordingRP72 && code in listOf(android.view.KeyEvent.KEYCODE_MEDIA_PAUSE,android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)) {
@@ -2234,6 +2234,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             state.openLivePlayer(PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),stream,0,0,0L,live=true,liveChannelId=c.id,liveProvider=entry.provider,liveType=c.type))
         }}
         if(playerMenu=="custom_channels") CustomChannelsPanelRP45(state) {playerMenu=null}
+        if(playerMenu=="games") SportsGamesRP113(state,request) {playerMenu=null;dismissKey=null;controlInteraction++}
         if(playerMenu=="channels") LiveChannelPicker(state,request.liveProvider,select={ req ->
             if(state.partyRole==PartyRole.GUEST) state.error=tr("El host cambia el canal del party","The host changes the party channel")
             else {playerMenu=null;dismissKey=null;state.openLivePlayer(req)}
@@ -2265,7 +2266,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 onQuickReactions={ if(state.watchParty==null) openPlayerParty() else { quickReactions=true;controlsVisible=false;controlInteraction++ } },onClose={ requestExit() }, onMaximize={ maximized=!maximized },
                 nextAvailable=(randomMode || upcoming!=null) && state.partyRole!=PartyRole.GUEST,
                 onNext={cancelAutoplay=true;state.launch {state.socialAction {if(randomMode) state.playRandomEpisode(request.item) else upcoming?.let {state.playNext(request,it)} } }},
-                onEpisodes={ if(request.liveProvider=="lidom") state.showLidomSources(request) else if(request.live) playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else "channels" else { episodesResumeAfterClose=false;showEpisodes=true } },onQueue={ showQueue=true },
+                onEpisodes={ if(request.liveProvider=="lidom") state.showLidomSources(request) else if(request.live) playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else if(request.liveProvider=="sports") "games" else "channels" else { episodesResumeAfterClose=false;showEpisodes=true } },onQueue={ showQueue=true },
                 onMoment={momentNotice=false;showMomentComposer=true},onInfo={ playerMenu="info" },onPip={ parkCurrentPlayback();playerMenu=null;controlsVisible=false;state.miniPlayer=true;state.screen=Screen.HOME },
                 onScores={state.showLiveScoresRP11=true},
                 onStatsRP95={if(statsAllowedRP95) {playerMenu=null;controlsVisible=false;statsOpenRP95=true}},

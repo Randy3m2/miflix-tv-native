@@ -1,0 +1,5 @@
+RP113 / versionCode 22217. Aplicar sobre RP112 conservando las rutas.
+Botón Juegos en reproductor Live (fuera de Easy mode); panel lateral con todas las categorías de deportes del add-on configurado, juegos, indicación de reproducción, carga bajo demanda y Load more. OK en un stream deportivo también abre este panel.
+Con controles ocultos, arriba/abajo cambia al siguiente/anterior juego de la lista guardada; se elige su primer enlace y se usa el sistema existente de fallback (hasta 5 enlaces y reintento por fuente). No recorre categorías automáticamente al llegar al último juego. Seleccionar otra categoría en el panel permite cambiar de deporte.
+Live TV normal conserva su selector y VOD conserva episodios. Los juegos disponibles dependen del add-on deportivo, no se inventan fuentes LIDOM. Sin nuevas escrituras ni polling Supabase.
+Comprobaciones estáticas de integración realizadas. No se ejecutó compilación Android: entorno sin Android SDK ni wrapper Gradle. No incluye APK; requiere compilar en GitHub y verificar mando/errores en TV. Sin SQL.

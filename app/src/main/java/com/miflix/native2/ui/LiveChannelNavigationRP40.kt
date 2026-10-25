@@ -14,10 +14,7 @@ internal object LiveChannelNavigationRP40 {
     private var hiddenPlaybackId:String?=null
     private fun owner(state:AppState)="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
     fun save(state:AppState,snapshot:LiveBrowseSnapshotRP40) {
-        val rows=snapshot.rows.map {if(it.value.id.startsWith(FinalPlaylistRP97.PREFIX)) it.copy(provider=CustomChannelsRP45.provider) else it}
-        val finalOnly=rows.isNotEmpty() && rows.all {it.value.id.startsWith(FinalPlaylistRP97.PREFIX)}
-        val normalized=snapshot.copy(rows=rows,category=if(finalOnly) snapshot.category.copy(provider=CustomChannelsRP45.provider) else snapshot.category)
-        val key=owner(state);snapshots.remove(key);snapshots[key]=normalized
+        val key=owner(state);snapshots.remove(key);snapshots[key]=snapshot
         while(snapshots.size>6) snapshots.remove(snapshots.keys.first())
     }
     fun matching(state:AppState,request:PlayerRequest?):LiveBrowseSnapshotRP40? {
@@ -30,7 +27,24 @@ internal object LiveChannelNavigationRP40 {
         val snapshot=matching(state,request) ?: return
         val index=snapshot.rows.indexOfFirst {it.provider==request.liveProvider && it.value.id==request.liveChannelId}
         val target=snapshot.rows.getOrNull(index+direction) ?: return
-        if(target.provider=="sports" || target.provider==NuvioTestConfigRP49.PROVIDER) {chooseSports?.invoke(target);return}
+        if(target.provider=="sports") {
+            val profile=owner(state)
+            try {
+                val links=LiveRepository().streams(state.calendarLiveManifest("sports"),target.value)
+                if(profile!=owner(state) || state.playerRequest?.playbackId!=request.playbackId || state.partyRole==PartyRole.GUEST) return
+                val c=target.value
+                val first=links.firstOrNull() ?: error("No playable links")
+                val next=state.sportsRequestRP71(PlayerRequest(MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),first,0,0,0L,
+                    live=true,liveChannelId=c.id,liveProvider="sports",liveType=c.type,
+                    sportsRecordingRP72=SportsRecordingPolicyRP72.recording(snapshot.category.value.name,snapshot.category.value.id,snapshot.category.value.genre,c.name,c.description)),links)
+                hiddenPlaybackId=next.playbackId
+                state.openLivePlayer(next)
+            } catch(e:CancellationException) {throw e} catch(_:Exception) {
+                if(profile==owner(state) && state.playerRequest?.playbackId==request.playbackId) state.error=tr("No se pudo abrir el juego. Puedes elegir otro.","Could not open the game. You can choose another.")
+            }
+            return
+        }
+        if(target.provider==NuvioTestConfigRP49.PROVIDER) {chooseSports?.invoke(target);return}
         val profile=owner(state)
         if(target.provider==CustomChannelsRP45.provider) {
             val channel=CustomChannelsRP45.findForStateRP61(state,target.value.id) ?: return

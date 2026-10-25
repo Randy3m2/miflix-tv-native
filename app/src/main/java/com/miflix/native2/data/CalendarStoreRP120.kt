@@ -15,7 +15,7 @@ internal object CalendarStoreRP120 {
     private fun prefs(c:Context)=c.getSharedPreferences("brunio_calendar_rp120",Context.MODE_PRIVATE)
     private fun changed() {synchronized(this) {revision.value=revision.value+1}}
     fun owner(c:Context,profile:String):String {
-        val account=runCatching {JSONObject(c.getSharedPreferences("miflix_native2",0).getString("session","{}")).optString("uid","local")}.getOrDefault("local")
+        val account=runCatching {JSONObject(c.getSharedPreferences("miflix_native2",0).getString("session","{}").orEmpty().ifBlank {"{}"}).optString("uid","local")}.getOrDefault("local")
         return "$account:$profile"
     }
     fun active(c:Context)=prefs(c).getString("active","").orEmpty()

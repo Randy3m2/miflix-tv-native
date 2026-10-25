@@ -36,7 +36,7 @@ class MandanguitaRP62Test {
         assertFalse(StreamLanguagePriority.hasAudio("","French subtitles","fr"))
     }
     @Test fun directVodWithUnknownSizeUsesImdbMovieAndEpisodeRoutes()=runBlocking {
-        val requested=mutableListOf<String>()
+        val requested=java.util.concurrent.CopyOnWriteArrayList<String>()
         val repo=StreamRepository(url) {request,_ ->
             requested.add(request)
             if(request.endsWith("manifest.json")) """{"name":"RenTV","resources":[{"name":"stream","types":["movie","series"]}]}"""

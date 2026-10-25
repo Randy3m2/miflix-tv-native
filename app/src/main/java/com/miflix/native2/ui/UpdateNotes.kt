@@ -102,7 +102,7 @@ internal object UpdateNotes {
         "My List: Last Added y Oldest Added, con paginación de 25. Last Added también en la web." to "My List: Last Added and Oldest Added with 25-title paging. Last Added is also available on the web.",
         "Connect phone / PC abre tu catálogo de Vercel conectado a la TV: QR/enlace sin código manual y botón Play on TV." to "Connect phone / PC opens your Vercel catalog connected to the TV: QR/link with no manual code and a Play on TV button."
     )
-    val changes=listOf(
+    val legacyChanges=listOf(
         "RC95: al bajar a una fila desplazada, Home primero confirma el foco y después vuelve a su primera tarjeta; elimina la cancelación que podía bloquear la entrada. Las transiciones barra superior/contenido cancelan tareas anteriores al invertir la dirección." to "RC95: when entering a horizontally scrolled row, Home commits focus before returning to its first card, removing the cancellation that could block entry. Header/content transitions cancel older work when direction changes.",
         "RC94: paneles laterales sin recortes al subir y turnos de la ruleta al inicio. Controles compactos de tráileres y controles nativos de YouTube desactivados; selecciones y tráileres rotatorios con historial local. Long press uniforme de 750 ms. Audio compatible con los decodificadores de la TV dentro de la prioridad de idioma, verificación de pistas reales y recuperación ante errores de audio." to "RC94: side-panel focus scrolling without top clipping and movie-night turns reset to the top. Compact trailer controls with YouTube playback controls disabled; rotating picks and trailers with local history. Consistent 750 ms long press. TV decoder-compatible audio within language priority, real-track verification and audio-error recovery.",
         "RC93: superficie de vídeo de tráileres a tamaño completo y controles directos del mando; barra Previous/Next/Details/Watch Title. Moods rediseñados y ampliados. Orden de Home por perfil, fuente adaptada al ancho de banda, ruleta local, estadísticas manuales y guías curadas de sagas. Afinación de gustos y búsquedas descriptivas por metadatos. X-Ray con IA queda pendiente." to "RC93: full-size trailer video surface and direct remote shortcuts; Previous/Next/Details/Watch Title bar. Redesigned expanded moods. Per-profile Home ordering, bandwidth-aware source selection, local movie-night roulette, manual stats and curated saga journeys. Metadata-based taste tuning and descriptive search. AI X-Ray remains pending.",
@@ -169,7 +169,11 @@ internal object UpdateNotes {
         "Fichas web con imagen superior, sinopsis, Play on TV, My List, recomendar, compartir y eventos." to "Web title profiles with hero artwork, synopsis, Play on TV, My List, recommend, share and events.",
         "Enlaces cortos para compartir títulos y Recientes del historial sincronizado del perfil, de 25 en 25." to "Short title sharing links and Recents from the profile’s synced history, paged in groups of 25."
     )
-    val previousChanges=rc62Changes+rc59Changes+listOf(
+    val changes=listOf(
+        "RP124: las notificaciones de actualización muestran las novedades de la versión instalada." to "RP124: update notifications show release notes for the installed version.",
+        "El historial de versiones anteriores queda separado y muestra primero las revisiones RP más recientes." to "Earlier release history is separate and lists the latest RP revisions first."
+    )
+    val previousChanges=rc59Changes+legacyChanges+rc62Changes+listOf(
         "Menú de amigos: Watch, View Details, Recommendations y Close; detalles abre la ficha sin iniciar reproducción." to "Friend menu: Watch, View Details, Recommendations and Close; details opens the title without starting playback.",
         "Enlaces de Comet y Torrentio con texto ordenado e insignias de Dolby/HDR según sus metadatos." to "Clean Comet and Torrentio link metadata with small Dolby/HDR badges when reported by the source.",
         "Envío local a TV por Wi-Fi, con enlace y código de conexión; sin reproducción web." to "Send titles to TV over local Wi-Fi with a connection link and code; no web playback.",
@@ -202,7 +206,7 @@ internal fun ChangelogDialog(state: AppState,close: ()->Unit) {
             androidx.tv.material3.Text("Changelog / Details · ${BuildConfig.VERSION_NAME}",color=androidx.compose.ui.graphics.Color.White,fontSize=24.sp)
             androidx.compose.foundation.lazy.LazyColumn(androidx.compose.ui.Modifier.weight(1f,false),verticalArrangement=androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
                 items(UpdateNotes.changes.size) {index -> val change=UpdateNotes.changes[index];androidx.tv.material3.Text("• "+tr(change.first,change.second),color=Muted,fontSize=15.sp,modifier=androidx.compose.ui.Modifier.fillMaxWidth().contentFocusBorder().focusable().padding(10.dp)) }
-                item {androidx.tv.material3.Text("RC57–RC62",color=Accent,fontSize=20.sp)}
+                item {androidx.tv.material3.Text(tr("Versiones anteriores","Earlier versions"),color=Accent,fontSize=20.sp)}
                 items(UpdateNotes.previousChanges.size) {index -> val change=UpdateNotes.previousChanges[index];androidx.tv.material3.Text("• "+tr(change.first,change.second),color=Muted,fontSize=15.sp,modifier=androidx.compose.ui.Modifier.fillMaxWidth().contentFocusBorder().focusable().padding(10.dp)) }
             }
             FocusButton(tr("Cerrar","Close"),modifier=androidx.compose.ui.Modifier.focusRequester(focus)) {state.markNoticesRead(UpdateNotes.id);close()}

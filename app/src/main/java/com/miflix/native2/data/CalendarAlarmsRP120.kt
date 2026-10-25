@@ -40,7 +40,7 @@ internal object CalendarAlarmsRP120 {
         if(Build.VERSION.SDK_INT>=26) manager.createNotificationChannel(NotificationChannel(CHANNEL,"BruniO · Events",NotificationManager.IMPORTANCE_DEFAULT))
         val launch=c.packageManager.getLaunchIntentForPackage(c.packageName) ?: return
         val intent=PendingIntent.getActivity(c,0,launch,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val builder=if(Build.VERSION.SDK_INT>=26) Notification.Builder(c,CHANNEL) else Notification.Builder(c)
+        val builder=androidx.core.app.NotificationCompat.Builder(c,CHANNEL)
         val notice=builder.setSmallIcon(R.drawable.brunio_icon).setContentTitle(event.title)
             .setContentText("${CalendarStoreRP120.name(c,owner)} · ${event.league} · ${CalendarStoreRP120.starting(c,owner)}")
             .setContentIntent(intent).setAutoCancel(true).build()

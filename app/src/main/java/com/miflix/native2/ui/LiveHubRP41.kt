@@ -470,7 +470,7 @@ internal fun HubCategoryChipRP42(label:String,selected:Boolean,click:()->Unit) {
 /** Same configured sports add-on and baseball catalogs; no separate source or full hub. */
 @Composable
 internal fun EasyMlbRP80(state:AppState,modifier:Modifier) {
-    HubSportsRP41(state,"baseball",modifier,{})
+    HubSportsRP41(state,"baseball",modifier,openNautaSourceRP71={})
 }
 
 @Composable

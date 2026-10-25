@@ -17,6 +17,7 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -203,7 +204,7 @@ private fun SportsPlayersRP121(league:String) {
                 gridItems(visible.take(count),key={it.id}) {p ->
                     var focused by remember(p.id) {mutableStateOf(false)}
                     Column(Modifier.fillMaxWidth().height(174.dp).clip(RoundedCornerShape(15.dp)).background(GlassActionBrushRP108(focused))
-                        .border(if(focused) 2.dp else 1.dp,Color.White.copy(alpha=if(focused) .8f else .12f),RoundedCornerShape(15.dp))
+                        .border(if(focused) 2.dp else 1.dp,if(focused) Color(0xCCFFFFFF) else Color(0x1FFFFFFF),RoundedCornerShape(15.dp))
                         .onFocusChanged {focused=it.isFocused}.focusable().tvClick {person=p}.clickable {person=p}.padding(12.dp),
                         horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(6.dp)) {
                         SportsPortraitRP121(p,80.dp)

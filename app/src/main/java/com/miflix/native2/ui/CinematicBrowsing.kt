@@ -1,6 +1,7 @@
 package com.miflix.native2.ui
 
 import kotlinx.coroutines.ensureActive
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.animateColorAsState
 
 import androidx.activity.compose.BackHandler
@@ -32,6 +33,8 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -205,9 +208,6 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
     val easySearchRP80=LocalEasySearchRP80.current
     val owner=state.searchHistoryOwner()
     var query by rememberSaveable(owner) {mutableStateOf(state.searchQuery)}
-    var committedQueryRP115 by remember(owner) {mutableStateOf("")}
-    var submitRP115 by remember(owner) {mutableIntStateOf(0)}
-    var handledSubmitRP115 by remember(owner) {mutableIntStateOf(0)}
     var cursor by rememberSaveable(owner) {mutableIntStateOf(query.length)}
     var results by remember {mutableStateOf<List<MediaSummary>>(emptyList())}
     var searching by remember {mutableStateOf(false)}
@@ -220,7 +220,6 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
     fun apply(edit: SearchTextEditor.Edit) {query=edit.text;cursor=edit.cursor;state.searchQuery=query}
     fun replace(value: String) {apply(SearchTextEditor.replace(value))}
     fun insert(value: String) {apply(SearchTextEditor.insert(query,cursor,value))}
-    fun submit() {submitRP115++;state.rememberSearch(query);runCatching {resultsFocus.requestFocus()}}
     fun acceptVoiceRP85(result:androidx.activity.result.ActivityResult) {
         if(result.resultCode==android.app.Activity.RESULT_OK && voiceOwnerRP81==state.searchHistoryOwner()) {
             val heard=result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS).orEmpty()
@@ -266,28 +265,19 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
         } catch(e:Exception) {state.error=tr("No se pudo iniciar el micrófono.","Could not start voice input.")}
     }
     LaunchedEffect(Unit) {withFrameNanos { };runCatching {keyboardFocus.requestFocus()}}
-    LaunchedEffect(query,state.interfaceLanguage,owner,submitRP115) {
+    LaunchedEffect(query,state.interfaceLanguage,owner) {
         val term=query.trim()
         searchError=false
-        if(term.isEmpty()) {results=emptyList();committedQueryRP115="";searching=false;return@LaunchedEffect}
-        if(term.length<3) {results=emptyList();searching=false;return@LaunchedEffect}
-        val previous=committedQueryRP115
-        val prefix=term.zip(previous).takeWhile {it.first==it.second}.size
-        val edited=maxOf(term.length,previous.length)-prefix
-        // Three edits per batch; finish a partial batch after a short pause.
-        if(edited<3 && submitRP115==handledSubmitRP115) delay(600)
-        else delay(180)
+        if(term.length<2) {results=emptyList();searching=false;return@LaunchedEffect}
         searching=true
         try {
-            handledSubmitRP115=submitRP115
-            committedQueryRP115=term
-            val local=state.localSearch(term)
-            if(local.isNotEmpty()) results=local
-            val remote=state.searchFlexible(term)
+            // Debounce typing, then publish only the completed search batch.
+            delay(250)
+            val batch=state.searchFlexible(term)
             kotlinx.coroutines.currentCoroutineContext().ensureActive()
-            results=remote
-        } catch(e: CancellationException) {throw e}
-        catch(e: Exception) {searchError=true}
+            results=batch
+        } catch(e:CancellationException) {throw e}
+        catch(_:Exception) {results=emptyList();searchError=true}
         finally {searching=false}
     }
     val suggestions=(if(state.kidsMode) state.kidsMovies+state.kidsSeries else state.seasonalItems+state.trending+state.movies+state.series).distinctBy {it.cloudId}.take(30)
@@ -333,34 +323,14 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
                     item {
                         Column(verticalArrangement=Arrangement.spacedBy(7.dp)) {
                             SearchKey(tr("Voz","Voice"),Modifier.fillMaxWidth(),microphone=true) {dictate()}
-                            (if(easySearchRP80) com.miflix.native2.data.BilingualInputRP85.keyboard() else "abcdefghijklmnopqrstuvwxyz1234567890").chunked(6).forEachIndexed { row,letters ->
+                            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                                SearchKey(tr("Espacio","Space"),Modifier.weight(1f),keyIcon="space") {insert(" ")}
+                                SearchKey(tr("Borrar letra","Delete letter"),Modifier.weight(1f),keyIcon="backspace") {apply(SearchTextEditor.backspace(query,cursor))}
+                            }
+                            "abcdefghijklmnopqrstuvwxyz1234567890".chunked(6).forEachIndexed { row,letters ->
                                 Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
                                     letters.forEachIndexed { col,letter -> SearchKey(letter.toString(),Modifier.weight(1f)
                                         .then(if(row==0 && col==0) Modifier.focusRequester(keyboardFocus) else Modifier)) {insert(letter.toString())} }
-                                }
-                            }
-                            Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-                                SearchKey(tr("Espacio","Space"),Modifier.weight(2f)) {insert(" ")}
-                                SearchKey("⌫",Modifier.weight(1f)) {apply(SearchTextEditor.backspace(query,cursor))}
-                                SearchKey("←",Modifier.weight(1f)) {cursor=SearchTextEditor.move(query,cursor,-1)}
-                                SearchKey("→",Modifier.weight(1f)) {cursor=SearchTextEditor.move(query,cursor,1)}
-                            }
-                            if(!easySearchRP80) Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-                                SearchKey(if(state.voiceLocaleRP81=="es-MX") "✓ ES" else "ES",Modifier.weight(1f)) {state.setVoiceLocaleRP81("es-MX")}
-                                SearchKey(if(state.voiceLocaleRP81=="en-US") "✓ EN" else "EN",Modifier.weight(1f)) {state.setVoiceLocaleRP81("en-US")}
-                            }
-                            Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-                                SearchKey(tr("Borrar","Clear"),Modifier.weight(1f)) {replace("")}
-                                SearchKey(tr("Ver →","View →"),Modifier.weight(1f)) {submit()}
-                            }
-                        }
-                    }
-                    if(!easySearchRP80 && display.isNotEmpty()) item {
-                        Column(verticalArrangement=Arrangement.spacedBy(5.dp)) {
-                            Text(tr("Sugerencias de títulos","Title suggestions"),color=Muted,fontSize=12.sp)
-                            display.take(5).forEach {title ->
-                                SearchKey(title.title,Modifier.fillMaxWidth()) {
-                                    state.rememberSearch(query);state.launch {state.open(title)}
                                 }
                             }
                         }
@@ -371,11 +341,14 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
                         color=Color.White,fontSize=20.sp,lineHeight=24.sp,fontWeight=FontWeight.Bold,maxLines=2,modifier=Modifier.padding(bottom=6.dp))
                     if(!state.easyModeRP79 && com.miflix.native2.data.TasteQuery.parse(query)!=null) Text(tr("Coincidencias por temas, reparto y fotografía disponibles","Matches based on available themes, cast and cinematography"),color=Muted,fontSize=12.sp)
                     if(!state.easyModeRP79 && com.miflix.native2.data.DiscoveryMood.intent(query).isNotBlank()) Text(tr("Selección por ánimo · basada en géneros y tus preferencias","Mood picks · based on genres and your preferences"),color=Muted,fontSize=12.sp)
-                    if(searching || searchError) Text(if(searching) tr("Buscando más…","Finding more…") else tr("No pudimos completar la búsqueda.","Could not complete the search."),color=Muted,fontSize=12.sp)
-                    if(!searching && !searchError && query.isNotBlank() && display.isEmpty()) Text(if(query.trim().length<3) tr("Escribe al menos 3 caracteres","Type at least 3 characters") else tr("Prueba otro título.","Try another title."),color=Muted,fontSize=14.sp)
-                    LazyVerticalGrid(GridCells.Adaptive(142.dp),modifier=Modifier.weight(1f).fillMaxWidth().focusRequester(resultsFocus).focusGroup(),
+                    if(searchError) Text(tr("No pudimos completar la búsqueda.","Could not complete the search."),color=Muted,fontSize=12.sp)
+                    if(!searching && !searchError && query.isNotBlank() && display.isEmpty()) Text(if(query.trim().length<2) tr("Escribe al menos 2 caracteres","Type at least 2 characters") else tr("Prueba otro título.","Try another title."),color=Muted,fontSize=14.sp)
+                    Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) {
+                    if(searching) SearchSpinnerRP116()
+                    else LazyVerticalGrid(GridCells.Adaptive(142.dp),modifier=Modifier.fillMaxSize().focusRequester(resultsFocus).focusGroup(),
                         horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(top=4.dp,bottom=32.dp)) {
                         gridItems(display,key={it.cloudId}) {item -> MediaCard(item,compact=true,allowContextMenu=!state.easyModeRP79) {state.rememberSearch(query);state.launch {state.open(item)}} }
+                    }
                     }
                 }
             }
@@ -386,10 +359,10 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
 internal val LocalEasySearchRP80=staticCompositionLocalOf {false}
 
 @Composable
-private fun SearchKey(label: String,modifier: Modifier=Modifier,microphone:Boolean=false,onClick: () -> Unit) {
+private fun SearchKey(label: String,modifier: Modifier=Modifier,microphone:Boolean=false,keyIcon:String?=null,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     val largeRP80=LocalEasySearchRP80.current
-    Box(modifier.height(if(largeRP80) 39.dp else 34.dp).onFocusChanged {focused=it.isFocused}.focusable().tvClick(onClick).clickable(onClick=onClick)
+    Box(modifier.semantics {contentDescription=label}.height(if(largeRP80) 39.dp else 34.dp).onFocusChanged {focused=it.isFocused}.focusable().tvClick(onClick).clickable(onClick=onClick)
         .background(GlassActionBrushRP108(focused),RoundedCornerShape(6.dp))
         .border(if(focused) 2.dp else 1.dp,Color.White.copy(alpha=if(focused) .95f else .10f),RoundedCornerShape(6.dp)).padding(horizontal=4.dp),
         contentAlignment=Alignment.Center) {
@@ -404,7 +377,35 @@ private fun SearchKey(label: String,modifier: Modifier=Modifier,microphone:Boole
                 drawLine(Color.White,androidx.compose.ui.geometry.Offset(size.width*.5f,size.height*.72f),androidx.compose.ui.geometry.Offset(size.width*.5f,size.height*.92f),stroke.width)
                 drawLine(Color.White,androidx.compose.ui.geometry.Offset(size.width*.32f,size.height*.92f),androidx.compose.ui.geometry.Offset(size.width*.68f,size.height*.92f),stroke.width)
             }
-            Text(label,color=Color.White,fontSize=if(largeRP80) 18.sp else 15.sp,fontWeight=if(focused) FontWeight.Bold else FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
+            if(keyIcon!=null) androidx.compose.foundation.Canvas(Modifier.width(26.dp).height(18.dp)) {
+                val path=androidx.compose.ui.graphics.Path()
+                val w=size.width;val h=size.height
+                if(keyIcon=="space") {
+                    path.moveTo(w*.16f,h*.38f);path.lineTo(w*.16f,h*.7f)
+                    path.lineTo(w*.84f,h*.7f);path.lineTo(w*.84f,h*.38f)
+                } else {
+                    path.moveTo(w*.34f,h*.14f);path.lineTo(w*.91f,h*.14f)
+                    path.lineTo(w*.91f,h*.86f);path.lineTo(w*.34f,h*.86f)
+                    path.lineTo(w*.08f,h*.5f);path.close()
+                    path.moveTo(w*.48f,h*.32f);path.lineTo(w*.73f,h*.68f)
+                    path.moveTo(w*.73f,h*.32f);path.lineTo(w*.48f,h*.68f)
+                }
+                drawPath(path,Color.White,style=androidx.compose.ui.graphics.drawscope.Stroke(1.8.dp.toPx(),cap=androidx.compose.ui.graphics.StrokeCap.Round,join=androidx.compose.ui.graphics.StrokeJoin.Round))
+            }
+            else Text(label,color=Color.White,fontSize=if(largeRP80) 18.sp else 15.sp,fontWeight=if(focused) FontWeight.Bold else FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
         }
+    }
+}
+
+@Composable
+private fun SearchSpinnerRP116() {
+    val animation=androidx.compose.animation.core.rememberInfiniteTransition(label="search-loading")
+    val rotation by animation.animateFloat(initialValue=0f,targetValue=360f,
+        animationSpec=androidx.compose.animation.core.infiniteRepeatable(
+            animation=androidx.compose.animation.core.tween(700,easing=androidx.compose.animation.core.LinearEasing)),label="rotation")
+    androidx.compose.foundation.Canvas(Modifier.size(34.dp).graphicsLayer {rotationZ=rotation}) {
+        val stroke=androidx.compose.ui.graphics.drawscope.Stroke(width=3.dp.toPx(),cap=androidx.compose.ui.graphics.StrokeCap.Round)
+        drawArc(Color.White.copy(alpha=.12f),0f,360f,false,style=stroke)
+        drawArc(Color.White,0f,95f,false,style=stroke)
     }
 }

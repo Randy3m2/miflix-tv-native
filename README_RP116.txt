@@ -1,0 +1,5 @@
+RP116 / 22220. Aplicar sobre RP115 conservando rutas.
+Buscador general VOD normal y Easy. Primera letra: sin búsqueda. Desde segunda letra: espera 250ms tras escribir, spinner blanco y publicación del resultado completo de searchFlexible en una sola actualización, sin resultados locales intermedios. Cancela búsquedas anteriores y comprueba cancelación antes de publicar. No espera a que cada póster remoto termine de descargar; las imágenes conservan su carga lazy.
+Teclado compacto de 36 teclas (a-z,0-9), espacio y borrar. Micrófono arriba. Sin teclas de acentos, ES/EN, flechas, borrar todo, Ver ni sugerencias bajo teclado. Entrada física y dictado conservan soporte de español/inglés. Foco blanco rectangular y texto en negrita.
+Revisión estática de umbral, publicación por lote, cancelación y controles realizada. Sin compilación Android ni prueba en TV; sin APK ni SQL.
+Iconos vectoriales blancos de espacio y backspace en una fila encima de las letras, debajo del micrófono; descripciones accesibles conservadas.

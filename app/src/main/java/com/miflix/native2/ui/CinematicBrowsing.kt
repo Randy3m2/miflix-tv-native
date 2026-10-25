@@ -232,7 +232,7 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
     fun voiceIntentRP85(automatic:Boolean):android.content.Intent {
         val intent=android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE,if(easySearchRP80) com.miflix.native2.data.BilingualInputRP85.fallbackLocale(state.audioLanguage,state.interfaceLanguage) else state.voiceLocaleRP81)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE,com.miflix.native2.data.BilingualInputRP85.fallbackLocale(state.audioLanguage,state.interfaceLanguage))
             .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS,5)
             .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT,tr("Di un título, actor o director","Say a title, actor or director"))
         if(automatic) {
@@ -250,7 +250,7 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
     val voice=androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) {result ->
         if(result.resultCode==android.app.Activity.RESULT_OK) acceptVoiceRP85(result)
-        else if(easySearchRP80 && voiceOwnerRP81==state.searchHistoryOwner() && result.resultCode in 1..5) {
+        else if(voiceOwnerRP81==state.searchHistoryOwner() && result.resultCode in 1..5) {
             // One retry without switching flags for an actual recognizer error; never restart after Cancel.
             runCatching {fallbackVoiceRP85.launch(voiceIntentRP85(false))}.onFailure {
                 state.error=tr("No se pudo iniciar el micrófono.","Could not start voice input.")
@@ -259,7 +259,7 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
     }
     fun dictate() {
         voiceOwnerRP81=owner;voiceAlternativesRP81=emptyList()
-        try {voice.launch(voiceIntentRP85(easySearchRP80))}
+        try {voice.launch(voiceIntentRP85(true))}
         catch(e:android.content.ActivityNotFoundException) {
             state.error=tr("Esta TV no tiene un servicio de dictado disponible.","No voice input service is available on this TV.")
         } catch(e:Exception) {state.error=tr("No se pudo iniciar el micrófono.","Could not start voice input.")}
@@ -283,41 +283,17 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
     val suggestions=(if(state.kidsMode) state.kidsMovies+state.kidsSeries else state.seasonalItems+state.trending+state.movies+state.series).distinctBy {it.cloudId}.take(30)
     val display=if(query.isBlank()) suggestions else results
     AppShell(state,Screen.SEARCH,{state.screen=it}) {
-        Column(Modifier.fillMaxSize().padding(start=34.dp,end=28.dp,top=12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-            // This text box uses the in-app keyboard; focusing it never invokes a covering IME.
-            var textFocused by remember {mutableStateOf(false)}
-            val textScroll=rememberScrollState()
-            var fieldWidth by remember {mutableIntStateOf(0)}
-            var searchLayoutRP35 by remember {mutableStateOf<androidx.compose.ui.text.TextLayoutResult?>(null)}
-            LaunchedEffect(cursor,query,fieldWidth,searchLayoutRP35) {
-                val layout=searchLayoutRP35?.takeIf {it.layoutInput.text.text==query} ?: return@LaunchedEffect
-                val caret=layout.getCursorRect(cursor.coerceIn(0,query.length)).left
-                textScroll.scrollTo((caret-fieldWidth*.8f).toInt().coerceAtLeast(0))
-            }
-            Box(Modifier.fillMaxWidth().height(if(easySearchRP80) 56.dp else 46.dp).onFocusChanged {textFocused=it.isFocused}
-                .onPreviewKeyEvent {event ->
-                    val code=event.nativeKeyEvent.keyCode
-                    if(code==21 || code==22 || code==67) {
-                        if(event.type==KeyEventType.KeyDown) {
-                            if(code==67) apply(SearchTextEditor.backspace(query,cursor)) else cursor=SearchTextEditor.move(query,cursor,if(code==21) -1 else 1)
-                        };true
-                    } else if(event.type==KeyEventType.KeyDown && event.nativeKeyEvent.unicodeChar>=32 && !event.nativeKeyEvent.isCtrlPressed &&
-                        (!easySearchRP80 || com.miflix.native2.data.BilingualInputRP85.accepts(event.nativeKeyEvent.unicodeChar))) {
-                        insert(String(Character.toChars(event.nativeKeyEvent.unicodeChar)));true
-                    } else false
-                }.focusable().tvClick {keyboardFocus.requestFocus()}.clickable {keyboardFocus.requestFocus()}
-                .background(GlassActionBrushRP108(textFocused),RoundedCornerShape(14.dp)).border(if(textFocused) 2.dp else 1.dp,Color.White.copy(alpha=if(textFocused) .7f else .12f),RoundedCornerShape(14.dp))
-                .padding(horizontal=14.dp),contentAlignment=Alignment.CenterStart) {
-                Text(if(query.isEmpty()) tr("Película, serie, actor o director…","Movie, series, actor or director…") else query,
-                    color=if(query.isEmpty()) Muted else Color.White,fontSize=if(easySearchRP80) 22.sp else 19.sp,maxLines=1,
-                    onTextLayout={searchLayoutRP35=it},
-                    modifier=Modifier.fillMaxWidth().onSizeChanged {fieldWidth=it.width}.horizontalScroll(textScroll))
-            }
-            if(voiceAlternativesRP81.size>1) LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp),contentPadding=PaddingValues(vertical=2.dp)) {
-                items(voiceAlternativesRP81,key={it}) {heard ->
-                    SearchKey(heard,Modifier.widthIn(max=280.dp)) {replace(heard)}
-                }
-            }
+        Column(Modifier.fillMaxSize().onPreviewKeyEvent {event ->
+            // Hardware keyboards still work without a second text field.
+            val native=event.nativeKeyEvent
+            if(native.keyCode==67) {
+                if(event.type==KeyEventType.KeyDown) apply(SearchTextEditor.backspace(query,cursor))
+                true
+            } else if(event.type==KeyEventType.KeyDown && native.unicodeChar>=32 && !native.isCtrlPressed &&
+                (!easySearchRP80 || com.miflix.native2.data.BilingualInputRP85.accepts(native.unicodeChar))) {
+                insert(String(Character.toChars(native.unicodeChar)));true
+            } else false
+        }.padding(start=34.dp,end=28.dp,top=8.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Row(Modifier.weight(1f).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(24.dp)) {
                 LazyColumn(Modifier.width(if(easySearchRP80) 270.dp else 252.dp).fillMaxHeight(),verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=20.dp)) {
                     item {

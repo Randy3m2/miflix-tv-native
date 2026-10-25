@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP117: búsqueda sin campo duplicado arriba; consulta solo a la derecha y teclado más alto." to "RP117: removed duplicate top search field; query only at right and keyboard moved upward.",
         "RP116: búsqueda desde 2 letras, resultados completos con spinner y teclado simplificado con micrófono arriba." to "RP116: search from 2 letters, complete result batches with spinner and simplified keyboard with microphone above.",
         "RP115: buscador glass más ligero, teclado con foco rectangular y búsquedas agrupadas cada 3 caracteres." to "RP115: lighter glass search, rectangular keyboard focus and searches batched every 3 characters.",
         "RP114: tarjetas glass con imagen del evento y marcador Viendo ahora en el selector de juegos." to "RP114: glass event cards with artwork and Now playing marker in the game picker.",

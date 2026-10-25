@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP109: Ajustes disponible únicamente desde el engranaje superior; menú de perfil sin duplicados." to "RP109: Settings available only from the top gear; no duplicate in the profile menu.",
         "RP108: seis tarjetas grandes en Live, reintento deportivo único, botones glass y foco corregido en navegación/Stats." to "RP108: six large Live tiles, one sports retry, glass buttons and corrected navigation/Stats focus.",
         "RP107: Dragon Ball Z envía siempre temporada 1 y episodio absoluto a las fuentes, también en Modo fácil y precarga." to "RP107: Dragon Ball Z always sends season 1 and absolute episode numbers to sources, including Easy mode and prewarm.",
         "RP106: Stats con foco persistente y scroll estable; menú centrado con efecto glass, engranaje de ajustes y Seguir viendo primero." to "RP106: persistent Stats focus and stable scrolling; centered glass navigation, settings gear and Continue Watching first.",

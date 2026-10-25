@@ -456,15 +456,21 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
             onDismissRequest={ profileMenu=false;runCatching { profileAnchor.requestFocus() } },
             properties=androidx.compose.ui.window.PopupProperties(focusable=true)) {
             val menuFocus=remember { FocusRequester() }
+            val firstProfileAction=when {
+                !kids && manageProfile!=null -> "manage"
+                !kids && pairTv!=null -> "pair"
+                onEditPicture!=null -> "picture"
+                else -> "switch"
+            }
+            fun profileActionModifier(action:String)=Modifier.fillMaxWidth().then(if(firstProfileAction==action) Modifier.focusRequester(menuFocus) else Modifier)
             LaunchedEffect(Unit) { withFrameNanos { };runCatching { menuFocus.requestFocus() } }
             Column(Modifier.width(290.dp).heightIn(max=420.dp).verticalScroll(rememberScrollState()).background(Color.Black,RoundedCornerShape(14.dp))
                 .border(1.dp,PanelBorder,RoundedCornerShape(14.dp)).padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Text(profileName,color=Muted,fontSize=13.sp,modifier=Modifier.padding(8.dp))
-                                if(!kids) FocusButton(tr("Ajustes","Settings"),modifier=Modifier.fillMaxWidth().focusRequester(menuFocus)) { profileMenu=false;navigateHeader(Screen.SETTINGS) }
-                if(!kids) manageProfile?.let {manage -> FocusButton(tr("Administrar perfil","Manage profile"),modifier=Modifier.fillMaxWidth()) {profileMenu=false;manage()} }
-                if(!kids) pairTv?.let {pair -> FocusButton(tr("Conectar teléfono / PC","Connect phone / PC"),modifier=Modifier.fillMaxWidth()) {profileMenu=false;pair()} }
-                onEditPicture?.let { edit -> FocusButton(tr("Editar foto","Edit picture"),modifier=Modifier.fillMaxWidth()) { profileMenu=false;edit() } }
-                FocusButton(tr("Cambiar perfil","Switch profile"),modifier=Modifier.fillMaxWidth().then(if(kids) Modifier.focusRequester(menuFocus) else Modifier)) { profileMenu=false;navigateHeader(Screen.PROFILES) }
+                if(!kids) manageProfile?.let {manage -> FocusButton(tr("Administrar perfil","Manage profile"),modifier=profileActionModifier("manage")) {profileMenu=false;manage()} }
+                if(!kids) pairTv?.let {pair -> FocusButton(tr("Conectar teléfono / PC","Connect phone / PC"),modifier=profileActionModifier("pair")) {profileMenu=false;pair()} }
+                onEditPicture?.let { edit -> FocusButton(tr("Editar foto","Edit picture"),modifier=profileActionModifier("picture")) { profileMenu=false;edit() } }
+                FocusButton(tr("Cambiar perfil","Switch profile"),modifier=profileActionModifier("switch")) { profileMenu=false;navigateHeader(Screen.PROFILES) }
             }
         }
         }

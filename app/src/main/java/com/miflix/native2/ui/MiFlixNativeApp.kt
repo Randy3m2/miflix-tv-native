@@ -67,6 +67,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             BruniOSplashScreen()
             return@MaterialTheme
         }
+        CalendarRuntimeRP120("${state.session?.userId ?: "local"}:${state.activeProfile.id}",state.activeProfile.name,state.appForeground)
         LaunchedEffect(bootstrapped, initialPartyCode,state.easyModeRP79) {
             if (bootstrapped && !state.easyModeRP79 && !initialPartyCode.isNullOrBlank()) {
                 state.launch { state.joinWatchParty(initialPartyCode) }

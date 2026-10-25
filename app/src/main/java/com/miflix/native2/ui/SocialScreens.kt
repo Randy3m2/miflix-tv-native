@@ -88,7 +88,7 @@ fun FriendsScreen(state: AppState) {
                 Spacer(Modifier.height(12.dp))
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     if(tab==1 && state.session!=null) SharedMomentsContentRP23(state,close={},modifier=Modifier.fillMaxSize(),embedded=true)
-                    else if(tab==3 && state.session!=null) InlineCalendar(state,Modifier.fillMaxSize())
+                    else if(tab==3) InlineCalendar(state,Modifier.fillMaxSize())
                     else LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(bottom=32.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 if(state.session==null) item { FocusButton(tr("Iniciar sesión","Sign in")) { state.screen=Screen.SETTINGS } }
                 else {
@@ -276,22 +276,33 @@ fun TraktScreen(state: AppState) {
 
 @Composable
 fun NotificationsScreen(state: AppState) {
+    val calendarContextRP120=androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val calendarRevisionRP120 by com.miflix.native2.data.CalendarStoreRP120.revision.collectAsState()
+    val calendarOwnerRP120=com.miflix.native2.data.CalendarStoreRP120.owner(calendarContextRP120,state.activeProfile.id)
+    val sportNoticesRP120 by produceState<List<com.miflix.native2.data.SportEventRP120>>(emptyList(),calendarOwnerRP120,calendarRevisionRP120) {
+        value=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {com.miflix.native2.data.CalendarStoreRP120.notices(calendarContextRP120,calendarOwnerRP120)}
+    }
+
+    val sportUnreadRP120 by produceState(0,calendarOwnerRP120,calendarRevisionRP120) {
+        value=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {com.miflix.native2.data.CalendarStoreRP120.unread(calendarContextRP120,calendarOwnerRP120)}
+    }
     BackHandler { state.screen = Screen.HOME }
     val contentFocus=remember { FocusRequester() }
     Column(Modifier.fillMaxSize().background(Bg)) {
         Sidebar(Screen.NOTIFICATIONS,state.activeProfile.name,{state.screen=it},state.unreadNoticeCount,state.activeProfile,onMoveDown={ contentFocus.requestFocus(); Unit })
         LazyColumn(Modifier.weight(1f).padding(horizontal=34.dp).focusRequester(contentFocus).focusGroup(),contentPadding=PaddingValues(top=24.dp,bottom=40.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             item {
-                Text("${tr("Notificaciones","Notifications")} · ${state.unreadNoticeCount}",color=Color.White,fontSize=30.sp, lineHeight=36.sp)
+                Text("${tr("Notificaciones","Notifications")} · ${state.unreadNoticeCount+sportUnreadRP120}",color=Color.White,fontSize=30.sp, lineHeight=36.sp)
                 Spacer(Modifier.height(14.dp))
                 Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     FocusButton(tr("Revisar ahora","Check now")) { state.launch { runCatching { state.checkNotifications() }.onFailure { state.error=it.message } } }
-                    FocusButton(tr("Marcar como leídas","Mark as read")) {state.markNoticesRead()}
-                    FocusButton(tr("Limpiar notificaciones","Clear notifications")) { state.clearNotifications() }
+                    FocusButton(tr("Marcar como leídas","Mark as read")) {state.markNoticesRead();com.miflix.native2.data.CalendarStoreRP120.markRead(calendarContextRP120,calendarOwnerRP120)}
+                    FocusButton(tr("Limpiar notificaciones","Clear notifications")) { state.clearNotifications();com.miflix.native2.data.CalendarStoreRP120.clearNotices(calendarContextRP120,calendarOwnerRP120) }
                 }
                 Spacer(Modifier.height(12.dp))
                 Text(tr("Nuevos episodios y estrenos de tus favoritos.","New episodes and releases from your favorites."),color=Muted,fontSize=14.sp)
             }
+            items(sportNoticesRP120,key={"event:"+it.noticeKey}) {event ->CalendarSportEventRP120(state,event)}
             item(key=UpdateNotes.id) {
                 Column(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(20.dp)).border(1.dp,if(state.noticeRead(UpdateNotes.id)) PanelBorder else Accent,RoundedCornerShape(20.dp)).padding(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                     Text("What's new · BruniO ${com.miflix.native2.BuildConfig.VERSION_NAME}",color=Color.White,fontSize=24.sp)

@@ -487,7 +487,13 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
             }
         }
         Row(Modifier.width(136.dp),horizontalArrangement=Arrangement.spacedBy(10.dp,Alignment.End),verticalAlignment=Alignment.CenterVertically) {
-            NotificationButton(notificationCount,if(current==Screen.NOTIFICATIONS) Modifier.focusRequester(headerTarget) else Modifier) {navigateHeader(Screen.NOTIFICATIONS)}
+            val calendarContextRP120=androidx.compose.ui.platform.LocalContext.current.applicationContext
+        val calendarOwnerRP120=if(profile==null) "" else com.miflix.native2.data.CalendarStoreRP120.owner(calendarContextRP120,profile.id)
+        val calendarRevisionRP120 by com.miflix.native2.data.CalendarStoreRP120.revision.collectAsState()
+        val sportUnreadRP120 by produceState(0,calendarOwnerRP120,calendarRevisionRP120) {
+            value=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {com.miflix.native2.data.CalendarStoreRP120.unread(calendarContextRP120,calendarOwnerRP120)}
+        }
+        NotificationButton(notificationCount+sportUnreadRP120,if(current==Screen.NOTIFICATIONS) Modifier.focusRequester(headerTarget) else Modifier) {navigateHeader(Screen.NOTIFICATIONS)}
             if(!kids) SettingsNavigationButtonRP106(current==Screen.SETTINGS,if(current==Screen.SETTINGS) Modifier.focusRequester(headerTarget) else Modifier) {navigateHeader(Screen.SETTINGS)}
         }
 

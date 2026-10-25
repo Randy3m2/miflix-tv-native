@@ -2,6 +2,9 @@
 
 package com.miflix.native2.ui
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -68,7 +71,7 @@ fun QueueAddDialog(state: AppState,item: MediaSummary,close: () -> Unit) {
         Column(Modifier.width(680.dp).heightIn(max=500.dp).background(Panel,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
             Text(tr("Añadir episodio a la cola","Add episode to queue"),color=Color.White,fontSize=24.sp)
             Text(item.title,color=Muted)
-            Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
+            FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 FocusButton("‹") { if(season>1) season-- };Text("S$season",color=Color.White)
                 FocusButton("›") { if(season<count) season++ };FocusButton(tr("Cerrar","Close"),modifier=Modifier.focusRequester(first)) { close() }
             }
@@ -126,6 +129,7 @@ internal fun eventLocal(value: String): String = runCatching {
 
 @Composable
 fun CalendarDialog(state: AppState, close: () -> Unit) {
+    val androidContextRP120=androidx.compose.ui.platform.LocalContext.current.applicationContext
     val first=remember { FocusRequester() }
     LaunchedEffect(Unit) { withFrameNanos { };first.requestFocus() }
     var offset by remember { mutableStateOf(0) }
@@ -133,6 +137,10 @@ fun CalendarDialog(state: AppState, close: () -> Unit) {
     var day by remember { mutableStateOf<String?>(null) }
     val month=remember(offset) { Calendar.getInstance().apply { add(Calendar.MONTH,offset);set(Calendar.DAY_OF_MONTH,1) } }
     val prefix=SimpleDateFormat("yyyy-MM",Locale.US).format(month.time)
+    val subscribedEventsRP120=rememberSportEventsRP120(state,prefix)
+    val subscribedByDayRP120=remember(subscribedEventsRP120) {subscribedEventsRP120.groupBy {it.day()}}
+    var subscriptionsRP120 by remember {mutableStateOf(false)}
+    var eventSearchRP120 by remember {mutableStateOf("")}
     LaunchedEffect(Unit) { state.socialAction { state.refreshCalendar();state.refreshFriends() } }
     PlayerMenuDialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Column(Modifier.width(820.dp).heightIn(max=560.dp).background(Panel,RoundedCornerShape(22.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -141,8 +149,9 @@ fun CalendarDialog(state: AppState, close: () -> Unit) {
                 FocusButton("‹") { offset--;day=null }
                 Text(prefix,color=Color.White,fontSize=22.sp)
                 FocusButton("›") { offset++;day=null }
+                FocusButton(tr("Suscripciones","Subscriptions")) {subscriptionsRP120=true}
                 FocusButton(tr("Crear evento","Create event"),modifier=Modifier.focusRequester(first)) { creating=true }
-                FocusButton(tr("Actualizar","Refresh")) { state.launch { state.socialAction { state.refreshCalendar() } } }
+                FocusButton(tr("Actualizar","Refresh")) { state.launch { state.socialAction { state.refreshCalendar() };withContext(Dispatchers.IO) {com.miflix.native2.data.CalendarStoreRP120.refresh(androidContextRP120,com.miflix.native2.data.CalendarStoreRP120.owner(androidContextRP120,state.activeProfile.id),true)} } }
                 FocusButton(tr("Cerrar","Close")) { close() }
             }
             state.error?.let { Text(it,color=Color.White,maxLines=3) }
@@ -154,14 +163,19 @@ fun CalendarDialog(state: AppState, close: () -> Unit) {
                     Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                         group.forEach { n ->
                             val date="$prefix-${n.toString().padStart(2,'0')}"
-                            val count=state.calendarEvents.count { eventLocal(it.starts).startsWith(date) }
-                            if(n==0) Spacer(Modifier.weight(1f)) else FocusButton("$n"+if(count>0) " ⭐" else "",modifier=Modifier.weight(1f),primary=day==date) { day=if(day==date) null else date }
+                            val sporting=subscribedByDayRP120[date].orEmpty()
+                                val count=state.calendarEvents.count { eventLocal(it.starts).startsWith(date) }+sporting.size
+                            if(n==0) Spacer(Modifier.weight(1f)) else CalendarDay(n,count,day==date,Modifier.weight(1f),height=48.dp,logosRP120=sporting.map {it.logos.firstOrNull() ?: com.miflix.native2.data.CalendarSourcesRP120.logo(it.league)}) {day=if(day==date) null else date}
                         }
                         repeat(7-group.size) { Spacer(Modifier.weight(1f)) }
                     }
                 }
+                item {NativeTextField(eventSearchRP120,{eventSearchRP120=it},tr("Buscar equipo, liga o enfrentamiento","Find team, league or matchup"),modifier=Modifier.fillMaxWidth())}
+                val sportRowsRP120=subscribedEventsRP120.filter {(eventSearchRP120.isNotBlank() || it.day().startsWith(day ?: prefix)) &&
+                    eventSearchRP120.trim().split(" ").filter {q ->q.isNotBlank()}.all {q ->com.miflix.native2.data.IptvPlaylist.searchKey(it.league+" "+it.title).contains(com.miflix.native2.data.IptvPlaylist.searchKey(q))}}
+                items(sportRowsRP120,key={"sport:"+it.key}) {event ->CalendarSportEventRP120(state,event)}
                 val events=state.calendarEvents.filter { eventLocal(it.starts).startsWith(day ?: prefix) }
-                if(events.isEmpty()) item { Text(tr("No hay eventos en este período","No events in this period"),color=Muted) }
+                if(events.isEmpty() && sportRowsRP120.isEmpty()) item { Text(tr("No hay eventos en este período","No events in this period"),color=Muted) }
                 items(events,key={it.id}) { event ->
                     Column(Modifier.background(Panel,RoundedCornerShape(14.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                         Text(event.title,color=Color.White,fontSize=20.sp)
@@ -176,6 +190,7 @@ fun CalendarDialog(state: AppState, close: () -> Unit) {
             }
         }
     }
+    if(subscriptionsRP120) CalendarSubscriptionsRP120(state) {subscriptionsRP120=false}
     if(creating) CreateEventDialog(state,day) { creating=false }
 }
 
@@ -350,22 +365,28 @@ fun PlayerPartyChatDialog(state: AppState, close: () -> Unit) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun InlineCalendar(state: AppState,modifier: Modifier=Modifier) {
+    val androidContextRP120=androidx.compose.ui.platform.LocalContext.current.applicationContext
     var offset by remember { mutableIntStateOf(0) }
     var day by remember { mutableStateOf<String?>(null) }
     var creating by remember { mutableStateOf(false) }
     val month=remember(offset) { Calendar.getInstance().apply { add(Calendar.MONTH,offset);set(Calendar.DAY_OF_MONTH,1) } }
     val prefix=SimpleDateFormat("yyyy-MM",Locale.US).format(month.time)
+    val subscribedEventsRP120=rememberSportEventsRP120(state,prefix)
+    val subscribedByDayRP120=remember(subscribedEventsRP120) {subscribedEventsRP120.groupBy {it.day()}}
+    var subscriptionsRP120 by remember {mutableStateOf(false)}
+    var eventSearchRP120 by remember {mutableStateOf("")}
     val days=List((month.get(Calendar.DAY_OF_WEEK)+5)%7) { 0 }+(1..month.getActualMaximum(Calendar.DAY_OF_MONTH)).toList()
     LaunchedEffect(state.session?.userId) { if(state.session!=null) state.socialAction { state.refreshCalendar();state.refreshFriends() } }
     BoxWithConstraints(modifier) {
-    val dayHeight=((maxHeight-123.dp)/6f).coerceIn(18.dp,34.dp)
+    val dayHeight=((maxHeight-105.dp)/6f).coerceIn(34.dp,48.dp)
     Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
             FocusButton("‹",horizontalPadding=14.dp) { offset--;day=null }
             Text(prefix,color=Color.White,fontSize=20.sp,modifier=Modifier.weight(1f))
             FocusButton("›",horizontalPadding=14.dp) { offset++;day=null }
+            FocusButton(tr("Suscripciones","Subscriptions")) {subscriptionsRP120=true}
             FocusButton(tr("Crear evento","Create event")) { creating=true }
-            FocusButton(tr("Actualizar","Refresh")) { state.launch { state.socialAction { state.refreshCalendar() } } }
+            FocusButton(tr("Actualizar","Refresh")) { state.launch { state.socialAction { state.refreshCalendar() };withContext(Dispatchers.IO) {com.miflix.native2.data.CalendarStoreRP120.refresh(androidContextRP120,com.miflix.native2.data.CalendarStoreRP120.owner(androidContextRP120,state.activeProfile.id),true)} } }
         }
         Row(Modifier.weight(1f).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(16.dp)) {
             LazyColumn(Modifier.weight(1f).fillMaxHeight().background(Panel,RoundedCornerShape(14.dp)).padding(12.dp),
@@ -376,8 +397,9 @@ internal fun InlineCalendar(state: AppState,modifier: Modifier=Modifier) {
                         week.forEach { n ->
                             if(n==0) Spacer(Modifier.weight(1f)) else {
                                 val date="$prefix-${n.toString().padStart(2,'0')}"
-                                val count=state.calendarEvents.count { eventLocal(it.starts).startsWith(date) }
-                                CalendarDay(n,count,day==date,Modifier.weight(1f),height=dayHeight) { day=if(day==date) null else date }
+                                val sporting=subscribedByDayRP120[date].orEmpty()
+                                val count=state.calendarEvents.count { eventLocal(it.starts).startsWith(date) }+sporting.size
+                                CalendarDay(n,count,day==date,Modifier.weight(1f),height=dayHeight,logosRP120=sporting.map {it.logos.firstOrNull() ?: com.miflix.native2.data.CalendarSourcesRP120.logo(it.league)}) { day=if(day==date) null else date }
                             }
                         }
                         repeat(7-week.size) { Spacer(Modifier.weight(1f)) }
@@ -386,8 +408,12 @@ internal fun InlineCalendar(state: AppState,modifier: Modifier=Modifier) {
             }
             LazyColumn(Modifier.weight(1f).fillMaxHeight(),contentPadding=PaddingValues(bottom=16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 item { Text(day ?: tr("Eventos del mes","This month's events"),color=Muted,fontSize=13.sp) }
+                item {NativeTextField(eventSearchRP120,{eventSearchRP120=it},tr("Buscar equipo, liga o enfrentamiento","Find team, league or matchup"),modifier=Modifier.fillMaxWidth())}
+                val sportRowsRP120=subscribedEventsRP120.filter {(eventSearchRP120.isNotBlank() || it.day().startsWith(day ?: prefix)) &&
+                    eventSearchRP120.trim().split(" ").filter {q ->q.isNotBlank()}.all {q ->com.miflix.native2.data.IptvPlaylist.searchKey(it.league+" "+it.title).contains(com.miflix.native2.data.IptvPlaylist.searchKey(q))}}
+                items(sportRowsRP120,key={"sport:"+it.key}) {event ->CalendarSportEventRP120(state,event)}
                 val events=state.calendarEvents.filter { eventLocal(it.starts).startsWith(day ?: prefix) }
-                if(events.isEmpty()) item { Text(tr("No hay eventos en este período","No events in this period"),color=Muted) }
+                if(events.isEmpty() && sportRowsRP120.isEmpty()) item { Text(tr("No hay eventos en este período","No events in this period"),color=Muted) }
                 items(events,key={it.id}) { event ->
                     Column(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(12.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                         Text(event.title,color=Color.White,fontSize=17.sp,maxLines=2)
@@ -403,15 +429,21 @@ internal fun InlineCalendar(state: AppState,modifier: Modifier=Modifier) {
         }
     }
     }
+    if(subscriptionsRP120) CalendarSubscriptionsRP120(state) {subscriptionsRP120=false}
     if(creating) CreateEventDialog(state,day) { creating=false }
 }
 
 @Composable
-private fun CalendarDay(number: Int,count: Int,selected: Boolean,modifier: Modifier,height: androidx.compose.ui.unit.Dp=34.dp,onClick: () -> Unit) {
+private fun CalendarDay(number: Int,count: Int,selected: Boolean,modifier: Modifier,height: androidx.compose.ui.unit.Dp=34.dp,logosRP120:List<String> = emptyList(),onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     Box(modifier.height(height).onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
         .background(GlassActionBrushRP108(focused,selected),RoundedCornerShape(7.dp))
         .border(1.dp,if(focused) Accent else if(selected) PanelBorder else Color.Transparent,RoundedCornerShape(7.dp)),contentAlignment=Alignment.Center) {
-        Text(number.toString()+(if(count>0) " •" else ""),color=if(count>0) Accent else Color.White,fontSize=12.sp,maxLines=1)
+        Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(2.dp)) {
+            Text(number.toString()+(if(count>0) " •" else ""),color=Color.White,fontSize=12.sp,fontWeight=if(focused || selected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,maxLines=1)
+            if(logosRP120.isNotEmpty()) Row(horizontalArrangement=Arrangement.spacedBy(2.dp)) {
+                logosRP120.distinct().take(2).forEach {EventLogoRP120(it,"EV",Modifier.size(14.dp))}
+            }
+        }
     }
 }

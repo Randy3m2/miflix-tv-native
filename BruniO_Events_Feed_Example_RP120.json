@@ -1,0 +1,33 @@
+{
+  "events": [
+    {
+      "id": "2027",
+      "league": "OSCARS",
+      "title": "99th Oscars",
+      "startsAt": "2027-03-14T23:00:00Z",
+      "logos": [
+        "drawable:calendar_trophy_rp120"
+      ]
+    },
+    {
+      "id": "2027",
+      "league": "GRAMMYS",
+      "title": "2027 Grammy Awards",
+      "date": "2027-02-07",
+      "timed": false,
+      "logos": [
+        "drawable:calendar_music_rp120"
+      ]
+    },
+    {
+      "id": "2026-final",
+      "league": "MISS_UNIVERSE",
+      "title": "Miss Universe · Final",
+      "date": "2026-11-24",
+      "timed": false,
+      "logos": [
+        "drawable:calendar_crown_rp120"
+      ]
+    }
+  ]
+}

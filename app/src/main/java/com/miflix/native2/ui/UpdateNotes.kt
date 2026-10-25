@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP120: suscripciones por equipo/liga, calendario con logos y avisos; posiciones NBA, MLB, F1 y LIDOM en Others." to "RP120: team/league subscriptions, calendar logos and alerts; NBA, MLB, F1 and LIDOM standings in Others.",
         "RP119: OK restaura categoría, búsqueda, posición y foco del canal en reproducción." to "RP119: OK restores category, search, position and focus on the playing channel.",
         "RP118: sin importar M3U en TV Channels ni panel; tarjetas enfocadas completas y más espacio para canales." to "RP118: no M3U import in TV Channels or browser; fully revealed focused cards and more channel space.",
         "RP117: búsqueda sin campo duplicado arriba; consulta solo a la derecha y teclado más alto." to "RP117: removed duplicate top search field; query only at right and keyboard moved upward.",

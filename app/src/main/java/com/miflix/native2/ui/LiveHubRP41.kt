@@ -2,6 +2,8 @@ package com.miflix.native2.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -278,7 +280,15 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,openNa
             finally {resolving=false}
         }
     }
+    var showStandingsRP120 by remember {mutableStateOf(false)}
+    var showCalendarRP120 by remember {mutableStateOf(false)}
+    if(showStandingsRP120) StandingsScreenRP120 {showStandingsRP120=false}
+    if(showCalendarRP120) CalendarDialog(state) {showCalendarRP120=false}
     Column(modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+        if(section=="others") Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+            FocusButton(tr("Tabla de posiciones","Standings")) {showStandingsRP120=true}
+            FocusButton(tr("Calendario y suscripciones","Calendar & subscriptions")) {showCalendarRP120=true}
+        }
         // Only Others has category tabs. Dedicated sports present event cards only.
         if(categories.isNotEmpty()) {
             Text(tr("EXPLORA MÁS","EXPLORE MORE"),color=Muted,fontSize=11.sp,fontWeight=FontWeight.Bold)
@@ -333,12 +343,14 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,openNa
 
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 internal fun HubEventCardRP41(title:String,poster:String?,subtitle:String,onHoldRP48:(()->Unit)?=null,logoRP50:Boolean=false,click:()->Unit) {
     var logoFailedRP50 by remember(poster) {mutableStateOf(false)}
     var focused by remember(title) {mutableStateOf(false)}
-    val scale by animateFloatAsState(if(focused) 1.015f else 1f,label="Event focus")
-    Column(Modifier.fillMaxWidth().height(194.dp).graphicsLayer {scaleX=scale;scaleY=scale}
+    val bring=remember {BringIntoViewRequester()}
+    LaunchedEffect(focused) {if(focused) {withFrameNanos {};bring.bringIntoView()}}
+    Column(Modifier.fillMaxWidth().height(194.dp).bringIntoViewRequester(bring)
         .clip(RoundedCornerShape(13.dp)).background(Brush.verticalGradient(listOf(Color(0xFF242424),Color(0xFF101010))))
         .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(13.dp))
         .onFocusChanged {focused=it.isFocused}.focusable().tvPlaybackClick(click,onHoldRP48 ?: click).clickable(onClick=click)) {

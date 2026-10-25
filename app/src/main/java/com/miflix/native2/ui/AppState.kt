@@ -67,7 +67,7 @@ class AppState(context: Context) {
     private val lastSourceRP16=LastPlaybackSourceRP16({lastSourcePrefsRP16.getString("rows","{}").orEmpty()},
         {lastSourcePrefsRP16.edit().putString("rows",it).apply()})
     private fun lastSourceKeyRP16(item:MediaSummary,season:Int,episode:Int)=LastPlaybackSourceRP16.key(
-        localExtrasScope(),item.cloudId,season,episode,
+        localExtrasScope()+(if(com.miflix.native2.data.DbzEpisodeRP107.enabled(item.type,item.id)) ":dbz-absolute-rp107" else ""),item.cloudId,season,episode,
         org.json.JSONArray(listOf(easyModeRP79,easySpanishOnlyRP83,audioLanguage,secondaryAudioLanguageRP62,streamSizeBytes,nativeSourceEnabled,nativeRevision,nativeOnlyRP75,nativeSpanishOnlyRP77,nativeSizeAscendingRP77,
             org.json.JSONArray(streamRepo.manifests()))).toString())
     internal fun rememberSuccessfulPlaybackRP16(req:PlayerRequest) {
@@ -1409,7 +1409,16 @@ class AppState(context: Context) {
         if(streams.isNotEmpty() && key==playbackCacheKey(item,imdb,season,episode)) playbackLinkCache.put(key,streams)
         streams
     }
+    private suspend fun providerEpisodeRP107(item:MediaSummary,season:Int,episode:Int):Pair<Int,Int> {
+        if(!com.miflix.native2.data.DbzEpisodeRP107.enabled(item.type,item.id)) return season to episode
+        return com.miflix.native2.data.DbzEpisodeRP107.coordinates(season,episode,tmdb.season(item.id,1))
+    }
     private suspend fun fetchPlaybackSources(item:MediaSummary,imdb:String,season:Int,episode:Int):List<StreamChoice> {
+        if(com.miflix.native2.data.DbzEpisodeRP107.enabled(item.type,item.id)) {
+            val target=providerEpisodeRP107(item,season,episode)
+            // DBZ is ALWAYS S1:absolute at the provider boundary; never query saga seasons first.
+            return fetchCanonicalSourcesRP102(item,imdb,target.first,target.second)
+        }
         val normal=fetchCanonicalSourcesRP102(item,imdb,season,episode)
         if(normal.isNotEmpty() || item.type!="series" || !com.miflix.native2.data.AbsoluteEpisodeRP102.enabled(item.id)) return normal
         val absolute=tmdb.absoluteNumberRP102(item.id,season,episode) ?: return normal
@@ -3273,7 +3282,8 @@ class AppState(context: Context) {
         val rows=playbackSubtitleJobs[subtitleKey(req.item,req.season,req.episode)]?.await().orEmpty()
         if(rows.isNotEmpty()) return rows
         val imdb=details?.takeIf { selected?.cloudId==req.item.cloudId }?.imdbId ?: tmdb.details(req.item).imdbId ?: return emptyList()
-        return subtitleRepo.resolve(imdb,req.item.type,req.season,req.episode,req.stream,preferredLanguage=subtitleLanguage)
+        val target=providerEpisodeRP107(req.item,req.season,req.episode)
+        return subtitleRepo.resolve(imdb,req.item.type,target.first,target.second,req.stream,preferredLanguage=subtitleLanguage)
     }
 
     private suspend fun playResolved(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeOverride: Long? = null, selectedStream: StreamChoice? = null, fallbackStreams: List<StreamChoice> = emptyList(), onStarted: ((PlayerRequest) -> Unit)? = null) = latestPlaybackRP87.run {
@@ -3325,7 +3335,10 @@ class AppState(context: Context) {
         }
         // Subtitle services must not gate opening the video. Keep late results for the CC menu.
         val subsJob = playbackSubtitleJobs.getOrPut(subtitleKey) { appScope.async {
-            if(easyModeRP79) emptyList() else runCatching { subtitleRepo.resolve(imdb, item.type, season, episode, null,preferredLanguage=preferredSubtitleRP78) }.getOrDefault(emptyList())
+            if(easyModeRP79) emptyList() else runCatching {
+                val target=providerEpisodeRP107(item,season,episode)
+                subtitleRepo.resolve(imdb,item.type,target.first,target.second,null,preferredLanguage=preferredSubtitleRP78)
+            }.getOrDefault(emptyList())
         } }
         runCatching {
             val streams = streamsJob.await()

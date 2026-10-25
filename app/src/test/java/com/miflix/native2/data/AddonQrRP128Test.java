@@ -1,7 +1,6 @@
 package com.miflix.native2.data;
 
 import org.junit.Test;
-import org.junit.Assume;
 import static org.junit.Assert.*;
 import java.net.*;
 import java.io.*;
@@ -23,13 +22,8 @@ public class AddonQrRP128Test {
             return response.toString("UTF-8");
         }
     }
-    private static InterfaceAddress lan() throws Exception {
-        for(NetworkInterface iface:Collections.list(NetworkInterface.getNetworkInterfaces())) for(InterfaceAddress address:iface.getInterfaceAddresses())
-            if(address.getAddress() instanceof Inet4Address && LocalCastServer.isPrivate(address.getAddress().getAddress()) && address.getNetworkPrefixLength()>=8 && address.getNetworkPrefixLength()<=30) return address;
-        return null;
-    }
     private static String token(String html) {
-        Matcher m=Pattern.compile("name='csrf' value='([^']+)'").matcher(html);assertTrue(m.find());return m.group(1);
+        Matcher m=Pattern.compile("name='csrf' value='([^']+)'").matcher(html);assertTrue("Form must contain CSRF input; status: "+html.lines().findFirst().orElse("empty response"),m.find());return m.group(1);
     }
     @Test public void acceptsConfiguredAndStremioLinks() {
         assertTrue(AddonManifestServerRP128.valid("https://addon.example/private/manifest.json"));
@@ -47,12 +41,11 @@ public class AddonQrRP128Test {
         assertFalse(AddonManifestServerRP128.acceptsForm("http://tv","http://tv","secret","wrong"));
     }
     @Test public void localFormDeliversOnceWithoutEchoingPrivateUrl() throws Exception {
-        InterfaceAddress address=lan();Assume.assumeNotNull(address);
         String link="https://addon.example/private-configuration/manifest.json";
         AtomicInteger calls=new AtomicInteger();
-        try(AddonManifestServerRP128 server=new AddonManifestServerRP128((Inet4Address)address.getAddress(),address.getNetworkPrefixLength(),value->{assertEquals(link,value);calls.incrementAndGet();return true;})) {
+        try(AddonManifestServerRP128 server=AddonManifestServerRP128.loopbackForTests(value->{assertEquals(link,value);calls.incrementAndGet();return true;})) {
             URI uri=URI.create(server.getUrl());assertFalse(uri.toString().contains(link));
-            String html=request(uri,"GET",uri.getPath(),null,"");assertTrue(html.startsWith("HTTP/1.1 200"));assertTrue(html.contains("name='manifest'"));
+            String html=request(uri,"GET",uri.getPath(),null,"");assertTrue("Expected GET 200: "+html.lines().findFirst().orElse("empty response"),html.startsWith("HTTP/1.1 200"));assertTrue(html.contains("name='manifest'"));
             String path=uri.getPath().replace("/add/","/save/");
             String body="csrf="+token(html)+"&manifest="+URLEncoder.encode(link,"UTF-8");
             assertTrue(request(uri,"POST",path,"https://other.example",body).startsWith("HTTP/1.1 403"));assertEquals(0,calls.get());
@@ -62,12 +55,21 @@ public class AddonQrRP128Test {
         }
     }
     @Test public void rejectedDeliveryCanBeRetried() throws Exception {
-        InterfaceAddress address=lan();Assume.assumeNotNull(address);AtomicInteger attempts=new AtomicInteger();
-        try(AddonManifestServerRP128 server=new AddonManifestServerRP128((Inet4Address)address.getAddress(),address.getNetworkPrefixLength(),value->attempts.incrementAndGet()>1)) {
+        AtomicInteger attempts=new AtomicInteger();
+        try(AddonManifestServerRP128 server=AddonManifestServerRP128.loopbackForTests(value->attempts.incrementAndGet()>1)) {
             URI uri=URI.create(server.getUrl());String html=request(uri,"GET",uri.getPath(),null,"");
             String path=uri.getPath().replace("/add/","/save/");String body="csrf="+token(html)+"&manifest=https%3A%2F%2Faddon.example%2Fmanifest.json";
             assertTrue(request(uri,"POST",path,server.getBase(),body).startsWith("HTTP/1.1 409"));
             assertTrue(request(uri,"POST",path,server.getBase(),body).startsWith("HTTP/1.1 200"));assertEquals(2,attempts.get());
         }
     }
+    @Test public void lanAdmissionRejectsPublicAndDifferentSubnets() throws Exception {
+        assertTrue(AddonManifestServerRP128.sameLan(InetAddress.getByName("192.168.1.2").getAddress(),InetAddress.getByName("192.168.1.3").getAddress(),24));
+        assertFalse(AddonManifestServerRP128.sameLan(InetAddress.getByName("192.168.1.2").getAddress(),InetAddress.getByName("192.168.2.3").getAddress(),24));
+        assertFalse(AddonManifestServerRP128.privateAddress(InetAddress.getByName("8.8.8.8").getAddress()));
+    }
+    @Test(expected=IOException.class) public void publicConstructorDoesNotEnableLoopbackFixture() throws Exception {
+        try(AddonManifestServerRP128 ignored=new AddonManifestServerRP128((Inet4Address)InetAddress.getByName("127.0.0.1"),8,value->true)) {fail("Must reject non-LAN address");}
+    }
+
 }

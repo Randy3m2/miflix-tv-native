@@ -13,21 +13,38 @@ public final class AddonManifestServerRP128 implements AutoCloseable {
     private final Inet4Address address;
     private final int prefix;
     private final ServerSocket socket;
-    private final LocalCastAccess access=new LocalCastAccess("unused",System::currentTimeMillis);
+    private final String ticket=UUID.randomUUID().toString()+UUID.randomUUID().toString();
+    private final long until=System.currentTimeMillis()+120000L;
+    private final boolean loopbackOnly;
     private final ThreadPoolExecutor workers=new ThreadPoolExecutor(2,2,0L,TimeUnit.SECONDS,new ArrayBlockingQueue<>(8));
     private final String formToken=UUID.randomUUID().toString()+UUID.randomUUID().toString();
     private final Save save;
     private boolean received;
     private volatile boolean closed;
     public AddonManifestServerRP128(Inet4Address address,int prefix,Save save) throws IOException {
-        if(!LocalCastServer.isPrivate(address.getAddress()) || prefix<8 || prefix>30) throw new IOException("LAN required");
-        this.address=address;this.prefix=prefix;this.save=save;
+        this(address,prefix,save,false);
+    }
+    /** Package-private fixture: only binds localhost; cannot relax LAN admission. */
+    static AddonManifestServerRP128 loopbackForTests(Save save) throws IOException {
+        return new AddonManifestServerRP128((Inet4Address)InetAddress.getByName("127.0.0.1"),8,save,true);
+    }
+    private AddonManifestServerRP128(Inet4Address address,int prefix,Save save,boolean loopbackOnly) throws IOException {
+        if(prefix<8 || prefix>30 || (loopbackOnly?!address.isLoopbackAddress():!privateAddress(address.getAddress()))) throw new IOException("LAN required");
+        this.address=address;this.prefix=prefix;this.save=save;this.loopbackOnly=loopbackOnly;
         socket=new ServerSocket();socket.bind(new InetSocketAddress(address,0),8);
         Thread thread=new Thread(this::accept,"brunio-addon-manifest");thread.setDaemon(true);thread.start();
     }
-    public long getUntil(){return access.pairUntil;}
+    static boolean privateAddress(byte[] ip) {
+        return ip.length==4 && ((ip[0]&255)==10 || (ip[0]&255)==172 && (ip[1]&255)>=16 && (ip[1]&255)<=31 || (ip[0]&255)==192 && (ip[1]&255)==168);
+    }
+    static boolean sameLan(byte[] own,byte[] peer,int prefix) {
+        if(!privateAddress(own)||!privateAddress(peer)||prefix<8||prefix>30) return false;
+        for(int bit=0;bit<prefix;bit++) if((own[bit/8]&(1<<(7-bit%8)))!=(peer[bit/8]&(1<<(7-bit%8)))) return false;
+        return true;
+    }
+    public long getUntil(){return until;}
     public String getBase(){return "http://"+address.getHostAddress()+":"+socket.getLocalPort();}
-    public String getUrl(){return getBase()+"/add/"+access.getLinkTicket();}
+    public String getUrl(){return getBase()+"/add/"+ticket;}
     public static boolean valid(String key) {
         if(key==null || key.length()>8192) return false;
         try {AddonManifestRP126.normalize(key);return true;}
@@ -35,7 +52,7 @@ public final class AddonManifestServerRP128 implements AutoCloseable {
     }
     private void accept(){while(!closed)try {
         Socket s=socket.accept();
-        if(!LocalCastServer.sameSubnet(address.getAddress(),s.getInetAddress().getAddress(),prefix)) {s.close();continue;}
+        if(loopbackOnly?!s.getInetAddress().isLoopbackAddress():!sameLan(address.getAddress(),s.getInetAddress().getAddress(),prefix)) {s.close();continue;}
         try {workers.execute(()->handle(s));} catch(RejectedExecutionException e){s.close();}
     }catch(IOException e){if(!closed)close();}}
     private static String line(InputStream in,int max) throws IOException {
@@ -48,8 +65,7 @@ public final class AddonManifestServerRP128 implements AutoCloseable {
         Map<String,String> headers=new HashMap<>();int total=0;
         while(true) {String l=line(in,4096);total+=l.length();if(total>8192)return;if(l.isEmpty())break;int colon=l.indexOf(':');if(colon<1)return;headers.put(l.substring(0,colon).toLowerCase(Locale.ROOT),l.substring(colon+1).trim());}
         if(!Objects.equals(headers.get("host"),address.getHostAddress()+":"+socket.getLocalPort())) {reply(s,403,"Link unavailable.");return;}
-        String ticket=access.getLinkTicket();
-        if(!access.validLink(ticket)) {reply(s,410,"QR expired / QR vencido. Generate a new QR on the TV.");return;}
+        if(closed || System.currentTimeMillis()>=until) {reply(s,410,"QR expired / QR vencido. Generate a new QR on the TV.");return;}
         if(request[0].equals("GET") && request[1].equals("/add/"+ticket)) {reply(s,200,form(ticket));return;}
         if(!request[0].equals("POST") || !request[1].equals("/save/"+ticket)) {reply(s,404,"Not found");return;}
         // Chrome may send Origin: null (or omit it) with a no-referrer form.
@@ -85,5 +101,5 @@ public final class AddonManifestServerRP128 implements AutoCloseable {
         String header="HTTP/1.1 "+status+" Response\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: "+body.length+"\r\nConnection: close\r\nCache-Control: no-store\r\nReferrer-Policy: no-referrer\r\nX-Content-Type-Options: nosniff\r\nContent-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'\r\n\r\n";
         OutputStream out=s.getOutputStream();out.write(header.getBytes(StandardCharsets.UTF_8));out.write(body);out.flush();
     }
-    @Override public void close(){closed=true;access.clear();try{socket.close();}catch(IOException ignored){}workers.shutdownNow();}
+    @Override public void close(){closed=true;try{socket.close();}catch(IOException ignored){}workers.shutdownNow();}
 }

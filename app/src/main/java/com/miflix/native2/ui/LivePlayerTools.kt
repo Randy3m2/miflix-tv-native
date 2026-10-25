@@ -69,6 +69,9 @@ fun MultiViewScreen(state: AppState) {
     var hd by remember { mutableStateOf(false) }
     var panelRP43 by remember {mutableStateOf(true)}
     val statsRepoRP130=remember { SportsStatsRP95() }
+    val f1RepoRP131=remember { F1StatsRP131() }
+    val f1OverrideRP131=remember {mutableStateMapOf<String,Boolean>()}
+    fun isF1RP131(req:PlayerRequest)=f1OverrideRP131[req.playbackId] ?: F1StatsRP131.channel(req.liveProvider,req.item.title+" "+req.item.overview)
     val statsGamesRP130=remember { mutableStateMapOf<String,LiveScoreRP11>() }
     var teamLogosRP130 by remember {mutableStateOf<Map<String,String>>(emptyMap())}
     LaunchedEffect(customContextRP48) {
@@ -94,6 +97,7 @@ fun MultiViewScreen(state: AppState) {
     val slotIdsRP130=state.multiViewRequests.map {it.playbackId}
     LaunchedEffect(slotIdsRP130) {
         statsGamesRP130.keys.toList().filter {it !in slotIdsRP130}.forEach {statsGamesRP130.remove(it)}
+        f1OverrideRP131.keys.toList().filter {it !in slotIdsRP130}.forEach {f1OverrideRP131.remove(it)}
         statsOpenRP130.keys.toList().filter {it !in slotIdsRP130}.forEach {statsOpenRP130.remove(it)}
         if(statsSourceRP130 !in slotIdsRP130) statsSourceRP130=slotIdsRP130.firstOrNull()
         if(chooseStatsRP130 !in slotIdsRP130) chooseStatsRP130=null
@@ -131,10 +135,15 @@ fun MultiViewScreen(state: AppState) {
                             })
                             if(slots.size==2 && statsOpenRP130[req.playbackId]==true) {
                                 val band=((tileHeight-tileWidth*9f/16f)/2f-5.dp).coerceAtLeast(0.dp)
-                                if(band>=96.dp) SplitStatsDockRP130(state,req,statsRepoRP130,statsGamesRP130[req.playbackId],
+                                if(band>=96.dp) {
+                                    if(isF1RP131(req)) F1StatsPanelRP131(state,f1RepoRP131,true,
+                                        {statsOpenRP130[req.playbackId]=false;runCatching {first.requestFocus()}},first,
+                                        Modifier.align(Alignment.TopCenter).padding(6.dp).fillMaxWidth().height(band))
+                                    else SplitStatsDockRP130(state,req,statsRepoRP130,statsGamesRP130[req.playbackId],
                                     {assignStatsRP130(req.playbackId,it)},{chooseStatsRP130=req.playbackId},
                                     {statsOpenRP130[req.playbackId]=false;runCatching {first.requestFocus()}},
                                     Modifier.align(Alignment.TopCenter).padding(6.dp).fillMaxWidth().height(band))
+                                }
                                 else FocusButton(tr("Ver estadísticas","View stats"),modifier=Modifier.align(Alignment.TopStart).padding(8.dp)) {chooseStatsRP130=req.playbackId}
                             }
                         }
@@ -157,7 +166,9 @@ fun MultiViewScreen(state: AppState) {
                     }
                 }
                 if(fourthStatsRP130) key(statsReq.playbackId) {
-                    SplitStatsFullRP130(state,statsReq,statsRepoRP130,statsGamesRP130[statsReq.playbackId],
+                    if(isF1RP131(statsReq)) F1StatsPanelRP131(state,f1RepoRP131,false,
+                        {fourthStatsRP130=false;runCatching {first.requestFocus()}},first,Modifier.weight(1f))
+                    else SplitStatsFullRP130(state,statsReq,statsRepoRP130,statsGamesRP130[statsReq.playbackId],
                         {assignStatsRP130(statsReq.playbackId,it)},{chooseStatsRP130=statsReq.playbackId},
                         {fourthStatsRP130=false;runCatching {first.requestFocus()}},first,Modifier.weight(1f))
                 } else Box(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) {
@@ -210,6 +221,16 @@ fun MultiViewScreen(state: AppState) {
                     selected=null
                 }
                 FocusButton(tr("Escuchar este canal","Listen to this channel")) { sound=id;selected=null }
+                if(state.multiViewRequests.size in 2..3) {
+                    FocusButton("Stats · F1") {
+                        f1OverrideRP131[id]=true;statsSourceRP130=id;fourthStatsRP130=true;statsOpenRP130[id]=true
+                        selected=null;panelRP43=false
+                    }
+                    FocusButton("Stats · NBA / MLB / LIDOM") {
+                        f1OverrideRP131[id]=false;statsSourceRP130=id;fourthStatsRP130=true;statsOpenRP130[id]=true
+                        selected=null;panelRP43=false
+                    }
+                }
                 FocusButton(tr("Cambiar fuente","Change source")) {youtubeFull=null;sourceTarget=req;selected=null}
                 FocusButton(tr("Cambiar canal","Change channel")) {
                     youtubeFull=null;replacing=id;selected=null
@@ -237,7 +258,10 @@ fun MultiViewScreen(state: AppState) {
         state.multiViewRequests.firstOrNull {it.playbackId==id}?.let {req ->
             PlayerMenuDialog(onDismissRequest={chooseStatsRP130=null},fullScreen=true) {
                 Box(Modifier.fillMaxSize(),contentAlignment=Alignment.CenterEnd) {
-                    SportsStatsPanelRP95(state,splitStatsTitleRP130(req),statsRepoRP130,statsGamesRP130[id],
+                    if(isF1RP131(req)) F1StatsPanelRP131(state,f1RepoRP131,false,
+                        {chooseStatsRP130=null;runCatching {first.requestFocus()}},first,
+                        Modifier.fillMaxWidth(.48f).fillMaxHeight().padding(8.dp))
+                    else SportsStatsPanelRP95(state,splitStatsTitleRP130(req),statsRepoRP130,statsGamesRP130[id],
                         {assignStatsRP130(id,it);chooseStatsRP130=null},
                         {chooseStatsRP130=null;runCatching {first.requestFocus()}},first,
                         Modifier.fillMaxWidth(.48f).fillMaxHeight().padding(8.dp),leaguesRP130=listOf("NBA","MLB","LIDOM"),selectOnlyRP130=true)

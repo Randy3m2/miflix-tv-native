@@ -11,6 +11,10 @@ import com.miflix.native2.BuildConfig
 /** Release notes ship with the APK. No API calls or repeated startup notifications. */
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
+    val rp130Changes=listOf(
+        "RP130: Stats glass por pantalla en SplitScreen de dos videos; con tres, el cuarto cuadro muestra estadísticas del juego elegido." to "RP130: per-screen glass Stats for two videos; with three, the fourth cell shows stats for the selected game.",
+        "NBA, MLB y LIDOM: selección manual/automática y actualizaciones mientras Stats está abierto; botón SplitScreen en el pie, sin tapar datos." to "NBA, MLB and LIDOM: manual/automatic selection and updates while Stats is open; SplitScreen button in the footer without covering data."
+    )
     val rp129Changes=listOf(
         "RP129: Seguir viendo se publica primero y conserva su lugar al iniciar Home, sin tener que bajar para encontrarlo." to "RP129: Continue Watching publishes early and retains its place at Home startup without scrolling to find it.",
         "Ajustes: sin espaciadores duplicados y con recuperación del encabezado al enfocar los primeros controles." to "Settings: removed duplicate spacers and reveal clipped headings when early controls receive focus.",
@@ -195,10 +199,10 @@ internal object UpdateNotes {
         "Corregida la compatibilidad del parser JSON de add-ons con Android." to "Fixed add-on JSON parser compatibility with Android."
     )
     val changes=listOf(
-        "RP130: Stats glass por pantalla en SplitScreen de dos videos; con tres, el cuarto cuadro muestra estadísticas del juego elegido." to "RP130: per-screen glass Stats for two videos; with three, the fourth cell shows stats for the selected game.",
-        "NBA, MLB y LIDOM: selección manual/automática y actualizaciones mientras Stats está abierto; botón SplitScreen en el pie, sin tapar datos." to "NBA, MLB and LIDOM: manual/automatic selection and updates while Stats is open; SplitScreen button in the footer without covering data."
+        "RP131: estadísticas F1 en SplitScreen con posiciones, vuelta publicada y selector de sesión; mismo diseño glass de RP130." to "RP131: F1 SplitScreen stats with positions, published lap and session picker; same RP130 glass design.",
+        "ESPN: actualización automática, sesiones Final/Programada diferenciadas y campos no publicados como —; selección F1 manual desde las opciones del canal." to "ESPN: automatic updates, distinct Final/Scheduled sessions and unavailable fields shown as —; manual F1 mode from channel options."
     )
-    val previousChanges=rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
+    val previousChanges=rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
         "Menú de amigos: Watch, View Details, Recommendations y Close; detalles abre la ficha sin iniciar reproducción." to "Friend menu: Watch, View Details, Recommendations and Close; details opens the title without starting playback.",
         "Enlaces de Comet y Torrentio con texto ordenado e insignias de Dolby/HDR según sus metadatos." to "Clean Comet and Torrentio link metadata with small Dolby/HDR badges when reported by the source.",
         "Envío local a TV por Wi-Fi, con enlace y código de conexión; sin reproducción web." to "Send titles to TV over local Wi-Fi with a connection link and code; no web playback.",

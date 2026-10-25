@@ -185,11 +185,16 @@ internal object UpdateNotes {
         "RP127: ajustes con mayor separación entre controles y filas que se adaptan al espacio disponible." to "RP127: roomier settings controls and button rows that adapt to available space.",
         "Pantalla de actualizaciones renovada: versión, estado, descarga y detalles de instalación organizados con diseño glass." to "Refreshed updates screen: version, status, download and installation details organized in a glass layout."
     )
-    val changes=listOf(
+    val rp128Changes=listOf(
         "RP128: instala add-ons enviando su manifest.json desde el celular con un QR local y confirmación en la TV." to "RP128: install add-ons by sending manifest.json from your phone using a local QR and TV confirmation.",
         "Corregida la compatibilidad del parser JSON de add-ons con Android." to "Fixed add-on JSON parser compatibility with Android."
     )
-    val previousChanges=rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
+    val changes=listOf(
+        "RP129: Seguir viendo se publica primero y conserva su lugar al iniciar Home, sin tener que bajar para encontrarlo." to "RP129: Continue Watching publishes early and retains its place at Home startup without scrolling to find it.",
+        "Ajustes: sin espaciadores duplicados y con recuperación del encabezado al enfocar los primeros controles." to "Settings: removed duplicate spacers and reveal clipped headings when early controls receive focus.",
+        "QR locales: detección Ethernet/Wi-Fi y compatibilidad con clientes de otras subredes privadas comunicadas por el router." to "Local QR: Ethernet/Wi-Fi detection and support for routed private-network clients."
+    )
+    val previousChanges=rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
         "Menú de amigos: Watch, View Details, Recommendations y Close; detalles abre la ficha sin iniciar reproducción." to "Friend menu: Watch, View Details, Recommendations and Close; details opens the title without starting playback.",
         "Enlaces de Comet y Torrentio con texto ordenado e insignias de Dolby/HDR según sus metadatos." to "Clean Comet and Torrentio link metadata with small Dolby/HDR badges when reported by the source.",
         "Envío local a TV por Wi-Fi, con enlace y código de conexión; sin reproducción web." to "Send titles to TV over local Wi-Fi with a connection link and code; no web playback.",

@@ -317,7 +317,7 @@ class AppState(context: Context) {
         if(changed) clearTranslatedCatalogRC100()
     }
     private fun clearTranslatedCatalogRC100() {
-        extrasLoaded=false
+        extrasLoaded=false;continueHomeReadyRP129=false
         trending.clear();movies.clear();series.clear();topRated.clear()
         action.clear();sciFi.clear();netflix.clear();disney.clear();prime.clear();apple.clear();hbo.clear()
         newMovies.clear();bestSeries.clear();comedy.clear();thrillers.clear()
@@ -1802,6 +1802,8 @@ class AppState(context: Context) {
     val prime = mutableStateListOf<MediaSummary>()
     val apple = mutableStateListOf<MediaSummary>()
     val hbo = mutableStateListOf<MediaSummary>()
+    var continueHomeReadyRP129 by mutableStateOf(false)
+        private set
     var extrasLoaded by mutableStateOf(false)
     var extrasLoading by mutableStateOf(false)
 
@@ -2094,7 +2096,7 @@ class AppState(context: Context) {
         partyClosedNotice=false;partyJoinedNotice=null;changelogOpen=false
         screen=Screen.HOME
         if(enabled) {saveEasySnapshotRP79();presenceEvents.stopForEasyMode(actor)}
-        else {extrasLoaded=false;launch {flushSettingsRP83()};launch {if(!easyModeRP79) loadHome()}}
+        else {extrasLoaded=false;continueHomeReadyRP129=false;launch {flushSettingsRP83()};launch {if(!easyModeRP79) loadHome()}}
     }
     suspend fun loadEasyHomeRP79() = supervisorScope {
         val owner="${localExtrasScope()}:${interfaceLanguage}"
@@ -2314,7 +2316,7 @@ class AppState(context: Context) {
         favorites.clear(); favorites.addAll(fav)
         progress.clear(); progress.putAll(prog)
         easyHomeOwnerRP79=""
-        extrasLoaded = false
+        extrasLoaded=false;continueHomeReadyRP129=false
         cloudIdentityReadyRP83=true
         flushSettingsRP83()
     }
@@ -2348,7 +2350,7 @@ class AppState(context: Context) {
             favorites.clear(); favorites.addAll(fav)
             progress.clear(); progress.putAll(prog)
         }
-        extrasLoaded = false
+        extrasLoaded=false;continueHomeReadyRP129=false
         cloudIdentityReadyRP83=session!=null
         easyHomeOwnerRP79=""
         flushSettingsRP83(force=true)
@@ -2543,7 +2545,13 @@ class AppState(context: Context) {
                 val primeJob = async { runCatching { tmdb.discoverProviderType(providers.getValue("prime"), "movie") } }
                 val appleJob = async { runCatching { tmdb.discoverProviderType(providers.getValue("apple"), "movie") } }
                 val hboJob = async { runCatching { tmdb.discoverProviderType(providers.getValue("hbo"), "movie") } }
-                val continueJob = async { runCatching { resolveContinueWatching() } }
+                val continueJob = async {
+                    try {
+                        val rows=resolveContinueWatching()
+                        if(current()) {continueWatching.replaceWith(rows);continueHomeReadyRP129=true}
+                    } catch(e:CancellationException) {throw e}
+                    catch(_:Exception) {if(current()) continueHomeReadyRP129=true}
+                }
                 val newJob=async { runCatching { tmdb.nowPlayingMovies() } }
                 val bestTvJob=async { runCatching { tmdb.topRatedSeries() } }
                 val comedyJob=async { runCatching { tmdb.discoverMovieGenre(35,pages=1,limit=20) } }
@@ -2556,7 +2564,7 @@ class AppState(context: Context) {
                 primeJob.await().onSuccess { if(current()) prime.replaceWith(it) }
                 appleJob.await().onSuccess { if(current()) apple.replaceWith(it) }
                 hboJob.await().onSuccess { if(current()) hbo.replaceWith(it) }
-                continueJob.await().onSuccess { if(current()) continueWatching.replaceWith(it) }
+                continueJob.await()
                 newJob.await().onSuccess { if(current()) newMovies.replaceWith(it) }
                 bestTvJob.await().onSuccess { if(current()) bestSeries.replaceWith(it) }
                 comedyJob.await().onSuccess { if(current()) comedy.replaceWith(it) }
@@ -3904,7 +3912,7 @@ class AppState(context: Context) {
         local.saveSession(null)
         favorites.clear(); progress.clear(); profiles.clear(); continueWatching.clear(); ratings.clear(); forYou.clear()
         loadOfflineProfiles()
-        extrasLoaded = false
+        extrasLoaded=false;continueHomeReadyRP129=false
         screen = Screen.SETTINGS
     }
 

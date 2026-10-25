@@ -37,6 +37,7 @@ public final class AddonManifestServerRP128 implements AutoCloseable {
     static boolean privateAddress(byte[] ip) {
         return ip.length==4 && ((ip[0]&255)==10 || (ip[0]&255)==172 && (ip[1]&255)>=16 && (ip[1]&255)<=31 || (ip[0]&255)==192 && (ip[1]&255)==168);
     }
+    static boolean acceptsPeer(byte[] ip) {return LocalQrNetworkRP129.acceptsPeer(ip);}
     static boolean sameLan(byte[] own,byte[] peer,int prefix) {
         if(!privateAddress(own)||!privateAddress(peer)||prefix<8||prefix>30) return false;
         for(int bit=0;bit<prefix;bit++) if((own[bit/8]&(1<<(7-bit%8)))!=(peer[bit/8]&(1<<(7-bit%8)))) return false;
@@ -52,7 +53,7 @@ public final class AddonManifestServerRP128 implements AutoCloseable {
     }
     private void accept(){while(!closed)try {
         Socket s=socket.accept();
-        if(loopbackOnly?!s.getInetAddress().isLoopbackAddress():!sameLan(address.getAddress(),s.getInetAddress().getAddress(),prefix)) {s.close();continue;}
+        if(loopbackOnly?!s.getInetAddress().isLoopbackAddress():!acceptsPeer(s.getInetAddress().getAddress())) {s.close();continue;}
         try {workers.execute(()->handle(s));} catch(RejectedExecutionException e){s.close();}
     }catch(IOException e){if(!closed)close();}}
     private static String line(InputStream in,int max) throws IOException {

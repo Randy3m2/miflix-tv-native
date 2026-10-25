@@ -45,12 +45,14 @@ internal fun AddonManifestQrRP128(state:AppState,received:(String)->Unit,close:(
         if(state.screen==Screen.SETTINGS && state.session!=null && !state.sessionNeedsSignIn && state.appForeground && !state.kidsMode && state.partyRole!=PartyRole.GUEST) try {
             val network=manager.activeNetwork
             val caps=network?.let {manager.getNetworkCapabilities(it)}
-            val endpoint=if(network!=null && caps!=null && !caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) &&
+            val active=if(network!=null && caps!=null && !caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) &&
                 (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)||caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)))
-                manager.getLinkProperties(network)?.linkAddresses?.firstOrNull {it.address is Inet4Address && LocalCastServer.isPrivate(it.address.address)} else null
+                manager.getLinkProperties(network)?.linkAddresses?.firstOrNull {it.address is Inet4Address && LocalCastServer.isPrivate(it.address.address)}
+                    ?.takeIf {it.prefixLength in 8..30}?.let {com.miflix.native2.data.LocalQrNetworkRP129.Endpoint(it.address as Inet4Address,it.prefixLength)} else null
+            val endpoint=(listOfNotNull(active)+com.miflix.native2.data.LocalQrNetworkRP129.find()).distinctBy {it.address.hostAddress}.firstOrNull()
             if(endpoint==null) message=tr("Conecta la TV y el celular a la misma red Wi-Fi o Ethernet.","Connect your TV and phone to the same Wi-Fi or Ethernet network.")
             else {
-                server=AddonManifestServerRP128(endpoint.address as Inet4Address,endpoint.prefixLength) {url ->
+                server=AddonManifestServerRP128(endpoint.address,endpoint.prefixLength) {url ->
                     val latch=CountDownLatch(1);val accepted=AtomicBoolean(false)
                     main.post {
                         try {

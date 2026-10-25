@@ -1,5 +1,8 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.miflix.native2.ui
 
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -31,10 +34,10 @@ internal val SettingsCategories = listOf(
 @Composable
 internal fun SettingsSectionCard(onFocused: () -> Unit = {},content: @Composable ColumnScope.() -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().onFocusChanged {
+    Column(Modifier.fillMaxWidth().settingsCardHeaderRP129().onFocusChanged {
         focused=it.hasFocus
         if(it.hasFocus) onFocused()
     }.background(Panel,RoundedCornerShape(16.dp))
         .border(1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(16.dp))
-        .padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp),content=content)
+        .padding(20.dp).focusGroup(),verticalArrangement=Arrangement.spacedBy(12.dp),content=content)
 }

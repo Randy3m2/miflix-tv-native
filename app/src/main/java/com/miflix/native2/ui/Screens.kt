@@ -42,6 +42,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -171,6 +173,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
         try {val contextual=state.discoveryRun(effectiveMood);discoveryRows=state.freshDiscoveryRows("mood:$effectiveMood",(if(discoveryMood.isEmpty()) state.forYou+contextual else contextual).distinctBy {it.cloudId})} catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {discoveryError=true} finally {discoveryLoading=false}
     }
     if(showTrailers) DiscoveryTrailers(state,(state.forYou+state.trending+state.movies+state.series).distinctBy {it.cloudId},mood=discoveryMood) {showTrailers=false}
+    var startupInteractedRP129 by remember(discoveryOwner) {mutableStateOf(false)}
     val genreScroll=rememberLazyListState()
     val firstGenre=remember {FocusRequester()}
     val scroll=rememberLazyListState()
@@ -183,6 +186,12 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     val headerWork=remember {mutableListOf<kotlinx.coroutines.Job>()}
     fun cancelHeaderWork() {headerWork.forEach {it.cancel()};headerWork.clear()}
 
+    LaunchedEffect(discoveryOwner,state.continueWatching.isNotEmpty()) {
+        if(state.continueWatching.isNotEmpty() && homeReturn.pending==null && !startupInteractedRP129) {
+            withFrameNanos { }
+            if(homeReturn.pending==null && !startupInteractedRP129) {shelfMotion.reset();scroll.scrollToItem(0)}
+        }
+    }
     val headerShade by remember { derivedStateOf { if(scroll.firstVisibleItemIndex>0) .88f else (scroll.firstVisibleItemScrollOffset/320f).coerceIn(0f,.88f) } }
     LaunchedEffect(state.interfaceLanguage) { delay(550); state.loadHomeExtras(); runCatching { state.loadComingSoon() } }
     LaunchedEffect(Unit) { state.loadDiscoveryArt() }
@@ -209,7 +218,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
             }
             Unit
         }) {
-    BoxWithConstraints(Modifier.fillMaxSize().background(Bg)) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(Bg).onPreviewKeyEvent {if(it.type==KeyEventType.KeyDown) startupInteractedRP129=true;false}) {
         val homeHeroHeight=(maxHeight*.5f).coerceIn(228.dp,284.dp)
         BrowsingViewport(state,(state.localRecommendations(state.trending)+state.localRecommendations(state.movies)).firstOrNull {it.type=="movie"},heroHeight=homeHeroHeight,headerInset=84.dp,heroFocus=heroFocus,ranked=(state.localRecommendations(state.trending)+state.localRecommendations(state.movies)).filter {it.type=="movie"}.distinctBy {it.cloudId}.take(10),
             onRandom={if(!state.randomChoosing) state.launch {state.playRandomMovie()}}) {
@@ -251,9 +260,14 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                         }
                     }
                 }
-                if(state.continueWatching.isNotEmpty()) shelf(key="continue") {
+                if(com.miflix.native2.data.HomeStartupPolicyRP129.reserveContinue(state.continueHomeReadyRP129,state.continueWatching.isNotEmpty(),state.tmdb.token.isNotBlank())) shelf(key="continue") {
+                    if(state.continueWatching.isEmpty()) Column(Modifier.fillMaxWidth().padding(horizontal=40.dp,vertical=18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                        Text(tr("Seguir viendo","Continue Watching"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
+                        Text(tr("Cargando tu progreso…","Loading your progress…"),color=Muted,fontSize=14.sp)
+                    } else {
                     SpotlightRail(title=tr("Seguir viendo","Continue Watching"),rows=state.continueWatching,showTitle=true,
                         progressFor={ state.progress[it.cloudId]?.percent },onLongClick={state.titleActions(it,true)},onClick=openItem)
+                    }
                 }
                 shelf(key="streaming") { CollectionRail(tr("Plataformas","Streaming"),StreamingTiles,openCollection) }
                 shelf(key="genres_home") { Column {
@@ -880,6 +894,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
     var helpIndex by remember(category) { mutableStateOf(-1) }
     var visualHelp by remember(category) {mutableStateOf<SettingsHelpRC103?>(null)}
     val settingsScroll=rememberLazyListState()
+    var settingsViewportRP129 by remember {mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)}
     LaunchedEffect(category) { settingsScroll.scrollToItem(0) }
 
     var email by remember { mutableStateOf("") }
@@ -945,7 +960,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
     }
     AppShell(state, Screen.SETTINGS, { state.screen = it }) {
         SocialBackdrop()
-        CompositionLocalProvider(LocalSettingsHelpRC103 provides {visualHelp=it},LocalBringIntoViewSpec provides object : BringIntoViewSpec {
+        CompositionLocalProvider(LocalSettingsViewportRP129 provides settingsViewportRP129,LocalSettingsHelpRC103 provides {visualHelp=it},LocalBringIntoViewSpec provides object : BringIntoViewSpec {
             override fun calculateScrollDistance(offset: Float,size: Float,containerSize: Float): Float = when {
                 size>containerSize-48 -> offset-24
                 offset<24 -> offset-24
@@ -964,7 +979,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
             }
             Spacer(Modifier.height(18.dp))
             Row(Modifier.weight(1f).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(22.dp)) {
-                LazyColumn(Modifier.weight(.7f).fillMaxHeight(),state=settingsScroll,
+                LazyColumn(Modifier.weight(.7f).fillMaxHeight().onGloballyPositioned {settingsViewportRP129=it.boundsInWindow()},state=settingsScroll,
                     contentPadding=PaddingValues(top=8.dp,bottom=42.dp),verticalArrangement=Arrangement.spacedBy(20.dp)) {
                     if(category=="system" && !state.kidsMode) item(key="final-m3u-rp97") {
                         SettingsSectionCard(onFocused={helpTitle=tr("Canales Live TV","Live TV channels");helpDescription=tr("Actualiza la lista M3U por URL Raw, sin otra build. El QR funciona en la red local y conserva la última copia válida si falla la descarga.","Update the M3U using a Raw URL without another build. QR works on the local network; failed downloads retain the last valid copy.");visualHelp=null}) {FinalM3USettingsRP97(state)}
@@ -991,24 +1006,22 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     if(category=="system") item(key="setting-0") {
                         SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="About BruniO";helpDescription="Usage on this device, installed version and updates.";helpIndex=0 }) {
                 Text(tr("Acerca de BruniO","About BruniO"),color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
-                Spacer(Modifier.height(8.dp))
+
                 Text("BruniO ${BuildConfig.VERSION_NAME}", color = Muted, fontSize = 14.sp, lineHeight=17.sp)
-                Spacer(Modifier.height(12.dp))
+
                 FocusButton("Changelog / Details") {state.changelogOpen=true}
-                Spacer(Modifier.height(10.dp))
+
                 FocusButton("${tr("Tiempo de uso", "Usage time")} · $usageLabel") {
                     usageMs=com.miflix.native2.data.AppUsageTracker.totalMs(context)
                     showUsage=true
                 }
-                Spacer(Modifier.height(30.dp))
-
 
                         }
                     }
                     if(category=="language") item(key="setting-1") {
                         SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="App language";helpDescription="Choose English or Spanish for menus and catalog information.";helpIndex=1 }) {
                 Text(tr("Idioma de la app","App language"),color=Color.White,fontSize=22.sp, lineHeight=26.sp)
-                Spacer(Modifier.height(12.dp))
+
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                     FocusButton("Español (Latinoamérica)",primary=state.interfaceLanguage=="es") { state.launch { state.setInterfaceLanguage("es") } }
                     FocusButton("English",primary=state.interfaceLanguage=="en") { state.launch { state.setInterfaceLanguage("en") } }
@@ -1020,22 +1033,22 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Account & Sync";helpDescription="Manage your account, device pairing and shared favorites.";helpIndex=2 }) {
                 if (state.session == null) {
                     Text(tr("Cuenta y sincronización","Account & Sync"), color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(8.dp))
+
                     Text(tr("Usa tu correo y contraseña o escanea el QR seguro con tu celular.","Use email/password or scan the secure pairing QR with your phone."), color = Muted, fontSize = 14.sp, lineHeight=17.sp, modifier = Modifier.fillMaxWidth())
-                    Spacer(Modifier.height(16.dp))
+
                     NativeTextField(email, { email = it }, tr("Correo","Email"), modifier = Modifier.fillMaxWidth())
-                    Spacer(Modifier.height(10.dp))
+
                     NativeTextField(password, { password = it }, tr("Contraseña","Password"), true, Modifier.fillMaxWidth())
-                    Spacer(Modifier.height(14.dp))
+
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(18.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
                         FocusButton(tr("Iniciar sesión","Sign In"), primary = true) { state.launch { state.login(email.trim(), password) } }
                         FocusButton(tr("Acceder con QR","QR Sign-in")) { state.screen = Screen.PAIR_DEVICE }
                     }
                 } else {
                     Text(tr("Cuenta y sincronización","Account & Sync"), color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(8.dp))
+
                     Text("${tr("Sesión de","Signed in as")} ${state.session?.email}", color = Color(0xFFE4E4E6), fontSize = 16.sp, lineHeight=19.sp)
-                    Spacer(Modifier.height(14.dp))
+
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(18.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
                         FocusButton(tr("Sincronizar","Sync Now"), primary = true) { state.launch { state.syncFromCloud(); state.pushCloud(); if (state.tmdb.token.isNotBlank()) state.loadHome() } }
                         FocusButton(tr("Vincular / Complementos","Pair / Add Add-on")) { state.screen = Screen.PAIR_DEVICE }
@@ -1043,12 +1056,10 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     }
                 }
 
-                Spacer(Modifier.height(28.dp))
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(18.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
                     FocusButton(tr("Amigos / Apodo / Frases","Friends / Nickname / Phrases")) { state.screen=Screen.FRIENDS }
                     FocusButton("Trakt") { state.screen=Screen.TRAKT }
                 }
-                Spacer(Modifier.height(18.dp))
 
                         }
                     }
@@ -1074,7 +1085,6 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         FocusButton(label,primary=state.secondaryAudioLanguageRP62==code) {state.saveSecondaryAudioRP62(code)}
                     }
                 }
-                Spacer(Modifier.height(18.dp))
 
                         }
                     }
@@ -1129,13 +1139,13 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 var customLimit by remember(state.streamSizeLimitGb) { mutableStateOf(if(state.streamSizeLimitGb>0) state.streamSizeLimitGb.toString() else "") }
                 Text(tr("Límite de tamaño de enlaces","Playback link size limit"),color=Color.White,fontSize=22.sp,lineHeight=26.sp)
                 Text(if(state.streamSizeLimitGb==0.0) tr("Sin límite","Unlimited") else "${tr("Máximo","Maximum")}: ${state.streamSizeLimitGb} GB",color=Muted)
-                Spacer(Modifier.height(12.dp))
+
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                     listOf(0.0,5.0,10.0,20.0,40.0,80.0).forEach { limit ->
                         FocusButton(if(limit==0.0) tr("Sin límite","Unlimited") else "${limit.toInt()} GB",primary=state.streamSizeLimitGb==limit) { state.saveStreamSizeLimit(limit) }
                     }
                 }
-                Spacer(Modifier.height(12.dp))
+
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                     NativeTextField(customLimit,{ customLimit=it },tr("Límite personalizado en GB","Custom limit in GB"),modifier=Modifier.width(300.dp))
                     FocusButton(tr("Aplicar límite","Apply limit")) {
@@ -1144,7 +1154,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         else state.saveStreamSizeLimit(number)
                     }
                 }
-                Spacer(Modifier.height(10.dp))
+
                 Text(tr("Con un límite activo se ocultan enlaces sin tamaño conocido, excepto Addon Latam y Nuve+. Si informan tamaño, se respeta el límite.","An active cap hides unknown-size links except Addon Latam and Nuve+. Known sizes always respect the cap."),color=Muted,fontSize=14.sp,lineHeight=18.sp)
 
                         }
@@ -1157,7 +1167,6 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         FocusButton(label,primary=state.subtitleLanguage==code) { state.savePlaybackPreferences(state.audioLanguage,code,state.autoplayNext) }
                     }
                 } } }
-                Spacer(Modifier.height(18.dp))
 
                         }
                     }
@@ -1178,7 +1187,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                                 if(customColor.matches(Regex("#[0-9a-fA-F]{6}"))) state.saveFocusColor(android.graphics.Color.parseColor(customColor))
                                 else state.error=tr("Usa # y seis dígitos hexadecimales.","Use # followed by six hexadecimal digits.")
                             }
-                            Spacer(Modifier.height(12.dp))
+
                             FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                                 listOf(0xFFFFFFFF.toInt() to "White",0xFFB792FF.toInt() to "Purple",0xFF65BFFF.toInt() to "Blue",0xFF66E6A0.toInt() to "Green",0xFFFFBB66.toInt() to "Amber",0xFFFF8FB6.toInt() to "Rose").forEach {(color,label) ->
                                     FocusButton("● $label",primary=state.focusColor==color) {state.saveFocusColor(color)}
@@ -1194,25 +1203,25 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     if(category=="appearance") item(key="setting-6") {
                         SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Subtitle style";helpDescription="Set subtitle color and size. Preview the result before you play.";helpIndex=6 }) {
                 Text(tr("Estilo de subtítulos","Subtitle style"),color=Color.White,fontSize=22.sp,lineHeight=26.sp,fontWeight=FontWeight.Bold)
-                Spacer(Modifier.height(10.dp))
+
                 Text(tr("Sin fondo negro. El contorno mantiene el texto legible.","No black background. An outline keeps text readable."),color=Muted)
-                Spacer(Modifier.height(14.dp))
+
                 Text(tr("Color","Color"),color=Muted)
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                     listOf(android.graphics.Color.WHITE to tr("Blanco","White"),android.graphics.Color.YELLOW to tr("Amarillo","Yellow"),android.graphics.Color.CYAN to tr("Cian","Cyan"),0xFFFFDAB9.toInt() to tr("Crema","Cream"),0xFF90EE90.toInt() to tr("Verde","Green")).forEach { (color,name) ->
                         FocusButton(name,primary=state.subtitleColor==color) { state.saveSubtitleStyle(color,state.subtitleScale) }
                     }
                 }
-                Spacer(Modifier.height(16.dp))
+
                 Text(tr("Tamaño","Size"),color=Muted)
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                     listOf(0.8f to tr("Pequeño","Small"),1f to tr("Normal","Normal"),1.2f to tr("Grande","Large"),1.4f to tr("Muy grande","Extra large")).forEach { (scale,name) ->
                         FocusButton(name,primary=state.subtitleScale==scale) { state.saveSubtitleStyle(state.subtitleColor,scale) }
                     }
                 }
-                Spacer(Modifier.height(14.dp))
+
                 Text(tr("Así se verán tus subtítulos","Your subtitles will look like this"),color=Color(state.subtitleColor),fontSize=(24*state.subtitleScale).sp,lineHeight=(30*state.subtitleScale).sp)
-                Spacer(Modifier.height(20.dp))
+
                 FocusButton(tr("Restaurar estilo","Reset style")) { state.saveSubtitleStyle(android.graphics.Color.WHITE,1f) }
 
                         }
@@ -1220,7 +1229,6 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     if(category=="playback") item(key="setting-7") {
                         SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Autoplay next episode";helpDescription="Continue automatically when the current episode finishes.";helpIndex=7 }) {
                 FocusButton("${tr("Siguiente episodio automático","Autoplay next episode")}: ${if(state.autoplayNext) tr("Activado","ON") else tr("Desactivado","OFF")}") { state.savePlaybackPreferences(state.audioLanguage,state.subtitleLanguage,!state.autoplayNext) }
-                Spacer(Modifier.height(24.dp))
 
                         }
                     }
@@ -1255,15 +1263,15 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     if(category=="system") item(key="setting-10") {
                         SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Storage";helpDescription="Clear temporary artwork without changing your account or favorites.";helpIndex=10 }) {
                 Text(tr("Almacenamiento","Storage"),color=Color.White,fontSize=22.sp,lineHeight=26.sp)
-                Spacer(Modifier.height(10.dp))
+
                 Text(tr("Limpia las imágenes temporales. Conserva tu cuenta, perfiles, favoritos y ajustes.",
                     "Clear temporary images. Keep your account, profiles, favorites and settings."),color=Muted,fontSize=14.sp,lineHeight=18.sp)
-                Spacer(Modifier.height(14.dp))
+
                 FocusButton(if(state.clearingCache) tr("Limpiando…","Clearing…") else tr("Eliminar caché","Clear cache")) {
                     if(!state.clearingCache) state.launch { state.socialAction { state.clearCache() } }
                 }
                 if(state.cacheCleared) {
-                    Spacer(Modifier.height(10.dp))
+
                     Text(tr("Caché eliminada. Las imágenes se descargarán cuando las necesites.",
                         "Cache cleared. Images will download again when needed."),color=Color(0xFFB6DDC0),fontSize=14.sp,lineHeight=18.sp)
                 }
@@ -1273,9 +1281,9 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     if(category=="system") item(key="setting-11") {
                         SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Updates";helpDescription="Check for a newer BruniO version.";helpIndex=11 }) {
                 Text(tr("Actualizaciones","Updates"),color=Color.White,fontSize=22.sp)
-                Spacer(Modifier.height(12.dp))
+
                 Text("BruniO ${BuildConfig.VERSION_NAME}",color=Muted)
-                Spacer(Modifier.height(12.dp))
+
                 FocusButton(tr("Buscar actualizaciones","Check for Updates")) { showUpdates=true }
 
                         }

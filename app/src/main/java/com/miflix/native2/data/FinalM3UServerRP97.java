@@ -38,7 +38,7 @@ public final class FinalM3UServerRP97 implements AutoCloseable {
     }
     private void accept(){while(!closed)try {
         Socket s=socket.accept();
-        if(!LocalCastServer.sameSubnet(address.getAddress(),s.getInetAddress().getAddress(),prefix)) {s.close();continue;}
+        if(!LocalQrNetworkRP129.acceptsPeer(s.getInetAddress().getAddress())) {s.close();continue;}
         try {workers.execute(()->handle(s));} catch(RejectedExecutionException e){s.close();}
     }catch(IOException e){if(!closed)close();}}
     private static String line(InputStream in,int max) throws IOException {

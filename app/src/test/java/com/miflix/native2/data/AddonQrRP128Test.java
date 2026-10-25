@@ -63,9 +63,10 @@ public class AddonQrRP128Test {
             assertTrue(request(uri,"POST",path,server.getBase(),body).startsWith("HTTP/1.1 200"));assertEquals(2,attempts.get());
         }
     }
-    @Test public void lanAdmissionRejectsPublicAndDifferentSubnets() throws Exception {
+    @Test public void lanAdmissionAcceptsRoutedPrivatePeersAndRejectsPublic() throws Exception {
         assertTrue(AddonManifestServerRP128.sameLan(InetAddress.getByName("192.168.1.2").getAddress(),InetAddress.getByName("192.168.1.3").getAddress(),24));
-        assertFalse(AddonManifestServerRP128.sameLan(InetAddress.getByName("192.168.1.2").getAddress(),InetAddress.getByName("192.168.2.3").getAddress(),24));
+        assertTrue(AddonManifestServerRP128.acceptsPeer(InetAddress.getByName("192.168.2.3").getAddress()));
+        assertTrue(AddonManifestServerRP128.acceptsPeer(InetAddress.getByName("10.0.0.8").getAddress()));
         assertFalse(AddonManifestServerRP128.privateAddress(InetAddress.getByName("8.8.8.8").getAddress()));
     }
     @Test(expected=IOException.class) public void publicConstructorDoesNotEnableLoopbackFixture() throws Exception {

@@ -12,6 +12,8 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP119: OK restaura categoría, búsqueda, posición y foco del canal en reproducción." to "RP119: OK restores category, search, position and focus on the playing channel.",
+        "RP118: sin importar M3U en TV Channels ni panel; tarjetas enfocadas completas y más espacio para canales." to "RP118: no M3U import in TV Channels or browser; fully revealed focused cards and more channel space.",
         "RP117: búsqueda sin campo duplicado arriba; consulta solo a la derecha y teclado más alto." to "RP117: removed duplicate top search field; query only at right and keyboard moved upward.",
         "RP116: búsqueda desde 2 letras, resultados completos con spinner y teclado simplificado con micrófono arriba." to "RP116: search from 2 letters, complete result batches with spinner and simplified keyboard with microphone above.",
         "RP115: buscador glass más ligero, teclado con foco rectangular y búsquedas agrupadas cada 3 caracteres." to "RP115: lighter glass search, rectangular keyboard focus and searches batched every 3 characters.",

@@ -1,5 +1,7 @@
 package com.miflix.native2.ui
 
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.geometry.Offset
@@ -94,9 +96,9 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     var pendingChannelFocusRP88 by remember {mutableStateOf<String?>(null)}
     var loadedSelectionRP74 by remember {mutableStateOf("")}
     var categories by remember {mutableStateOf<List<BrowserCategoryRP34>>(emptyList())}
-    var selected by remember {mutableStateOf("favorites")}
+    var selected by remember {mutableStateOf(restoredRP40?.category?.takeIf {it.value.id!="favorites"}?.key ?: "favorites")}
     var channels by remember {mutableStateOf<List<BrowserChannelRP34>>(emptyList())}
-    var search by remember {mutableStateOf("")}
+    var search by remember {mutableStateOf(restoredRP40?.search.orEmpty())}
     var loading by remember {mutableStateOf(true)}
     var resolving by remember {mutableStateOf(false)}
     var message by remember {mutableStateOf("")}
@@ -117,7 +119,6 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     val localChannelsRP74=localCatalogRP74.orEmpty()
     val localByIdRP74=remember(localChannelsRP74) {localChannelsRP74.associateBy {it.id}}
     val localIdsRP48=remember(localByIdRP74) {localByIdRP74.keys}
-    var showM3URP61 by remember(localOwnerRP48) {mutableStateOf(false)}
     var customManageRP48 by remember(localOwnerRP48) {mutableStateOf<CustomChannelRP45?>(null)}
     var favoritesReadyRP101 by remember(localOwnerRP48) {mutableStateOf(false)}
     val favorites by produceState<List<FavoriteChannel>>(emptyList(),revision,customRevisionRP48,localIdsRP48,localOwnerRP48) {
@@ -160,7 +161,11 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
         if(!initialFocus && !state.easyModeRP79) {withFrameNanos {};runCatching {first.requestFocus()}}
 
     }
-    LaunchedEffect(selected,if(group?.provider==CustomChannelsRP45.provider) "" else search,localCatalogRP74,if(group?.provider==CustomChannelsRP45.provider || selected=="favorites") customRevisionRP48 else 0L) {
+    LaunchedEffect(categories,selected) {
+        val categoryIndex=if(selected=="favorites") 0 else categories.indexOfFirst {it.key==selected}.takeIf {it>=0}?.plus(1)
+        if(initialFocus && categoryIndex!=null) categoryListRP40.scrollToItem(categoryIndex)
+    }
+    LaunchedEffect(selected,group?.key,if(group?.provider==CustomChannelsRP45.provider) "" else search,localCatalogRP74,if(group?.provider==CustomChannelsRP45.provider || selected=="favorites") customRevisionRP48 else 0L) {
         generation++;resolving=false;more=false;channels=emptyList();offset=0;message="";loadedSelectionRP74=""
         val categorySelectionRP74=selected
         val categoryGenerationRP74=generation
@@ -243,7 +248,15 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     LaunchedEffect(displayed,loading,loadedSelectionRP74,favoritesReadyRP101) {
         if(initialFocus && (selected!="favorites" || favoritesReadyRP101) && !loading && selected.isNotBlank() && loadedSelectionRP74==selected) {
             val index=displayed.indexOfFirst {it.provider==current?.liveProvider && it.value.id==current?.liveChannelId}
-            if(index>=0) {publishedRP100=maxOf(publishedRP100,index+1);withFrameNanos {};channelList.scrollToItem(index);withFrameNanos {};runCatching {playingChannelFocus.requestFocus()}}
+            if(index>=0) {
+                val saved=restoredRP40?.takeIf {it.category.key==group?.key || (selected=="favorites" && it.category.value.id=="favorites")}
+                val top=saved?.scrollIndex?.coerceIn(0,displayed.lastIndex) ?: index
+                publishedRP100=maxOf(publishedRP100,maxOf(index,top)+1)
+                withFrameNanos {}
+                channelList.scrollToItem(top,saved?.scrollOffset ?: 0)
+                withFrameNanos {}
+                runCatching {playingChannelFocus.requestFocus()}
+            }
             else {withFrameNanos {};runCatching {first.requestFocus()}}
             initialFocus=false
         }
@@ -320,7 +333,6 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                         Text(catalogWarningRP39,color=Muted,fontSize=10.sp)
                         FocusButton(tr("Reintentar","Retry"),modifier=Modifier.fillMaxWidth()) {retry++}
                     }
-                    if(!state.easyModeRP79 && !state.kidsMode && state.partyRole!=PartyRole.GUEST) FocusButton(tr("+ Lista M3U","+ M3U playlist"),modifier=Modifier.fillMaxWidth()) {showM3URP61=true}
                     FocusButton(tr("Cerrar","Close"),modifier=Modifier.fillMaxWidth(),onClick=close)
                 }
                 Column(Modifier.weight(.64f).fillMaxHeight().onPreviewKeyEvent {event ->
@@ -338,7 +350,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
                     NativeTextField(search,{search=it},tr("Buscar canal","Search channels"),modifier=Modifier.fillMaxWidth())
                     if(loading || resolving) Text(if(resolving) tr("Abriendo canal…","Opening channel…") else tr("Cargando…","Loading…"),color=Muted,fontSize=12.sp)
                     if(message.isNotBlank()) Text(message,color=Color.White,fontSize=12.sp)
-                    LazyColumn(Modifier.weight(1f),state=channelList,verticalArrangement=Arrangement.spacedBy(2.dp),contentPadding=PaddingValues(bottom=16.dp)) {
+                    LazyColumn(Modifier.weight(1f),state=channelList,verticalArrangement=Arrangement.spacedBy(2.dp),contentPadding=PaddingValues(top=4.dp,bottom=30.dp)) {
                         items(count=minOf(publishedRP100,displayed.size),key={displayed[it].key}) {index ->
                             val entry=displayed[index]
                             val favorite=entry.key in favoriteKeysRP74
@@ -375,7 +387,6 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
             }
         }
     }
-    if(showM3URP61) M3UListsPanelRP61(state) {showM3URP61=false}
     customManageRP48?.let {channel ->CustomChannelManageRP48(state,channel) {customManageRP48=null}}
     genericOptionsRP54?.let {entry ->
         val isFav=entry.key in favoriteKeysRP74
@@ -411,6 +422,7 @@ private fun BrowserCategoryRowRP34(title:String,selected:Boolean,modifier:Modifi
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun BrowserChannelRowRP34(channel:LiveChannel,number:Int,favorite:Boolean,playing:Boolean,click:()->Unit,favoriteHold:()->Unit,optionsHold:()->Unit,easyRP79:Boolean=false,modifier:Modifier=Modifier) {
     val logoContextRP100=LocalContext.current
@@ -419,7 +431,9 @@ private fun BrowserChannelRowRP34(channel:LiveChannel,number:Int,favorite:Boolea
     }
     var focused by remember(channel.id) {mutableStateOf(false)}
     var logoFailedRP97 by remember(channel.poster) {mutableStateOf(false)}
-    Row(modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(GlassActionBrushRP108(focused))
+    val bring=remember {BringIntoViewRequester()}
+    LaunchedEffect(focused) {if(focused) {withFrameNanos {};bring.bringIntoView()}}
+    Row(modifier.fillMaxWidth().bringIntoViewRequester(bring).clip(RoundedCornerShape(8.dp)).background(GlassActionBrushRP108(focused))
         .border(if(focused) 1.dp else 0.dp,if(focused) Color.White else Color.Transparent,RoundedCornerShape(8.dp))
         .onFocusChanged {focused=it.isFocused}.tvChannelTimedClickRP54(click,favoriteHold,optionsHold).focusable().padding(horizontal=10.dp,vertical=9.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -484,7 +498,7 @@ private fun ChannelHeartRP38(favorite:Boolean) {
     }
 }
 
-/** RP54: OK short press plays, 750-1749ms toggles favorite, >=1750ms opens options. */
+/** RP112: open options while held at 1750ms; shorter gestures resolve on release. */
 private fun Modifier.tvChannelTimedClickRP54(
     play:()->Unit, toggleFavorite:()->Unit, openOptions:()->Unit
 ):Modifier = composed {
@@ -492,6 +506,17 @@ private fun Modifier.tvChannelTimedClickRP54(
     val favoriteNow by rememberUpdatedState(toggleFavorite)
     val optionsNow by rememberUpdatedState(openOptions)
     var pressedAt by remember { mutableLongStateOf(-1L) }
+    LaunchedEffect(pressedAt) {
+        val start=pressedAt
+        if(start>=0L) {
+            delay((1750L-(android.os.SystemClock.uptimeMillis()-start)).coerceAtLeast(0L))
+            if(pressedAt==start) {
+                // Consume this gesture before opening a dialog or changing focus.
+                pressedAt=-1L
+                optionsNow()
+            }
+        }
+    }
     this.onFocusChanged { if (!it.hasFocus) pressedAt=-1L }
         .onPreviewKeyEvent { event ->
             val native=event.nativeKeyEvent

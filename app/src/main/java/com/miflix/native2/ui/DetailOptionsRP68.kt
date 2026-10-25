@@ -77,7 +77,7 @@ private fun DetailCloseRP70(close:()->Unit) {
         .semantics {contentDescription=label}
         .onFocusChanged {focused=it.isFocused}.tvClick(close).focusable()
         .clickable(role=Role.Button,onClick=close),contentAlignment=Alignment.Center) {
-        DetailIconRP68("close",if(selected)Color(0xFF101010) else Color.White)
+        DetailIconRP68("close",Color.White)
     }
 }
 
@@ -93,13 +93,13 @@ private fun DetailActionGroupRP68(title:String,actions:List<DetailOptionRP68>,mo
 private fun DetailActionRP68(option:DetailOptionRP68,modifier:Modifier=Modifier) {
     var focused by remember {mutableStateOf(false)}
     val selected=actionFocusVisibleRP64(focused)
-    val ink=if(selected)Color(0xFF101010) else Color(0xFFEAEAEA)
+    val ink=if(selected)Color.White else Color(0xFFEAEAEA)
     Row(modifier.heightIn(min=58.dp).clip(RoundedCornerShape(10.dp))
         .background(GlassActionBrushRP108(selected))
         .onFocusChanged {focused=it.isFocused}.tvClick(option.action).focusable().clickable(onClick=option.action)
         .padding(horizontal=13.dp,vertical=13.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
         DetailIconRP68(option.icon,ink)
-        Text(option.title,color=ink,fontSize=15.sp,fontWeight=if(selected)FontWeight.SemiBold else FontWeight.Medium,maxLines=2,overflow=TextOverflow.Ellipsis,lineHeight=20.sp)
+        Text(option.title,color=ink,fontSize=15.sp,fontWeight=if(selected)FontWeight.Bold else FontWeight.Medium,maxLines=2,overflow=TextOverflow.Ellipsis,lineHeight=20.sp)
     }
 }
 

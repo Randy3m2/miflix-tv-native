@@ -35,7 +35,7 @@ internal fun LoadMoreTile(modifier:Modifier=Modifier,onClick:()->Unit) {
             verticalArrangement=Arrangement.spacedBy(6.dp)) {
             Text("+",color=if(active) Color.White else Accent,fontSize=30.sp,lineHeight=32.sp,fontWeight=FontWeight.Light)
             Text(tr("Cargar más","Load more"),color=if(active) Color.White else Color.White,fontSize=15.sp,fontWeight=FontWeight.Bold)
-            Text(tr("Explorar →","Explore →"),color=if(active) Color(0xFF555555) else Muted,fontSize=11.sp)
+            Text(tr("Explorar →","Explore →"),color=if(active) Color.White else Muted,fontSize=11.sp)
         }
     }
 }
@@ -50,7 +50,7 @@ internal fun FeatureActionCard(title:String,subtitle:String,glyph:String="+",mod
             }
             Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
                 Text(title,color=if(active) Color.White else Color.White,fontSize=16.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
-                Text(subtitle,color=if(active) Color(0xFF555555) else Muted,fontSize=12.sp,maxLines=2,overflow=TextOverflow.Ellipsis)
+                Text(subtitle,color=if(active) Color.White else Muted,fontSize=12.sp,maxLines=2,overflow=TextOverflow.Ellipsis)
             }
             Text("›",color=if(active) Color.White else Accent,fontSize=25.sp)
         }

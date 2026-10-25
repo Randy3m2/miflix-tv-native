@@ -276,6 +276,6 @@ private fun StatsActionRP105(label:String,selected:Boolean,modifier:Modifier=Mod
                 true
             } else false
         }.clickable(onClick=click).padding(horizontal=8.dp),contentAlignment=Alignment.Center) {
-        Text(label,color=if(focused) Color.White else Color.White,fontSize=12.sp,fontWeight=if(selected) FontWeight.Bold else FontWeight.Normal,maxLines=1,overflow=TextOverflow.Ellipsis)
+        Text(label,color=if(focused) Color.White else Color.White,fontSize=12.sp,fontWeight=if(focused || selected) FontWeight.Bold else FontWeight.Normal,maxLines=1,overflow=TextOverflow.Ellipsis)
     }
 }

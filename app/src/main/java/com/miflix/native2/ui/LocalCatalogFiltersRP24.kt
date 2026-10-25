@@ -132,6 +132,6 @@ private fun LocalFilterChoiceRP24(label:String,selected:Boolean,modifier:Modifie
         .background(GlassActionBrushRP108(active,selected),RoundedCornerShape(12.dp))
         .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else if(selected) Color(0xFFB0B0B0) else Color(0xFF414141),RoundedCornerShape(12.dp))
         .padding(horizontal=14.dp,vertical=10.dp),contentAlignment=Alignment.Center) {
-        Text((if(selected) "✓  " else "")+label,color=if(active) Color.White else Color.White,fontSize=13.sp,lineHeight=17.sp,fontWeight=if(selected || focused) FontWeight.Bold else FontWeight.Normal)
+        Text((if(selected) "✓  " else "")+label,color=if(active) Color.White else Color.White,fontSize=13.sp,lineHeight=17.sp,fontWeight=if(selected || active) FontWeight.Bold else FontWeight.Normal)
     }
 }

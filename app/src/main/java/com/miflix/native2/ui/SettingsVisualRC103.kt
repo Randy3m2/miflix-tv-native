@@ -108,8 +108,8 @@ internal fun SettingsTileRC103(title:String,description:String,icon:String,modif
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
         SettingsIconRC103(icon,filled)
         Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-            Text(title,color=if(filled) Color.White else Color.White,fontSize=17.sp,lineHeight=22.sp,fontWeight=FontWeight.SemiBold)
-            Text(description,color=if(filled) Color(0xFF555555) else Muted,fontSize=13.sp,lineHeight=18.sp)
+            Text(title,color=if(filled) Color.White else Color.White,fontSize=17.sp,lineHeight=22.sp,fontWeight=if(filled) FontWeight.Bold else FontWeight.SemiBold)
+            Text(description,color=if(filled) Color.White else Muted,fontSize=13.sp,lineHeight=18.sp)
         }
         if(checked!=null) Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(5.dp)) {
             Canvas(Modifier.size(44.dp,26.dp)) {

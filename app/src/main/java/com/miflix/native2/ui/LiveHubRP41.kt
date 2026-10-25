@@ -432,7 +432,7 @@ internal fun HubCategoryChipRP42(label:String,selected:Boolean,click:()->Unit) {
                 for(i in 0..2) drawLine(if(active) Color.White else Color.White,androidx.compose.ui.geometry.Offset(0f,size.height*(.2f+i*.3f)),androidx.compose.ui.geometry.Offset(size.width,size.height*(.2f+i*.3f)),strokeWidth=2.dp.toPx())
             } else drawCircle(if(active) Color.White else if(selected) Color.White else Color(0xFF888888),radius=size.minDimension*.28f)
         }
-        Text(label,color=if(active) Color.White else Color.White,fontSize=13.sp,fontWeight=if(selected) FontWeight.Bold else FontWeight.Normal)
+        Text(label,color=if(active) Color.White else Color.White,fontSize=13.sp,fontWeight=if(active || selected) FontWeight.Bold else FontWeight.Normal)
     }
 }
 

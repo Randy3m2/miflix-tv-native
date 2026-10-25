@@ -2,6 +2,21 @@ package com.miflix.native2.ui
 
 import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -54,7 +69,7 @@ internal fun SportsGamesRP113(state:AppState,request:PlayerRequest,close:()->Uni
             item {FocusButton(tr("‹ Todos los deportes","‹ All sports"),Modifier.fillMaxWidth()) {category=null;rows=emptyList();skip=0}}
             items(rows,key={"game:${it.id}"}) {game ->
                 val playing=request.liveProvider=="sports" && request.liveChannelId==game.id
-                FocusButton((if(playing) "▶ " else "")+game.name,Modifier.fillMaxWidth(),primary=playing) {
+                SportsGameCardRP114(game,playing,resolving) {
                     if(!resolving && state.partyRole!=PartyRole.GUEST) scope.launch {
                         resolving=true;message=""
                         val selected=category ?: run {resolving=false;return@launch}
@@ -79,6 +94,41 @@ internal fun SportsGamesRP113(state:AppState,request:PlayerRequest,close:()->Uni
         if(message.isNotBlank()) item {
             Text(message,color=Color.White)
             FocusButton(tr("Reintentar","Retry")) {retry++}
+        }
+    }
+}
+
+/** Fixed-size artwork keeps remote navigation stable while images arrive. */
+@Composable
+private fun SportsGameCardRP114(game:LiveChannel,playing:Boolean,busy:Boolean,onClick:()->Unit) {
+    var focused by remember {mutableStateOf(false)}
+    val active=actionFocusVisibleRP64(focused)
+    val shape=RoundedCornerShape(16.dp)
+    val context=LocalContext.current
+    val artwork=remember(context,game.poster) {
+        ImageRequest.Builder(context).data(game.poster).size(480,270).build()
+    }
+    Row(Modifier.fillMaxWidth().height(116.dp).clip(shape)
+        .background(GlassActionBrushRP108(active,playing))
+        .border(if(active) 2.dp else 1.dp,Color.White.copy(alpha=if(active) .85f else if(playing) .42f else .14f),shape)
+        .onFocusChanged {focused=it.isFocused}.focusable()
+        .tvClick {if(!busy) onClick()}.clickable {if(!busy) onClick()}
+        .padding(10.dp),verticalAlignment=Alignment.CenterVertically,
+        horizontalArrangement=Arrangement.spacedBy(14.dp)) {
+        Box(Modifier.width(150.dp).height(86.dp).clip(RoundedCornerShape(10.dp))
+            .background(Color.White.copy(alpha=.07f)),contentAlignment=Alignment.Center) {
+            // Title is also shown beside the image if the provider has no artwork.
+            Text("▶",color=Color.White.copy(alpha=.5f),fontSize=24.sp)
+            AsyncImage(artwork,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+        }
+        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(7.dp)) {
+            Text(game.name,color=Color.White,fontSize=16.sp,lineHeight=21.sp,
+                fontWeight=if(active || playing) FontWeight.Bold else FontWeight.SemiBold,
+                maxLines=3,overflow=TextOverflow.Ellipsis)
+            if(playing) Text(tr("▶ VIENDO AHORA","▶ NOW PLAYING"),color=Color.White,
+                fontSize=10.sp,fontWeight=FontWeight.Bold)
+            else if(active) Text(tr("OK · Reproducir","OK · Play"),color=Color.White,
+                fontSize=11.sp,fontWeight=FontWeight.Bold)
         }
     }
 }

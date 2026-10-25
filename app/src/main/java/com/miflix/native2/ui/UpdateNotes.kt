@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP114: tarjetas glass con imagen del evento y marcador Viendo ahora en el selector de juegos." to "RP114: glass event cards with artwork and Now playing marker in the game picker.",
         "RP113: selector de juegos de todos los deportes en el reproductor y cambio arriba/abajo con enlaces automáticos." to "RP113: all-sports game picker in the player and up/down game switching with automatic sources.",
         "RP112: opciones de canal al cumplir 1.75 segundos manteniendo OK, sin esperar a soltar." to "RP112: channel options open at 1.75 seconds while holding OK, without waiting for release.",
         "RP111: eliminado el botón de importar listas M3U del selector de canales; actualización de la lista principal desde Ajustes." to "RP111: removed M3U playlist import from the channel browser; main playlist refresh remains in Settings.",

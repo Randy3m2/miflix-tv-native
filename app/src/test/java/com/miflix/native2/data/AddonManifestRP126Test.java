@@ -13,7 +13,7 @@ public class AddonManifestRP126Test {
     }
     @Test public void missingLogoUsesEmptyFallback() {assertEquals("",AddonManifestRP126.parse(url,json("")).logo);}
     @Test public void unsafeLogoDoesNotDiscardValidProvider() {assertEquals("",AddonManifestRP126.parse(url,json(",\"logo\":\"javascript:bad\"")).logo);}
-    @Test(expected=org.json.JSONException.class) public void rejectsWebsiteHtml() {AddonManifestRP126.parse(url,"<html>not a manifest</html>");}
+    @Test(expected=IllegalArgumentException.class) public void rejectsWebsiteHtml() {AddonManifestRP126.parse(url,"<html>not a manifest</html>");}
     @Test(expected=IllegalArgumentException.class) public void rejectsCatalogOnlyAddon() {AddonManifestRP126.parse(url,"{\"id\":\"x\",\"name\":\"Catalog\",\"resources\":[\"catalog\"]}");}
     @Test(expected=IllegalArgumentException.class) public void rejectsUnconfiguredAddon() {AddonManifestRP126.parse(url,json(",\"behaviorHints\":{\"configurationRequired\":true}"));}
     @Test(expected=IllegalArgumentException.class) public void rejectsCredentialsInHost() {AddonManifestRP126.normalize("https://user:password@addon.example/manifest.json");}

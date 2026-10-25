@@ -26,7 +26,9 @@ public final class AddonManifestRP126 {
     }
     public static AddonManifestRP126 parse(String url,String body) {
         if(body.length()>524288) throw new IllegalArgumentException("Manifest too large");
-        JSONObject json=new JSONObject(body);
+        final JSONObject json;
+        try {json=new JSONObject(body);}
+        catch(JSONException e) {throw new IllegalArgumentException("Invalid manifest JSON",e);}
         String name=clean(json.optString("name"),80);
         if(name.isEmpty()||json.optString("id").trim().isEmpty())
             throw new IllegalArgumentException("Invalid manifest");

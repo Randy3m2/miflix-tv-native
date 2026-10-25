@@ -35,6 +35,7 @@ private fun AddonManagerContentRP126(state:AppState,close:()->Unit) {
     val manifests=state.addonManifests.toList()
     val metadata=remember {mutableStateMapOf<String,AddonManifestRP126>()}
     var adding by remember {mutableStateOf(false)}
+    var startQr by remember {mutableStateOf(false)}
     var order by remember {mutableStateOf(false)}
     var selected by remember {mutableStateOf<String?>(null)}
     var confirmRemove by remember {mutableStateOf(false)}
@@ -58,9 +59,9 @@ private fun AddonManagerContentRP126(state:AppState,close:()->Unit) {
                 FocusButton("×",horizontalPadding=16.dp,onClick=close)
             }
             FlowRow(horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-                FocusButton(tr("+ Agregar add-on","+ Add add-on")) {adding=true}
+                FocusButton(tr("+ Agregar add-on","+ Add add-on")) {startQr=false;adding=true}
                 FocusButton(tr("Orden de reproducción","Playback priority")) {order=true}
-                FocusButton("QR") {state.screen=Screen.PAIR_DEVICE;close()}
+                FocusButton(tr("Agregar por QR local","Add via local QR")) {startQr=true;adding=true}
             }
             if(!state.activeProfile.primary) {
                 FocusButton((if(state.profileAddonsInherited) "✓ " else "")+tr("Usar add-ons del perfil principal","Use main profile add-ons"),primary=state.profileAddonsInherited) {
@@ -88,7 +89,7 @@ private fun AddonManagerContentRP126(state:AppState,close:()->Unit) {
         }
     }
     if(order) AddonPrioritySettingsRP2(state) {order=false}
-    if(adding) AddonInstallRP126(state,{adding=false}) {info ->metadata[info.url]=info}
+    if(adding) AddonInstallRP126(state,{adding=false},initialQr=startQr) {info ->metadata[info.url]=info}
     selected?.takeIf {it in manifests}?.let {url ->
         val title=addonTitleRP126(state,url,metadata[url])
         PlayerSideSheet(title,{if(!busy) selected=null}) {
@@ -141,15 +142,17 @@ private fun AddonLogoRP126(url:String,title:String,modifier:Modifier) {
 }
 
 @Composable
-private fun AddonInstallRP126(state:AppState,close:()->Unit,installed:(AddonManifestRP126)->Unit) {
+private fun AddonInstallRP126(state:AppState,close:()->Unit,initialQr:Boolean=false,installed:(AddonManifestRP126)->Unit) {
     val scope=rememberCoroutineScope()
     var input by remember {mutableStateOf("")}
     var preview by remember {mutableStateOf<AddonManifestRP126?>(null)}
+    var showQr by remember {mutableStateOf(initialQr)}
     var busy by remember {mutableStateOf(false)}
     var status by remember {mutableStateOf("")}
     PlayerSideSheet(tr("Agregar add-on","Add add-on"),close) {
         item {Text(tr("Pega el enlace de instalación","Paste the installation link"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)}
         item {Text(tr("Configúralo primero en su página y copia su URL manifest.json. También acepta enlaces stremio://.","Configure it on its website first, then copy its manifest.json URL. stremio:// links are also accepted."),color=Muted,fontSize=14.sp)}
+        item {FocusButton(tr("Pegar desde el celular · QR","Paste from phone · QR")) {if(!busy) showQr=true}}
         item {NativeTextField(input,{if(!busy) {input=it;preview=null;status=""}},"https://…/manifest.json",modifier=Modifier.fillMaxWidth())}
         item {FocusButton(if(busy) tr("Comprobando…","Checking…") else tr("Comprobar add-on","Check add-on")) {
             if(!busy) {busy=true;status="";scope.launch {
@@ -172,4 +175,9 @@ private fun AddonInstallRP126(state:AppState,close:()->Unit,installed:(AddonMani
         }
         if(status.isNotBlank()) item {Text(status,color=Color.White,fontSize=13.sp)}
     }
+    if(showQr) AddonManifestQrRP128(state,received={value ->
+        input=value;preview=null
+        status=tr("Enlace recibido. Comprueba el add-on antes de instalar.","Link received. Check the add-on before installing.")
+    },close={showQr=false})
+
 }

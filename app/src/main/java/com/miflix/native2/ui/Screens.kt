@@ -1491,6 +1491,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var maximized by remember { mutableStateOf(true) }
     var speed by remember(request.playbackId) { mutableStateOf(1f) }
     var playbackError by remember(request.playbackId) { mutableStateOf<String?>(null) }
+    val sportsRetryRP108=remember(request.playbackId) {com.miflix.native2.data.SportsRetryRP108()}
     var advancingSource by remember(request.playbackId) {mutableStateOf(false)}
     var externalSubtitles by remember(request.playbackId) { mutableStateOf<List<SubtitleChoice>>(emptyList()) }
     var subtitleLoading by remember(request.playbackId) { mutableStateOf(false) }
@@ -1753,10 +1754,26 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         val listener = object : Player.Listener {
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                 if(state.playerRequest?.playbackId!=request.playbackId) return
+                if(sportsRetryRP108.take(request.live,request.sportsRecordingRP72,request.liveProvider)) {
+                    val wasPlaying=player.playWhenReady
+                    channelMenuScopeRP34.launch {
+                        delay(250)
+                        if(state.playerRequest?.playbackId==request.playbackId) {
+                            if(state.appForeground) {
+                                try {
+                                    playbackError=null
+                                    player.prepare()
+                                    player.playWhenReady=wasPlaying
+                                } catch(e:Exception) {playbackError=playerFailureDetails(error)}
+                            } else playbackError=playerFailureDetails(error)
+                        }
+                    }
+                    return
+                }
                 if(request.liveProvider=="sports" && state.nextSportsSourceRP71(request)) return
                 // Some IPTV endpoints have no extension and return generic content types.
                 // Retry HLS once only when automatic container detection failed, never on HTTP/auth errors.
-                if(request.live && request.liveMime!="application/dash+xml" && !triedLiveHls && error.errorCode==androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED) {
+                if(request.liveProvider!="sports" && request.live && request.liveMime!="application/dash+xml" && !triedLiveHls && error.errorCode==androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED) {
                     triedLiveHls=true
                     player.setMediaItem(MediaItem.Builder().setUri(request.stream.url).setMimeType(MimeTypes.APPLICATION_M3U8).build())
                     player.prepare()
@@ -2510,17 +2527,17 @@ private fun EpisodeListRow(ep: EpisodeSummary, active: Boolean, hidden: Boolean,
     var focused by remember(ep.season, ep.episode) { mutableStateOf(false) }
     Row(
         modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused }.tvPlaybackClick(onClick, onLongClick).clickable(onClick = onClick)
-            .background(if (focused) Accent else if (active) Color(0xFF242424) else Color(0xFF161616), RoundedCornerShape(12.dp))
+            .background(GlassActionBrushRP108(focused,active), RoundedCornerShape(12.dp))
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         EpisodeArtwork(ep,hidden,Modifier.width(150.dp).height(84.dp).clip(RoundedCornerShape(8.dp)))
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text("${if(ep.absoluteEpisodeRP102>0) "E${ep.absoluteEpisodeRP102}" else "S${ep.season} E${ep.episode}"} · ${if(hidden) tr("No visto","Not watched") else ep.title}", color = if (focused) FocusInk else Color.White, fontSize = 14.sp, lineHeight=17.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-            Text(if(hidden) tr("Sinopsis oculta para evitar spoilers","Synopsis hidden to avoid spoilers") else ep.overview, color = if (focused) FocusInk.copy(alpha=.8f) else Muted, fontSize = 11.sp, lineHeight=13.sp, maxLines = 2)
+            Text("${if(ep.absoluteEpisodeRP102>0) "E${ep.absoluteEpisodeRP102}" else "S${ep.season} E${ep.episode}"} · ${if(hidden) tr("No visto","Not watched") else ep.title}", color = if (focused) Color.White else Color.White, fontSize = 14.sp, lineHeight=17.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(if(hidden) tr("Sinopsis oculta para evitar spoilers","Synopsis hidden to avoid spoilers") else ep.overview, color = if (focused) Color.White.copy(alpha=.8f) else Muted, fontSize = 11.sp, lineHeight=13.sp, maxLines = 2)
         }
-        if (active) Text(tr("ACTUAL","NOW"), color = if (focused) FocusInk else Color.White, fontSize = 10.sp, lineHeight=12.sp, fontWeight = FontWeight.Black)
+        if (active) Text(tr("ACTUAL","NOW"), color = if (focused) Color.White else Color.White, fontSize = 10.sp, lineHeight=12.sp, fontWeight = FontWeight.Black)
     }
 }
 
@@ -2718,7 +2735,7 @@ private fun SourceLinkCard(stream: com.miflix.native2.model.StreamChoice,modifie
     }
 
     Column(modifier.onFocusChanged {focused=it.isFocused}.focusable().tvPlaybackClick(onClick,{rawDetails=true}).clickable(onClick=onClick)
-        .background(if(focused) FocusedPanel else if(playing) Accent.copy(alpha=.18f) else Color(0xFF252528),RoundedCornerShape(18.dp))
+        .background(GlassActionBrushRP108(focused,playing),RoundedCornerShape(18.dp))
         .border(if(focused || playing) 2.dp else 1.dp,if(focused || playing) Accent else PanelBorder,RoundedCornerShape(18.dp)).padding(20.dp),
         verticalArrangement=Arrangement.spacedBy(8.dp)) {
         if(playing) Text("▶ "+tr("REPRODUCIENDO","NOW PLAYING"),color=Accent,fontSize=11.sp,fontWeight=FontWeight.Bold)

@@ -81,11 +81,11 @@ internal fun EasyExitLogoRP80(state:AppState,onCountdown:()->Unit,unlock:()->Uni
         }
     }.semantics {contentDescription=tr("BruniO · Mantén OK 15 segundos y suelta para salir del modo fácil",
         "BruniO · Hold OK for 15 seconds, then release to exit Easy mode")}
-        .background(if(focused) Color.White else Panel,RoundedCornerShape(30.dp))
+        .background(GlassActionBrushRP108(focused),RoundedCornerShape(30.dp))
         .border(1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(30.dp))
         .padding(horizontal=14.dp,vertical=10.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-        Text("BruniO",color=if(focused) Color.Black else Color.White,fontSize=20.sp,fontWeight=FontWeight.Bold)
+        Text("BruniO",color=if(focused) Color.White else Color.White,fontSize=20.sp,fontWeight=FontWeight.Bold)
         if(held) Text(if(remaining==0L) tr("Suelta","Release") else "$remaining s",
-            color=if(focused) Color.Black else Color.White,fontSize=12.sp)
+            color=if(focused) Color.White else Color.White,fontSize=12.sp)
     }
 }

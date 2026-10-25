@@ -377,9 +377,9 @@ private fun SearchKey(label: String,modifier: Modifier=Modifier,onClick: () -> U
     var focused by remember { mutableStateOf(false) }
     val largeRP80=LocalEasySearchRP80.current
     Box(modifier.height(if(largeRP80) 34.dp else 28.dp).onFocusChanged {focused=it.isFocused}.focusable().tvClick(onClick).clickable(onClick=onClick)
-        .background(if(focused) Accent else Panel,RoundedCornerShape(6.dp))
+        .background(GlassActionBrushRP108(focused),RoundedCornerShape(6.dp))
         .border(1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(6.dp)).padding(horizontal=4.dp),
         contentAlignment=Alignment.Center) {
-        Text(label,color=if(focused) FocusInk else Color.White,fontSize=if(largeRP80) 16.sp else 13.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+        Text(label,color=if(focused) Color.White else Color.White,fontSize=if(largeRP80) 16.sp else 13.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
     }
 }

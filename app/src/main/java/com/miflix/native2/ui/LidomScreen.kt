@@ -114,7 +114,7 @@ internal fun LidomScreen(state:AppState) {
 private fun LidomGameCard(game:LidomGame,onClick:()->Unit) {
     var focused by remember(game.id) {mutableStateOf(false)}
     Column(Modifier.fillMaxWidth().onFocusChanged {focused=it.isFocused}.focusable().tvClick(onClick)
-        .background(if(focused) FocusedPanel else Panel,RoundedCornerShape(20.dp))
+        .background(GlassActionBrushRP108(focused),RoundedCornerShape(20.dp))
         .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(20.dp))
         .padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)) {

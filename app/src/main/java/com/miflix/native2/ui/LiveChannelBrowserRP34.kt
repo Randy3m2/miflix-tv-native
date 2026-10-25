@@ -404,10 +404,10 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
 @Composable
 private fun BrowserCategoryRowRP34(title:String,selected:Boolean,modifier:Modifier,onSelect:()->Unit,source:String="",activateOnly:Boolean=false,onActivate:()->Unit=onSelect) {
     var focused by remember {mutableStateOf(false)}
-    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(9.dp)).background(if(focused) Color.White else if(selected) Color(0xFF292929) else Color.Transparent)
+    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(9.dp)).background(GlassActionBrushRP108(focused,selected))
         .onFocusChanged {focused=it.isFocused;if(it.isFocused && !activateOnly) onSelect()}.focusable().tvClick(onActivate).clickable(onClick=onActivate).padding(horizontal=12.dp,vertical=12.dp)) {
-        Text(title,color=if(focused) Color.Black else Color.White,fontSize=14.sp,maxLines=2)
-        if(source.isNotBlank()) Text(source,color=if(focused) Color.DarkGray else Muted,fontSize=10.sp)
+        Text(title,color=if(focused) Color.White else Color.White,fontSize=14.sp,maxLines=2)
+        if(source.isNotBlank()) Text(source,color=if(focused) Color(0xFFDDDDDD) else Muted,fontSize=10.sp)
     }
 }
 
@@ -419,7 +419,7 @@ private fun BrowserChannelRowRP34(channel:LiveChannel,number:Int,favorite:Boolea
     }
     var focused by remember(channel.id) {mutableStateOf(false)}
     var logoFailedRP97 by remember(channel.poster) {mutableStateOf(false)}
-    Row(modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(if(focused) Color(0xFF292929) else Color.Transparent)
+    Row(modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(GlassActionBrushRP108(focused))
         .border(if(focused) 1.dp else 0.dp,if(focused) Color.White else Color.Transparent,RoundedCornerShape(8.dp))
         .onFocusChanged {focused=it.isFocused}.tvChannelTimedClickRP54(click,favoriteHold,optionsHold).focusable().padding(horizontal=10.dp,vertical=9.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -450,7 +450,7 @@ internal fun LiveFavoriteRP36(state:AppState,request:PlayerRequest,onInteraction
         LiveLibrary.toggle(context,state,request.liveProvider,LiveChannel(request.liveChannelId,request.liveType,request.item.title,request.item.backdrop,request.item.overview))
     }
     Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp))
-        .background(if(focused) Color(0xFF303030) else Color.Transparent)
+        .background(GlassActionBrushRP108(focused))
         .border(if(focused) 1.dp else 0.dp,if(focused) Color.White else Color.Transparent,RoundedCornerShape(12.dp))
         .semantics {contentDescription=action;stateDescription=if(favorite) "Favorito" else "Sin marcar"}
         .onFocusChanged {focused=it.isFocused;if(it.isFocused) onInteraction()}

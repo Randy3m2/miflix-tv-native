@@ -75,7 +75,7 @@ internal fun CustomChannelsPanelRP45(state:AppState,initialEditRP48:CustomChanne
                             val play={if(state.partyRole!=PartyRole.GUEST && !state.kidsMode) {close();state.openLivePlayer(CustomChannelsRP45.request(channel))}}
                             val edit={actionsRP48=channel}
                             Column(Modifier.fillMaxWidth().onFocusChanged {focused=it.isFocused}.focusable().tvPlaybackClick(play,edit).clickable(onClick=play)
-                                .background(if(focused) Color(0xFF292929) else Color(0xFF181818),RoundedCornerShape(12.dp))
+                                .background(GlassActionBrushRP108(focused),RoundedCornerShape(12.dp))
                                 .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(12.dp)).padding(15.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
                                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                                     AsyncImage(channel.logo,channel.name,Modifier.size(48.dp),contentScale=ContentScale.Fit)

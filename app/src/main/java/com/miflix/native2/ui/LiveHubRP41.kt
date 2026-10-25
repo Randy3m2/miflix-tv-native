@@ -68,15 +68,15 @@ internal fun LiveHubRP41(state:AppState) {
     }
     fun back() {changeSectionRP46(if(section=="nauta-source") "others" else "hub")}
     BackHandler {if(section!="hub") back() else state.screen=Screen.HOME}
-    LaunchedEffect(section) {if(section=="hub") {withFrameNanos {};runCatching {first.requestFocus()}}}
     Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal=14.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Sidebar(Screen.LIVE_TV,state.activeProfile.name,{state.screen=it},state.unreadNoticeCount,state.activeProfile,
             onMoveDown={runCatching {contentFocusRP44.requestFocus()};Unit},onEditPicture={state.profilePhotoEditor=state.activeProfile},kids=state.kidsMode)
         Column(Modifier.weight(1f).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
+        if(section!="hub") Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
             FocusButton("‹",horizontalPadding=14.dp) {if(section=="hub") state.screen=Screen.HOME else back()}
             Text(if(section=="hub") tr("En Vivo","Live") else when(section) {"basketball"->"NBA · Basketball";"baseball"->"MLB · Baseball";"football"->"NFL · American Football";"soccer"->tr("Fútbol","Football");"f1"->"F1";"lidom"->"LIDOM";"tv"->tr("Canales de TV","TV Channels");"nauta-source"->"Nauta Source";else->"Others"},color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
             if(section=="others") {
+                FocusButton(tr("Marcadores en vivo","Live scores")) {state.showLiveScoresRP11=true}
                 FocusButton(tr("Mis canales","My channels")) {customChannelsRP45=true}
                 FocusButton(tr("Configurar deportes","Sports settings")) {configuring=true}
             }
@@ -84,14 +84,14 @@ internal fun LiveHubRP41(state:AppState) {
         if(section=="hub") {
             val board=ImageBitmap.imageResource(R.drawable.live_hub_board_rp41)
             BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().focusRequester(contentFocusRP44).focusGroup()) {
-            val gapRP46=10.dp
-            val tileWidthRP46=(maxWidth-32.dp-gapRP46*2)/3
-            val tileHeightRP46=(maxHeight-8.dp-gapRP46*2)/3
-            Column(Modifier.width(tileWidthRP46*3+gapRP46*2).height(tileHeightRP46*3+gapRP46*2).align(Alignment.Center),verticalArrangement=Arrangement.spacedBy(gapRP46)) {
-                repeat(3) {row ->
+            val gapRP46=16.dp
+            val tileWidthRP46=(maxWidth-16.dp-gapRP46*2)/3
+            val tileHeightRP46=(maxHeight-8.dp-gapRP46)/2
+            Column(Modifier.width(tileWidthRP46*3+gapRP46*2).height(tileHeightRP46*2+gapRP46).align(Alignment.Center),verticalArrangement=Arrangement.spacedBy(gapRP46)) {
+                repeat(2) {row ->
                     Row(Modifier.height(tileHeightRP46).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(gapRP46)) {
                         repeat(3) {col ->
-                            val index=row*3+col;val key=liveHubKeysRP41[index]
+                            val index=listOf(0,1,2,3,4,8)[row*3+col];val key=liveHubKeysRP41[index]
                             HubTileRP41(board,index,key,Modifier.weight(1f).fillMaxHeight().then(if(index==0) Modifier.focusRequester(first) else Modifier)) {
                                 when(key) {
                                     "scores"->state.showLiveScoresRP11=true
@@ -225,7 +225,7 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,openNa
         loading=true;message=""
         try {
             val all=hubCatalogRP41.get(manifest) ?: repo.categories(manifest).also {hubCatalogRP41.put(manifest,it)}
-            categories=all.filter {if(section=="others" && SportsRecordingPolicyRP72.recording(it.name,it.id,it.genre)) true else liveSportGroupRP41(it)==section && (section!="others" || !liveAggregateRP41(it))}
+            categories=all.filter {if(section=="others" && SportsRecordingPolicyRP72.recording(it.name,it.id,it.genre)) true else (if(section=="others") liveSportGroupRP41(it) in listOf("others","soccer","football") else liveSportGroupRP41(it)==section) && (section!="others" || !liveAggregateRP41(it))}
             val savedRP46=LiveHubMemoryRP46.category(ownerRP46,section)
             selected=categories.firstOrNull {it.type+":"+it.id+":"+it.genre.orEmpty()==savedRP46} ?: categories.firstOrNull()
             if(categories.isEmpty()) message=tr("No hay categorías publicadas para este deporte.","No categories published for this sport.")
@@ -404,7 +404,7 @@ private fun HubLidomRP41(state:AppState,modifier:Modifier) {
                 var focused by remember {mutableStateOf(false)}
                 val choose={team=club;state.lidomTeamId=club.id}
                 Row(Modifier.fillMaxWidth().height(100.dp).clip(RoundedCornerShape(14.dp))
-                    .background(if(focused) Color(0xFF303030) else Color(0xFF171717))
+                    .background(GlassActionBrushRP108(focused))
                     .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(14.dp))
                     .onFocusChanged {focused=it.isFocused}.focusable().tvClick(choose).clickable(onClick=choose).padding(14.dp),
                     verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
@@ -423,16 +423,16 @@ private fun HubLidomRP41(state:AppState,modifier:Modifier) {
 internal fun HubCategoryChipRP42(label:String,selected:Boolean,click:()->Unit) {
     var focused by remember {mutableStateOf(false)}
     val active=actionFocusVisibleRP64(focused)
-    Row(Modifier.clip(RoundedCornerShape(18.dp)).background(if(active) Color.White else if(selected) Color(0xFF303030) else Color(0xFF161616))
+    Row(Modifier.clip(RoundedCornerShape(18.dp)).background(GlassActionBrushRP108(active,selected))
         .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else if(selected) Color(0xFF727272) else Color(0xFF2A2A2A),RoundedCornerShape(18.dp))
         .onFocusChanged {focused=it.isFocused}.focusable().tvClick(click).clickable(onClick=click).padding(horizontal=16.dp,vertical=12.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(9.dp)) {
         Canvas(Modifier.size(16.dp)) {
             if(label=="M3U") {
-                for(i in 0..2) drawLine(if(active) Color.Black else Color.White,androidx.compose.ui.geometry.Offset(0f,size.height*(.2f+i*.3f)),androidx.compose.ui.geometry.Offset(size.width,size.height*(.2f+i*.3f)),strokeWidth=2.dp.toPx())
-            } else drawCircle(if(active) Color.Black else if(selected) Color.White else Color(0xFF888888),radius=size.minDimension*.28f)
+                for(i in 0..2) drawLine(if(active) Color.White else Color.White,androidx.compose.ui.geometry.Offset(0f,size.height*(.2f+i*.3f)),androidx.compose.ui.geometry.Offset(size.width,size.height*(.2f+i*.3f)),strokeWidth=2.dp.toPx())
+            } else drawCircle(if(active) Color.White else if(selected) Color.White else Color(0xFF888888),radius=size.minDimension*.28f)
         }
-        Text(label,color=if(active) Color.Black else Color.White,fontSize=13.sp,fontWeight=if(selected) FontWeight.Bold else FontWeight.Normal)
+        Text(label,color=if(active) Color.White else Color.White,fontSize=13.sp,fontWeight=if(selected) FontWeight.Bold else FontWeight.Normal)
     }
 }
 

@@ -24,7 +24,7 @@ private fun ActionSurface(modifier:Modifier,onClick:()->Unit,content:@Composable
     var focused by remember {mutableStateOf(false)}
     val active=actionFocusVisibleRP64(focused)
     Box(modifier.onFocusChanged {focused=it.isFocused}.focusable().tvClick(onClick).clickable(onClick=onClick)
-        .background(if(active) Color.White else Panel,RoundedCornerShape(20.dp))
+        .background(GlassActionBrushRP108(active),RoundedCornerShape(20.dp))
         .border(2.dp,if(active) Color.White else Accent.copy(alpha=.3f),RoundedCornerShape(20.dp))) {content(active)}
 }
 
@@ -33,8 +33,8 @@ internal fun LoadMoreTile(modifier:Modifier=Modifier,onClick:()->Unit) {
     ActionSurface(modifier,onClick) {active ->
         Column(Modifier.align(Alignment.Center).padding(12.dp),horizontalAlignment=Alignment.CenterHorizontally,
             verticalArrangement=Arrangement.spacedBy(6.dp)) {
-            Text("+",color=if(active) Color.Black else Accent,fontSize=30.sp,lineHeight=32.sp,fontWeight=FontWeight.Light)
-            Text(tr("Cargar más","Load more"),color=if(active) Color.Black else Color.White,fontSize=15.sp,fontWeight=FontWeight.Bold)
+            Text("+",color=if(active) Color.White else Accent,fontSize=30.sp,lineHeight=32.sp,fontWeight=FontWeight.Light)
+            Text(tr("Cargar más","Load more"),color=if(active) Color.White else Color.White,fontSize=15.sp,fontWeight=FontWeight.Bold)
             Text(tr("Explorar →","Explore →"),color=if(active) Color(0xFF555555) else Muted,fontSize=11.sp)
         }
     }
@@ -46,13 +46,13 @@ internal fun FeatureActionCard(title:String,subtitle:String,glyph:String="+",mod
         Row(Modifier.padding(horizontal=18.dp,vertical=14.dp),verticalAlignment=Alignment.CenterVertically,
             horizontalArrangement=Arrangement.spacedBy(14.dp)) {
             Box(Modifier.size(38.dp).background(Accent.copy(alpha=.17f),RoundedCornerShape(12.dp)),contentAlignment=Alignment.Center) {
-                Text(glyph,color=if(active) Color.Black else Accent,fontSize=23.sp,fontWeight=FontWeight.Bold)
+                Text(glyph,color=if(active) Color.White else Accent,fontSize=23.sp,fontWeight=FontWeight.Bold)
             }
             Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
-                Text(title,color=if(active) Color.Black else Color.White,fontSize=16.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
+                Text(title,color=if(active) Color.White else Color.White,fontSize=16.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
                 Text(subtitle,color=if(active) Color(0xFF555555) else Muted,fontSize=12.sp,maxLines=2,overflow=TextOverflow.Ellipsis)
             }
-            Text("›",color=if(active) Color.Black else Accent,fontSize=25.sp)
+            Text("›",color=if(active) Color.White else Accent,fontSize=25.sp)
         }
     }
 }

@@ -87,7 +87,7 @@ private fun CreateListCardRC104(modifier:Modifier=Modifier,onClick:()->Unit) {
     // Home can constrain the shelf height below 208dp. Keep the primary action centered
     // and omit secondary copy when there is insufficient room, instead of clipping it.
     BoxWithConstraints(modifier.height(208.dp).onFocusChanged {focused=it.isFocused}.clip(shape)
-        .background(Panel).border(if(focused || hovered) 2.dp else 1.dp,if(focused || hovered) Color.White else PanelBorder,shape)
+        .background(GlassActionBrushRP108(focused || hovered)).border(if(focused || hovered) 2.dp else 1.dp,if(focused || hovered) Color.White else PanelBorder,shape)
         .hoverable(source).clickable(role=Role.Button,onClick=onClick),contentAlignment=Alignment.Center) {
         val showSubtitle=maxHeight>=132.dp
         Row(Modifier.fillMaxWidth().padding(horizontal=18.dp,vertical=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {

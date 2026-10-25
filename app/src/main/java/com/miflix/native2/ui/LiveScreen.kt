@@ -235,9 +235,9 @@ private fun LiveChannelRow(channel: LiveChannel, number: Int, onClick: () -> Uni
     var focused by remember(channel.id) { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().onFocusChanged { focused = it.hasFocus }
         .tvPlaybackClick(onClick, onLongClick).focusable().clickable(onClick = onClick)
-        .background(if (focused) Accent else Panel, RoundedCornerShape(14.dp)).padding(12.dp),
+        .background(GlassActionBrushRP108(focused), RoundedCornerShape(14.dp)).padding(12.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-        Text(number.toString().padStart(3, '0'), color = if (focused) FocusInk else Color.White,
+        Text(number.toString().padStart(3, '0'), color = if (focused) Color.White else Color.White,
             fontSize = 18.sp, lineHeight=22.sp, modifier = Modifier.width(58.dp))
         Box(Modifier.size(62.dp).clip(RoundedCornerShape(9.dp)).background(Color(0xFF303030)),
             contentAlignment = androidx.compose.ui.Alignment.Center) {
@@ -246,10 +246,10 @@ private fun LiveChannelRow(channel: LiveChannel, number: Int, onClick: () -> Uni
         }
         Spacer(Modifier.width(18.dp))
         Column(Modifier.weight(1f)) {
-            Text(channel.name,color=if(focused) FocusInk else Color.White,fontSize=16.sp,lineHeight=19.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-            schedule(if(focused) Color.DarkGray else Muted)
+            Text(channel.name,color=if(focused) Color.White else Color.White,fontSize=16.sp,lineHeight=19.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            schedule(if(focused) Color(0xFFDDDDDD) else Muted)
         }
-        Text(tr("EN VIVO","LIVE"), color = if (focused) FocusInk else Color.White, fontSize = 12.sp, lineHeight=15.sp)
+        Text(tr("EN VIVO","LIVE"), color = if (focused) Color.White else Color.White, fontSize = 12.sp, lineHeight=15.sp)
     }
 }
 
@@ -258,7 +258,7 @@ internal fun LiveChannelTile(channel: LiveChannel,number: Int,favorite: Boolean,
     var focused by remember(channel.id) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().height(176.dp).onFocusChanged { focused=it.isFocused }.focusable()
         .tvPlaybackClick(onClick,onLongClick).clickable(onClick=onClick)
-        .background(if(focused) FocusedPanel else Panel,RoundedCornerShape(14.dp))
+        .background(GlassActionBrushRP108(focused),RoundedCornerShape(14.dp))
         .border(1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(14.dp)).padding(14.dp),
         verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {

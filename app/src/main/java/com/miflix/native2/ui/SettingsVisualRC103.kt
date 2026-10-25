@@ -46,7 +46,7 @@ private val SettingsAccentRC103=Accent
 internal fun SettingsIconRC103(kind:String,focused:Boolean=false) {
     Box(Modifier.size(44.dp).background(if(focused) Color(0x14000000) else SettingsAccentRC103.copy(alpha=0.12f),RoundedCornerShape(14.dp)),contentAlignment=Alignment.Center) {
         Canvas(Modifier.size(26.dp)) {
-            val c=if(focused) Color.Black else SettingsAccentRC103;val w=size.width;val h=size.height;val sw=2.dp.toPx()
+            val c=if(focused) Color.White else SettingsAccentRC103;val w=size.width;val h=size.height;val sw=2.dp.toPx()
             fun line(x:Float,y:Float,x2:Float,y2:Float)=drawLine(c,Offset(w*x,h*y),Offset(w*x2,h*y2),sw)
             when(kind) {
                 "sleep" -> {drawCircle(c,w*0.34f,center,style=Stroke(sw));line(.5f,.5f,.5f,.25f);line(.5f,.5f,.7f,.6f)}
@@ -103,12 +103,12 @@ internal fun SettingsTileRC103(title:String,description:String,icon:String,modif
     val interaction=if(checked==null) Modifier.clickable(role=Role.Button,onClick=onClick) else Modifier
         .semantics {stateDescription=if(checked) tr("Activado","On") else tr("Desactivado","Off")}
         .toggleable(value=checked,role=Role.Switch,onValueChange={onClick()})
-    Row(modifier.fillMaxWidth().clip(shape).background(if(filled) Color.White else Panel)
+    Row(modifier.fillMaxWidth().clip(shape).background(GlassActionBrushRP108(filled))
         .border(if(active) 2.dp else 1.dp,edge,shape).onFocusChanged {focused=it.isFocused}.hoverable(hoverSource).then(interaction).padding(16.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
         SettingsIconRC103(icon,filled)
         Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-            Text(title,color=if(filled) Color.Black else Color.White,fontSize=17.sp,lineHeight=22.sp,fontWeight=FontWeight.SemiBold)
+            Text(title,color=if(filled) Color.White else Color.White,fontSize=17.sp,lineHeight=22.sp,fontWeight=FontWeight.SemiBold)
             Text(description,color=if(filled) Color(0xFF555555) else Muted,fontSize=13.sp,lineHeight=18.sp)
         }
         if(checked!=null) Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(5.dp)) {
@@ -117,8 +117,8 @@ internal fun SettingsTileRC103(title:String,description:String,icon:String,modif
                 val radius=size.height/2-3.dp.toPx()
                 drawCircle(if(checked) Color.White else Color.White,radius,Offset(size.height/2+(size.width-size.height)*position,size.height/2))
             }
-            Text(if(checked) tr("ACTIVO","ON") else tr("INACTIVO","OFF"),color=if(filled) Color.Black else if(checked) SettingsAccentRC103 else Muted,fontSize=10.sp,fontWeight=FontWeight.Bold)
-        } else Text("›",color=if(filled) Color.Black else SettingsAccentRC103,fontSize=30.sp)
+            Text(if(checked) tr("ACTIVO","ON") else tr("INACTIVO","OFF"),color=if(filled) Color.White else if(checked) SettingsAccentRC103 else Muted,fontSize=10.sp,fontWeight=FontWeight.Bold)
+        } else Text("›",color=if(filled) Color.White else SettingsAccentRC103,fontSize=30.sp)
     }
 }
 

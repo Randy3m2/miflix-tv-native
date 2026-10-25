@@ -42,10 +42,10 @@ internal fun ModernButtonRP63(text:String,modifier:Modifier=Modifier,primary:Boo
     val shape=RoundedCornerShape(12.dp)
     Box(modifier.onFocusChanged {focused=it.isFocused}.focusable(enabled)
         .tvClick {if(enabled) action()}.clickable(enabled=enabled,onClick=action)
-        .background(if(active) Color.White else if(primary) Color(0xFF211F28) else Color(0xFF17181C),shape)
+        .background(GlassActionBrushRP108(active,primary,destructive),shape)
         .border(if(active) 2.dp else 1.dp,if(active) Color.White else if(primary) Accent.copy(alpha=.55f) else ModernBorderRP63,shape)
         .padding(horizontal=18.dp,vertical=13.dp),contentAlignment=Alignment.Center) {
-        Text(text,color=if(!enabled) Color(0xFF666871) else if(active) Color.Black else if(destructive) Color(0xFFFF858D) else Color.White,fontSize=15.sp,fontWeight=FontWeight.SemiBold)
+        Text(text,color=if(!enabled) Color(0xFF666871) else if(active) Color.White else if(destructive) Color(0xFFFF858D) else Color.White,fontSize=15.sp,fontWeight=FontWeight.SemiBold)
     }
 }
 

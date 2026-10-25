@@ -92,9 +92,9 @@ internal fun CompactPlayerControls(
             .padding(start=24.dp,end=24.dp,top=30.dp,bottom=16.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
             var titleFocused by remember { mutableStateOf(false) }
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            Text(request.item.title,color=if(titleFocused) Color.Black else Color.White,fontSize=22.sp,lineHeight=26.sp,maxLines=1,
+            Text(request.item.title,color=if(titleFocused) Color.White else Color.White,fontSize=22.sp,lineHeight=26.sp,maxLines=1,
                 modifier=Modifier.weight(1f,fill=false).onFocusChanged { titleFocused=it.isFocused; if(it.isFocused) onInteraction() }
-                    .background(if(titleFocused) Color.White else Color.Transparent,RoundedCornerShape(6.dp))
+                    .background(GlassActionBrushRP108(titleFocused),RoundedCornerShape(6.dp))
                     .semantics { contentDescription=request.item.title+" · "+tr("Opciones de contenido y Party","Content and Party options") }
                     .clickable { onInteraction(); onMenu("content") }.padding(horizontal=4.dp,vertical=2.dp))
             channelFavoriteRP36()
@@ -135,10 +135,10 @@ private fun PlayerIconButton(icon: String, label: String, modifier: Modifier=Mod
     var focused by remember { mutableStateOf(false) }
     Box(modifier.size(44.dp).onFocusChanged { focused=it.isFocused; if(it.isFocused) { onInteraction(); onLabel(label) } }
         .then(if(onLongClick!=null && enabled) Modifier.tvPlaybackClick({ onInteraction();onClick() },{ onInteraction();onLongClick() }) else Modifier)
-        .background(if(focused) Color.White else Color.Transparent,CircleShape)
+        .background(GlassActionBrushRP108(focused),CircleShape)
         .semantics { contentDescription=label }
         .clickable(enabled=enabled) { onInteraction(); onClick() },contentAlignment=Alignment.Center) {
-        PlayerGlyph(icon,if(!enabled) Color(0xFF666666) else if(focused) Color.Black else Color.White,Modifier.size(23.dp))
+        PlayerGlyph(icon,if(!enabled) Color(0xFF666666) else if(focused) Color.White else Color.White,Modifier.size(23.dp))
 
     }
 }

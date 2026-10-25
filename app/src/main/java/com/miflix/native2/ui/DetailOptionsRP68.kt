@@ -73,7 +73,7 @@ private fun DetailCloseRP70(close:()->Unit) {
     val selected=actionFocusVisibleRP64(focused)
     val label=tr("Cerrar","Close")
     Box(Modifier.size(46.dp).clip(RoundedCornerShape(12.dp))
-        .background(if(selected)Color.White else Color(0xFF242424))
+        .background(GlassActionBrushRP108(selected))
         .semantics {contentDescription=label}
         .onFocusChanged {focused=it.isFocused}.tvClick(close).focusable()
         .clickable(role=Role.Button,onClick=close),contentAlignment=Alignment.Center) {
@@ -95,7 +95,7 @@ private fun DetailActionRP68(option:DetailOptionRP68,modifier:Modifier=Modifier)
     val selected=actionFocusVisibleRP64(focused)
     val ink=if(selected)Color(0xFF101010) else Color(0xFFEAEAEA)
     Row(modifier.heightIn(min=58.dp).clip(RoundedCornerShape(10.dp))
-        .background(if(selected)Color.White else Color(0xFF1D1D1D))
+        .background(GlassActionBrushRP108(selected))
         .onFocusChanged {focused=it.isFocused}.tvClick(option.action).focusable().clickable(onClick=option.action)
         .padding(horizontal=13.dp,vertical=13.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
         DetailIconRP68(option.icon,ink)

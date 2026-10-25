@@ -143,7 +143,7 @@ private fun MomentFriendCard(friend: SocialPerson,enabled: Boolean,onClick: () -
     val activate: () -> Unit={if(enabled) onClick()}
     Row(Modifier.fillMaxWidth().onFocusChanged {focused=it.isFocused}.focusable()
         .tvClick(activate).clickable(onClick=activate)
-        .background(if(focused) FocusedPanel else Bg,RoundedCornerShape(18.dp))
+        .background(GlassActionBrushRP108(focused),RoundedCornerShape(18.dp))
         .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(18.dp))
         .padding(14.dp),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
         ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(48.dp).clip(CircleShape))

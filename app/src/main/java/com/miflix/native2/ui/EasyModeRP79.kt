@@ -156,11 +156,11 @@ private fun EasyShelfRP79(title:String,rows:List<MediaSummary>,onOpen:(MediaSumm
 @Composable
 private fun EasyCardRP79(item:MediaSummary,modifier:Modifier=Modifier,onOpen:()->Unit) {
     var focused by remember(item.cloudId) {mutableStateOf(false)}
-    Column(modifier.clip(RoundedCornerShape(16.dp)).background(if(focused) Color.White else Color(0xFF191919))
+    Column(modifier.clip(RoundedCornerShape(16.dp)).background(GlassActionBrushRP108(focused))
         .border(if(focused) 3.dp else 1.dp,if(focused) Color.White else Color(0xFF333333),RoundedCornerShape(16.dp))
         .onFocusChanged {focused=it.isFocused}.focusable().tvClick(onOpen).clickable(onClick=onOpen)) {
         AsyncImage(item.poster,null,Modifier.fillMaxWidth().height(220.dp).background(Color(0xFF222222)),contentScale=ContentScale.Crop)
-        Text(item.title,color=if(focused) Color.Black else Color.White,fontSize=20.sp,lineHeight=26.sp,maxLines=2,
+        Text(item.title,color=if(focused) Color.White else Color.White,fontSize=20.sp,lineHeight=26.sp,maxLines=2,
             overflow=TextOverflow.Ellipsis,modifier=Modifier.fillMaxWidth().heightIn(min=68.dp).padding(10.dp))
     }
 }

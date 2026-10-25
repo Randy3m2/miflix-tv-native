@@ -43,11 +43,11 @@ internal fun WatchedFriendsBadgeRP93(state:AppState,item:MediaSummary) {
     LaunchedEffect(owner,item.cloudId) {people=state.friendsWhoWatchedRP93(item.cloudId)}
     if(people.isEmpty()) return
     val label=if(item.type=="series") tr("Vieron episodios","Watched episodes") else tr("Ya la vieron","Already watched")
-    val ink=if(focused && !showNames) Color.Black else Color.White.copy(alpha=.92f)
+    val ink=if(focused && !showNames) Color.White else Color.White.copy(alpha=.92f)
     val preview=people.take(3)
     Row(Modifier.widthIn(max=264.dp).height(40.dp).focusRequester(pillFocus)
         .onFocusChanged {focused=it.isFocused}.clip(CircleShape)
-        .background(if(focused && !showNames) Color.White else Color.Black.copy(alpha=.15f))
+        .background(GlassActionBrushRP108(focused && !showNames))
         .semantics {contentDescription=label+" · ${people.size}"}
         .tvClick {showNames=true}.clickable(role=Role.Button) {showNames=true}
         .padding(horizontal=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -82,10 +82,10 @@ private fun WatchedPeopleRP96(label:String,people:List<SocialPerson>,close:()->U
                     Text("${people.size} "+tr(if(people.size==1) "amigo" else "amigos",if(people.size==1) "friend" else "friends"),color=Muted,fontSize=12.sp)
                 }
                 Box(Modifier.size(32.dp).focusRequester(closeFocus).onFocusChanged {closeFocused=it.isFocused}
-                    .clip(CircleShape).background(if(closeFocused) Color.White else Color.Transparent)
+                    .clip(CircleShape).background(GlassActionBrushRP108(closeFocused))
                     .semantics {contentDescription=tr("Cerrar","Close")}
                     .tvClick(close).clickable(role=Role.Button,onClick=close),contentAlignment=Alignment.Center) {
-                    Text("×",color=if(closeFocused) Color.Black else Color.White.copy(alpha=.8f),fontSize=24.sp)
+                    Text("×",color=if(closeFocused) Color.White else Color.White.copy(alpha=.8f),fontSize=24.sp)
                 }
             }
             LazyColumn(Modifier.fillMaxWidth().heightIn(max=276.dp),contentPadding=PaddingValues(vertical=4.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
@@ -93,12 +93,12 @@ private fun WatchedPeopleRP96(label:String,people:List<SocialPerson>,close:()->U
                     var rowFocused by remember(person.id) {mutableStateOf(false)}
                     Row(Modifier.fillMaxWidth().then(if(person.id==people.firstOrNull()?.id) Modifier.focusRequester(firstFocus) else Modifier)
                         .onFocusChanged {rowFocused=it.isFocused}.clip(RoundedCornerShape(14.dp))
-                        .background(if(rowFocused) Color.White else Color.Transparent).focusable().padding(8.dp),
+                        .background(GlassActionBrushRP108(rowFocused)).focusable().padding(8.dp),
                         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                         ProfileAvatar(Profile(person.id,person.nickname,person.avatar),Modifier.size(40.dp).clip(CircleShape))
                         Column(Modifier.weight(1f)) {
-                            Text(person.nickname,color=if(rowFocused) Color.Black else Color.White,fontSize=16.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
-                            Text(tr("Amigo en BruniO","BruniO friend"),color=if(rowFocused) Color.DarkGray else Muted,fontSize=11.sp,maxLines=1)
+                            Text(person.nickname,color=if(rowFocused) Color.White else Color.White,fontSize=16.sp,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
+                            Text(tr("Amigo en BruniO","BruniO friend"),color=if(rowFocused) Color(0xFFDDDDDD) else Muted,fontSize=11.sp,maxLines=1)
                         }
                     }
                 }

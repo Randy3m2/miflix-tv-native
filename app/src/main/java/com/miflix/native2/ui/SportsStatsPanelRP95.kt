@@ -138,9 +138,13 @@ private fun ColumnScope.StatsBoxScoreRP105(game:LiveScoreRP11,data:GameStatsRP95
     var teamIndex by remember {mutableIntStateOf(0)}
     var tab by remember {mutableIntStateOf(0)}
     var page by remember(teamIndex,tab) {mutableIntStateOf(0)}
-    val teamFocus=remember {FocusRequester()}
+    val teamRequests=remember {List(2) {FocusRequester()}}
+    val teamFocus=teamRequests[teamIndex]
     val firstRow=remember(teamIndex,tab,page) {FocusRequester()}
     val tabs=if(game.league=="NBA") listOf(tr("Jugadores","Players"),tr("Equipos","Teams")) else listOf(tr("Bateo","Batting"),tr("Pitcheo","Pitching"),tr("Equipos","Teams"))
+    val tabRequests=remember {List(tabs.size) {FocusRequester()}}
+    val tabFocus=tabRequests[tab]
+    val columnFocus=remember {FocusRequester()}
     val currentTeam=if(teamIndex==0) game.away else game.home
     val table=remember(data,teamIndex,tab,page) {
         if(data==null) StatsTableRP105(emptyList(),emptyList(),1)
@@ -159,23 +163,22 @@ private fun ColumnScope.StatsBoxScoreRP105(game:LiveScoreRP11,data:GameStatsRP95
     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)) {
         listOf(game.away,game.home).forEachIndexed {index,team ->
             StatsActionRP105(team.name,teamIndex==index,Modifier.weight(1f)
-                .then(if(index==teamIndex) Modifier.focusRequester(teamFocus) else Modifier)
-                .focusProperties {left=if(index==0) videoFocus else FocusRequester.Default;down=if(table.rows.isNotEmpty()) firstRow else FocusRequester.Default}) {teamIndex=index}
+                .focusRequester(teamRequests[index]).focusProperties {left=if(index==0) videoFocus else teamRequests[0];right=if(index==0) teamRequests[1] else FocusRequester.Cancel;down=tabFocus}) {teamIndex=index}
         }
     }
     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-        tabs.forEachIndexed {index,label ->StatsActionRP105(label,tab==index,Modifier.weight(1f).focusProperties {down=if(table.rows.isNotEmpty()) firstRow else FocusRequester.Default}) {tab=index}}
-        if(table.pages>1) StatsActionRP105("${page.coerceAtMost(table.pages-1)+1}/${table.pages} ›",false,description=tr("Más columnas","More columns")) {page=(page+1)%table.pages}
+        tabs.forEachIndexed {index,label ->StatsActionRP105(label,tab==index,Modifier.weight(1f).focusRequester(tabRequests[index]).focusProperties {up=teamFocus;down=firstRow;left=if(index>0) tabRequests[index-1] else videoFocus;right=if(index<tabs.lastIndex) tabRequests[index+1] else if(table.pages>1) columnFocus else FocusRequester.Cancel}) {tab=index}}
+        if(table.pages>1) StatsActionRP105("${page.coerceAtMost(table.pages-1)+1}/${table.pages} ›",false,Modifier.focusRequester(columnFocus).focusProperties {left=tabRequests.last();up=teamFocus;down=firstRow},description=tr("Más columnas","More columns")) {page=(page+1)%table.pages}
     }
     Text(currentTeam.name,color=Muted,fontSize=10.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
     StatsTableCellsRP105(tr("Jugador / estadística","Player / statistic"),table.columns,header=true)
     Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF343434)))
-    key(teamIndex,tab,page) {StatsTableRowsRP105(table,firstRow,teamFocus,videoFocus,Modifier.weight(1f))}
+    key(teamIndex,tab,page) {StatsTableRowsRP105(table,firstRow,tabFocus,teamFocus,videoFocus,Modifier.weight(1f))}
     Text(tr("← Video  ·  → Equipos  ·  Datos pueden adelantarse al video","← Video  ·  → Teams  ·  Data may lead video"),color=Muted,fontSize=9.sp,maxLines=1)
 }
 
 @Composable
-private fun StatsTableRowsRP105(table:StatsTableRP105,first:FocusRequester,header:FocusRequester,video:FocusRequester,modifier:Modifier) {
+private fun StatsTableRowsRP105(table:StatsTableRP105,first:FocusRequester,header:FocusRequester,teams:FocusRequester,video:FocusRequester,modifier:Modifier) {
     val list=rememberLazyListState()
     var tableFocused by remember {mutableStateOf(false)}
     var selectedKey by remember {mutableStateOf(table.rows.firstOrNull()?.key)}
@@ -215,7 +218,7 @@ private fun StatsTableRowsRP105(table:StatsTableRP105,first:FocusRequester,heade
                     true
                 }
                 21 -> {if(event.type==KeyEventType.KeyDown) runCatching {video.requestFocus()};true}
-                22 -> {if(event.type==KeyEventType.KeyDown) runCatching {header.requestFocus()};true}
+                22 -> {if(event.type==KeyEventType.KeyDown) runCatching {teams.requestFocus()};true}
                 else ->false
             }
         }.focusable(),state=list,contentPadding=PaddingValues(bottom=8.dp)) {
@@ -266,13 +269,13 @@ private fun StatsActionRP105(label:String,selected:Boolean,modifier:Modifier=Mod
     var focused by remember {mutableStateOf(false)}
     Box(modifier.height(30.dp).clip(RoundedCornerShape(5.dp))
         .semantics {contentDescription=description}.onFocusChanged {focused=it.isFocused}
-        .background(if(focused) Color.White else if(selected) Color(0xFF303036) else Color(0xFF181818))
+        .background(GlassActionBrushRP108(focused,selected))
         .onPreviewKeyEvent {event ->
             if(event.nativeKeyEvent.keyCode in listOf(23,66,160)) {
                 if(event.type==KeyEventType.KeyUp && !event.nativeKeyEvent.isCanceled) click()
                 true
             } else false
         }.clickable(onClick=click).padding(horizontal=8.dp),contentAlignment=Alignment.Center) {
-        Text(label,color=if(focused) Color.Black else Color.White,fontSize=12.sp,fontWeight=if(selected) FontWeight.Bold else FontWeight.Normal,maxLines=1,overflow=TextOverflow.Ellipsis)
+        Text(label,color=if(focused) Color.White else Color.White,fontSize=12.sp,fontWeight=if(selected) FontWeight.Bold else FontWeight.Normal,maxLines=1,overflow=TextOverflow.Ellipsis)
     }
 }

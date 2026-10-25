@@ -169,7 +169,7 @@ fun FriendsScreen(state: AppState) {
 private fun FriendTile(friend: FriendActivity,modifier: Modifier,onClick: () -> Unit) {
     var focused by remember(friend.id) { mutableStateOf(false) }
     Row(modifier.height(112.dp).onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
-        .background(if(focused) FocusedPanel else Panel,RoundedCornerShape(16.dp))
+        .background(GlassActionBrushRP108(focused),RoundedCornerShape(16.dp))
         .border(1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(16.dp)).padding(16.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
         ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(48.dp).clip(androidx.compose.foundation.shape.CircleShape))

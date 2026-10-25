@@ -12,6 +12,7 @@ import com.miflix.native2.BuildConfig
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
     val rc59Changes=listOf(
+        "RP108: seis tarjetas grandes en Live, reintento deportivo único, botones glass y foco corregido en navegación/Stats." to "RP108: six large Live tiles, one sports retry, glass buttons and corrected navigation/Stats focus.",
         "RP107: Dragon Ball Z envía siempre temporada 1 y episodio absoluto a las fuentes, también en Modo fácil y precarga." to "RP107: Dragon Ball Z always sends season 1 and absolute episode numbers to sources, including Easy mode and prewarm.",
         "RP106: Stats con foco persistente y scroll estable; menú centrado con efecto glass, engranaje de ajustes y Seguir viendo primero." to "RP106: persistent Stats focus and stable scrolling; centered glass navigation, settings gear and Continue Watching first.",
         "RP105: Stats NBA/MLB como tabla compacta, cabecera fija, navegación por todas las filas actualización cada 10 s y sin robo de foco del temporizador del video." to "RP105: compact NBA/MLB box-score tables, fixed headers, complete row navigation 10-second updates and no focus stealing from the video timer.",

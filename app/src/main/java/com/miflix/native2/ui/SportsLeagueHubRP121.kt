@@ -58,15 +58,9 @@ internal fun SportsLeagueHubRP121(state:AppState,league:String,modifier:Modifier
             Spacer(Modifier.weight(1f))
             FocusButton(if(followed) tr("✓ Siguiendo","✓ Following") else tr("+ Seguir","+ Follow"),primary=followed) {subscriptions=true}
         }
-        if(tab=="games" && league!="LIDOM") Row(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
-            FocusButton("‹",horizontalPadding=14.dp) {day=LocalDate.parse(day).minusDays(1).toString()}
-            FocusButton(tr("Hoy","Today"),primary=day==LocalDate.now().toString()) {day=LocalDate.now().toString()}
-            FocusButton("›",horizontalPadding=14.dp) {day=LocalDate.parse(day).plusDays(1).toString()}
-            Text(day,color=Color.White,fontSize=14.sp)
-        }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             tabs.SaveableStateProvider(tab) {when(tab) {
-                "games"->games(day)
+                "games"->games("")
                 "table"->StandingsScreenRP120(close={},initialLeagueRP121=league,embeddedRP121=true)
                 "stats"->SportsSeasonStatsRP121(league)
                 "players"->SportsPlayersRP121(league)
@@ -104,13 +98,12 @@ private fun SportsPersonDetailsRP121(person:SportsPersonRP121,close:()->Unit) {
 private fun SportsSeasonStatsRP121(league:String) {
     val context=LocalContext.current.applicationContext
     var data by remember(league) {mutableStateOf<SportsSnapshotRP121<List<SportsLeadersRP121>>?>(null)}
-    var retry by remember(league) {mutableIntStateOf(0)}
     var loading by remember {mutableStateOf(true)}
     var error by remember {mutableStateOf(false)}
     var person by remember {mutableStateOf<SportsPersonRP121?>(null)}
-    LaunchedEffect(league,retry) {
+    LaunchedEffect(league) {
         loading=true;error=false
-        try {data=withContext(Dispatchers.IO) {SportsBrowseRepositoryRP121.leaders(context,league,retry>0)}}
+        try {data=withContext(Dispatchers.IO) {SportsBrowseRepositoryRP121.leaders(context,league,false)}}
         catch(e:CancellationException) {throw e} catch(_:Exception) {error=true}
         finally {loading=false}
     }
@@ -120,7 +113,6 @@ private fun SportsSeasonStatsRP121(league:String) {
                 Text(tr("Líderes de temporada","Season leaders"),color=Color.White,fontSize=20.sp,fontWeight=FontWeight.Bold)
                 Text(seasonLabelRP121(league),color=Muted,fontSize=12.sp)
             }
-            FocusButton(tr("Actualizar","Refresh")) {if(!loading) retry++}
         }
         SportsDataStatusRP121(loading,error,data?.stale==true,data?.updated)
         val rows=data?.rows.orEmpty()
@@ -194,7 +186,6 @@ private fun SportsPlayersRP121(league:String) {
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp),verticalAlignment=Alignment.CenterVertically) {
             Text(tr(if(league=="F1") "Pilotos" else "Jugadores activos",if(league=="F1") "Drivers" else "Active players"),color=Color.White,fontSize=20.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
             FocusButton(teams.firstOrNull {it.id==teamId}?.name ?: tr("Todos los equipos","All teams")) {choosing=true}
-            FocusButton(tr("Actualizar","Refresh")) {if(!loading) retry++}
         }
         NativeTextField(query,{query=it},tr("Buscar jugador","Find player"),modifier=Modifier.fillMaxWidth())
         Text(if(league=="F1") tr("Última parrilla publicada · destacados primero","Last published race grid · featured first") else tr("Destacados primero · luego orden alfabético","Featured first · then alphabetical order"),color=Muted,fontSize=11.sp)

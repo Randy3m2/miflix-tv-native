@@ -169,11 +169,15 @@ internal object UpdateNotes {
         "Fichas web con imagen superior, sinopsis, Play on TV, My List, recomendar, compartir y eventos." to "Web title profiles with hero artwork, synopsis, Play on TV, My List, recommend, share and events.",
         "Enlaces cortos para compartir títulos y Recientes del historial sincronizado del perfil, de 25 en 25." to "Short title sharing links and Recents from the profile’s synced history, paged in groups of 25."
     )
-    val changes=listOf(
+    val rp124Changes=listOf(
         "RP124: las notificaciones de actualización muestran las novedades de la versión instalada." to "RP124: update notifications show release notes for the installed version.",
         "El historial de versiones anteriores queda separado y muestra primero las revisiones RP más recientes." to "Earlier release history is separate and lists the latest RP revisions first."
     )
-    val previousChanges=rc59Changes+legacyChanges+rc62Changes+listOf(
+    val changes=listOf(
+        "RP125: Table sin selector de temporada ni Refresh, con más espacio para las posiciones." to "RP125: Table removes season controls and Refresh, leaving more room for standings.",
+        "Games sin selector de fecha: muestra lo publicado por SS. Stats y Players sin Refresh." to "Games shows published SS events without a date selector. Stats and Players remove Refresh."
+    )
+    val previousChanges=rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
         "Menú de amigos: Watch, View Details, Recommendations y Close; detalles abre la ficha sin iniciar reproducción." to "Friend menu: Watch, View Details, Recommendations and Close; details opens the title without starting playback.",
         "Enlaces de Comet y Torrentio con texto ordenado e insignias de Dolby/HDR según sus metadatos." to "Clean Comet and Torrentio link metadata with small Dolby/HDR badges when reported by the source.",
         "Envío local a TV por Wi-Fi, con enlace y código de conexión; sin reproducción web." to "Send titles to TV over local Wi-Fi with a connection link and code; no web playback.",

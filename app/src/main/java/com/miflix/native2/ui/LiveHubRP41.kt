@@ -113,7 +113,7 @@ internal fun LiveHubRP41(state:AppState) {
             val league=when(section) {"basketball"->"NBA";"baseball"->"MLB";"f1"->"F1";else->"LIDOM"}
             SportsLeagueHubRP121(state,league,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup()) {day ->
                 if(section=="lidom") LidomGamesRP121(state,Modifier.fillMaxSize())
-                else HubSportsRP41(state,section,Modifier.fillMaxSize(),dayRP121=day) {changeSectionRP46("nauta-source")}
+                else HubSportsRP41(state,section,Modifier.fillMaxSize(),dayRP121=null) {changeSectionRP46("nauta-source")}
             }
         }
         else if(section=="lidom") HubLidomRP41(state,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())

@@ -27,17 +27,16 @@ internal fun StandingsScreenRP120(initialLeagueRP121:String="NBA",embeddedRP121:
     var league by remember(initialLeagueRP121) {mutableStateOf(initialLeagueRP121)}
     val today=LocalDate.now()
     fun currentSeason(id:String)=when(id) {"NBA"->today.year+if(today.monthValue>=7) 1 else 0;"LIDOM"->today.year-if(today.monthValue<7) 1 else 0;else->today.year}
-    var season by remember {mutableIntStateOf(currentSeason(league))}
+    val season=currentSeason(league)
     var groups by remember {mutableStateOf<List<StandingGroupRP120>>(emptyList())}
     var groupIndex by remember {mutableIntStateOf(0)}
     var loading by remember {mutableStateOf(false)}
     var message by remember {mutableStateOf("")}
-    var refresh by remember {mutableIntStateOf(0)}
     val scroll=rememberLazyListState()
-    LaunchedEffect(league,season,refresh) {
+    LaunchedEffect(league,season) {
         loading=true;message="";groups=emptyList();groupIndex=0
         try {
-            val result=withContext(Dispatchers.IO) {StandingsRP120.load(context,league,season,refresh>0)}
+            val result=withContext(Dispatchers.IO) {StandingsRP120.load(context,league,season,false)}
             groups=result.first
             if(result.second) message=tr("Sin conexión · última tabla guardada","Offline · last saved table")
         } catch(e:CancellationException) {throw e} catch(_:Exception) {message=tr("No se pudo cargar. Reintenta.","Could not load. Try again.")}
@@ -50,14 +49,8 @@ internal fun StandingsScreenRP120(initialLeagueRP121:String="NBA",embeddedRP121:
                 Text(tr("Tabla de posiciones","Standings"),color=Color.White,fontSize=26.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
                 if(!embeddedRP121) FocusButton("×",horizontalPadding=16.dp, onClick=close)
             }
-            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                if(!embeddedRP121) listOf("NBA","MLB","F1","LIDOM").forEach {id ->FocusButton(id,primary=id==league) {league=id;season=currentSeason(id);refresh=0}}
-                FocusButton("‹",horizontalPadding=14.dp) {if(season>currentSeason(league)-5) {season--;refresh=0}}
-                Text(if(league in listOf("NBA","LIDOM")) {
-                    if(league=="NBA") "${season-1}–$season" else "$season–${season+1}"
-                } else season.toString(),color=Color.White,modifier=Modifier)
-                FocusButton("›",horizontalPadding=14.dp) {if(season<currentSeason(league)) {season++;refresh=0}}
-                FocusButton(tr("Actualizar","Refresh")) {refresh++}
+            if(!embeddedRP121) Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                listOf("NBA","MLB","F1","LIDOM").forEach {id ->FocusButton(id,primary=id==league) {league=id}}
             }
             if(groups.size>1) Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 groups.forEachIndexed {i,g ->FocusButton(when(g.title) {"Eastern Conference"->tr("Conferencia Este","Eastern Conference");"Western Conference"->tr("Conferencia Oeste","Western Conference");"Drivers"->tr("Pilotos","Drivers");"Constructors"->tr("Constructores","Constructors");else->g.title},primary=i==groupIndex,horizontalPadding=12.dp) {groupIndex=i}}

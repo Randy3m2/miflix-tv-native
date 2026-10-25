@@ -5,7 +5,7 @@ import org.json.JSONObject
 import java.net.URLEncoder
 
 data class LiveCategory(val type: String, val id: String, val name: String, val genre: String? = null, val paginated: Boolean = false, val searchable: Boolean = false)
-data class LiveChannel(val id: String, val type: String, val name: String, val poster: String?, val description: String, val number: Int = 0,val tvgId: String = "")
+data class LiveChannel(val id: String, val type: String, val name: String, val poster: String?, val description: String, val number: Int = 0,val tvgId: String = "",val startsAtRP121:String="")
 
 class LiveRepository {
     private data class RankedSportsRP84(val stream:StreamChoice,val resolution:Int,val bitrate:Long,val index:Int)
@@ -54,7 +54,7 @@ class LiveRepository {
         return (0 until rows.length()).map { i ->
             val m = rows.getJSONObject(i)
             LiveChannel(m.getString("id"), m.optString("type", category.type), m.optString("name", "Channel"),
-                m.optString("poster").takeIf { it.isNotBlank() }, m.optString("description"))
+                m.optString("poster").takeIf { it.isNotBlank() }, m.optString("description"),startsAtRP121=SportsMetaPolicyRP121.start(m))
         }
     }
 

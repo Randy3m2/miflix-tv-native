@@ -99,12 +99,12 @@ internal fun CalendarSportEventRP120(state:AppState,event:SportEventRP120) {
 internal fun eventTimeRP120(event:SportEventRP120)=if(event.timed) DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(event.starts)) else tr("Hora por confirmar","Time TBA")
 
 @Composable
-internal fun CalendarSubscriptionsRP120(state:AppState,close:()->Unit) {
+internal fun CalendarSubscriptionsRP120(state:AppState,initialLeagueRP121:String?=null,close:()->Unit) {
     val context=LocalContext.current;val owner=CalendarStoreRP120.owner(context,state.activeProfile.id);val scope=rememberCoroutineScope()
     val revision by CalendarStoreRP120.revision.collectAsState()
     val subs=remember(revision,owner) {CalendarStoreRP120.subscriptions(context,owner)}
     val teams by produceState<List<CalendarTeamRP120>>(emptyList()) {value=withContext(Dispatchers.IO) {CalendarSourcesRP120.teams(context)}}
-    var league by remember {mutableStateOf<String?>(null)}
+    var league by remember(initialLeagueRP121) {mutableStateOf<String?>(initialLeagueRP121)}
     var query by remember {mutableStateOf("")}
     var feed by remember(owner) {mutableStateOf(CalendarStoreRP120.feed(context,owner))}
     var busy by remember {mutableStateOf(false)}

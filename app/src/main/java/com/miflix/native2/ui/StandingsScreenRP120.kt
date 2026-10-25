@@ -22,9 +22,9 @@ import kotlinx.coroutines.*
 import java.time.LocalDate
 
 @Composable
-internal fun StandingsScreenRP120(close:()->Unit) {
+internal fun StandingsScreenRP120(initialLeagueRP121:String="NBA",embeddedRP121:Boolean=false,close:()->Unit) {
     val context=LocalContext.current.applicationContext
-    var league by remember {mutableStateOf("NBA")}
+    var league by remember(initialLeagueRP121) {mutableStateOf(initialLeagueRP121)}
     val today=LocalDate.now()
     fun currentSeason(id:String)=when(id) {"NBA"->today.year+if(today.monthValue>=7) 1 else 0;"LIDOM"->today.year-if(today.monthValue<7) 1 else 0;else->today.year}
     var season by remember {mutableIntStateOf(currentSeason(league))}
@@ -44,14 +44,14 @@ internal fun StandingsScreenRP120(close:()->Unit) {
         finally {loading=false}
     }
     LaunchedEffect(groupIndex,league,season) {scroll.scrollToItem(0)}
-    PlayerMenuDialog(onDismissRequest=close,fullScreen=true) {
-        Column(Modifier.fillMaxSize().background(Bg).padding(28.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+    val contentRP121:@Composable ()->Unit = {
+        Column(Modifier.fillMaxSize().background(Bg).padding(if(embeddedRP121) 0.dp else 28.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                 Text(tr("Tabla de posiciones","Standings"),color=Color.White,fontSize=26.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
-                FocusButton("×",horizontalPadding=16.dp, onClick=close)
+                if(!embeddedRP121) FocusButton("×",horizontalPadding=16.dp, onClick=close)
             }
             Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                listOf("NBA","MLB","F1","LIDOM").forEach {id ->FocusButton(id,primary=id==league) {league=id;season=currentSeason(id);refresh=0}}
+                if(!embeddedRP121) listOf("NBA","MLB","F1","LIDOM").forEach {id ->FocusButton(id,primary=id==league) {league=id;season=currentSeason(id);refresh=0}}
                 FocusButton("‹",horizontalPadding=14.dp) {if(season>currentSeason(league)-5) {season--;refresh=0}}
                 Text(if(league in listOf("NBA","LIDOM")) {
                     if(league=="NBA") "${season-1}–$season" else "$season–${season+1}"
@@ -88,4 +88,5 @@ internal fun StandingsScreenRP120(close:()->Unit) {
             Text(tr("NBA: ESPN · MLB/LIDOM: MLB · F1: Jolpica. Caché 6 h.","NBA: ESPN · MLB/LIDOM: MLB · F1: Jolpica. 6-hour cache."),color=Muted,fontSize=10.sp)
         }
     }
+    if(embeddedRP121) contentRP121() else PlayerMenuDialog(onDismissRequest=close,fullScreen=true) {contentRP121()}
 }

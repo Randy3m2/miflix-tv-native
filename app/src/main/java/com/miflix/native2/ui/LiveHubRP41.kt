@@ -51,6 +51,7 @@ import kotlinx.coroutines.sync.withPermit
 private data class HubEventRP41(val provider:String,val channel:LiveChannel,val category:LiveCategory) {
     val key get()=provider+":"+channel.type+":"+channel.id
 }
+private val hubGamePagesRP121=PlaybackLinkCache<String,List<LiveChannel>>(16) {System.currentTimeMillis()}
 private val hubCatalogRP41=PlaybackLinkCache<String,List<LiveCategory>>(4) {System.currentTimeMillis()}
 
 @Composable
@@ -108,6 +109,13 @@ internal fun LiveHubRP41(state:AppState) {
             }
         } else if(section=="tv") key(owner) {LiveAutoStartRP83(state) {UnifiedLiveTVRP32(state,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())}}
         else if(section=="nauta-source") NautaSourceScreenRP71(state,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())
+        else if(!state.easyModeRP79 && section in listOf("basketball","baseball","f1","lidom")) key(section,revision) {
+            val league=when(section) {"basketball"->"NBA";"baseball"->"MLB";"f1"->"F1";else->"LIDOM"}
+            SportsLeagueHubRP121(state,league,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup()) {day ->
+                if(section=="lidom") LidomGamesRP121(state,Modifier.fillMaxSize())
+                else HubSportsRP41(state,section,Modifier.fillMaxSize(),dayRP121=day) {changeSectionRP46("nauta-source")}
+            }
+        }
         else if(section=="lidom") HubLidomRP41(state,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())
         else key(section,revision) {HubSportsRP41(state,section,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup()) {changeSectionRP46("nauta-source")}}
     }
@@ -155,7 +163,7 @@ private fun HubTileRP41(board:ImageBitmap,index:Int,label:String,modifier:Modifi
 }
 
 @Composable
-private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,openNautaSourceRP71:()->Unit) {
+private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,dayRP121:String?=null,openNautaSourceRP71:()->Unit) {
     val repo=remember {LiveRepository()};val scope=rememberCoroutineScope()
     val ownerRP46="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
     val contextRP48=LocalContext.current
@@ -175,14 +183,17 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,openNa
     var iptvF1RP43 by remember {mutableStateOf<List<HubEventRP41>>(emptyList())}
     var iptvWarningRP43 by remember {mutableStateOf("")}
     var recordingFilterRP97 by remember(ownerRP46) {mutableStateOf(LiveHubMemoryRP46.category(ownerRP46,"recording-sport").orEmpty().ifBlank {"all"})}
-    val allDisplayedRP97=events+nautaF1RP42+iptvF1RP43
+    val allDisplayedRP97=(events+nautaF1RP42+iptvF1RP43).filter {it.provider!="sports" || SportsBrowsePolicyRP121.leagueEvent(section,it.channel.name+" "+it.channel.description+" "+it.category.name+" "+it.category.genre.orEmpty())}
     val recordingModeRP97=section=="others" && (SportsRecordingPolicyRP72.recording(selected?.name,selected?.id,selected?.genre) || allDisplayedRP97.any {SportsRecordingPolicyRP72.recording(it.channel.name,it.channel.description)})
     val recordingKeysRP97=remember(allDisplayedRP97) {allDisplayedRP97.associate {entry ->
         val title=RecordingSportRP97.group(entry.channel.name)
         entry.key to if(title!="other") title else RecordingSportRP97.group(entry.category.name,entry.category.id,entry.category.genre.orEmpty(),entry.channel.description)
     }}
     val recordingGroupsRP97=recordingKeysRP97.values.distinct()
-    val displayedRP42=if(recordingModeRP97 && recordingFilterRP97!="all") allDisplayedRP97.filter {recordingKeysRP97[it.key]==recordingFilterRP97} else allDisplayedRP97
+    val datedRP121=remember(allDisplayedRP97,dayRP121) {if(dayRP121==null) allDisplayedRP97 else allDisplayedRP97.filter {
+        SportsBrowsePolicyRP121.visibleDay(it.channel.name,it.channel.description+" "+it.channel.startsAtRP121,dayRP121,java.time.LocalDate.now().toString(),continuous=it.provider!="sports")
+    }}
+    val displayedRP42=if(recordingModeRP97 && recordingFilterRP97!="all") datedRP121.filter {recordingKeysRP97[it.key]==recordingFilterRP97} else datedRP121
     LaunchedEffect(selected,loading,recordingGroupsRP97) {
         if(!loading && recordingGroupsRP97.isNotEmpty() && recordingFilterRP97!="all" && recordingFilterRP97 !in recordingGroupsRP97) recordingFilterRP97="all"
     }
@@ -226,15 +237,16 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,openNa
     LaunchedEffect(manifest,retry) {
         loading=true;message=""
         try {
-            val all=hubCatalogRP41.get(manifest) ?: repo.categories(manifest).also {hubCatalogRP41.put(manifest,it)}
-            categories=all.filter {if(section=="others" && SportsRecordingPolicyRP72.recording(it.name,it.id,it.genre)) true else (if(section=="others") liveSportGroupRP41(it) in listOf("others","soccer","football") else liveSportGroupRP41(it)==section) && (section!="others" || !liveAggregateRP41(it))}
+            val all=(if(retry==0) hubCatalogRP41.get(manifest) else null) ?: withContext(Dispatchers.IO) {repo.categories(manifest)}.also {hubCatalogRP41.put(manifest,it)}
+            categories=all.filter {if(section=="others" && SportsRecordingPolicyRP72.recording(it.name,it.id,it.genre)) true else (if(section=="others") liveSportGroupRP41(it) in listOf("others","soccer","football") else if(section=="lidom") liveSportGroupRP41(it)=="baseball" || "lidom" in (it.name+" "+it.genre.orEmpty()).lowercase() else liveSportGroupRP41(it)==section && SportsBrowsePolicyRP121.leagueEvent(section,it.name+" "+it.id+" "+it.genre.orEmpty())) && (section!="others" || !liveAggregateRP41(it))}
             val savedRP46=LiveHubMemoryRP46.category(ownerRP46,section)
-            selected=categories.firstOrNull {it.type+":"+it.id+":"+it.genre.orEmpty()==savedRP46} ?: categories.firstOrNull()
+            selected=categories.firstOrNull {it.type+":"+it.id+":"+it.genre.orEmpty()==savedRP46}
+                ?: (if(section=="lidom") categories.firstOrNull {"lidom" in (it.name+" "+it.genre.orEmpty()).lowercase()} else null) ?: categories.firstOrNull()
             if(categories.isEmpty()) message=tr("No hay categorías publicadas para este deporte.","No categories published for this sport.")
         } catch(e:CancellationException) {throw e} catch(_:Exception) {message=tr("La fuente de deportes no respondió.","Sports source did not respond.")}
         finally {loading=false}
     }
-    LaunchedEffect(selected) {
+    LaunchedEffect(selected,retry) {
         generation++;val c=selected ?: return@LaunchedEffect
         LiveHubMemoryRP46.category(ownerRP46,section,c.type+":"+c.id+":"+c.genre.orEmpty())
         loading=true;events=emptyList();message="";more=false;offset=0
@@ -242,7 +254,10 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,openNa
             offsetsRP41.clear();pendingRP41.clear()
             val requested=listOf(c)
             val batches=coroutineScope {requested.map {cat -> async {
-                val rows=permitsRP41.withPermit {repo.channels(manifest,cat)}
+                val pageKey=(System.currentTimeMillis()/300000L).toString()+"|"+manifest+"|"+cat.type+"|"+cat.id+"|"+cat.genre.orEmpty()
+                val rows=permitsRP41.withPermit {
+                    (if(retry==0) hubGamePagesRP121.get(pageKey) else null) ?: withContext(Dispatchers.IO) {repo.channels(manifest,cat)}.also {hubGamePagesRP121.put(pageKey,it)}
+                }
                 cat to rows
             }}.awaitAll()}
             events=batches.flatMap {(cat,rows) ->
@@ -289,8 +304,12 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,openNa
             FocusButton(tr("Tabla de posiciones","Standings")) {showStandingsRP120=true}
             FocusButton(tr("Calendario y suscripciones","Calendar & subscriptions")) {showCalendarRP120=true}
         }
+        if(dayRP121!=null) Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
+            Text(tr("Enlaces de la fuente · sin fecha: solo Hoy","Published sources · undated: only Today"),color=Muted,fontSize=10.sp,modifier=Modifier.weight(1f))
+            FocusButton(tr("Actualizar","Refresh")) {if(!loading && !resolving) retry++}
+        }
         // Only Others has category tabs. Dedicated sports present event cards only.
-        if(categories.isNotEmpty()) {
+        if(categories.isNotEmpty() && (section=="others" || categories.size>1)) {
             Text(tr("EXPLORA MÁS","EXPLORE MORE"),color=Muted,fontSize=11.sp,fontWeight=FontWeight.Bold)
             LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp),contentPadding=PaddingValues(4.dp)) {
                 items(categories,key={it.type+":"+it.id+":"+it.genre}) {c ->HubCategoryChipRP42(c.name,c==selected) {selected=c}}
@@ -314,7 +333,7 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,openNa
         if(nautaWarningRP42.isNotBlank()) Text(nautaWarningRP42,color=Muted,fontSize=12.sp)
         if(message.isNotBlank()) {Text(message,color=Muted);FocusButton(tr("Reintentar","Retry")) {retry++}}
         LazyVerticalGrid(GridCells.Adaptive(240.dp),Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(6.dp,6.dp,6.dp,30.dp)) {
-            items(displayedRP42,key={it.key}) {event ->HubEventCardRP41(event.channel.name,event.channel.poster,when {event.provider=="nauta"->if(f1ChannelRP42(event.channel.name)) "Live TV · F1" else "Live TV · DAZN";event.provider in IptvRepository.sources->"IPTV · "+IptvRepository.sources[event.provider]?.first.orEmpty();else->event.channel.description},onHoldRP48={tune(event,manual=true)}) {tune(event)}}
+            items(displayedRP42,key={it.key}) {event ->HubEventCardRP41(event.channel.name,event.channel.poster,when {event.provider=="nauta"->if(f1ChannelRP42(event.channel.name)) "Live TV · F1" else "Live TV · DAZN";event.provider in IptvRepository.sources->"IPTV · "+IptvRepository.sources[event.provider]?.first.orEmpty();else->listOf(SportsBrowsePolicyRP121.startLabel(event.channel.startsAtRP121),event.channel.description).filter {it.isNotBlank()}.joinToString(" · ")},onHoldRP48={tune(event,manual=true)}) {tune(event)}}
             if(!loading && displayedRP42.isEmpty() && customRowsRP48.isEmpty() && message.isBlank()) item(span={GridItemSpan(maxLineSpan)}) {Text(tr("No hay eventos publicados ahora.","No events published right now."),color=Muted)}
             if(more && !loading) item(span={GridItemSpan(maxLineSpan)}) {FocusButton(tr("Cargar más","Load more")) {
                 val c=selected
@@ -452,4 +471,26 @@ internal fun HubCategoryChipRP42(label:String,selected:Boolean,click:()->Unit) {
 @Composable
 internal fun EasyMlbRP80(state:AppState,modifier:Modifier) {
     HubSportsRP41(state,"baseball",modifier,{})
+}
+
+@Composable
+private fun LidomGamesRP121(state:AppState,modifier:Modifier) {
+    var addon by androidx.compose.runtime.saveable.rememberSaveable(state.activeProfile.id) {mutableStateOf(true)}
+    var day by androidx.compose.runtime.saveable.rememberSaveable(state.activeProfile.id) {mutableStateOf(java.time.LocalDate.now().toString())}
+    Column(modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+            FocusButton(tr("Add-on de deportes","Sports add-on"),primary=addon) {addon=true}
+            FocusButton(tr("Canales de equipos","Team channels"),primary=!addon) {addon=false}
+        }
+        if(addon) Row(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
+            FocusButton("‹",horizontalPadding=14.dp) {day=java.time.LocalDate.parse(day).minusDays(1).toString()}
+            FocusButton(tr("Hoy","Today")) {day=java.time.LocalDate.now().toString()}
+            FocusButton("›",horizontalPadding=14.dp) {day=java.time.LocalDate.parse(day).plusDays(1).toString()}
+            Text(day,color=Color.White,fontSize=14.sp)
+        }
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            if(addon) HubSportsRP41(state,"lidom",Modifier.fillMaxSize(),dayRP121=day) { }
+            else HubLidomRP41(state,Modifier.fillMaxSize())
+        }
+    }
 }

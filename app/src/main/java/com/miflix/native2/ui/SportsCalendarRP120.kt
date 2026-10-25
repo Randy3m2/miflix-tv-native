@@ -56,7 +56,8 @@ internal fun rememberSportEventsRP120(state:AppState,month:String):List<SportEve
     val rows by produceState<List<SportEventRP120>>(emptyList(),owner,revision) {
         value=withContext(Dispatchers.IO) {CalendarStoreRP120.events(context,owner)}
     }
-    LaunchedEffect(owner,month) {withContext(Dispatchers.IO) {
+    val subscriptions=remember(revision,owner) {CalendarStoreRP120.subscriptions(context,owner)}
+    LaunchedEffect(owner,month,subscriptions) {withContext(Dispatchers.IO) {
         runCatching {CalendarStoreRP120.refresh(context,owner,month=YearMonth.parse(month))}
     }}
     return rows
@@ -128,7 +129,7 @@ internal fun CalendarSubscriptionsRP120(state:AppState,initialLeagueRP121:String
     fun follow(key:String) {
         CalendarStoreRP120.toggle(context,owner,key)
         if(Build.VERSION.SDK_INT>=33 && context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED) permission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-        refresh(true)
+        status=tr("Selección guardada. Los horarios se actualizarán en segundo plano.","Selection saved. Schedules will update in the background.")
     }
     PlayerSideSheet(tr("Suscripciones","Subscriptions"),close,league) {
         item {Text(tr("Tus equipos. Tus fechas.","Your teams. Your dates."),color=Color.White,fontSize=23.sp,fontWeight=FontWeight.Bold)}

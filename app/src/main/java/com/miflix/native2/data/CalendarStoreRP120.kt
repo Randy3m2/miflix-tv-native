@@ -30,10 +30,14 @@ internal object CalendarStoreRP120 {
     fun subscriptions(c:Context,owner:String)=prefs(c).getStringSet("subs:$owner",emptySet()).orEmpty().toSet()
     fun feed(c:Context,owner:String)=prefs(c).getString("feed:$owner","").orEmpty()
     fun setFeed(c:Context,owner:String,url:String) {prefs(c).edit().putString("feed:$owner",url.trim()).putLong("refresh:$owner",0).apply();changed()}
-    fun toggle(c:Context,owner:String,key:String) {
+    @Synchronized fun toggle(c:Context,owner:String,key:String) {
         val set=subscriptions(c,owner).toMutableSet();if(!set.add(key)) set.remove(key)
         prefs(c).edit().putStringSet("subs:$owner",set).putLong("refresh:$owner",0).apply();changed()
-        localWork.launch {CalendarAlarmsRP120.schedule(c.applicationContext,owner)}
+        val app=c.applicationContext
+        localWork.launch {
+            CalendarAlarmsRP120.schedule(app,owner)
+            try {refresh(app,owner)} catch(e:CancellationException) {throw e} catch(_:Exception) { }
+        }
     }
     fun follows(c:Context,owner:String,e:SportEventRP120)=CalendarPolicyRP120.follows(subscriptions(c,owner),e.league,e.id,e.teams)
     fun events(c:Context,owner:String):List<SportEventRP120> = runCatching {
@@ -45,8 +49,10 @@ internal object CalendarStoreRP120 {
     suspend fun refresh(c:Context,owner:String,force:Boolean=false,month:java.time.YearMonth?=null) = mutex.withLock {
         val now=System.currentTimeMillis()
         val cacheKey=if(month==null) "refresh:$owner" else "month:$owner:$month"
-        if(!CalendarPolicyRP120.refresh(prefs(c).getLong(cacheKey,0),now,force)) return@withLock
         val subs=subscriptions(c,owner)
+        val signature=CalendarSubscriptionCacheRP122.signature(subs,feed(c,owner))
+        if(CalendarSubscriptionCacheRP122.canReuse(prefs(c).getString("signature:$cacheKey","").orEmpty(),signature,
+            prefs(c).getLong(cacheKey,0),now,force)) return@withLock
         if(subs.isEmpty()) return@withLock
         val today=LocalDate.now();val start=month?.atDay(1)?.minusDays(1) ?: today.minusDays(1)
         val end=month?.atEndOfMonth()?.plusDays(1) ?: today.plusDays(93)
@@ -70,7 +76,7 @@ internal object CalendarStoreRP120 {
         // Remove stale/irrelevant events, and deduplicate league/team subscriptions.
         all=all.distinctBy {it.key}.filter {it.date>=today.minusDays(7).toString() && CalendarPolicyRP120.follows(subs,it.league,it.id,it.teams)}.take(7000)
         prefs(c).edit().putString("events:$owner",JSONArray(all.map {it.json()}).toString())
-            .putLong(cacheKey,if(subscriptions(c,owner)==subs) now else 0).putString("error:$owner",failures.distinct().joinToString(", ")).commit()
+            .putString("signature:$cacheKey",signature).putLong(cacheKey,if(subscriptions(c,owner)==subs && failures.isEmpty()) now else 0).putString("error:$owner",failures.distinct().joinToString(", ")).commit()
         changed();CalendarAlarmsRP120.schedule(c,owner)
     }
     fun notices(c:Context,owner:String)=events(c,owner).filter {it.noticeKey in prefs(c).getStringSet("sent:$owner",emptySet()).orEmpty() && it.noticeKey !in prefs(c).getStringSet("hidden:$owner",emptySet()).orEmpty()}

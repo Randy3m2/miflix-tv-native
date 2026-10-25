@@ -158,7 +158,7 @@ fun CalendarDialog(state: AppState, close: () -> Unit) {
             val days=List((month.get(Calendar.DAY_OF_WEEK)+5)%7) { 0 }+(1..month.getActualMaximum(Calendar.DAY_OF_MONTH)).toList()
             LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                 item { Text(tr("Selecciona un día para ver sus eventos","Select a day to see its events"),color=Muted) }
-                item { Row { (tr("L M X J V S D","M T W T F S S").split(" ")).forEach { Text(it,color=Muted,modifier=Modifier.weight(1f)) } } }
+                item { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) { (tr("L M X J V S D","M T W T F S S").split(" ")).forEach { Text(it,color=Muted,textAlign=androidx.compose.ui.text.style.TextAlign.Center,modifier=Modifier.weight(1f)) } } }
                 items(days.chunked(7)) { group ->
                     Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                         group.forEach { n ->
@@ -382,8 +382,9 @@ internal fun InlineCalendar(state: AppState,modifier: Modifier=Modifier) {
     Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
             FocusButton("‹",horizontalPadding=14.dp) { offset--;day=null }
-            Text(prefix,color=Color.White,fontSize=20.sp,modifier=Modifier.weight(1f))
+            Text(prefix,color=Color.White,fontSize=20.sp)
             FocusButton("›",horizontalPadding=14.dp) { offset++;day=null }
+            Spacer(Modifier.weight(1f))
             FocusButton(tr("Suscripciones","Subscriptions")) {subscriptionsRP120=true}
             FocusButton(tr("Crear evento","Create event")) { creating=true }
             FocusButton(tr("Actualizar","Refresh")) { state.launch { state.socialAction { state.refreshCalendar() };withContext(Dispatchers.IO) {com.miflix.native2.data.CalendarStoreRP120.refresh(androidContextRP120,com.miflix.native2.data.CalendarStoreRP120.owner(androidContextRP120,state.activeProfile.id),true)} } }
@@ -391,7 +392,7 @@ internal fun InlineCalendar(state: AppState,modifier: Modifier=Modifier) {
         Row(Modifier.weight(1f).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(16.dp)) {
             LazyColumn(Modifier.weight(1f).fillMaxHeight().background(Panel,RoundedCornerShape(14.dp)).padding(12.dp),
                 contentPadding=PaddingValues(bottom=12.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-                item { Row { tr("L M X J V S D","M T W T F S S").split(" ").forEach { Text(it,color=Muted,fontSize=11.sp,modifier=Modifier.weight(1f)) } } }
+                item { Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)) { tr("L M X J V S D","M T W T F S S").split(" ").forEach { Text(it,color=Muted,fontSize=11.sp,textAlign=androidx.compose.ui.text.style.TextAlign.Center,modifier=Modifier.weight(1f)) } } }
                 items(days.chunked(7)) { week ->
                     Row(horizontalArrangement=Arrangement.spacedBy(5.dp)) {
                         week.forEach { n ->

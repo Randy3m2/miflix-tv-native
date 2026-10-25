@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.miflix.native2.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -36,7 +38,7 @@ private fun LocalPanelRC100(title:String,close:()->Unit,content:@Composable Colu
     Dialog(onDismissRequest=close) {
         val first=remember {FocusRequester()}
         LaunchedEffect(Unit) {withFrameNanos {};runCatching {first.requestFocus()}}
-        Column(Modifier.width(560.dp).heightIn(max=520.dp).background(Panel,RoundedCornerShape(24.dp)).padding(22.dp).verticalScroll(rememberScrollState()).focusGroup(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.width(560.dp).heightIn(max=520.dp).background(Panel,RoundedCornerShape(24.dp)).padding(22.dp).verticalScroll(rememberScrollState()).focusGroup(),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             Text(title,color=Color.White,fontSize=24.sp)
             FocusButton(tr("Cerrar","Close"),modifier=Modifier.focusRequester(first)) {close()}
             content()
@@ -85,7 +87,7 @@ internal fun LocalExtrasSettingsRC100(state:AppState,close:()->Unit) {
         SettingsTileRC103(tr("¿Sigues viendo?","Are you still watching?"),tr("Pregunta antes de seguir tras varios episodios sin usar el mando.","Ask before continuing after several episodes without remote interaction."),"still",checked=extras.enabled("still")) {extras.enable("still",!extras.enabled("still"))}
         if(extras.enabled("still")) {
             Text(tr("Preguntar después de:","Ask after:"),color=Muted,fontSize=13.sp)
-            Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {listOf(2,3,5).forEach {n -> FocusButton("$n "+tr("episodios","episodes"),primary=extras.stillLimit==n,modifier=Modifier.settingsHelpRC103(tr("¿Sigues viendo?","Are you still watching?"),tr("Solicita confirmación tras este número de episodios consecutivos sin interacción con el mando.","Request confirmation after this many consecutive episodes without remote interaction."),"still","$n "+tr("episodios","episodes"))) {extras.saveStillLimit(n)}}}
+            FlowRow(horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {listOf(2,3,5).forEach {n -> FocusButton("$n "+tr("episodios","episodes"),primary=extras.stillLimit==n,modifier=Modifier.settingsHelpRC103(tr("¿Sigues viendo?","Are you still watching?"),tr("Solicita confirmación tras este número de episodios consecutivos sin interacción con el mando.","Request confirmation after this many consecutive episodes without remote interaction."),"still","$n "+tr("episodios","episodes"))) {extras.saveStillLimit(n)}}}
         }
         SettingsTileRC103(tr("Recordar audio y subtítulos","Remember audio and subtitles"),tr("Recupera las pistas que elegiste para cada serie de este perfil.","Recall the tracks you chose for each series in this profile."),"tracks",checked=extras.enabled("tracks")) {extras.enable("tracks",!extras.enabled("tracks"))}
         if(extras.enabled("tracks")) SettingsTileRC103(tr("Borrar preferencias de series","Clear series preferences"),tr("Vuelve a usar tus idiomas predeterminados.","Return to your default language choices."),"tracks") {extras.clearTracks(owner);status=tr("Preferencias borradas.","Preferences cleared.")}
@@ -152,7 +154,7 @@ internal fun LocalListsRC100(state:AppState,adding:MediaSummary?,initialListId:S
             FocusButton(tr("Eliminar colección","Delete collection"),destructive=true) {deleting=true}
             if(deleting) {
                 Text(tr("Se elimina esta lista; los títulos siguen disponibles en BruniO.","This list will be deleted; its titles remain available in BruniO."),color=Muted,fontSize=13.sp)
-                Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                FlowRow(horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                     FocusButton(tr("Confirmar eliminación","Confirm deletion"),destructive=true) {extras.deleteList(owner,current.getString("id"));selected=null;name="";deleting=false;message=""}
                     FocusButton(tr("Cancelar","Cancel")) {deleting=false}
                 }

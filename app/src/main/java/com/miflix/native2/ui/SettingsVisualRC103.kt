@@ -155,9 +155,9 @@ internal fun SettingsDialogRC103(title:String,subtitle:String,close:()->Unit,con
                 }
                 CompositionLocalProvider(LocalSettingsHelpRC103 provides {help=it}) {
                     if(wide) Row(Modifier.weight(1f,fill=false).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
-                        Column(Modifier.weight(.65f).verticalScroll(rememberScrollState()).focusGroup(),verticalArrangement=Arrangement.spacedBy(10.dp),content=content)
+                        Column(Modifier.weight(.65f).verticalScroll(rememberScrollState()).padding(vertical=6.dp).focusGroup(),verticalArrangement=Arrangement.spacedBy(16.dp),content=content)
                         Column(Modifier.weight(.35f).verticalScroll(rememberScrollState())) {SettingsHelpPanelRC103(help)}
-                    } else Column(Modifier.weight(1f,fill=false).fillMaxWidth().verticalScroll(rememberScrollState()).focusGroup(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    } else Column(Modifier.weight(1f,fill=false).fillMaxWidth().verticalScroll(rememberScrollState()).padding(vertical=6.dp).focusGroup(),verticalArrangement=Arrangement.spacedBy(16.dp)) {
                         SettingsHelpPanelRC103(help)
                         content()
                     }

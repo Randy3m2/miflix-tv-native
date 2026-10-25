@@ -183,7 +183,7 @@ internal fun ModernSocialSettingsRP63(state:AppState,close:()->Unit) {
 
 @Composable
 internal fun ModernSettingsGroupRP63(title:String,content:@Composable ColumnScope.()->Unit) {
-    Column(Modifier.fillMaxWidth().background(Color(0xFF141519),RoundedCornerShape(16.dp)).border(1.dp,ModernBorderRP63,RoundedCornerShape(16.dp)).padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxWidth().background(Color(0xFF141519),RoundedCornerShape(16.dp)).border(1.dp,ModernBorderRP63,RoundedCornerShape(16.dp)).padding(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         Text(title,color=Color.White,fontSize=17.sp,fontWeight=FontWeight.SemiBold)
         content()
     }

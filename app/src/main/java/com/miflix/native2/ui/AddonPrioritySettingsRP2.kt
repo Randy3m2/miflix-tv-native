@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.miflix.native2.ui
 
 import androidx.compose.foundation.background
@@ -29,7 +31,7 @@ internal fun AddonPrioritySettingsRP2(state:AppState,close:()->Unit) {
     }
     val rows=state.orderedSourceAddonsRP2(language)
     SettingsDialogRC103(tr("Tus fuentes, en tu orden","Your sources, your order"),tr("Solo add-ons instalados que ofrecen enlaces. Se guarda por perfil en esta TV.","Only installed add-ons that provide streams. Saved per profile on this TV."),close) {
-        Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+        FlowRow(horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
             FocusButton(tr("Español","Spanish"),primary=language=="es",modifier=Modifier.settingsHelpRC103(tr("Orden para español","Spanish order"),tr("Edita la prioridad usada cuando el audio preferido es español. No cambia tu idioma de reproducción.","Edit the priority used for Spanish audio. This does not change your playback language."),"tracks",tr("Español","Spanish"))) {language="es";moved=null}
             FocusButton(tr("Inglés","English"),primary=language=="en",modifier=Modifier.settingsHelpRC103(tr("Orden para inglés","English order"),tr("Edita la prioridad usada cuando el audio preferido es inglés. No cambia tu idioma de reproducción.","Edit the priority used for English audio. This does not change your playback language."),"tracks",tr("Inglés","English"))) {language="en";moved=null}
         }

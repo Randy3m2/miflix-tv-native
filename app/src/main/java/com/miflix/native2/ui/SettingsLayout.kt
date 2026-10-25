@@ -2,6 +2,7 @@ package com.miflix.native2.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,5 +36,5 @@ internal fun SettingsSectionCard(onFocused: () -> Unit = {},content: @Composable
         if(it.hasFocus) onFocused()
     }.background(Panel,RoundedCornerShape(16.dp))
         .border(1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(16.dp))
-        .padding(20.dp),content=content)
+        .padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp),content=content)
 }

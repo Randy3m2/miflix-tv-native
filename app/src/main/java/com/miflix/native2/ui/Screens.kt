@@ -884,9 +884,8 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var addonUrl by remember { mutableStateOf("") }
-    var showAddonOrder by remember {mutableStateOf(false)}
-    if(showAddonOrder) AddonPrioritySettingsRP2(state) {showAddonOrder=false}
+    var showAddonManagerRP126 by remember {mutableStateOf(false)}
+    if(showAddonManagerRP126) AddonManagerRP126(state) {showAddonManagerRP126=false}
     var showTasteEditor by remember {mutableStateOf(false)}
     if(showTasteEditor && !state.kidsMode) TasteOnboardingRC102(state) {showTasteEditor=false}
     var showLocalExtras by remember {mutableStateOf(false)}
@@ -960,13 +959,13 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
             Text(tr("Tu experiencia, a tu manera.","Make BruniO yours."),color=Muted,fontSize=15.sp,modifier=Modifier.padding(top=4.dp,bottom=18.dp))
             LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(vertical=4.dp)) {
                 items(SettingsCategories,key={it.id}) { tab ->
-                    FocusButton(tr(tab.spanish,tab.english),primary=category==tab.id) { category=tab.id }
+                    FocusButton(if(tab.id=="sources") "Add-ons" else tr(tab.spanish,tab.english),primary=category==tab.id) { category=tab.id }
                 }
             }
             Spacer(Modifier.height(18.dp))
             Row(Modifier.weight(1f).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(22.dp)) {
                 LazyColumn(Modifier.weight(.7f).fillMaxHeight(),state=settingsScroll,
-                    contentPadding=PaddingValues(top=4.dp,bottom=42.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                    contentPadding=PaddingValues(top=8.dp,bottom=42.dp),verticalArrangement=Arrangement.spacedBy(20.dp)) {
                     if(category=="system" && !state.kidsMode) item(key="final-m3u-rp97") {
                         SettingsSectionCard(onFocused={helpTitle=tr("Canales Live TV","Live TV channels");helpDescription=tr("Actualiza la lista M3U por URL Raw, sin otra build. El QR funciona en la red local y conserva la última copia válida si falla la descarga.","Update the M3U using a Raw URL without another build. QR works on the local network; failed downloads retain the last valid copy.");visualHelp=null}) {FinalM3USettingsRP97(state)}
                     }
@@ -1010,7 +1009,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="App language";helpDescription="Choose English or Spanish for menus and catalog information.";helpIndex=1 }) {
                 Text(tr("Idioma de la app","App language"),color=Color.White,fontSize=22.sp, lineHeight=26.sp)
                 Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
+                FlowRow(horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                     FocusButton("Español (Latinoamérica)",primary=state.interfaceLanguage=="es") { state.launch { state.setInterfaceLanguage("es") } }
                     FocusButton("English",primary=state.interfaceLanguage=="en") { state.launch { state.setInterfaceLanguage("en") } }
                 }
@@ -1070,7 +1069,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 } } }
                 Text(tr("Idioma secundario · este perfil","Secondary language · this profile"),color=Color.White,fontSize=18.sp)
                 Text(tr("Si el principal no está disponible, intenta este idioma automáticamente. No cambia el idioma de la interfaz.","If the primary language is unavailable, automatically try this language. Does not change the interface language."),color=Muted,fontSize=14.sp)
-                FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                     listOf("" to tr("Desactivado","Off"),"es" to "Español", "en" to "English", "pt" to "Português", "fr" to "Français", "ko" to "Korean · 한국어").filter {it.first.isBlank() || it.first!=state.audioLanguage}.forEach {(code,label) ->
                         FocusButton(label,primary=state.secondaryAudioLanguageRP62==code) {state.saveSecondaryAudioRP62(code)}
                     }
@@ -1180,7 +1179,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                                 else state.error=tr("Usa # y seis dígitos hexadecimales.","Use # followed by six hexadecimal digits.")
                             }
                             Spacer(Modifier.height(12.dp))
-                            FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                            FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                                 listOf(0xFFFFFFFF.toInt() to "White",0xFFB792FF.toInt() to "Purple",0xFF65BFFF.toInt() to "Blue",0xFF66E6A0.toInt() to "Green",0xFFFFBB66.toInt() to "Amber",0xFFFF8FB6.toInt() to "Rose").forEach {(color,label) ->
                                     FocusButton("● $label",primary=state.focusColor==color) {state.saveFocusColor(color)}
                                 }
@@ -1239,47 +1238,11 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         }
                     }
                     if(category=="sources") item(key="setting-8") {
-                        SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Stream Add-ons";helpDescription="Use the main profile add-ons or configure sources for this profile on this TV.";helpIndex=8 }) {
-                Text(tr("Complementos de reproducción","Stream Add-ons"), color = Color.White, fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold)
-                SettingsTileRC103("PIN Live score",tr("NBA, MLB y LIDOM en una píldora movible. Preferencias locales por perfil.","NBA, MLB and LIDOM in a movable pill. Local per-profile preferences."),"lists") {state.showLiveScoresRP11=true}
-                SettingsTileRC103(tr("Orden de los add-ons","Add-on priority"),tr("Prioridades independientes para español e inglés, guardadas para este perfil en esta TV.","Separate Spanish and English priorities, saved for this profile on this TV."),"lists") {showAddonOrder=true}
-                Spacer(Modifier.height(8.dp))
-                Text(tr("Añade las URLs de manifiesto de tus complementos compatibles. Cada perfil puede heredar las fuentes del principal o usar las suyas en esta TV.","Add manifest URLs for your compatible add-ons. Each profile can inherit the main profile sources or use its own on this TV."), color = Muted, fontSize = 14.sp, lineHeight=17.sp, modifier = Modifier.fillMaxWidth())
-                Spacer(Modifier.height(12.dp))
-                if(state.streamSizeLimitGb>0) {
-                    Text(tr("El límite de GB oculta enlaces sin tamaño, excepto los de Addon Latam y Nuve+.","The GB cap hides unknown-size links except Addon Latam and Nuve+."),color=Muted,fontSize=14.sp)
-                    FocusButton(tr("Quitar límite de GB","Remove GB cap")) {state.saveStreamSizeLimit(0.0)}
-                }
-                state.addonManifests.toList().forEach { manifest ->
-                    Row(Modifier.fillMaxWidth().padding(vertical=6.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
-                        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                            Text(state.streamRepo.addonLabel(manifest),color=Color.White,fontSize=14.sp)
-                            val status=state.streamRepo.status(manifest)
-                            if(status.isNotBlank()) Text(if(state.interfaceLanguage=="es") status
-                                .replace("Configuration required","Requiere configuración")
-                                .replace("Request failed","Falló la consulta")
-                                .replace("Returned:","Recibidos:").replace("Available:","Disponibles:")
-                                .replace("Hidden (unknown size):","Ocultos (sin tamaño):").replace("Torrents ignored:","Torrents omitidos:") else status,color=Muted,fontSize=12.sp)
-                        }
-                        AddonLimitButtonRP8(state,manifest)
-                        FocusButton(tr("Eliminar","Remove"),destructive=true) { state.launch { state.socialAction { state.removeAddonManifest(manifest) } } }
-                    }
-                }
-                Spacer(Modifier.height(12.dp))
-                if(!state.activeProfile.primary) {
-                    Text(tr("Add-ons de este perfil","This profile's add-ons"),color=Color.White,fontSize=20.sp)
-                    SettingsTileRC103(tr("Usar add-ons del perfil principal","Use main profile add-ons"),tr("Activado: hereda las fuentes del principal. Desactivado: usa tu configuración propia en esta TV.","On: inherit the main profile sources. Off: use your own configuration on this TV."),"links",checked=state.profileAddonsInherited) {state.saveProfileAddonInheritance(!state.profileAddonsInherited)}
-                    Text(tr("Las fuentes propias se guardan en esta TV. Editar la lista crea una configuración propia y no cambia el principal.","Own sources are saved on this TV. Editing the list creates an independent configuration and leaves the main profile unchanged."),color=Muted,fontSize=13.sp)
-                }
-                NativeTextField(addonUrl, { addonUrl = it }, tr("URL del complemento · manifest.json","Add-on URL · manifest.json"), modifier = Modifier.fillMaxWidth())
-                Spacer(Modifier.height(10.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(18.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
-                    FocusButton(tr("Añadir manifiesto","Add Manifest")) { state.launch { state.socialAction { state.addAddonManifest(addonUrl); addonUrl = "" } } }
-                    FocusButton(tr("Usar QR","Use QR")) { state.screen = Screen.PAIR_DEVICE }
-                }
-
-                Spacer(Modifier.height(34.dp))
-
+                        SettingsSectionCard(onFocused={visualHelp=null;helpTitle="Add-ons";helpDescription=tr("Instala y administra tus fuentes de reproducción, logos, límites y prioridades.","Install and manage playback providers, artwork, limits and priorities.");helpIndex=8}) {
+                            Text("Add-ons",color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
+                            Text(tr("Tus fuentes, en un solo lugar.","Your providers, all in one place."),color=Muted,fontSize=15.sp)
+                            SettingsTileRC103(tr("Administrar add-ons","Manage add-ons"),tr("Tarjetas con logos, agregar manifest.json, límites de enlaces, orden y eliminación.","Artwork cards, manifest.json installation, link limits, priority and removal."),"links") {showAddonManagerRP126=true}
+                            SettingsTileRC103("PIN Live score",tr("NBA, MLB y LIDOM en una píldora movible.","NBA, MLB and LIDOM in a movable pill."),"lists") {state.showLiveScoresRP11=true}
                         }
                     }
                     if(category=="sources") item(key="setting-9") {
@@ -1319,7 +1282,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     }
                 }
                 Column(Modifier.weight(.3f).fillMaxHeight().background(Panel,RoundedCornerShape(16.dp)).border(1.dp,PanelBorder,RoundedCornerShape(16.dp)).padding(16.dp),
-                    verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    verticalArrangement=Arrangement.spacedBy(14.dp)) {
                     Text(visualHelp?.title ?: helpTitle,color=Color.White,fontSize=20.sp,lineHeight=24.sp,fontWeight=FontWeight.Bold,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     Text(visualHelp?.description ?: helpDescription,color=Muted,fontSize=14.sp,lineHeight=20.sp,maxLines=8,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     Spacer(Modifier.weight(1f))

@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.miflix.native2.ui
 
 import androidx.activity.compose.BackHandler
@@ -218,13 +220,14 @@ internal fun LidomSourcesSettings(repo:LidomRepository,initialTeam:String,close:
     PlayerSideSheet(tr("LIDOM · Configuración","LIDOM · Source settings"),close) {
         item {Text(tr("URLs guardadas solo para este perfil en esta TV. Agrega señales que estés autorizado a reproducir.","URLs are stored for this profile on this TV. Add streams you are authorized to play."),color=Muted,fontSize=13.sp)}
         items(repo.teams,key={"team:${it.id}"}) {club ->FocusButton((if(team.id==club.id) "✓ " else "")+club.short) {team=club}}
-        item {Text(team.name,color=Color.White,fontSize=21.sp);FocusButton(tr("+ Agregar fuente","+ Add source")) {editing=LidomSource(UUID.randomUUID().toString(),team.id,"","HLS","")}}
+        item {Column(verticalArrangement=Arrangement.spacedBy(14.dp)) {Text(team.name,color=Color.White,fontSize=21.sp);FocusButton(tr("+ Agregar fuente","+ Add source")) {editing=LidomSource(UUID.randomUUID().toString(),team.id,"","HLS","")}}}
         items(repo.sources(team.id),key={it.id+revision}) {source ->
+            Column(verticalArrangement=Arrangement.spacedBy(14.dp)) {
             Text(source.name+" · "+source.kind,color=Color.White,fontSize=16.sp)
-            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                 FocusButton(tr("Editar","Edit")) {editing=source}
                 FocusButton(tr("Eliminar","Delete"),destructive=true) {repo.delete(source);revision++}
-            }
+            }}
         }
     }
     editing?.let {source -> LidomSourceEditor(repo,source,close={editing=null;revision++})}

@@ -173,11 +173,19 @@ internal object UpdateNotes {
         "RP124: las notificaciones de actualización muestran las novedades de la versión instalada." to "RP124: update notifications show release notes for the installed version.",
         "El historial de versiones anteriores queda separado y muestra primero las revisiones RP más recientes." to "Earlier release history is separate and lists the latest RP revisions first."
     )
-    val changes=listOf(
+    val rp125Changes=listOf(
         "RP125: Table sin selector de temporada ni Refresh, con más espacio para las posiciones." to "RP125: Table removes season controls and Refresh, leaving more room for standings.",
         "Games sin selector de fecha: muestra lo publicado por SS. Stats y Players sin Refresh." to "Games shows published SS events without a date selector. Stats and Players remove Refresh."
     )
-    val previousChanges=rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
+    val rp126Changes=listOf(
+        "RP126: nuevo administrador de Add-ons en Ajustes, con logos y tarjetas glass." to "RP126: new Add-ons manager in Settings with artwork and glass cards.",
+        "Agregar con manifest.json validado, límites por fuente, prioridades y eliminación; conserva la configuración por perfil." to "Install validated manifest.json links, manage per-source limits, priorities and removal; preserves profile configuration."
+    )
+    val changes=listOf(
+        "RP127: ajustes con mayor separación entre controles y filas que se adaptan al espacio disponible." to "RP127: roomier settings controls and button rows that adapt to available space.",
+        "Pantalla de actualizaciones renovada: versión, estado, descarga y detalles de instalación organizados con diseño glass." to "Refreshed updates screen: version, status, download and installation details organized in a glass layout."
+    )
+    val previousChanges=rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
         "Menú de amigos: Watch, View Details, Recommendations y Close; detalles abre la ficha sin iniciar reproducción." to "Friend menu: Watch, View Details, Recommendations and Close; details opens the title without starting playback.",
         "Enlaces de Comet y Torrentio con texto ordenado e insignias de Dolby/HDR según sus metadatos." to "Clean Comet and Torrentio link metadata with small Dolby/HDR badges when reported by the source.",
         "Envío local a TV por Wi-Fi, con enlace y código de conexión; sin reproducción web." to "Send titles to TV over local Wi-Fi with a connection link and code; no web playback.",

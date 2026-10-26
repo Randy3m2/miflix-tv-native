@@ -334,13 +334,14 @@ class AppState(context: Context) {
     private val playbackWork = PlaybackWorkGate()
     private var partyEpoch = 0L
     private var switchingPartyEpoch: Long? = null
-    var streamSizeLimitGb by mutableStateOf((playbackPrefs.getString("stream_size_gb","0")?.toDoubleOrNull() ?: 0.0))
+    private val streamSizePreferenceKeyRP134=if(BuildConfig.APPLICATION_ID.startsWith("com.brunio.mobile")) "mobile_stream_size_gb_rp134" else "stream_size_gb"
+    var streamSizeLimitGb by mutableStateOf((playbackPrefs.getString(streamSizePreferenceKeyRP134,"0")?.toDoubleOrNull() ?: 0.0))
         private set
     private val streamSizeBytes: Long get() = (streamSizeLimitGb * 1_000_000_000.0).toLong()
     fun saveStreamSizeLimit(gb: Double) {
         require(gb.isFinite() && gb in 0.0..500.0)
         streamSizeLimitGb=gb
-        playbackPrefs.edit().putString("stream_size_gb",gb.toString()).apply()
+        playbackPrefs.edit().putString(streamSizePreferenceKeyRP134,gb.toString()).apply()
         invalidatePlaybackWork()
     }
     private fun invalidatePlaybackWork() {
@@ -474,8 +475,18 @@ class AppState(context: Context) {
         } finally { queueStarting=false }
     }
 
+    internal suspend fun syncCalendarSubscriptionsRP134() {
+        val current=session ?: return
+        val profile=activeProfile.id
+        val owner="${current.userId}:$profile"
+        val local=com.miflix.native2.data.CalendarStoreRP120.syncEntriesRP134(appContext,owner)
+        val remote=cloud.calendarSubscriptionsRP134(current,profile,local)
+        if(session?.userId==current.userId && activeProfile.id==profile)
+            com.miflix.native2.data.CalendarStoreRP120.applySyncRP134(appContext,owner,remote)
+    }
     val calendarEvents=mutableStateListOf<CalendarEvent>()
     suspend fun refreshCalendar() {
+        try {syncCalendarSubscriptionsRP134()} catch(e:CancellationException) {throw e} catch(_:Exception) { }
         val owner=profileSocialSession() ?: return
         val events=social.calendar(owner)
         if(isCurrentSocialSession(owner)) { calendarEvents.clear();calendarEvents.addAll(events) }
@@ -2906,6 +2917,63 @@ class AppState(context: Context) {
         } catch(e: CancellationException) { throw e } catch(e: Exception) { if(generation==playbackWork.generation) error=e.message } finally { randomChoosing=false; if(generation==playbackWork.generation) busyMessage=null }
     }
 
+    var mobileDownloadBusyRP134 by mutableStateOf(false)
+        private set
+    var mobileDownloadStatusRP134 by mutableStateOf("")
+        private set
+    internal fun openMobileDownloadRP134(entry:MobileDownloadEntryRP134) {
+        require(com.miflix.native2.BuildConfig.APPLICATION_ID.startsWith("com.brunio.mobile"))
+        require(MobileDownloadsRP134.entries(appContext,MobileDownloadsRP134.owner(appContext)).any {it.id==entry.id && it.uri==entry.uri})
+        val uri=entry.uri ?: return
+        invalidatePlaybackWork();selected=entry.item;details=null;episodes.clear()
+        miniPlayer=false
+        playerRequest=PlayerRequest(entry.item,StreamChoice("Offline",uri,"Offline"),entry.season,entry.episode,0,returnScreen=Screen.DOWNLOADS)
+        screen=Screen.PLAYER
+    }
+    suspend fun downloadMobileItemRP134(item:MediaSummary,season:Int=0,episode:Int=0) {
+        downloadMobileEpisodesRP134(item,season,if(episode>0) listOf(episode) else listOf(0),false)
+    }
+    suspend fun downloadMobileSeasonRP134() {
+        val item=selected ?: return
+        val season=currentSeason
+        val today=java.time.LocalDate.now().toString()
+        val rows=episodes.filter {it.season==season && it.airDate.isNotBlank() && it.airDate<=today}.map {it.episode}.distinct()
+        require(rows.isNotEmpty()) {tr("No hay episodios estrenados disponibles.","No released episodes available.")}
+        downloadMobileEpisodesRP134(item,season,rows,true)
+    }
+    private suspend fun downloadMobileEpisodesRP134(item:MediaSummary,season:Int,numbers:List<Int>,wholeSeason:Boolean) {
+        if(mobileDownloadBusyRP134) return
+        require(BuildConfig.APPLICATION_ID.startsWith("com.brunio.mobile") && !kidsMode)
+        val account=session?.userId;val profile=activeProfile.id
+        val scope=MobileDownloadsRP134.owner(appContext)
+        fun valid()=session?.userId==account && activeProfile.id==profile
+        mobileDownloadBusyRP134=true
+        var queued=0;var failed=0
+        try {
+            val imdb=tmdb.details(item).imdbId ?: error("IMDb ID unavailable")
+            if(wholeSeason) MobileDownloadsRP134.planned(appContext,scope,item,season,numbers.size)
+            for(episode in numbers) {
+                if(!valid()) break
+                mobileDownloadStatusRP134=tr("Preparando descarga ","Preparing download ")+"${queued+failed+1}/${numbers.size}"
+                try {
+                    val rows=resolvePlaybackSources(item,imdb,season,episode)
+                    var ready:StreamChoice?=null
+                    for(candidate in rows.take(5)) {
+                        try {
+                            val source=if(candidate.nativeSource!=null) withTimeoutOrNull(15_000) {nativeSources.materialize(candidate,nativeStore.token(account),::valid)} else candidate
+                            if(source!=null && MobileDownloadRP133.direct(source)) {ready=source;break}
+                        } catch(e:CancellationException) {throw e} catch(_:Exception) { }
+                    }
+                    val source=ready ?: error("No downloadable file")
+                    if(!valid()) break
+                    kotlinx.coroutines.withContext(Dispatchers.IO) {MobileDownloadsRP134.enqueue(appContext,item,source,season,episode,scope)}
+                    queued++
+                } catch(e:CancellationException) {throw e} catch(_:Exception) {failed++}
+            }
+            mobileDownloadStatusRP134=tr("En cola: ","Queued: ")+queued+if(failed>0) tr(" · Sin enlace descargable: "," · No downloadable source: ")+failed else ""
+        } finally {mobileDownloadBusyRP134=false}
+    }
+
     suspend fun playMovie(fromStart: Boolean=false) {
         val item = selected ?: return
         if(!rapidPlaybackRP87.accept("${localExtrasScope()}:playMovie:${item.cloudId}:$fromStart",android.os.SystemClock.uptimeMillis())) return
@@ -3999,7 +4067,7 @@ class AppState(context: Context) {
             }
             easyRevisionRP79++;easySpanishRevisionRP83++;secondaryAudioRevisionRP62++;voiceRevisionRP81++
             simpleHomeRevision++;unwatchedVisibilityRevisionRP20++;contentWarningsRevisionRP31++;addonOrderRevision++;profileAddonRevision++
-            streamSizeLimitGb=(playbackPrefs.getString("stream_size_gb","0")?.toDoubleOrNull() ?: 0.0).coerceIn(0.0,500.0)
+            streamSizeLimitGb=(playbackPrefs.getString(streamSizePreferenceKeyRP134,"0")?.toDoubleOrNull() ?: 0.0).coerceIn(0.0,500.0)
             rememberLastProfile=playbackPrefs.getBoolean("remember_last_profile",false)
             hiddenAvatars=playbackPrefs.getStringSet("hidden_avatars",emptySet()).orEmpty().toSet()
             LiveLibrary.revision++;CustomChannelsRP45.changesRP48.value++
@@ -4096,7 +4164,7 @@ class AppState(context: Context) {
 
 enum class Screen {
     SPLASH, HOME, SEARCH, MOVIES, SERIES, COLLECTIONS, OSCARS, COLLECTION_DETAIL, PLATFORM_DETAIL,
-    GENRES, GENRE_DETAIL, YEAR_DETAIL, MY_LIST, SETTINGS, PROFILES, WATCH_PARTY, PAIR_DEVICE,
+    GENRES, GENRE_DETAIL, YEAR_DETAIL, MY_LIST, DOWNLOADS, SETTINGS, PROFILES, WATCH_PARTY, PAIR_DEVICE,
     DETAILS, CUSTOM_FILTER, FRANCHISE, PLAYER, MULTIVIEW, LIVE_TV, LIDOM, FRIENDS, TRAKT, NOTIFICATIONS, DIRECTOR_DETAIL
 
 }

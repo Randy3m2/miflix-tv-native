@@ -16,6 +16,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.media3.common.*
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.exoplayer.ExoPlayer
@@ -36,76 +39,69 @@ internal fun MobilePlayerControlsRP133(request:PlayerRequest,paused:Boolean,posi
     seekable:Boolean,nextAvailable:Boolean,easy:Boolean,player:ExoPlayer?,onInteraction:()->Unit,onPlay:()->Unit,
     onClose:()->Unit,onSeek:(Long)->Unit,onMenu:(String)->Unit,onLinks:()->Unit,onEpisodes:()->Unit,
     onNext:()->Unit,onParty:()->Unit,onChat:()->Unit,onReactions:()->Unit,onMultiView:()->Unit,
-    onStats:()->Unit,onInfo:()->Unit,onPip:()->Unit) {
+    onStats:()->Unit,onInfo:()->Unit,onPip:()->Unit,onResize:()->Unit) {
     val context=LocalContext.current
-    val portrait=LocalConfiguration.current.orientation==android.content.res.Configuration.ORIENTATION_PORTRAIT
+    var more by remember {mutableStateOf(false)}
     var muted by remember(player) {mutableStateOf(player?.volume==0f)}
-    var hasAudio by remember(player) {mutableStateOf(player?.currentTracks?.groups?.any {it.type==C.TRACK_TYPE_AUDIO && it.isSelected}==true)}
-    DisposableEffect(player) {
-        val listener=object:Player.Listener {override fun onTracksChanged(tracks:Tracks) {hasAudio=tracks.groups.any {it.type==C.TRACK_TYPE_AUDIO && it.isSelected}}}
-        player?.addListener(listener);onDispose {player?.removeListener(listener)}
-    }
+    LaunchedEffect(more) {while(more) {onInteraction();delay(1000)}}
     fun action(block:()->Unit) {onInteraction();block()}
-    Box(Modifier.fillMaxSize()) {
-        Column(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(7.dp)) {
-                MobileIconButtonRP133("back",tr("Volver","Back")) {action(onClose)}
-                Spacer(Modifier.weight(1f))
-                if(!easy) MobileIconButtonRP133("cast",tr("Transmitir pantalla","Cast screen")) {
-                    action {runCatching {context.startActivity(android.content.Intent(android.provider.Settings.ACTION_CAST_SETTINGS))}
-                        .onFailure {runCatching {context.startActivity(android.content.Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS))}}}
+    if(more) MobileSheetRP133(tr("Opciones del reproductor","Player options"),{more=false}) {
+        LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            item {MobileButtonRP133(tr("Audio","Audio"),"audio",Modifier.fillMaxWidth()) {more=false;action {onMenu("audio")}}}
+            item {MobileButtonRP133(tr("Subtítulos","Subtitles"),"cc",Modifier.fillMaxWidth()) {more=false;action {onMenu("subtitles")}}}
+            item {MobileButtonRP133(if(request.live) tr("Canales / juegos","Channels / games") else tr("Episodios","Episodes"),"grid",Modifier.fillMaxWidth()) {more=false;action(onEpisodes)}}
+            if(nextAvailable) item {MobileButtonRP133(tr("Siguiente episodio","Next episode"),"next",Modifier.fillMaxWidth()) {more=false;action(onNext)}}
+            if(!easy) {
+                item {MobileButtonRP133(tr("Cambiar fuente","Change source"),"link",Modifier.fillMaxWidth()) {more=false;action(onLinks)}}
+                if(request.live) {
+                    item {MobileButtonRP133("SplitScreen","grid",Modifier.fillMaxWidth()) {more=false;action(onMultiView)}}
+                    item {MobileButtonRP133("Stats","stats",Modifier.fillMaxWidth()) {more=false;action(onStats)}}
                 }
-                MobileIconButtonRP133(if(muted || !hasAudio) "mute" else "volume",if(!hasAudio) tr("Sin audio detectado","No audio detected") else tr("Sonido","Sound"),selected=muted) {action {muted=!muted;player?.volume=if(muted) 0f else 1f}}
-                MobileIconButtonRP133("full",tr("Pantalla completa","Full screen")) {action {
-                    context.playbackActivity()?.requestedOrientation=if(portrait) android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE else android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
-                }}
-            }
-        }
-        Box((if(portrait) Modifier.align(Alignment.TopCenter).fillMaxWidth().aspectRatio(16f/9f) else Modifier.fillMaxSize()),contentAlignment=Alignment.Center) {
-            Row(horizontalArrangement=Arrangement.spacedBy(22.dp),verticalAlignment=Alignment.CenterVertically) {
-                if(seekable) MobileButtonRP133("−10",modifier=Modifier.size(50.dp)) {action {onSeek((position-10_000).coerceAtLeast(0))}}
-                MobileIconButtonRP133(if(request.live && !request.sportsRecordingRP72) "grid" else if(paused) "play" else "pause",
-                    if(request.live) tr("Canales y juegos","Channels and games") else tr("Reproducir / pausar","Play / pause"),Modifier.size(64.dp)) {
-                    action {if(request.live && !request.sportsRecordingRP72) onEpisodes() else onPlay()}
-                }
-                if(seekable) MobileButtonRP133("+10",modifier=Modifier.size(50.dp)) {action {onSeek((position+10_000).coerceAtMost(duration))}}
-            }
-        }
-        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(Color.Black.copy(alpha=.8f)).padding(16.dp),
-            verticalArrangement=Arrangement.spacedBy(11.dp)) {
-            Text(request.item.title,color=Color.White,fontSize=if(easy) 23.sp else 19.sp,fontWeight=FontWeight.Bold,maxLines=2)
-            Text(if(request.sportsRecordingRP72) tr("Grabación","Recording") else if(request.live) tr("En vivo","Live") else request.stream.name,color=Muted,fontSize=12.sp,maxLines=1)
-            if(seekable) {
-                MobileSeekRP133(position,duration,onInteraction,onSeek)
-                Text(mobileTimeRP133(position)+" / "+mobileTimeRP133(duration),color=Muted,fontSize=12.sp)
-            }
-            LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                if(!request.live || request.sportsRecordingRP72) {
-                    item {MobileButtonRP133(tr("Audio","Audio"),"audio") {action {onMenu("audio")}}}
-                    item {MobileButtonRP133(tr("Subtítulos","Subtitles"),"cc") {action {onMenu("subtitles")}}}
-                    if(nextAvailable) item {MobileButtonRP133(tr("Siguiente","Next"),"next") {action(onNext)}}
-                    if(request.item.type=="series") item {MobileButtonRP133(tr("Episodios","Episodes"),"grid") {action(onEpisodes)}}
-                } else {
-                    item {MobileButtonRP133(tr("Canales / juegos","Channels / games"),"grid") {action(onEpisodes)}}
-                    if(!easy) {
-                        if(com.miflix.native2.data.SportsStatsRP95.available(request.live,request.sportsRecordingRP72,request.liveProvider,request.item.title+" "+request.item.overview) || com.miflix.native2.data.F1StatsRP131.channel(request.liveProvider,request.item.title+" "+request.item.overview)) item {MobileButtonRP133("Stats","stats") {action(onStats)}}
-                        item {MobileButtonRP133("SplitScreen","grid") {action(onMultiView)}}
-                    }
-                }
-                if(!easy) {
-                    item {MobileButtonRP133(tr("Fuente","Source"),"link") {action(onLinks)}}
-                    if(!request.live && MobileDownloadRP133.direct(request.stream.url)) item {MobileButtonRP133(tr("Descargar","Download"),"download") {action {
-                        context.playbackActivity()?.lifecycleScope?.launch(Dispatchers.IO) {runCatching {MobileDownloadRP133.enqueue(context,request.item.title,request.stream)}}
-                    }}}
-                    item {MobileButtonRP133("Party","friends") {action(onParty)}}
-                    item {MobileButtonRP133("Chat","friends") {action(onChat)}}
-                    item {MobileButtonRP133(tr("Reacciones","Reactions"),"heart") {action(onReactions)}}
-                    item {MobileButtonRP133("PiP","full") {action(onPip)}}
-                    item {MobileButtonRP133("Info","more") {action(onInfo)}}
-                }
+                if(!request.live && MobileDownloadRP133.direct(request.stream)) item {MobileButtonRP133(tr("Descargar","Download"),"download",Modifier.fillMaxWidth()) {more=false;action {
+                    context.playbackActivity()?.lifecycleScope?.launch(Dispatchers.IO) {runCatching {MobileDownloadsRP134.enqueue(context,request.item,request.stream,request.season,request.episode)}}
+                }}}
+                item {MobileButtonRP133(tr("Transmitir pantalla","Cast screen"),"cast",Modifier.fillMaxWidth()) {more=false;action {runCatching {context.startActivity(android.content.Intent(android.provider.Settings.ACTION_CAST_SETTINGS))}}}}
+                item {MobileButtonRP133("Watch Party","friends",Modifier.fillMaxWidth()) {more=false;action(onParty)}}
+                item {MobileButtonRP133("Chat","friends",Modifier.fillMaxWidth()) {more=false;action(onChat)}}
+                item {MobileButtonRP133(tr("Reacciones","Reactions"),"heart",Modifier.fillMaxWidth()) {more=false;action(onReactions)}}
+                item {MobileButtonRP133("PiP","full",Modifier.fillMaxWidth()) {more=false;action(onPip)}}
+                item {MobileButtonRP133("Info","more",Modifier.fillMaxWidth()) {more=false;action(onInfo)}}
             }
         }
     }
+    Box(Modifier.fillMaxSize()) {
+        Row(Modifier.align(Alignment.TopCenter).fillMaxWidth()
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Black.copy(alpha=.65f),Color.Transparent)))
+            .padding(horizontal=12.dp,vertical=6.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            MobileIconButtonRP133("back",tr("Volver","Back")) {action(onClose)}
+            Text(request.item.title,color=Color.White,fontSize=16.sp,fontWeight=FontWeight.SemiBold,maxLines=1,
+                overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
+            MobileIconButtonRP133(if(muted) "mute" else "volume",tr("Silenciar / activar sonido","Mute / unmute")) {action {muted=!muted;player?.volume=if(muted) 0f else 1f}}
+            MobileIconButtonRP133("more",tr("Más opciones","More options")) {action {more=true}}
+        }
+        Row(Modifier.align(Alignment.Center),horizontalArrangement=Arrangement.spacedBy(32.dp),verticalAlignment=Alignment.CenterVertically) {
+            if(seekable) MobileSeekButtonRP134("−10",tr("Retroceder 10 segundos","Back 10 seconds")) {action {onSeek((position-10_000).coerceAtLeast(0))}}
+            MobileIconButtonRP133(if(paused) "play" else "pause",tr("Reproducir / pausar","Play / pause"),Modifier.size(56.dp)) {action(onPlay)}
+            if(seekable) MobileSeekButtonRP134("+10",tr("Adelantar 10 segundos","Forward 10 seconds")) {action {onSeek((position+10_000).coerceAtMost(duration))}}
+        }
+        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent,Color.Black.copy(alpha=.75f))))
+            .padding(horizontal=16.dp,vertical=6.dp)) {
+            if(seekable) MobileSeekRP133(position,duration,onInteraction,onSeek)
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                Text(if(seekable) mobileTimeRP133(position)+" / "+mobileTimeRP133(duration) else tr("● EN VIVO","● LIVE"),color=Color.White,fontSize=12.sp,modifier=Modifier.weight(1f))
+                if(!easy) MobileIconButtonRP133("link",tr("Cambiar fuente","Change source")) {action(onLinks)}
+                MobileIconButtonRP133("audio",tr("Audio y subtítulos","Audio & subtitles")) {action {onMenu("audio")}}
+                MobileIconButtonRP133("full",tr("Ajustar / llenar pantalla","Fit / fill screen")) {action(onResize)}
+            }
+        }
+    }
+}
+
+@Composable
+private fun MobileSeekButtonRP134(text:String,label:String,click:()->Unit) {
+    Box(Modifier.size(48.dp).background(Color.Black.copy(alpha=.35f),androidx.compose.foundation.shape.CircleShape)
+        .semantics {contentDescription=label;role=androidx.compose.ui.semantics.Role.Button}.clickable(onClick=click),contentAlignment=Alignment.Center) {Text(text,color=Color.White,fontSize=16.sp,fontWeight=FontWeight.SemiBold)}
 }
 
 @Composable
@@ -181,8 +177,8 @@ internal fun MobileSourcesRP133(state:AppState,selection:SourceSelection) {
                     Text(stream.title,color=Muted,fontSize=12.sp,maxLines=4)
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                         MobileButtonRP133(tr("Reproducir","Play"),"play",Modifier.weight(1f)) {state.launch {if(owner==state.localExtrasScope()) state.playSelectedSource(selection,stream)}}
-                        if(!selection.item.type.equals("tv",true) && MobileDownloadRP133.direct(stream.url)) MobileIconButtonRP133("download",tr("Descargar archivo","Download file")) {
-                            state.launch {withContext(Dispatchers.IO) {MobileDownloadRP133.enqueue(context,selection.item.title,stream)}}
+                        if(!selection.item.type.equals("tv",true) && MobileDownloadRP133.direct(stream)) MobileIconButtonRP133("download",tr("Descargar archivo","Download file")) {
+                            state.launch {withContext(Dispatchers.IO) {MobileDownloadsRP134.enqueue(context,selection.item,stream,selection.season,selection.episode)}}
                         }
                     }
                 }

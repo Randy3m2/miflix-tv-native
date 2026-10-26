@@ -20,4 +20,11 @@ class MobileDownloadRP133Test {
             assertFalse(it,MobileDownloadRP133.direct(it))
         }
     }
+    @org.junit.Test fun opaqueFileLinksUseMetadataButManifestsNeverBecomeOfflineFiles() {
+        val file=com.miflix.native2.model.StreamChoice("CDN","https://cdn.example.com/download?id=1","Movie",filename="Movie.mkv")
+        org.junit.Assert.assertTrue(MobileDownloadRP133.direct(file))
+        org.junit.Assert.assertFalse(MobileDownloadRP133.direct(file.copy(url="https://cdn.example.com/live.m3u8")))
+        org.junit.Assert.assertFalse(MobileDownloadRP133.direct(file.copy(url="https://cdn.example.com/live.mpd")))
+        org.junit.Assert.assertFalse(MobileDownloadRP133.direct(file.copy(filename="")))
+    }
 }

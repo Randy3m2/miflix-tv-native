@@ -32,11 +32,32 @@ internal object CalendarStoreRP120 {
     fun setFeed(c:Context,owner:String,url:String) {prefs(c).edit().putString("feed:$owner",url.trim()).putLong("refresh:$owner",0).apply();changed()}
     @Synchronized fun toggle(c:Context,owner:String,key:String) {
         val set=subscriptions(c,owner).toMutableSet();if(!set.add(key)) set.remove(key)
-        prefs(c).edit().putStringSet("subs:$owner",set).putLong("refresh:$owner",0).apply();changed()
+        val changes=syncEntriesRP134(c,owner)
+        changes.put(key,JSONObject().put("enabled",key in set).put("at",maxOf(System.currentTimeMillis(),changes.optJSONObject(key)?.optLong("at",0)?.plus(1) ?: 1)))
+        prefs(c).edit().putString("sync:$owner",changes.toString()).putStringSet("subs:$owner",set).putLong("refresh:$owner",0).apply();changed()
         val app=c.applicationContext
         localWork.launch {
             CalendarAlarmsRP120.schedule(app,owner)
             try {refresh(app,owner)} catch(e:CancellationException) {throw e} catch(_:Exception) { }
+        }
+    }
+    @Synchronized fun syncEntriesRP134(c:Context,owner:String):JSONObject {
+        val rows=runCatching {JSONObject(prefs(c).getString("sync:$owner","{}"))}.getOrDefault(JSONObject())
+        subscriptions(c,owner).forEach {key->if(!rows.has(key)) rows.put(key,JSONObject().put("enabled",true).put("at",1L))}
+        return rows
+    }
+    @Synchronized fun applySyncRP134(c:Context,owner:String,remote:JSONObject) {
+        val rows=CalendarSyncRP134.merge(syncEntriesRP134(c,owner),remote)
+        val next=CalendarSyncRP134.enabled(rows)
+        val different=next!=subscriptions(c,owner)
+        prefs(c).edit().putString("sync:$owner",rows.toString()).putStringSet("subs:$owner",next).apply()
+        if(different) {
+            prefs(c).edit().putLong("refresh:$owner",0).apply();changed()
+            val app=c.applicationContext
+            localWork.launch {
+                CalendarAlarmsRP120.schedule(app,owner)
+                try {refresh(app,owner)} catch(e:CancellationException) {throw e} catch(_:Exception) { }
+            }
         }
     }
     fun follows(c:Context,owner:String,e:SportEventRP120)=CalendarPolicyRP120.follows(subscriptions(c,owner),e.league,e.id,e.teams)

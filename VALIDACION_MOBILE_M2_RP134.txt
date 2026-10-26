@@ -1,0 +1,21 @@
+BruniO Mobile M2 / RP134 / 22238
+
+:mobile:testDebugUnitTest: PASS — 441 tests, 0 fallos, 76 suites.
+Incluye 4 pruebas de fusión de suscripciones y 1 de archivos CDN/playlist.
+:mobile:assembleDebug: PASS.
+:app:compileReleaseKotlin: PASS.
+apksigner verify sobre APK Debug: PASS.
+Paquete Debug: com.brunio.mobile.preview.
+Versión: 1.0.1-m2-rp134. minSdk 26. targetSdk 36.
+git diff --check: PASS.
+
+Se generó un APK Preview local para validación, con clave de depuración de este entorno. No se usa como actualización de la instalación firmada existente.
+El ZIP entrega fuentes para generar la actualización con el workflow y la firma permanente del repositorio.
+No se compiló release firmada localmente ni se ejecutaron workflows remotos.
+
+Comando de validación:
+gradle :mobile:testDebugUnitTest :mobile:assembleDebug :app:compileReleaseKotlin -Pkotlin.incremental=false --max-workers=2
+
+Pendiente de dispositivo físico: orientación/zoom, recorte, accesibilidad, 2–4 decodificadores simultáneos, audio, proveedores, descargas reales y reproducción sin red.
+El SQL de calendario no se ejecutó en tu proyecto. Sin SQL, los eventos compartidos existentes siguen usando su backend anterior y las suscripciones deportivas quedan locales.
+No se garantiza ausencia de bugs ni soporte de todos los formatos.

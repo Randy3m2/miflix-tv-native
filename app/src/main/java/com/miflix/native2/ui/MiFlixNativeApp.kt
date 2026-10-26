@@ -70,6 +70,13 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             BruniOSplashScreen()
             return@MaterialTheme
         }
+        MobilePlayerEnvironmentRP133(mobileRP133 && state.screen in listOf(Screen.PLAYER,Screen.MULTIVIEW))
+        val calendarRevisionRP134 by com.miflix.native2.data.CalendarStoreRP120.revision.collectAsState()
+        val calendarOwnerRP134="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
+        val calendarSubscriptionsRP134=remember(calendarOwnerRP134,calendarRevisionRP134) {com.miflix.native2.data.CalendarStoreRP120.subscriptions(context,calendarOwnerRP134)}
+        LaunchedEffect(state.session?.userId,state.activeProfile.id,state.appForeground,calendarSubscriptionsRP134) {
+            if(state.appForeground) try {state.syncCalendarSubscriptionsRP134()} catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) { }
+        }
         CalendarRuntimeRP120("${state.session?.userId ?: "local"}:${state.activeProfile.id}",state.activeProfile.name,state.appForeground)
         LaunchedEffect(bootstrapped, initialPartyCode,state.easyModeRP79) {
             if (bootstrapped && !state.easyModeRP79 && !initialPartyCode.isNullOrBlank()) {
@@ -107,7 +114,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             } else false
         }.pointerInput(Unit) {awaitPointerEventScope {while(true) {awaitPointerEvent(PointerEventPass.Initial);MenuActivity.touch()} }}) {
         navigationState.SaveableStateProvider("${state.session?.userId}:${state.activeProfile.id}:${state.screen.name}") {
-        val destination=if(state.easyModeRP79 && !com.miflix.native2.data.EasyModePolicyRP79.allowsScreen(state.screen.name)) Screen.HOME else if(state.kidsMode && state.screen !in setOf(Screen.HOME,Screen.SEARCH,Screen.MY_LIST,Screen.DETAILS,Screen.PROFILES,Screen.NOTIFICATIONS,Screen.PLAYER)) Screen.HOME else state.screen
+        val destination=if(state.easyModeRP79 && !(mobileRP133 && state.screen==Screen.DOWNLOADS) && !com.miflix.native2.data.EasyModePolicyRP79.allowsScreen(state.screen.name)) Screen.HOME else if(state.kidsMode && state.screen !in setOf(Screen.HOME,Screen.SEARCH,Screen.MY_LIST,Screen.DETAILS,Screen.PROFILES,Screen.NOTIFICATIONS,Screen.PLAYER)) Screen.HOME else state.screen
         LaunchedEffect(destination,state.screen) {if(destination!=state.screen) state.screen=destination}
         if(mobileRP133) MobileAppRP133(state,destination)
         else if(state.easyModeRP79 && destination!=Screen.PLAYER) EasyScreenRP79(state,destination)
@@ -145,6 +152,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             Screen.WATCH_PARTY -> WatchPartyScreen(state) { state.screen = Screen.FRIENDS }
             Screen.PAIR_DEVICE -> PairDeviceScreen(state) { state.screen = Screen.SETTINGS }
             Screen.DETAILS -> DetailsScreen(state) { state.screen = state.detailsReturnScreen }
+            Screen.DOWNLOADS -> Unit
             Screen.MULTIVIEW -> MultiViewScreen(state)
             Screen.PLAYER -> if(state.playerRequest==null) state.screen=Screen.HOME
 
@@ -156,7 +164,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 Box(if(state.miniPlayer && state.screen!=Screen.PLAYER) Modifier.align(Alignment.BottomEnd).padding(20.dp).width(320.dp).height(220.dp) else Modifier.fillMaxSize()) {
                     CompositionLocalProvider(LocalPlayerMenuSide provides true) {
                     Box(Modifier.fillMaxSize().then(if(mobileRP133) Modifier.safeDrawingPadding() else Modifier)) {
-                    MobilePlayerEnvironmentRP133(mobileRP133)
+
                     PlayerScreen(state,req) { state.miniPlayer=false;state.screen=req.returnScreen ?: if(req.live) Screen.LIVE_TV else Screen.DETAILS }
                     }
                     }

@@ -23,15 +23,20 @@ internal object MobileDownloadRP133 {
         u.scheme in listOf("https","http") && !u.host.isNullOrBlank() && u.userInfo==null &&
             u.path.lowercase(java.util.Locale.ROOT).let {p->listOf(".mp4",".mkv",".webm",".ts",".mov").any(p::endsWith)}
     }.getOrDefault(false)
+    fun direct(stream:StreamChoice):Boolean = direct(stream.url) || runCatching {
+        val uri=java.net.URI(stream.url)
+        uri.scheme in listOf("https","http") && !uri.host.isNullOrBlank() && uri.userInfo==null &&
+            !uri.path.lowercase().let {it.endsWith(".m3u8") || it.endsWith(".mpd")} &&
+            stream.filename.substringAfterLast('.').lowercase() in listOf("mp4","mkv","webm","ts","mov")
+    }.getOrDefault(false)
     fun enqueue(context:Context,title:String,stream:StreamChoice):Long {
-        require(direct(stream.url)) {"This source is not a downloadable video file"}
-        val ext=java.net.URI(stream.url).path.substringAfterLast('.').lowercase(java.util.Locale.ROOT)
+        require(direct(stream)) {"This source is not a downloadable video file"}
+        val ext=stream.filename.substringAfterLast('.').lowercase().takeIf {it in listOf("mp4","mkv","webm","ts","mov")} ?: java.net.URI(stream.url).path.substringAfterLast('.').lowercase(java.util.Locale.ROOT)
         val name=title.replace(Regex("[^\\p{L}\\p{N} ._-]"),"_").take(90).ifBlank {"BruniO"}+"-"+System.currentTimeMillis()+"."+ext
         val request=DownloadManager.Request(Uri.parse(stream.url)).setTitle(title.take(100))
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
         stream.requestHeaders.forEach {(key,value)->if(!key.contains('\n') && !value.contains('\n') && !value.contains('\r')) request.addRequestHeader(key,value)}
-        if(Build.VERSION.SDK_INT>=29) request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS,name)
-        else request.setDestinationInExternalFilesDir(context,Environment.DIRECTORY_DOWNLOADS,name)
+        request.setDestinationInExternalFilesDir(context,Environment.DIRECTORY_DOWNLOADS,name)
         return (context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
     }
 }
@@ -41,10 +46,23 @@ internal fun MobilePlayerEnvironmentRP133(enabled:Boolean) {
     val activity=androidx.compose.ui.platform.LocalContext.current.playbackActivity()
     DisposableEffect(activity,enabled) {
         val previous=activity?.requestedOrientation
-        if(enabled) activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        val controller=activity?.window?.let {androidx.core.view.WindowCompat.getInsetsController(it,it.decorView)}
+        val insets=activity?.window?.decorView?.let {androidx.core.view.ViewCompat.getRootWindowInsets(it)}
+        val statusWasVisible=insets?.isVisible(androidx.core.view.WindowInsetsCompat.Type.statusBars()) ?: true
+        val navigationWasVisible=insets?.isVisible(androidx.core.view.WindowInsetsCompat.Type.navigationBars()) ?: true
+        val previousBehavior=controller?.systemBarsBehavior
+        if(enabled) {
+            activity?.requestedOrientation=ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            controller?.systemBarsBehavior=androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller?.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        }
         onDispose {if(enabled) {
             activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             if(previous!=null) activity?.requestedOrientation=previous
+            if(statusWasVisible) controller?.show(androidx.core.view.WindowInsetsCompat.Type.statusBars())
+            if(navigationWasVisible) controller?.show(androidx.core.view.WindowInsetsCompat.Type.navigationBars())
+            if(previousBehavior!=null) controller?.systemBarsBehavior=previousBehavior
         }}
     }
 }

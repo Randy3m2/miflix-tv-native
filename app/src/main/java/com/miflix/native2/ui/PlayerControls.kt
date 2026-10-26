@@ -58,7 +58,7 @@ internal fun CompactPlayerControls(
     if(LocalMobileBrunioRP133.current) {
         MobilePlayerControlsRP133(request,paused,position,duration,seekable,nextAvailable,easyModeRP79,badgePlayerRP26,
             onInteraction,onPlay,onClose,onSeek,onMenu,onLinks,
-            {if(request.live) onMenu("channels") else onEpisodes()},onNext,onParty,onChat,onReactions,onMultiView,onStatsRP95,onInfo,onPip)
+            {if(request.live) onMenu("channels") else onEpisodes()},onNext,onParty,onChat,onReactions,onMultiView,onStatsRP95,onInfo,onPip,onResize)
         return
     }
     if(easyModeRP79) {

@@ -118,6 +118,11 @@ class SupabaseRepository(private val url: String, private val key: String) {
         )
     }
 
+    suspend fun calendarSubscriptionsRP134(session:CloudSession,profile:String,changes:JSONObject):JSONObject {
+        val body=JSONObject().put("p_profile",profile).put("p_changes",changes)
+        return JSONObject(Http.text("$url/rest/v1/rpc/brunio_calendar_sync_rp134","POST",headers(session),body.toString()))
+    }
+
     suspend fun settingsRP83(session:CloudSession,profileId:String):Pair<JSONObject?,Long> {
         val state=readRow(session,profileId)?.optJSONObject("state") ?: JSONObject()
         return state.optJSONObject("settingsRP83") to state.optLong("settingsRevisionRP83",0L)

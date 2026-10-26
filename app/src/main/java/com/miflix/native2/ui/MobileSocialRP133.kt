@@ -145,8 +145,11 @@ private fun MobileCalendarRP133(state:AppState) {
     var events by remember {mutableStateOf<List<SportEventRP120>>(emptyList())}
     var subscriptions by remember {mutableStateOf(false)}
     val revision by CalendarStoreRP120.revision.collectAsState()
+    val followed=remember(owner,revision) {CalendarStoreRP120.subscriptions(context,owner)}
     LaunchedEffect(owner,month,revision) {events=withContext(Dispatchers.IO) {CalendarStoreRP120.events(context,owner)}}
-    LaunchedEffect(owner,month) {
+    LaunchedEffect(owner) {state.refreshCalendar()}
+    LaunchedEffect(owner,month,followed) {
+        if(!day.startsWith(month)) day=YearMonth.parse(month).atDay(1).toString()
         withContext(Dispatchers.IO) {CalendarStoreRP120.activate(context,owner,state.activeProfile.name);CalendarStoreRP120.refresh(context,owner,month=YearMonth.parse(month))}
     }
     if(subscriptions) MobileSubscriptionsRP133(state,"NBA") {subscriptions=false}
@@ -166,18 +169,32 @@ private fun MobileCalendarRP133(state:AppState) {
                     Box(Modifier.weight(1f).height(53.dp).then(if(date.isNotEmpty()) Modifier.mobileGlassRP133(date==day).clickable {day=date} else Modifier),contentAlignment=Alignment.Center) {
                         if(date.isNotEmpty()) Column(horizontalAlignment=Alignment.CenterHorizontally) {
                             Text(number.toString(),color=Color.White,fontSize=13.sp)
+                            if(state.calendarEvents.any {eventLocal(it.starts).startsWith(date)}) Text("●",color=MobileTintRP133,fontSize=10.sp)
                             events.firstOrNull {it.day()==date}?.let {event->EventLogoRP120(event.logos.firstOrNull() ?: CalendarSourcesRP120.logo(event.league),event.league,Modifier.size(20.dp))}
                         }
                     }
                 }
             }}
         }}
-        item {MobileButtonRP133(tr("Suscripciones","Subscriptions"),"plus",Modifier.fillMaxWidth()) {subscriptions=true}}
+        item {Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            MobileButtonRP133(tr("Suscripciones","Subscriptions"),"plus",Modifier.weight(1f)) {subscriptions=true}
+            MobileButtonRP133(tr("Actualizar","Refresh"),"refresh",Modifier.weight(1f)) {state.launch {
+                state.refreshCalendar()
+                withContext(Dispatchers.IO) {CalendarStoreRP120.refresh(context,owner,true,YearMonth.parse(month))}
+            }}
+        }}
+        items(state.calendarEvents.filter {eventLocal(it.starts).startsWith(day)},key={"shared:"+it.id}) {event->
+            Column(Modifier.fillMaxWidth().mobileGlassRP133().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                Text(event.title,color=Color.White,fontSize=15.sp,fontWeight=FontWeight.Bold)
+                Text(eventLocal(event.starts),color=Muted,fontSize=12.sp)
+                if(event.cloud!=null || event.channelId.isNotBlank()) MobileButtonRP133(tr("Ver contenido","View title"),"play") {state.launch {state.openCalendarEvent(event)}}
+            }
+        }
         items(events.filter {it.day()==day},key={it.key}) {event->Row(Modifier.fillMaxWidth().mobileGlassRP133().padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
             EventLogoRP120(event.logos.firstOrNull() ?: CalendarSourcesRP120.logo(event.league),event.league,Modifier.size(40.dp))
             Column {Text(event.title,color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold);Text(event.league+" · "+if(event.timed) DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(event.starts)) else day,color=Muted,fontSize=12.sp)}
         }}
-        if(events.none {it.day()==day}) item {Text(tr("Sin eventos seguidos en esta fecha.","No followed events on this date."),color=Muted)}
+        if(events.none {it.day()==day} && state.calendarEvents.none {eventLocal(it.starts).startsWith(day)}) item {Text(tr("Sin eventos seguidos en esta fecha.","No followed events on this date."),color=Muted)}
     }
 }
 

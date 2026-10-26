@@ -20,7 +20,7 @@ import com.miflix.native2.R
 
 @Composable
 internal fun MobileAppRP133(state:AppState,destination:Screen) {
-    val primary=listOf(Screen.HOME,Screen.SEARCH,Screen.LIVE_TV,Screen.FRIENDS,Screen.MY_LIST)
+    val primary=listOf(Screen.HOME,Screen.SEARCH,Screen.LIVE_TV,Screen.FRIENDS,Screen.MY_LIST,Screen.DOWNLOADS)
     val active=when(destination) {
         Screen.DETAILS->state.detailsReturnScreen.name
         Screen.WATCH_PARTY->Screen.FRIENDS.name
@@ -54,6 +54,7 @@ internal fun MobileAppRP133(state:AppState,destination:Screen) {
                 Screen.DETAILS->MobileDetailsRP133(state)
                 Screen.LIVE_TV,Screen.LIDOM->MobileLiveRP133(state,initial=if(destination==Screen.LIDOM) "LIDOM" else "TV")
                 Screen.FRIENDS,Screen.WATCH_PARTY->MobileFriendsRP133(state)
+                Screen.DOWNLOADS->MobileDownloadsScreenRP134(state)
                 Screen.SETTINGS->MobileSettingsRP133(state)
                 Screen.PROFILES->MobileProfilesRP133(state)
                 Screen.NOTIFICATIONS->MobileNotificationsRP133(state)
@@ -73,8 +74,8 @@ internal fun MobileAppRP133(state:AppState,destination:Screen) {
             }
         }
         if(destination !in listOf(Screen.PLAYER,Screen.MULTIVIEW)) Row(Modifier.fillMaxWidth().background(Color(0xF00C0E14)).padding(vertical=5.dp),horizontalArrangement=Arrangement.SpaceEvenly) {
-            val tabs=listOf(Triple(Screen.HOME,"home","Home"),Triple(Screen.SEARCH,"search",tr("Buscar","Search")),Triple(Screen.LIVE_TV,"live",tr("En vivo","Live")),Triple(Screen.FRIENDS,"friends",tr("Amigos","Friends")),Triple(Screen.MY_LIST,"list",tr("Mi lista","My list")))
-            tabs.filter {(!state.kidsMode || it.first !in listOf(Screen.LIVE_TV,Screen.FRIENDS)) && (!state.easyModeRP79 || it.first!=Screen.FRIENDS)}.forEach {(screen,icon,title)->
+            val tabs=listOf(Triple(Screen.HOME,"home","Home"),Triple(Screen.SEARCH,"search",tr("Buscar","Search")),Triple(Screen.LIVE_TV,"live",tr("En vivo","Live")),Triple(Screen.FRIENDS,"friends",tr("Amigos","Friends")),Triple(Screen.MY_LIST,"list",tr("Mi lista","My list")),Triple(Screen.DOWNLOADS,"download",tr("Descargas","Downloads")))
+            tabs.filter {(!state.kidsMode || it.first !in listOf(Screen.LIVE_TV,Screen.FRIENDS,Screen.DOWNLOADS)) && (!state.easyModeRP79 || it.first!=Screen.FRIENDS)}.forEach {(screen,icon,title)->
                 val selected=active==screen.name
                 Column(Modifier.weight(1f).heightIn(min=52.dp).clickable {
                     if(screen==Screen.FRIENDS) state.refreshFriendsTab()

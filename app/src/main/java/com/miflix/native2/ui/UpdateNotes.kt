@@ -206,11 +206,17 @@ internal object UpdateNotes {
         "RP132: selectores y marcadores de equipos con logos, sin nombres visibles; F1 con fotos reales de pilotos." to "RP132: logo-only team selectors and scoreboards; F1 with real driver portraits.",
         "F1 reutiliza la tabla de Stats normal: cabecera fija, filas compactas y navegación estable, también con dos pantallas." to "F1 reuses the normal Stats table: fixed header, compact rows and stable navigation, also with two screens."
     )
-    val changes=listOf(
+    val rp133Changes=listOf(
         "RP133: BruniO Mobile M1: nueva interfaz táctil para Android con Home, búsqueda, detalles, perfiles y ajustes glass." to "RP133: BruniO Mobile M1: new Android touch interface with Home, search, details, profiles and glass settings.",
         "Live TV, deportes, calendario, amigos, reproducción y SplitScreen adaptados al celular; instalación y actualizaciones separadas de TV." to "Live TV, sports, calendar, friends, playback and SplitScreen adapted for phones; installation and updates separate from TV."
     )
-    val previousChanges=rp132Changes+rp131Changes+rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
+    val changes=listOf(
+        "RP134: Mobile M2 — reproducción horizontal automática, pantalla completa y controles táctiles compactos." to "RP134: Mobile M2 — automatic landscape playback, full screen and compact touch controls.",
+        "Descargas en el celular con portadas, temporadas, progreso y reproducción local; límite de tamaño independiente de TV." to "Phone downloads with covers, seasons, progress and local playback; size limit independent from TV.",
+        "AMC+ usa su logo local. SplitScreen añade superficie de video móvil, respuesta al toque y reintento de señal." to "AMC+ uses its bundled logo. SplitScreen adds a mobile video surface, touch response and stream retry.",
+        "Calendario móvil con eventos compartidos de TV y sincronización de suscripciones por cuenta y perfil; requiere SQL RP134 y ambas apps actualizadas." to "Mobile calendar includes shared TV events and subscription sync per account/profile; requires RP134 SQL and both apps updated."
+    )
+    val previousChanges=rp133Changes+rp132Changes+rp131Changes+rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
         "Menú de amigos: Watch, View Details, Recommendations y Close; detalles abre la ficha sin iniciar reproducción." to "Friend menu: Watch, View Details, Recommendations and Close; details opens the title without starting playback.",
         "Enlaces de Comet y Torrentio con texto ordenado e insignias de Dolby/HDR según sus metadatos." to "Clean Comet and Torrentio link metadata with small Dolby/HDR badges when reported by the source.",
         "Envío local a TV por Wi-Fi, con enlace y código de conexión; sin reproducción web." to "Send titles to TV over local Wi-Fi with a connection link and code; no web playback.",

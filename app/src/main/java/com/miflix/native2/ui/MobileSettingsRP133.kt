@@ -105,7 +105,7 @@ internal fun MobileSettingsRP133(state:AppState) {
             MobileSettingRowRP133(tr("Audio principal","Primary audio"),language(state.audioLanguage)) {sheet="audio"}
             MobileSettingRowRP133(tr("Audio secundario","Secondary audio"),language(state.secondaryAudioLanguageRP62)) {sheet="secondary"}
             MobileSettingRowRP133(tr("Subtítulos","Subtitles"),if(state.subtitleLanguage=="off") tr("Desactivados","Off") else language(state.subtitleLanguage)) {sheet="subtitles"}
-            MobileSettingRowRP133(tr("Tamaño máximo","File size limit"),if(state.streamSizeLimitGb==0.0) tr("Sin límite","Unlimited") else "${state.streamSizeLimitGb} GB") {sheet="size"}
+            MobileSettingRowRP133(tr("Límite de reproducción del celular","Phone playback size limit"),if(state.streamSizeLimitGb==0.0) tr("Sin límite","Unlimited") else "${state.streamSizeLimitGb} GB") {sheet="size"}
             MobileSettingRowRP133(tr("Precarga en detalles","Preload in details"),if(state.sourcePrefetchEnabledRP90) "ON" else "OFF") {state.saveSourcePrefetchRP90(!state.sourcePrefetchEnabledRP90)}
             MobileSettingRowRP133(tr("Siguiente episodio","Next episode"),if(state.autoplayNext) "ON" else "OFF") {state.savePlaybackPreferences(state.audioLanguage,state.subtitleLanguage,!state.autoplayNext)}
             MobileSettingRowRP133(tr("Probar otra fuente si falla","Try next source on failure"),if(state.autoplayNextLink) "ON" else "OFF") {state.saveAutoplayNextLink(!state.autoplayNextLink)}

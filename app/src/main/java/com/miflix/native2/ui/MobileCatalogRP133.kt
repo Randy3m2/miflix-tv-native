@@ -100,7 +100,8 @@ internal fun MobileHomeRP133(state:AppState) {
                     items(listOf("netflix" to "Netflix","disney" to "Disney+","prime" to "Prime Video","hbo" to "Max","apple" to "Apple TV+","hulu" to "Hulu","paramount" to "Paramount+","amcplus" to "AMC+")) {(id,title)->
                         val tile=StreamingTiles.firstOrNull {it.id==id}
                         Box(Modifier.width(112.dp).height(70.dp).mobileGlassRP133().clickable {state.launch {state.openPlatform(id,title)}},contentAlignment=Alignment.Center) {
-                            if(tile!=null) AsyncImage(tile.coverUrl,title,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+                            if(id=="amcplus") Image(androidx.compose.ui.res.painterResource(com.miflix.native2.R.drawable.streaming_amcplus_rp48),title,Modifier.fillMaxSize().padding(12.dp),contentScale=ContentScale.Fit)
+                            else if(tile!=null && tile.coverUrl.isNotBlank()) AsyncImage(tile.coverUrl,title,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
                             else Text(title,color=Color.White,fontWeight=FontWeight.Bold)
                         }
                     }
@@ -211,6 +212,14 @@ internal fun MobileDetailsRP133(state:AppState) {
                 if(!state.easyModeRP79) MobileIconButtonRP133("link",tr("Reproducir manualmente","Play manually")) {state.launch {if(item.type=="series") state.episodes.firstOrNull()?.let {state.chooseEpisodeSources(it)} else state.chooseCurrentSources()}}
             }
         }}
+        if(!state.kidsMode) item("download") {
+            Column(Modifier.padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                MobileButtonRP133(if(item.type=="series") tr("Descargar temporada seleccionada","Download selected season") else tr("Descargar película","Download movie"),"download",Modifier.fillMaxWidth(),enabled=!state.mobileDownloadBusyRP134 && !state.selectedUpcoming) {
+                    state.launch {if(item.type=="series") state.downloadMobileSeasonRP134() else state.downloadMobileItemRP134(item)}
+                }
+                if(state.mobileDownloadStatusRP134.isNotBlank()) Text(state.mobileDownloadStatusRP134,color=Muted,fontSize=12.sp)
+            }
+        }
         if(item.type=="series") {
             item("seasons") {LazyRow(contentPadding=PaddingValues(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 if(absolute) item {Text(tr("Serie completa","Complete series"),color=Color.White,fontSize=18.sp)} else items((1..(detail?.seasonCount ?: 1).coerceAtLeast(1)).toList()) {season->MobileButtonRP133(tr("Temporada ","Season ")+season,selected=season==state.currentSeason) {state.launch {state.loadSeason(season)}}}

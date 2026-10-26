@@ -15,7 +15,7 @@ import com.miflix.native2.data.*
 /** One decoder pool, at most four streams, and exactly one audible tile. */
 @Composable
 internal fun MobileMultiViewRP133(state:AppState) {
-    val pool=remember {MultiPlayerPool()}
+    val pool=remember(state.localExtrasScope()) {MultiPlayerPool()}
     DisposableEffect(pool) {onDispose {pool.releaseAll()}}
     val portrait=LocalConfiguration.current.orientation==android.content.res.Configuration.ORIENTATION_PORTRAIT
     var sound by remember {mutableStateOf(state.multiViewRequests.firstOrNull()?.playbackId)}
@@ -38,7 +38,8 @@ internal fun MobileMultiViewRP133(state:AppState) {
         if(state.multiViewRequests.size>=4 || state.multiViewRequests.none {it.playbackId==stats}) stats=null
     }
     if(adding) MobileSheetRP133(tr("Agregar canal o juego","Add channel or game"),{adding=false;replacing=null}) {
-        MobileLiveRP133(state,{request->
+        MobileLiveRP133(state,{picked->
+            val request=picked.copy(playbackId=java.util.UUID.randomUUID().toString())
             val old=replacing
             if(old!=null) {
                 val index=state.multiViewRequests.indexOfFirst {it.playbackId==old}
@@ -50,6 +51,15 @@ internal fun MobileMultiViewRP133(state:AppState) {
     selected?.let {req->MobileSheetRP133(req.item.title,{selected=null}) {
         MobileButtonRP133(tr("Escuchar","Listen"),"volume",Modifier.fillMaxWidth(),selected=sound==req.playbackId) {sound=req.playbackId;selected=null}
         MobileButtonRP133("Stats","stats",Modifier.fillMaxWidth()) {stats=req.playbackId;game=null;forceF1=false;selected=null}
+        MobileButtonRP133(tr("Reintentar señal","Retry stream"),"refresh",Modifier.fillMaxWidth()) {
+            val index=state.multiViewRequests.indexOfFirst {it.playbackId==req.playbackId}
+            if(index>=0) {
+                val fresh=req.copy(playbackId=java.util.UUID.randomUUID().toString())
+                state.multiViewRequests[index]=fresh
+                if(sound==req.playbackId) sound=fresh.playbackId
+            }
+            selected=null
+        }
         MobileButtonRP133(tr("Cambiar canal","Change channel"),"link",Modifier.fillMaxWidth()) {replacing=req.playbackId;selected=null;adding=true}
         MobileButtonRP133(tr("Pantalla completa","Full screen"),"full",Modifier.fillMaxWidth()) {pool.releaseAll();state.multiViewRequests.clear();selected=null;state.openLivePlayer(req)}
         MobileButtonRP133(tr("Quitar pantalla","Remove screen"),"close",Modifier.fillMaxWidth()) {pool.release(req.playbackId);state.multiViewRequests.removeAll {it.playbackId==req.playbackId};selected=null;if(state.multiViewRequests.isEmpty()) finish()}
@@ -61,7 +71,7 @@ internal fun MobileMultiViewRP133(state:AppState) {
     Column(Modifier.fillMaxSize().background(Color.Black)) {
         Row(Modifier.fillMaxWidth().padding(8.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             MobileIconButtonRP133("back",tr("Salir de SplitScreen","Exit SplitScreen")) {finish()}
-            LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            LazyRow(Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 if(state.multiViewRequests.size<4) item {MobileButtonRP133(tr("Agregar","Add"),"plus") {adding=true}}
                 item {MobileButtonRP133("HD",selected=hd) {hd=!hd}}
                 item {MobileButtonRP133("Stats","stats",selected=target!=null,enabled=state.multiViewRequests.size<4) {if(target!=null) stats=null else {stats=state.multiViewRequests.firstOrNull()?.playbackId;game=null}}}

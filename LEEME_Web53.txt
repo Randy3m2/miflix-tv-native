@@ -1,0 +1,23 @@
+BruniO Web v53 — Torrentio / Comet de tu cuenta
+
+Aplicar sobre Web v51 o v52. Incluye los cambios de transporte de v52.
+No modifica TV ni móvil.
+
+1. Extraer el ZIP y copiar su contenido en la raíz del repositorio, reemplazando los archivos incluidos y conservando las rutas.
+2. Hacer commit.
+3. Actualizar la función brunio-downloads en Supabase con el archivo completo supabase/functions/brunio-downloads/index.ts y pulsar Deploy.
+   Alternativa CLI, con proyecto vinculado: supabase functions deploy brunio-downloads
+   Conservar autenticación y secrets existentes. No requiere SQL.
+4. Redesplegar Vercel. Recargar con Ctrl+Shift+R.
+
+Play y Change Source consultan solo los manifests configurados guardados por la cuenta de TV en privateSetup.addonManifests y el campo heredado torrentioManifest.
+Hosts admitidos: torrentio.strem.fun, comet.feels.legal y comet.elfhosted.com. Comet primero al mostrar la lista. No se incluyen Mandanguita/Deepflix.
+Los datos privados de configuración permanecen en el servidor. Las fuentes usan tickets cifrados ligados a cuenta y perfil.
+Si no hay Torrentio/Comet configurados, la web pide guardarlos desde TV; el Torrentio gratuito sin servicio de enlaces directos puede devolver solo torrents, que el navegador no reproduce.
+Se conservan enlaces HTTPS directos; se excluyen torrents, enlaces externos y fuentes que exigen cabeceras especiales o declaran notWebReady.
+TorBox se resuelve mediante el mecanismo existente cuando el add-on configurado lo utiliza.
+No hay transcodificación: un enlace directo puede seguir usando un códec o contenedor incompatible con tu navegador. MEDIA_4 no queda resuelto por cambiar el proveedor en todos los casos.
+
+Validación local: AccountSources53Check y ChangeSource53Check: PASS. Sintaxis JS y git diff --check: PASS.
+Incluye consulta de fuentes, aislamiento por perfil, tickets, filtrado, cabeceras de TV y redirecciones permitidas.
+No se desplegó en GitHub, Supabase ni Vercel. Falta verificar reproducción real después del despliegue.

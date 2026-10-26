@@ -1,8 +1,8 @@
 'use strict';
 const words46=(es,en)=>language==='en'?en:es;
 function validMedia46(raw){try{publicLiveURL(raw);return true;}catch{return false;}}
-const sourcePolicy49='mandanguita-deepflix-v49';
-function factorySources49(result){if(result?.sourcePolicy!==sourcePolicy49)throw Error(words46('Actualiza la función brunio-downloads en Supabase. El servidor aún no confirmó Mandanguita TV y Deepflix.','Update the brunio-downloads function in Supabase. The server has not confirmed Mandanguita TV and Deepflix yet.'));return (result.sources||[]).filter(s=>['mandanguita','deepflix'].includes(s.providerId)).sort((a,b)=>Number(a.providerId==='deepflix')-Number(b.providerId==='deepflix'));}
+const sourcePolicy49='torrentio-comet-v53';
+function factorySources49(result){if(result?.sourcePolicy!==sourcePolicy49)throw Error(words46('Actualiza la función brunio-downloads en Supabase. El servidor aún no confirmó Torrentio y Comet.','Update the brunio-downloads function in Supabase. The server has not confirmed Torrentio and Comet yet.'));return (result.sources||[]).filter(s=>['torrentio','comet'].includes(s.providerId)).sort((a,b)=>Number(a.providerId==='torrentio')-Number(b.providerId==='torrentio'));}
 const sourceCache46=new Map();
 let sourceRun46=0;
 function scope46(){return session?.user.id+':'+selected();}

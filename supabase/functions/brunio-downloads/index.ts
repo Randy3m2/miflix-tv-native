@@ -3,9 +3,8 @@ const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'au
 const reply=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...cors,'Content-Type':'application/json','Cache-Control':'no-store'}});
 const cache=new Map<string,{at:number;rows:Source[]}>();
 type Source={url:string;provider:string;name:string;filename:string;size:number};
-const defaults=['x.pepo.ar','mg.homelabx.qzz.io'];
-const factory=['https://x.pepo.ar/d/87ef2eec82a0471a/manifest.json','https://mg.homelabx.qzz.io/manifest.json'];
-const providerName=(host:string)=>host==='x.pepo.ar'?'Mandanguita TV':host==='mg.homelabx.qzz.io'?'Deepflix':host;
+const defaults=['torrentio.strem.fun','comet.feels.legal','comet.elfhosted.com'];
+const providerName=(host:string)=>host==='torrentio.strem.fun'?'Torrentio':'Comet';
 function publicMedia(raw:string){const u=https(raw),h=u.hostname.toLowerCase();if(!h.includes('.')||h.endsWith('.local')||h.endsWith('.localhost')||h.endsWith('.internal')||/^\d+(?:\.\d+){3}$/.test(h)||h.includes(':')||h==='api.torbox.app')throw Error('Invalid public media');return u;}
 function allowedHosts(){return new Set([...defaults,...(Deno.env.get('DOWNLOAD_ADDON_HOSTS')||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean)]);}
 function https(raw:string){const u=new URL(raw);if(u.protocol!=='https:'||u.username||u.password||(u.port&&u.port!=='443'))throw Error('Unsafe URL');return u;}
@@ -89,10 +88,11 @@ Deno.serve(async(request:Request)=>{
   const stateRows=await json(await fetch(base+'/rest/v1/miflix_user_state?user_id=eq.'+encodeURIComponent(user.id)+'&profile_id=eq.__account__&select=state',{headers,signal:AbortSignal.timeout(10000)}));
   const account=stateRows[0]?.state||{},profile=(account.profiles||[]).find((p:any)=>p.id===input.profile);
   if(!profile||profile.isKids||profile.id==='brunio-kids')return reply({error:en?'Downloads are unavailable for this profile.':'Descargas no disponibles para este perfil.'},403);
-  const manifests=factory;
-  const valid=manifests.flatMap(raw=>{try{return [addon(raw)];}catch{return [];}}).slice(0,4);
-  if(!valid.length)return reply({error:en?'No supported sources available.':'No hay fuentes compatibles disponibles.'},409);
-  const fingerprint=await digest('factory-v49:'+valid.map(x=>x.href).sort().join('|')),providers=new Set(valid.map(x=>x.hostname));
+  const setup=account.privateSetup||{};
+  const manifests=[...(Array.isArray(setup.addonManifests)?setup.addonManifests:[]),setup.torrentioManifest].filter((raw:unknown)=>typeof raw==='string'&&raw.length>0);
+  const valid=[...new Set<string>(manifests)].flatMap(raw=>{try{const u=addon(raw);return defaults.includes(u.hostname)?[u]:[];}catch{return [];}}).slice(0,4);
+  if(!valid.length)return reply({error:en?'Save your configured Torrentio/Comet add-ons in BruniO TV first.':'Guarda primero tus add-ons configurados de Torrentio/Comet en BruniO TV.'},409);
+  const fingerprint=await digest('account-torrentio-comet-v53:'+valid.map(x=>x.href).sort().join('|')),providers=new Set(valid.map(x=>x.hostname));
   if(input.action==='link'){
    stage='TICKET';const data=await unseal(String(input.ticket||''));
    if(data.owner!==user.id||data.profile!==input.profile||data.fingerprint!==fingerprint||data.expires<Date.now())return reply({error:en?'Links expired. Load sources again.':'Enlaces caducados. Carga las fuentes otra vez.'},410);
@@ -105,13 +105,13 @@ Deno.serve(async(request:Request)=>{
   const cacheKey=user.id+':'+fingerprint+':'+input.cloud+':'+season+':'+episode;let rows=cache.get(cacheKey)?.rows;
   if(input.refresh===true||!rows||Date.now()-(cache.get(cacheKey)?.at||0)>3*3600000){
    const details=await tmdb('/'+(kind==='series'?'tv':'movie')+'/'+id+'/external_ids'),imdb=details.imdb_id;
-   if(!/^tt\d+$/.test(imdb||''))return reply({sourcePolicy:'mandanguita-deepflix-v49',sources:[]});
+   if(!/^tt\d+$/.test(imdb||''))return reply({sourcePolicy:'torrentio-comet-v53',sources:[]});
    const media=kind==='series'?imdb+':'+season+':'+episode:imdb;
    const batches=await Promise.allSettled(valid.map(async manifest=>{
     const u=new URL(manifest.href);u.pathname=u.pathname.slice(0,-'/manifest.json'.length)+'/stream/'+kind+'/'+media+'.json';
     const body=await providerStreams52(u.href);
     return (body.streams||[]).slice(0,120).flatMap((row:any)=>{
-     if(row.externalUrl||row.infoHash||row.behaviorHints?.proxyHeaders)return [];
+     if(row.externalUrl||row.infoHash||row.behaviorHints?.proxyHeaders||row.behaviorHints?.notWebReady)return [];
      try{const url=publicMedia(row.url);
       return [{url:url.href,provider:providerName(manifest.hostname),name:clean(row.name||providerName(manifest.hostname),100),filename:clean(row.behaviorHints?.filename||row.title||'Download'),size:sourceSize(row)}];
      }catch{return [];}
@@ -125,7 +125,7 @@ Deno.serve(async(request:Request)=>{
    rows=[...new Map(batches.flatMap(x=>x.status==='fulfilled'?x.value:[]).map(x=>[x.url,x])).values()].slice(0,480);
    if(cache.size>=100)cache.delete(cache.keys().next().value!);cache.set(cacheKey,{at:Date.now(),rows});
   }
-  const sources=await Promise.all(rows.filter(row=>withinLimit(row.size,limit)).slice(0,80).map(async row=>({providerId:row.provider==='Mandanguita TV'?'mandanguita':'deepflix',provider:row.provider,name:row.name,filename:row.filename,size:row.size,ticket:await seal({owner:user.id,profile:input.profile,fingerprint,url:row.url,filename:row.filename,size:row.size,expires:Date.now()+15*60000})})));
-  return reply({sourcePolicy:'mandanguita-deepflix-v49',sources});
+  const sources=await Promise.all(rows.filter(row=>withinLimit(row.size,limit)).slice(0,80).map(async row=>({providerId:row.provider==='Torrentio'?'torrentio':'comet',provider:row.provider,name:row.name,filename:row.filename,size:row.size,ticket:await seal({owner:user.id,profile:input.profile,fingerprint,url:row.url,filename:row.filename,size:row.size,expires:Date.now()+15*60000})})));
+  return reply({sourcePolicy:'torrentio-comet-v53',sources});
  }catch(error){const code=error instanceof DownloadError?error.code:stage==='TICKET'?'TICKET_INVALID':stage==='RESOLVE'?'LINK_RESOLVE_FAILED':'DOWNLOAD_REQUEST_FAILED';return reply({code,error:(en?'Download could not be prepared. Refresh sources and retry. Code: ':'No se pudo preparar la descarga. Actualiza las fuentes y reintenta. Código: ')+code},502);}
 });

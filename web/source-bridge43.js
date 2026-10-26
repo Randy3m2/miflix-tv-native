@@ -1,9 +1,9 @@
 'use strict';
 // Keep the in-player picker independent of features46.js and its cache version.
-const playerSourcePolicy51='mandanguita-deepflix-v49';
+const playerSourcePolicy51='torrentio-comet-v53';
 function playerFactorySources51(result){
- if(result?.sourcePolicy!==playerSourcePolicy51)throw Error(language==='en'?'Update the brunio-downloads function in Supabase. The server has not confirmed Mandanguita TV and Deepflix yet.':'Actualiza la función brunio-downloads en Supabase. El servidor aún no confirmó Mandanguita TV y Deepflix.');
- return (result.sources||[]).filter(s=>['mandanguita','deepflix'].includes(s.providerId)).sort((a,b)=>Number(a.providerId==='deepflix')-Number(b.providerId==='deepflix'));
+ if(result?.sourcePolicy!==playerSourcePolicy51)throw Error(language==='en'?'Update the brunio-downloads function in Supabase. The server has not confirmed Torrentio and Comet yet.':'Actualiza la función brunio-downloads en Supabase. El servidor aún no confirmó Torrentio y Comet.');
+ return (result.sources||[]).filter(s=>['torrentio','comet'].includes(s.providerId)).sort((a,b)=>Number(a.providerId==='torrentio')-Number(b.providerId==='torrentio'));
 }
 function sourceCurrent43(current,picker){return activeWebPlayer===current&&current.picker43===picker&&session?.user.id===current.owner&&selected()===current.profile;}
 function sourceReply43(current,picker,body){if(sourceCurrent43(current,picker))current.frame.contentWindow.postMessage({brunio:'player-source-list43',channel:current.channel,requestId:picker.id,...body},location.origin);}

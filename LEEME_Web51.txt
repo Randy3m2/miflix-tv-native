@@ -1,0 +1,10 @@
+BruniO Web v51 — Change Source
+
+Aplicar sobre Web v50: copiar web/ en la raíz del repositorio, conservando las rutas.
+Incluye el selector independiente de sourcePolicy49, features46.js compatible y actualización de caché v51.
+Hacer commit y redesplegar Vercel. Cerrar las pestañas antiguas y reabrir; si persiste caché, Ctrl+Shift+R.
+No requiere cambios de Android, SQL ni nuevo despliegue de Supabase si ya se aplicó Web v49.
+Se conserva la política Mandanguita TV / Deepflix; el servidor debe confirmarla.
+
+Verificación: sintaxis JS y regresión del selector sin cargar features46.js, filtrado/orden de proveedores, rechazo de política antigua, lista vacía, Live TV y cambio de perfil. PASS.
+No se verificó contra proveedores reales ni se desplegó a tu cuenta.

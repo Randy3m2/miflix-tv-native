@@ -1,7 +1,7 @@
 """Real Qt widgets offscreen; fixtures avoid production network/account mutations."""
 import os,time,unittest
 os.environ.setdefault('QT_QPA_PLATFORM','offscreen')
-from PySide6.QtWidgets import QApplication,QLineEdit,QPushButton,QWidget
+from PySide6.QtWidgets import QApplication,QLineEdit,QPushButton,QWidget,QHBoxLayout
 from brunio.ui import Window,java_hash
 class UITests(unittest.TestCase):
     @classmethod
@@ -14,10 +14,10 @@ class UITests(unittest.TestCase):
         self.w.client.transport=lambda *args,**kwargs:[]
     def tearDown(self):self.w.client.session={};self.w.close();self.w.pool.waitForDone(3000)
     def test_search_and_settings_widgets_survive_navigation(self):
-        self.w.search();self.assertTrue(self.w.stack.currentWidget().findChildren(QLineEdit));self.w.settings(refresh=False);self.assertTrue(self.w.stack.currentWidget().findChildren(QPushButton));self.w.profiles();self.app.processEvents()
+        self.w.search();self.assertTrue(self.w.stack.currentWidget().findChildren(QLineEdit));self.w.settings(refresh=False);self.assertTrue(self.w.stack.currentWidget().findChildren(QPushButton));self.w.profiles(manage=True);self.app.processEvents()
         self.assertTrue(any(b.text()=='Avatar' for b in self.w.stack.currentWidget().findChildren(QPushButton)))
     def test_pages_are_top_aligned_and_live_uses_tv_playlist(self):
-        self.w.image=lambda *args:None
+        self.w.image=lambda *args,**kwargs:None
         self.w.resize(1000,700);self.w.show();self.w.live()
         deadline=time.monotonic()+3
         while not self.w.live_candidates and time.monotonic()<deadline:self.app.processEvents();time.sleep(.01)
@@ -26,6 +26,34 @@ class UITests(unittest.TestCase):
         page=self.w.stack.currentWidget();self.assertLessEqual(page.horizontalScrollBar().maximum(),0)
         self.w.search();self.app.processEvents();page=self.w.stack.currentWidget()
         inputs=page.findChildren(QLineEdit);self.assertTrue(inputs);self.assertLess(inputs[0].mapTo(page,inputs[0].rect().topLeft()).y(),300)
+    def test_profile_preferences_and_retry_are_scoped(self):
+        self.w.client.profile='one';self.w.save_profile_pref('retry_links',False)
+        self.w.client.profile='two';self.assertTrue(self.w.profile_pref('retry_links',True))
+        self.w.client.profile='one';self.assertFalse(self.w.profile_pref('retry_links',True))
+    def test_source_retry_keeps_position_and_respects_party_and_toggle(self):
+        class FakePlayer:
+            def get_time(self):return 42000
+            def stop(self):pass
+            def release(self):pass
+        self.w.player=FakePlayer();self.w.current={'item':{'type':'movie','title':'test'},'season':0,'episode':0,'stream':{'url':'https://a'}}
+        self.w.sources=[{'url':'https://a'},{'url':'https://b'}];self.w.fallback_urls={'https://a'};self.w.source_last_pos=50000
+        calls=[];self.w.play_stream=lambda *args:calls.append(args)
+        self.assertTrue(self.w.retry_next_source());self.assertEqual(calls[0][3],50000);self.assertEqual(calls[0][4]['url'],'https://b')
+        self.w.client.party={'room_code':'123456'};self.assertFalse(self.w.retry_next_source());self.w.client.party=None
+        self.w.save_profile_pref('retry_links',False);self.assertFalse(self.w.retry_next_source());self.w.player=None
+    def test_profiles_hide_header_and_settings_expose_update(self):
+        self.w.show();self.w.profiles();self.app.processEvents();self.assertTrue(self.w.sidebar.isHidden())
+        self.w.settings(False);self.app.processEvents();self.assertFalse(self.w.sidebar.isHidden())
+        self.assertTrue(self.w.stack.currentWidget().findChild(QPushButton,'updateButton'))
+    def test_edge_rail_arrows_scroll_the_actual_content(self):
+        from brunio.visuals import EdgeRail
+        content=QWidget();layout=QHBoxLayout(content)
+        for i in range(12):
+            b=QPushButton(str(i));b.setFixedWidth(150);layout.addWidget(b)
+        rail=EdgeRail(content,100);rail.resize(600,100);rail.show();self.app.processEvents()
+        bar=rail.scroll.horizontalScrollBar();self.assertGreater(bar.maximum(),0)
+        rail.move_by(1);self.assertGreater(bar.value(),0)
+        rail.move_by(-1);self.assertEqual(bar.value(),0);rail.close()
     def test_tv_live_hash_matches_kotlin_java(self):
         self.assertEqual(java_hash('abc'),96354);self.assertEqual(java_hash(''),0)
     def test_sidebar_selection_and_small_window_margins(self):

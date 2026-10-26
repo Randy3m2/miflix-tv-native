@@ -1,1 +1,1 @@
-Sube desktop/brunio-pc completo y .github/workflows/build-pc.yml a tu repositorio, respetando las carpetas. Ejecuta Actions > Build BruniO PC Windows > Run workflow. Lee desktop/brunio-pc/README.md. El ZIP es código fuente; no incluye un EXE compilado.
+Sube desktop/brunio-pc completo y .github/workflows/build-pc.yml a tu repositorio, respetando carpetas. Ejecuta Actions > Build BruniO PC Windows > Run workflow. Consulta desktop/brunio-pc/README.md. El ZIP es código fuente; no contiene un EXE compilado.

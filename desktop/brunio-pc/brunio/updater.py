@@ -15,6 +15,7 @@ def validate(info):
     if not isinstance(info,dict) or info.get('channel')!='pc-windows-x64':raise ValueError('Wrong update channel')
     version(info['version']);u=urlsplit(info['downloadUrl'])
     if u.scheme!='https' or u.hostname!='github.com' or u.username or u.password or u.port or u.query or u.fragment or not re.fullmatch('/'+re.escape(REPO)+r'/releases/download/pc-v[0-9.]+(?:-rc\d+)?/BruniO-PC-Setup-[0-9.]+(?:-rc\d+)?\.exe',u.path):raise ValueError('Untrusted PC installer URL')
+    if u.path!='/'+REPO+'/releases/download/pc-v'+info['version']+'/BruniO-PC-Setup-'+info['version']+'.exe':raise ValueError('Installer version mismatch')
     if not re.fullmatch('[a-f0-9]{64}',info.get('sha256','')) or not 0<int(info.get('sizeBytes',0))<=MAX:raise ValueError('Invalid installer hash/size')
     return info
 

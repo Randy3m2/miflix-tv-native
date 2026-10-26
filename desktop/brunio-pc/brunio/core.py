@@ -74,11 +74,37 @@ def filter_streams(rows, item, limit_gb=0):
         kept.setdefault(s['url'],s)
     return sorted(kept.values(),key=lambda x:(stream_quality(x),stream_size(x)),reverse=True)
 
+def addon_id(manifest):return hashlib.sha256(manifest.encode('utf-8')).hexdigest()
+def default_addon_rank(manifest,audio):
+    host=(urlsplit(manifest).hostname or '').lower();name=re.sub(r'[^a-z0-9]','',host)
+    if audio!='es':return 0 if 'comet' in name else 1 if 'torrentio' in name else 10
+    if 'deepflix' in name or host=='mg.homelabx.qzz.io':return -1
+    for rank,term in enumerate(('latadd','addonlatam','progresolatino','umbra','nuvedebrid','nuve','torrentio','comet')):
+        if term in name:return rank
+    return 10
+
+def ordered_addons(manifests,audio,saved=()):
+    ranked=sorted(dict.fromkeys(manifests),key=lambda m:default_addon_rank(m,audio));order={key:i for i,key in enumerate(saved)}
+    return sorted(ranked,key=lambda m:(0,order[addon_id(m)]) if addon_id(m) in order else (1,ranked.index(m)))
+
+def order_sources(rows,audio,manifests):
+    ranks={addon_id(m):i for i,m in enumerate(manifests)}
+    def rank(stream):
+        text=normalize(' '.join([str(stream.get('name','')),str(stream.get('title','')),str((stream.get('behaviorHints') or {}).get('filename',''))]))
+        spanish=bool(re.search(r'\b(latino|latina|castellano|espanol|spanish|españa|espa|spa)\b|🇪🇸|🇲🇽',text))
+        english=bool(re.search(r'\b(english|ingles|eng)\b|🇬🇧|🇺🇸',text))
+        preferred=spanish if audio=='es' else english
+        other=english if audio=='es' else spanish
+        language=0 if preferred else 2 if other else 1
+        variant=0 if re.search(r'\b(latino|latina)\b|🇲🇽',text) else 1 if spanish else 0
+        return (language,variant if audio=='es' else 0,ranks.get(stream.get('_addon_id'),len(ranks)),-stream_quality(stream),-stream_size(stream))
+    return sorted(rows,key=rank)
+
 class StaleWork(RuntimeError):pass
 class Client:
     def __init__(self, transport=get_json):
         self.transport=transport;self.session={};self.account={};self.profile='default';self.epoch=0
-        self.party=None;self.pending_room=None;self.token='';self.language='en-US';self.manifests=[]
+        self.party=None;self.pending_room=None;self.token='';self.language='en-US';self.manifests=[];self.source_audio='es';self.source_order=[]
         self.lock=threading.RLock();self.refresh_lock=threading.Lock()
     def context(self):return self.epoch,self.session.get('userId'),self.profile
     def check(self,context):
@@ -169,12 +195,13 @@ class Client:
         if not imdb:raise ValueError('IMDb ID unavailable')
         if not self.manifests:raise ValueError('Add your own Torrentio or Comet in Settings')
         vid=imdb+(f':{season}:{episode}' if item['type']=='series' else '')
+        manifests=ordered_addons(self.manifests,self.source_audio,self.source_order)
         def fetch(manifest):
-            try:return self.transport(manifest.removesuffix('/manifest.json')+f"/stream/{item['type']}/{vid}.json").get('streams',[])
+            try:return [{**x,'_addon_id':addon_id(manifest)} for x in self.transport(manifest.removesuffix('/manifest.json')+f"/stream/{item['type']}/{vid}.json").get('streams',[])]
             except Exception:return []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:rows=sum(list(pool.map(fetch,list(self.manifests))),[])
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:rows=sum(list(pool.map(fetch,manifests)),[])
         self.check(context)
-        return filter_streams(rows,item,limit),imdb
+        return order_sources(filter_streams(rows,item,limit),self.source_audio,manifests),imdb
     def rpc(self,name,body):return self.rest('rpc/'+name,'POST',body)
     def social_identity(self):
         context=self.context();profile=self.profile
@@ -199,7 +226,12 @@ class Client:
         return self.rpc('brunio_calendar_sync_rp134',{'p_profile':self.profile,'p_changes':changes or {}}) or {}
     def party_read(self,room):
         rows=self.social_rest('rp1_miflix_watch_parties?'+urlencode({'room_code':'eq.'+room,'select':'room_code,host_user_id,state,expires_at'})) or []
-        return rows[0] if rows else None
+        if not rows:return None
+        value=rows[0]
+        if self.party and self.party.get('room_code')==room:
+            for key in ('_actor','_profile'):
+                if key in self.party:value[key]=self.party[key]
+        return value
     def party_create(self):
         import secrets
         room=str(secrets.randbelow(900000)+100000);context=self.context()

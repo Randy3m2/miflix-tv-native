@@ -91,6 +91,14 @@ class StreamTests(unittest.TestCase):
         wrong=self.stream('1080p wrong','Dune.1984.mkv',10**9);big=self.stream('2160p big','Dune.2021.mkv',9*10**9);ok=self.stream('1080p okay','Dune.2021.mkv',4*10**9);download=self.stream('TB Download','Dune.2021.mkv',10**9)
         self.assertEqual(filter_streams([wrong,big,ok,download],item,5),[ok])
         self.assertEqual(filter_streams([ok,big],item),[big,ok])
+    def test_addon_and_language_priority(self):
+        from brunio.core import ordered_addons,addon_id,order_sources
+        a='https://torrentio.example/manifest.json';b='https://addonlatam.example/manifest.json'
+        ordered=ordered_addons([a,b],'es',[]);self.assertEqual(ordered,[b,a])
+        ordered=ordered_addons([a,b],'es',[addon_id(a)]);self.assertEqual(ordered,[a,b])
+        rows=[{'url':'https://a.test/a','title':'English 2160p','_addon_id':addon_id(a)},{'url':'https://b.test/b','title':'Latino 1080p','_addon_id':addon_id(b)}]
+        self.assertEqual(order_sources(rows,'es',ordered)[0]['url'],'https://b.test/b')
+        self.assertEqual(order_sources(rows,'en',ordered)[0]['url'],'https://a.test/a')
     def test_numeric_movie_title_is_not_release_year(self):
         self.assertIsNone(release_year('1917.1080p.mkv','1917'));self.assertEqual(release_year('Blade.Runner.2049.2017.1080p','Blade Runner 2049'),2017)
     def test_series_year_remains_unfiltered(self):self.assertEqual(len(filter_streams([self.stream('Show.2024','Show.2024.mkv')],{'type':'series','title':'Show','year':'2020'})),1)
@@ -107,6 +115,24 @@ class UpdateTests(unittest.TestCase):
         for url in [info['downloadUrl'].replace(REPO,'attacker/app'),info['downloadUrl'].replace('https:','http:'),info['downloadUrl'].replace('pc-v','native-v')]:
             with self.assertRaises(ValueError):validate({**info,'downloadUrl':url})
         with self.assertRaises(ValueError):validate({**info,'channel':'tv'})
+        with self.assertRaises(ValueError):validate({**info,'version':'1.0.0-rc3'})
+
+    def test_update_check_and_download_verify_release(self):
+        import hashlib,io,tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        from brunio import updater
+        from brunio.core import REPO
+        payload=b'MZ' + b'fixture-installer-bytes'
+        info={'channel':'pc-windows-x64','version':'99.0.0-rc1','sizeBytes':len(payload),'sha256':hashlib.sha256(payload).hexdigest(),'downloadUrl':f'https://github.com/{REPO}/releases/download/pc-v99.0.0-rc1/BruniO-PC-Setup-99.0.0-rc1.exe'}
+        asset={'assets':[{'name':'pc-update.json','browser_download_url':f'https://github.com/{REPO}/releases/download/pc-latest/pc-update.json'}]}
+        with patch.object(updater,'get_json',side_effect=[asset,info]):self.assertEqual(updater.check(),info)
+        class Opener:
+            def open(self,*args,**kwargs):return io.BytesIO(payload)
+        with tempfile.TemporaryDirectory() as directory, patch.object(updater,'build_opener',return_value=Opener()), patch.object(updater.tempfile,'gettempdir',return_value=directory):
+            self.assertEqual(updater.download(info).read_bytes(),payload)
+            with self.assertRaises(ValueError):updater.download({**info,'sha256':'0'*64})
+            self.assertFalse((Path(directory)/'BruniO-updates'/'setup.part').exists())
 
 class PairingTests(unittest.TestCase):
     def test_qr_encryption_matches_tv_aes_gcm_format(self):

@@ -16,6 +16,8 @@ PATHS={
  'profiles':'<circle cx="12" cy="8" r="4"/><path d="M3 22v-3a9 9 0 0 1 18 0v3"/>',
  'settings':'<path d="m9 2-1 4-4 1-2 5 3 3v5l5 2 3-3 5 1 3-5-2-4 1-5-5-2-3 3Z"/><circle cx="12" cy="12" r="3"/>',
  'bell':'<path d="M4 18h16l-2-4V9a6 6 0 0 0-12 0v5ZM9 21h6"/>',
+ 'volume':'<path d="M3 10v4h4l5 4V6l-5 4H3Zm12-1a5 5 0 0 1 0 6m3-9a9 9 0 0 1 0 12"/>',
+ 'fullscreen':'<path d="M4 9V4h5m6 0h5v5M4 15v5h5m6 0h5v-5"/>',
  'right':'<path d="m9 4 8 8-8 8"/>',
  'left':'<path d="m15 4-8 8 8 8"/>',
 }
@@ -55,3 +57,32 @@ class Poster(QPushButton):
         p.end()
     def enterEvent(self,e):self.update();super().enterEvent(e)
     def leaveEvent(self,e):self.update();super().leaveEvent(e)
+
+class EdgeRail(QWidget):
+    """A horizontal shelf with navigation over its left and right edges."""
+    def __init__(self,content,height,parent=None):
+        from PySide6.QtWidgets import QScrollArea,QHBoxLayout
+        super().__init__(parent);self.setObjectName('edgeRail');self.setFixedHeight(height)
+        outer=QHBoxLayout(self);outer.setContentsMargins(0,0,0,0)
+        self.scroll=QScrollArea();self.scroll.setWidgetResizable(True);self.scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff);self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff);self.scroll.setWidget(content);outer.addWidget(self.scroll)
+        self.previous=QPushButton(self);self.previous.setObjectName('railEdge');self.previous.setIcon(icon('left','#ffffff'));self.previous.setToolTip('Anterior')
+        self.next=QPushButton(self);self.next.setObjectName('railEdge');self.next.setIcon(icon('right','#ffffff'));self.next.setToolTip('Siguiente')
+        self.previous.clicked.connect(lambda:self.move_by(-1));self.next.clicked.connect(lambda:self.move_by(1))
+        bar=self.scroll.horizontalScrollBar();bar.valueChanged.connect(self.update_buttons);bar.rangeChanged.connect(self.update_buttons)
+    def move_by(self,direction):
+        bar=self.scroll.horizontalScrollBar();bar.setValue(bar.value()+direction*max(180,self.width()-180))
+    def update_buttons(self,*args):
+        bar=self.scroll.horizontalScrollBar();self.previous.setVisible(bar.value()>bar.minimum());self.next.setVisible(bar.value()<bar.maximum());self.previous.raise_();self.next.raise_()
+    def resizeEvent(self,event):
+        super().resizeEvent(event);height=min(90,max(44,self.height()-24));y=(self.height()-height)//2
+        self.previous.setGeometry(0,y,44,height);self.next.setGeometry(max(0,self.width()-44),y,44,height);self.update_buttons()
+
+class ProfileAvatar(Poster):
+    def paintEvent(self,event):
+        p=QPainter(self);p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        rect=QRectF(self.rect()).adjusted(5,5,-5,-5);path=QPainterPath();path.addEllipse(rect);p.setClipPath(path);p.fillRect(rect,QColor('#242428'))
+        if not self.pix.isNull():
+            pix=self.pix.scaled(self.size()-QSize(10,10),Qt.AspectRatioMode.KeepAspectRatioByExpanding,Qt.TransformationMode.SmoothTransformation)
+            p.drawPixmap((self.width()-pix.width())//2,(self.height()-pix.height())//2,pix)
+        p.setClipping(False);p.setPen(QColor('#f1f1f1' if self.underMouse() or self.hasFocus() else '#45454a'));p.drawEllipse(rect);p.end()

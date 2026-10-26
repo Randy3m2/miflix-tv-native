@@ -190,7 +190,7 @@ class DesktopFeatures:
         path=self.store().path(entry)
         if not path.is_file():self.tell(self.t('Archivo no disponible.','File unavailable.'));return
         item={'id':entry['media_id'],'cloudId':entry['cloud'],'title':entry['title'],'type':entry['kind'],'year':entry['year'],'poster':entry['poster'],'backdrop':'','overview':'','rating':0}
-        self.play_id+=1;self.play_stream(item,entry['season'],entry['episode'],0,{'url':path.as_uri(),'name':'Offline'})
+        self.play_id+=1;self.sources=[];self.fallback_urls=set();self.play_stream(item,entry['season'],entry['episode'],0,{'url':path.as_uri(),'name':'Offline'})
     def retry_download(self,entry):
         if entry['owner']!=owner(self.client):return
         item={'id':entry['media_id'],'cloudId':entry['cloud'],'title':entry['title'],'type':entry['kind'],'year':entry['year'],'poster':entry['poster'],'backdrop':'','overview':'','rating':0}

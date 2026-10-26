@@ -1,0 +1,113 @@
+name: Build BruniO Mobile APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: brunio-mobile-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      MIFLIX_TMDB_TOKEN: ${{ secrets.MIFLIX_TMDB_TOKEN }}
+      MIFLIX_SIGNING_KEYSTORE_BASE64: ${{ secrets.MIFLIX_SIGNING_KEYSTORE_BASE64 }}
+      MIFLIX_SIGNING_STORE_PASSWORD: ${{ secrets.MIFLIX_SIGNING_STORE_PASSWORD }}
+      MIFLIX_SIGNING_KEY_ALIAS: ${{ secrets.MIFLIX_SIGNING_KEY_ALIAS }}
+      MIFLIX_SIGNING_KEY_PASSWORD: ${{ secrets.MIFLIX_SIGNING_KEY_PASSWORD }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Verify catalog configuration
+        run: |
+          test -n "$MIFLIX_TMDB_TOKEN" || { echo "Configure MIFLIX_TMDB_TOKEN for the mobile catalog."; exit 1; }
+
+      - name: Restore permanent private signing key
+        run: |
+          python3 - <<'PY'
+          import base64, os, pathlib
+          names=['MIFLIX_SIGNING_KEYSTORE_BASE64','MIFLIX_SIGNING_STORE_PASSWORD','MIFLIX_SIGNING_KEY_ALIAS','MIFLIX_SIGNING_KEY_PASSWORD']
+          missing=[name for name in names if not os.environ.get(name)]
+          if missing:
+              raise SystemExit('Configure these repository Actions secrets first: '+', '.join(missing)+'. See RC17_SETUP.md.')
+          path=pathlib.Path(os.environ['RUNNER_TEMP'])/'brunio-signing.p12'
+          path.write_bytes(base64.b64decode(os.environ[names[0]],validate=True))
+          path.chmod(0o600)
+          with open(os.environ['GITHUB_ENV'],'a') as out:
+              out.write('MIFLIX_SIGNING_KEYSTORE_PATH='+str(path)+'\n')
+          PY
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Test and build permanently signed APK
+        run: gradle :mobile:testReleaseUnitTest :mobile:assembleRelease --stacktrace
+
+      - name: Verify signing and prepare APKs and update metadata
+        id: prepare
+        run: |
+          python3 scripts/prepare_mobile_update.py mobile/build/outputs/apk/release/mobile-release.apk
+          python3 - <<'PYTHON'
+          import json, os
+          from pathlib import Path
+          metadata = json.loads(Path('update.json').read_text())
+          version = metadata['version']
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+              out.write(f'version={version}\n')
+              out.write(f'apk=BruniO-Mobile-v{version}.apk\n')
+          PYTHON
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BruniO-Mobile-v${{ steps.prepare.outputs.version }}
+          path: |
+            ${{ steps.prepare.outputs.apk }}
+            update.json
+
+      - name: Publish versioned release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ steps.prepare.outputs.version }}
+          RELEASE_APK: ${{ steps.prepare.outputs.apk }}
+        run: |
+          TAG="mobile-v${RELEASE_VERSION}"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "BruniO Mobile ${RELEASE_VERSION}" --notes "Current version: ${RELEASE_VERSION}. Android phone interface, touch player, Live TV, sports, SplitScreen and profiles."
+          gh release upload "$TAG" "${RELEASE_APK}" update.json --clobber
+
+      - name: Update permanent latest channel
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ steps.prepare.outputs.version }}
+          RELEASE_APK: ${{ steps.prepare.outputs.apk }}
+        run: |
+          TAG="mobile-latest"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --target "${GITHUB_SHA}" --title "BruniO Mobile · Latest" --notes "Current version: ${RELEASE_VERSION}"
+          gh release upload "$TAG" BruniO-Mobile.apk update.json --clobber
+          gh release edit "$TAG" --title "BruniO Mobile · Latest" --notes "Current version: ${RELEASE_VERSION}"
+
+      - name: Remove runner copy of private signing key
+        if: always()
+        run: rm -f "${RUNNER_TEMP}/brunio-signing.p12"

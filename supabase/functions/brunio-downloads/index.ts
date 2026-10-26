@@ -14,6 +14,24 @@ const mediaDomains=['torbox.app','tb-cdn.cx','tb-cdn.io','tb-cdn.pw','tb-cdn.sh'
 function torbox(u:URL){return mediaDomains.some(domain=>u.hostname.endsWith('.'+domain));}
 class DownloadError extends Error {code:string;constructor(code:string){super(code);this.code=code;}}
 function addon(raw:string){const u=https(raw);if(!allowedHosts().has(u.hostname)||!u.pathname.endsWith('/manifest.json'))throw Error('Unsupported add-on');return u;}
+// Match TV's public add-on request headers; never forward account credentials.
+async function providerStreams52(raw:string){
+ let current=https(raw);const signal=AbortSignal.timeout(20000);
+ for(let hop=0;hop<5;hop++){
+  if(!allowedHosts().has(current.hostname))throw new DownloadError('PROVIDER_REDIRECT_HOST');
+  let response:Response;
+  try{response=await fetch(current,{headers:{Accept:'application/json','User-Agent':'BruniO/RP12'},redirect:'manual',signal});}
+  catch{throw new DownloadError(signal.aborted?'PROVIDER_TIMEOUT':'PROVIDER_NETWORK');}
+  if([301,302,303,307,308].includes(response.status)){
+   const location=response.headers.get('Location');await response.body?.cancel();
+   if(!location)throw new DownloadError('PROVIDER_REDIRECT_EMPTY');
+   current=https(new URL(location,current).href);continue;
+  }
+  if(!response.ok){await response.body?.cancel();throw new DownloadError('PROVIDER_HTTP_'+response.status);}
+  try{return await json(response);}catch{throw new DownloadError('PROVIDER_INVALID_RESPONSE');}
+ }
+ throw new DownloadError('PROVIDER_REDIRECT_LIMIT');
+}
 const clean=(value:unknown,max=220)=>String(value||'').replace(/https?:\/\/\S+/gi,'').replace(/[\x00-\x1f]/g,' ').slice(0,max);
 function sourceSize(row:any){
  const explicit=Number(row.behaviorHints?.videoSize);if(Number.isFinite(explicit)&&explicit>0)return explicit;
@@ -91,7 +109,7 @@ Deno.serve(async(request:Request)=>{
    const media=kind==='series'?imdb+':'+season+':'+episode:imdb;
    const batches=await Promise.allSettled(valid.map(async manifest=>{
     const u=new URL(manifest.href);u.pathname=u.pathname.slice(0,-'/manifest.json'.length)+'/stream/'+kind+'/'+media+'.json';
-    const body=await json(await fetch(u,{signal:AbortSignal.timeout(20000),redirect:'error'}));
+    const body=await providerStreams52(u.href);
     return (body.streams||[]).slice(0,120).flatMap((row:any)=>{
      if(row.externalUrl||row.infoHash||row.behaviorHints?.proxyHeaders)return [];
      try{const url=publicMedia(row.url);
@@ -99,7 +117,11 @@ Deno.serve(async(request:Request)=>{
      }catch{return [];}
     }) as Source[];
    }));
-   if(batches.every(x=>x.status==='rejected'))return reply({error:en?'Providers are unavailable. Try again later.':'Proveedores no disponibles. Reintenta luego.'},502);
+   if(batches.every(x=>x.status==='rejected')){
+    const failures=batches.map((batch,index)=>({provider:providerName(valid[index].hostname),code:batch.status==='rejected'&&batch.reason instanceof DownloadError?batch.reason.code:'PROVIDER_UNAVAILABLE'}));
+    const summary=failures.map(f=>f.provider+': '+f.code).join(' · ');
+    return reply({code:'PROVIDERS_UNAVAILABLE',failures,error:(en?'Providers are unavailable. ':'Proveedores no disponibles. ')+summary},502);
+   }
    rows=[...new Map(batches.flatMap(x=>x.status==='fulfilled'?x.value:[]).map(x=>[x.url,x])).values()].slice(0,480);
    if(cache.size>=100)cache.delete(cache.keys().next().value!);cache.set(cacheKey,{at:Date.now(),rows});
   }

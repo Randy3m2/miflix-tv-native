@@ -1,0 +1,18 @@
+BruniO Web v52 — Consultas de proveedores como TV
+
+Base revisada: Randy3m2/miflix-tv-native, commit 4fc930321138c0de87da56e8298259c6641fc8f1.
+Aplicar sobre Web v51, conservando las rutas. No modifica Android TV ni móvil.
+
+1. Copiar el contenido del ZIP sobre el repositorio y hacer commit.
+2. Actualizar en Supabase la función brunio-downloads con supabase/functions/brunio-downloads/index.ts.
+   Mediante CLI autenticado y proyecto vinculado: supabase functions deploy brunio-downloads
+   O pegar el archivo completo en el editor de la función existente y pulsar Deploy.
+   Conservar los secrets, configuración y autenticación existentes. No requiere SQL.
+3. Redesplegar Vercel y recargar con Ctrl+Shift+R.
+
+La función envía Accept y User-Agent como TV, sigue únicamente redirecciones HTTPS a hosts de proveedores ya aprobados, y devuelve códigos de error por proveedor. Conserva los filtros de seguridad del reproductor web, la política de dos proveedores y los tickets privados.
+Las URLs de TV y web ya coincidían. El nombre RenTV de Mandanguita también estaba previsto por TV; no prueba una URL desactualizada.
+
+Prueba en producción antes del cambio: Play y Elegir enlace devolvieron Proveedores no disponibles antes de abrir el reproductor.
+Validación local del cambio: Providers46Check, ProviderTransport52Check, ChangeSource51Check, sintaxis del service worker y git diff --check: PASS.
+No se desplegó en GitHub/Supabase/Vercel. No se verificó reproducción tras desplegar la corrección. Las diferencias HTTP son corregidas, pero no se ha confirmado que sean la causa única del fallo. Si persiste, el nuevo error distingue HTTP, timeout, red y redirección.

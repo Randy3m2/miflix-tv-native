@@ -1,7 +1,7 @@
 """Real Qt widgets offscreen; fixtures avoid production network/account mutations."""
 import os,time,unittest
 os.environ.setdefault('QT_QPA_PLATFORM','offscreen')
-from PySide6.QtWidgets import QApplication,QLineEdit,QPushButton,QWidget,QHBoxLayout
+from PySide6.QtWidgets import QApplication,QLineEdit,QPushButton,QWidget,QHBoxLayout,QVBoxLayout
 from brunio.ui import Window,java_hash
 class UITests(unittest.TestCase):
     @classmethod
@@ -71,6 +71,28 @@ class UITests(unittest.TestCase):
         bar=rail.scroll.horizontalScrollBar();self.assertGreater(bar.maximum(),0)
         rail.move_by(1);self.assertGreater(bar.value(),0)
         rail.move_by(-1);self.assertEqual(bar.value(),0);rail.close()
+    def test_rc7_reference_components_and_secondary_navigation(self):
+        from brunio.ui import PLATFORM_ASSETS
+        from brunio.visuals import ContinueCard,PlatformTile
+        self.assertTrue((PLATFORM_ASSETS/'netflix.png').is_file())
+        self.assertTrue((PLATFORM_ASSETS/'disney-plus.png').is_file())
+        self.assertTrue(self.w.extra_nav.isHidden())
+        self.w.toggle_more();self.assertFalse(self.w.extra_nav.isHidden())
+        self.w.toggle_more();self.assertTrue(self.w.extra_nav.isHidden())
+        self.w.select_nav('live');self.assertFalse(self.w.extra_nav.isHidden())
+        self.assertIsInstance(PlatformTile('Netflix'),QPushButton)
+        resume=ContinueCard('A movie',62)
+        self.assertAlmostEqual(resume.progress,.62)
+        resume.setProgress(18);self.assertAlmostEqual(resume.progress,.18)
+        self.w.image=lambda *args,**kwargs:None
+        self.w.state={'progress':{'tmdb:movie:42':{'percent':72,'position':30}}}
+        host=QWidget();layout=QVBoxLayout(host)
+        item={'id':42,'cloudId':'tmdb:movie:42','title':'Sample','type':'movie','backdrop':''}
+        self.w.continue_rail(layout,[item])
+        entries=host.findChildren(ContinueCard)
+        self.assertEqual(len(entries),1)
+        self.assertAlmostEqual(entries[0].progress,.72)
+
     def test_tv_live_hash_matches_kotlin_java(self):
         self.assertEqual(java_hash('abc'),96354);self.assertEqual(java_hash(''),0)
     def test_sidebar_selection_and_small_window_margins(self):

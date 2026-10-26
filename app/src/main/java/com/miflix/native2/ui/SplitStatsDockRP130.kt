@@ -58,13 +58,11 @@ internal fun SplitStatsDockRP130(state:AppState,req:PlayerRequest,repo:SportsSta
             Row(Modifier.weight(1f).fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                 Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(4.dp)) {
                     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-                        AsyncImage(game.away.logo,null,Modifier.size(21.dp))
-                        Text(game.away.short,color=Color.White,fontSize=12.sp,maxLines=1,modifier=Modifier.weight(1f))
+                        StatsTeamLogoRP132(game.away,Modifier.weight(1f).height(26.dp))
                         Text(data?.teams?.getOrNull(0)?.score ?: game.away.score,color=Color.White,fontSize=21.sp,fontWeight=FontWeight.Bold)
                         Text("–",color=Muted,fontSize=13.sp)
                         Text(data?.teams?.getOrNull(1)?.score ?: game.home.score,color=Color.White,fontSize=21.sp,fontWeight=FontWeight.Bold)
-                        Text(game.home.short,color=Color.White,fontSize=12.sp,maxLines=1,modifier=Modifier.weight(1f),textAlign=TextAlign.End)
-                        AsyncImage(game.home.logo,null,Modifier.size(21.dp))
+                        StatsTeamLogoRP132(game.home,Modifier.weight(1f).height(26.dp))
                     }
                     Text(data?.phase ?: game.phase,color=Muted,fontSize=10.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
                 }
@@ -75,7 +73,7 @@ internal fun SplitStatsDockRP130(state:AppState,req:PlayerRequest,repo:SportsSta
                         val current=data?.teams?.getOrNull(index)
                         MiniStatsRowRP130(team.short,listOf(current?.score ?: team.score,
                             current?.values?.get(if(nba) "totalRebounds" else "hits") ?: "—",
-                            current?.values?.get(if(nba) "assists" else "errors") ?: "—"),false)
+                            current?.values?.get(if(nba) "assists" else "errors") ?: "—"),false,team)
                     }
                 }
             }
@@ -84,9 +82,10 @@ internal fun SplitStatsDockRP130(state:AppState,req:PlayerRequest,repo:SportsSta
 }
 
 @Composable
-private fun MiniStatsRowRP130(team:String,values:List<String>,header:Boolean) {
+private fun MiniStatsRowRP130(team:String,values:List<String>,header:Boolean,logoTeam:ScoreTeamRP11?=null) {
     Row(Modifier.fillMaxWidth().height(16.dp),verticalAlignment=Alignment.CenterVertically) {
-        Text(team,color=if(header) Muted else Color.White,fontSize=10.sp,maxLines=1,modifier=Modifier.weight(1.4f))
+        if(logoTeam==null) Text(team,color=Muted,fontSize=10.sp,maxLines=1,modifier=Modifier.weight(1.4f))
+        else StatsTeamLogoRP132(logoTeam,Modifier.weight(1.4f).height(16.dp))
         values.forEach {Text(it,color=if(header) Muted else Color.White,fontSize=10.sp,modifier=Modifier.weight(1f),maxLines=1,textAlign=TextAlign.Center)}
     }
 }
@@ -171,12 +170,10 @@ internal fun SplitStatsFullRP130(state:AppState,req:PlayerRequest,repo:SportsSta
             }
         } else {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)) {
-                AsyncImage(game.away.logo,null,Modifier.size(20.dp))
-                Text(game.away.short,color=Color.White,fontSize=12.sp)
+                StatsTeamLogoRP132(game.away,Modifier.size(26.dp))
                 Text((data?.teams?.getOrNull(0)?.score ?: game.away.score)+" – "+(data?.teams?.getOrNull(1)?.score ?: game.home.score),
                     color=Color.White,fontSize=18.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f),textAlign=TextAlign.Center)
-                Text(game.home.short,color=Color.White,fontSize=12.sp)
-                AsyncImage(game.home.logo,null,Modifier.size(20.dp))
+                StatsTeamLogoRP132(game.home,Modifier.size(26.dp))
             }
             val current=if(teamIndex==0) game.away else game.home
             val table=remember(data,teamIndex,tab,page) {
@@ -185,8 +182,8 @@ internal fun SplitStatsFullRP130(state:AppState,req:PlayerRequest,repo:SportsSta
             }
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
                 listOf(game.away,game.home).forEachIndexed {index,team->
-                    SplitStatsActionRP130(team.short,{teamIndex=index},Modifier.weight(1f).then(if(index==teamIndex) Modifier.focusRequester(teams) else Modifier)
-                        .focusProperties {down=firstRow},teamIndex==index)
+                    StatsTeamButtonRP132(team,teamIndex==index,Modifier.weight(1f).then(if(index==teamIndex) Modifier.focusRequester(teams) else Modifier)
+                        .focusProperties {down=firstRow}) {teamIndex=index}
                 }
                 if(game.league!="NBA") {
                     SplitStatsActionRP130(tr("Bateo","Batting"),{tab=0},Modifier.weight(1f).focusProperties {down=firstRow},tab==0)

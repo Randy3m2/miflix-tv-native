@@ -11,6 +11,10 @@ import com.miflix.native2.BuildConfig
 /** Release notes ship with the APK. No API calls or repeated startup notifications. */
 internal object UpdateNotes {
     val id: String get()="update:${BuildConfig.VERSION_CODE}"
+    val rp131Changes=listOf(
+        "RP131: estadísticas F1 en SplitScreen con posiciones, vuelta publicada y selector de sesión; mismo diseño glass de RP130." to "RP131: F1 SplitScreen stats with positions, published lap and session picker; same RP130 glass design.",
+        "ESPN: actualización automática, sesiones Final/Programada diferenciadas y campos no publicados como —; selección F1 manual desde las opciones del canal." to "ESPN: automatic updates, distinct Final/Scheduled sessions and unavailable fields shown as —; manual F1 mode from channel options."
+    )
     val rp130Changes=listOf(
         "RP130: Stats glass por pantalla en SplitScreen de dos videos; con tres, el cuarto cuadro muestra estadísticas del juego elegido." to "RP130: per-screen glass Stats for two videos; with three, the fourth cell shows stats for the selected game.",
         "NBA, MLB y LIDOM: selección manual/automática y actualizaciones mientras Stats está abierto; botón SplitScreen en el pie, sin tapar datos." to "NBA, MLB and LIDOM: manual/automatic selection and updates while Stats is open; SplitScreen button in the footer without covering data."
@@ -199,10 +203,10 @@ internal object UpdateNotes {
         "Corregida la compatibilidad del parser JSON de add-ons con Android." to "Fixed add-on JSON parser compatibility with Android."
     )
     val changes=listOf(
-        "RP131: estadísticas F1 en SplitScreen con posiciones, vuelta publicada y selector de sesión; mismo diseño glass de RP130." to "RP131: F1 SplitScreen stats with positions, published lap and session picker; same RP130 glass design.",
-        "ESPN: actualización automática, sesiones Final/Programada diferenciadas y campos no publicados como —; selección F1 manual desde las opciones del canal." to "ESPN: automatic updates, distinct Final/Scheduled sessions and unavailable fields shown as —; manual F1 mode from channel options."
+        "RP132: selectores y marcadores de equipos con logos, sin nombres visibles; F1 con fotos reales de pilotos." to "RP132: logo-only team selectors and scoreboards; F1 with real driver portraits.",
+        "F1 reutiliza la tabla de Stats normal: cabecera fija, filas compactas y navegación estable, también con dos pantallas." to "F1 reuses the normal Stats table: fixed header, compact rows and stable navigation, also with two screens."
     )
-    val previousChanges=rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
+    val previousChanges=rp131Changes+rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
         "Menú de amigos: Watch, View Details, Recommendations y Close; detalles abre la ficha sin iniciar reproducción." to "Friend menu: Watch, View Details, Recommendations and Close; details opens the title without starting playback.",
         "Enlaces de Comet y Torrentio con texto ordenado e insignias de Dolby/HDR según sus metadatos." to "Clean Comet and Torrentio link metadata with small Dolby/HDR badges when reported by the source.",
         "Envío local a TV por Wi-Fi, con enlace y código de conexión; sin reproducción web." to "Send titles to TV over local Wi-Fi with a connection link and code; no web playback.",

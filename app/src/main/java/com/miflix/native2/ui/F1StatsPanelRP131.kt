@@ -81,24 +81,13 @@ internal fun F1StatsPanelRP131(state:AppState,repo:F1StatsRP131,compact:Boolean,
                 else if(selected!=null && session==null) tr("Sesión fuera del listado actual; selecciona Auto.","Session no longer listed; choose Auto.")
                 else tr("Esperando datos publicados por ESPN…","Waiting for published ESPN data…"),
                 color=Muted,fontSize=11.sp,maxLines=2,modifier=Modifier.weight(1f))
-        } else if(compact) {
-            F1CompactRowRP131(tr("Piloto","Driver"),"POS","GAP",true)
-            session.drivers.take(if(choosing) 1 else 3).forEach {driver->F1CompactRowRP131(driver.name,driver.position,driver.gap,false)}
         } else {
-            val table=remember(session) {StatsTableRP105(listOf("POS","LAP","GAP"),
-                session.drivers.map {StatsTableRowRP105(it.id,it.name,listOf(it.position,it.lap,it.gap),photo=it.flag)},1)}
+            val table=remember(session,compact) {StatsTableRP105(if(compact) listOf("POS","GAP") else listOf("POS","LAP","GAP"),
+                session.drivers.map {StatsTableRowRP105(it.id,it.name,if(compact) listOf(it.position,it.gap) else listOf(it.position,it.lap,it.gap),photo=it.photo)},1)}
             StatsTableCellsRP105(tr("Piloto","Driver"),table.columns,header=true)
-            StatsTableRowsRP105(table,firstRow,header,header,videoFocus,Modifier.weight(1f),rowHeightDp=26)
-            Text(tr("ESPN · datos publicados; — = no disponible","ESPN · published data; — = unavailable"),color=Muted,fontSize=9.sp,maxLines=1)
+            StatsTableRowsRP105(table,firstRow,header,header,videoFocus,Modifier.weight(1f),rowHeightDp=if(compact) 25 else 30)
+            if(!compact) Text(tr("ESPN · datos publicados; — = no disponible","ESPN · published data; — = unavailable"),color=Muted,fontSize=9.sp,maxLines=1)
         }
     }
 }
 
-@Composable
-private fun F1CompactRowRP131(name:String,position:String,gap:String,header:Boolean) {
-    Row(Modifier.fillMaxWidth().height(15.dp),verticalAlignment=Alignment.CenterVertically) {
-        Text(position,color=if(header) Muted else Color.White,fontSize=10.sp,modifier=Modifier.width(30.dp),textAlign=TextAlign.Center,maxLines=1)
-        Text(name,color=if(header) Muted else Color.White,fontSize=10.sp,modifier=Modifier.weight(1f),maxLines=1,overflow=TextOverflow.Ellipsis)
-        Text(gap,color=if(header) Muted else Color.White,fontSize=10.sp,modifier=Modifier.width(60.dp),textAlign=TextAlign.End,maxLines=1)
-    }
-}

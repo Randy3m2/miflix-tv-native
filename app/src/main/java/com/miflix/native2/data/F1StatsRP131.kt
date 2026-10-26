@@ -9,7 +9,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
-internal data class F1DriverRP131(val id:String,val name:String,val flag:String,val position:String,val lap:String,val gap:String)
+internal data class F1DriverRP131(val id:String,val name:String,val flag:String,val position:String,val lap:String,val gap:String,val photo:String="")
 internal data class F1SessionRP131(val id:String,val event:String,val type:String,val date:String,
     val state:String,val lap:Int,val drivers:List<F1DriverRP131>) {
     val live get()=state=="in"
@@ -32,6 +32,12 @@ internal class F1StatsRP131(private val fetch:suspend (String)->String={StatsHtt
         parsed
     }
     companion object {
+        fun portrait(id:String,published:String=""):String {
+            val url=runCatching {java.net.URI(published)}.getOrNull()
+            if(url?.scheme=="https" && !url.host.isNullOrBlank() && url.rawUserInfo==null) return published
+            if(id=="5892") return "https://res.cloudinary.com/prod-f2f3/d_common:f2:fallback.jpg/c_fill,w_840,h_630,g_north/c_pad,w_1200,h_630/b_rgb:a0b4c8/q_auto/v1770000000/common/f2/2026/hitech/colher01/2026hitechcolher01right.jpg"
+            return if(id.matches(Regex("[0-9]{1,12}"))) "https://a.espncdn.com/i/headshots/rpm/players/full/$id.png" else ""
+        }
         const val URL="https://site.api.espn.com/apis/site/v2/sports/racing/f1/scoreboard"
         fun channel(provider:String,title:String)=provider=="f1" ||
             Regex("(?i)(\\bf1\\b|formula\\s*(1|one|uno)|fórmula\\s*1)").containsMatchIn(title)
@@ -60,7 +66,8 @@ internal class F1StatsRP131(private val fetch:suspend (String)->String={StatsHtt
                     val order=row.optInt("order")
                     F1DriverRP131(row.optString("id"),name,athlete.optJSONObject("flag")?.optString("href").orEmpty(),
                         if(state!="pre" && order>0) order.toString() else "—",
-                        metric("lapsCompleted","laps"),metric("gapToLeader","timeBehindLeader","gap"))
+                        metric("lapsCompleted","laps"),metric("gapToLeader","timeBehindLeader","gap"),
+                        portrait(row.optString("id"),athlete.optJSONObject("headshot")?.optString("href").orEmpty()))
                 }.distinctBy {it.id}.sortedBy {it.position.toIntOrNull() ?: Int.MAX_VALUE}
                 F1SessionRP131(id,event.optString("name"),competition.optJSONObject("type")?.optString("abbreviation").orEmpty(),
                     competition.optString("date",event.optString("date")),state,status.optInt("period"),drivers)

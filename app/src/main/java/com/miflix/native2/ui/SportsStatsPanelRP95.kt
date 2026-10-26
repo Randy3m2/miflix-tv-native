@@ -162,7 +162,7 @@ private fun ColumnScope.StatsBoxScoreRP105(game:LiveScoreRP11,data:GameStatsRP95
     }
     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)) {
         listOf(game.away,game.home).forEachIndexed {index,team ->
-            StatsActionRP105(team.name,teamIndex==index,Modifier.weight(1f)
+            StatsTeamButtonRP132(team,teamIndex==index,Modifier.weight(1f)
                 .focusRequester(teamRequests[index]).focusProperties {left=if(index==0) videoFocus else teamRequests[0];right=if(index==0) teamRequests[1] else FocusRequester.Cancel;down=tabFocus}) {teamIndex=index}
         }
     }
@@ -170,7 +170,6 @@ private fun ColumnScope.StatsBoxScoreRP105(game:LiveScoreRP11,data:GameStatsRP95
         tabs.forEachIndexed {index,label ->StatsActionRP105(label,tab==index,Modifier.weight(1f).focusRequester(tabRequests[index]).focusProperties {up=teamFocus;down=firstRow;left=if(index>0) tabRequests[index-1] else videoFocus;right=if(index<tabs.lastIndex) tabRequests[index+1] else if(table.pages>1) columnFocus else FocusRequester.Cancel}) {tab=index}}
         if(table.pages>1) StatsActionRP105("${page.coerceAtMost(table.pages-1)+1}/${table.pages} ›",false,Modifier.focusRequester(columnFocus).focusProperties {left=tabRequests.last();up=teamFocus;down=firstRow},description=tr("Más columnas","More columns")) {page=(page+1)%table.pages}
     }
-    Text(currentTeam.name,color=Muted,fontSize=10.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
     StatsTableCellsRP105(tr("Jugador / estadística","Player / statistic"),table.columns,header=true)
     Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF343434)))
     key(teamIndex,tab,page) {StatsTableRowsRP105(table,firstRow,tabFocus,teamFocus,videoFocus,Modifier.weight(1f))}
@@ -258,8 +257,8 @@ internal fun StatsTableCellsRP105(name:String,values:List<String>,header:Boolean
 @Composable
 private fun ScoreTeamCompactRP105(team:ScoreTeamRP11,score:String,modifier:Modifier) {
     Row(modifier,verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)) {
-        AsyncImage(team.logo,null,Modifier.size(24.dp))
-        Text(team.short,color=Muted,fontSize=12.sp,maxLines=1,modifier=Modifier.weight(1f))
+        StatsTeamLogoRP132(team,Modifier.size(30.dp))
+        Spacer(Modifier.weight(1f))
         Text(score,color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
     }
 }

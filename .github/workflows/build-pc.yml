@@ -28,26 +28,40 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Tests failed' }
           python main.py --smoke
           if ($LASTEXITCODE -ne 0) { throw 'Qt smoke test failed' }
+      - name: Read PC version
+        id: pc_version
+        run: |
+          $version = (python -c 'from brunio import VERSION; print(VERSION)').Trim()
+          if (-not $version) { throw 'PC version is empty' }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "value=$version"
       - name: Build installer
         run: ./scripts/build_windows.ps1
       - uses: actions/upload-artifact@v6
         with:
-          name: BruniO-PC-Windows-RC5
+          name: BruniO-PC-Windows-${{ steps.pc_version.outputs.value }}
           path: desktop/brunio-pc/installer/*
       - name: Publish PC channel
         env:
           GH_TOKEN: ${{ github.token }}
+          PC_VERSION: ${{ steps.pc_version.outputs.value }}
         run: |
-          $tag = 'pc-v1.0.0-rc5'
+          $version = $env:PC_VERSION
+          $tag = "pc-v$version"
+          $installer = "installer/BruniO-PC-Setup-$version.exe"
+          if (-not (Test-Path $installer)) {
+            Get-ChildItem installer -ErrorAction SilentlyContinue | Select-Object Name
+            throw "PC installer not found: $installer"
+          }
+          if (-not (Test-Path 'installer/pc-update.json')) { throw 'PC update metadata not found' }
           gh release view $tag *> $null
-          if ($LASTEXITCODE -ne 0) { gh release create $tag --target $env:GITHUB_SHA --title 'BruniO PC 1.0 RC5' --notes 'Windows x64 client; TV-compatible Watch Party, profiles, catalogs and VLC playback.' }
+          if ($LASTEXITCODE -ne 0) { gh release create $tag --target $env:GITHUB_SHA --title "BruniO PC $version" --notes 'Windows x64 client; TV-compatible Watch Party, profiles, catalogs and VLC playback.' }
           if ($LASTEXITCODE -ne 0) { throw 'PC release failed' }
-          gh release upload $tag installer/BruniO-PC-Setup-1.0.0-rc5.exe installer/pc-update.json --clobber
+          gh release upload $tag $installer installer/pc-update.json --clobber
           if ($LASTEXITCODE -ne 0) { throw 'PC version upload failed' }
           gh release view pc-latest *> $null
-          if ($LASTEXITCODE -ne 0) { gh release create pc-latest --target $env:GITHUB_SHA --title 'BruniO PC · Latest' --notes 'Windows x64 current version: 1.0.0-rc5' }
+          if ($LASTEXITCODE -ne 0) { gh release create pc-latest --target $env:GITHUB_SHA --title 'BruniO PC · Latest' --notes "Windows x64 current version: $version" }
           if ($LASTEXITCODE -ne 0) { throw 'PC latest release failed' }
-          gh release edit pc-latest --notes 'Windows x64 current version: 1.0.0-rc5'
+          gh release edit pc-latest --notes "Windows x64 current version: $version"
           if ($LASTEXITCODE -ne 0) { throw 'PC latest description failed' }
           gh release upload pc-latest installer/pc-update.json --clobber
           if ($LASTEXITCODE -ne 0) { throw 'PC metadata upload failed' }

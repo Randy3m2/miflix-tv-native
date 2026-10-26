@@ -5,11 +5,11 @@ from urllib.parse import urlencode,quote
 from PySide6.QtCore import Qt,QObject,Signal,QRunnable,QThreadPool,QTimer,QUrl,QSize
 from PySide6.QtGui import QPixmap,QIcon,QImage,QPainter
 from PySide6.QtNetwork import QNetworkAccessManager,QNetworkRequest
-from PySide6.QtWidgets import (QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QPushButton,QLabel,QLineEdit,QScrollArea,QStackedWidget,QDialog,QComboBox,QSlider,QInputDialog,QMessageBox,QFileDialog,QCheckBox,QDoubleSpinBox,QGridLayout,QSizePolicy,QListWidget)
+from PySide6.QtWidgets import (QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QPushButton,QLabel,QLineEdit,QScrollArea,QStackedWidget,QDialog,QComboBox,QSlider,QInputDialog,QMessageBox,QFileDialog,QCheckBox,QDoubleSpinBox,QGridLayout,QSizePolicy,QListWidget,QButtonGroup)
 from shiboken6 import isValid
 from .core import Client,StaleWork,SUPABASE_URL,SUPABASE_KEY,LIVE,REPO,iso,now_ms,media,stream_size,stream_quality,normalize,valid_url
 from .vault import Vault
-from .visuals import Art,Poster,ProfileAvatar,EdgeRail,icon
+from .visuals import Art,Poster,ProfileAvatar,EdgeRail,Starfield,icon
 from .desktop_features import DesktopFeatures
 
 def java_hash(value):
@@ -52,20 +52,65 @@ class Window(DesktopFeatures,QMainWindow):
         self.pool=QThreadPool(self);self.pool.setMaxThreadCount(6);self.tasks=set();self.network=QNetworkAccessManager(self);self.images={};self.known_members=None
         self.setup_desktop_features();self.play_id=0;self.page_id=0;self.poll_busy=False;self.social_busy=False;self.sync_applying=False;self.guest_intent=None;self.guest_until=0;self.last_event=-1;self.paused_at=0;self.resume_pending=0;self.trakt_started=False
         self.fallback_urls=set();self.source_activity=time.monotonic();self.source_last_pos=0;self.vlc=None;self.player=None;self.library=None;self.segments={};self.imdb='';self.chat_dialog=None
-        self.root=QWidget();self.root.setObjectName('appRoot');self.root_layout=QVBoxLayout(self.root);self.root_layout.setContentsMargins(0,0,0,0);self.setCentralWidget(self.root)
-        header=QWidget();header.setObjectName('topbar');self.sidebar=header
-        nav=QHBoxLayout(header);self.nav=nav;nav.setContentsMargins(28,12,28,12);nav.setSpacing(8)
-        mark=QLabel('Bruni<span style="color:#ab86ff">O</span>');mark.setTextFormat(Qt.TextFormat.RichText);mark.setObjectName('brand');nav.addWidget(mark)
-        nav.addSpacing(22);self.nav_buttons={}
-        nav_group=QWidget();nav_group.setObjectName('navGroup');nav_group.setStyleSheet('QWidget#navGroup { background:transparent; border:0; }');nav_inner=QHBoxLayout(nav_group);nav_inner.setContentsMargins(4,4,4,4);nav_inner.setSpacing(2);nav.addWidget(nav_group)
-        for key,es,en,fn in [('home','Inicio','Home',self.home),('search','Buscar','Search',self.search),('live','Live TV','Live TV',self.live),('friends','Amigos','Friends',self.friends),('calendar','Calendario','Calendar',self.calendar),('downloads','Descargas','Downloads',self.downloads),('list','Mi lista','My List',self.my_list)]:
-            b=button(self.t(es,en),lambda key=key,fn=fn:(self.select_nav(key),fn()));b.setObjectName('navButton');b.setStyleSheet('QPushButton#navButton { background:transparent; color:#aaaab2; border:1px solid transparent; border-radius:18px; padding:9px 12px; } QPushButton#navButton[selected="true"] { color:white; background:#3a3a40; border:1px solid #3a3a40; border-radius:18px; } QPushButton#navButton:hover { color:white; background:#333337; border-radius:18px; }');b.setToolTip(self.t(es,en));b.setAccessibleName(self.t(es,en));nav_inner.addWidget(b);self.nav_buttons[key]=b
-        nav.addStretch(1)
-        self.alert_button=button('',self.alerts);self.alert_button.setObjectName('roundButton');self.alert_button.setStyleSheet('QPushButton#roundButton { background:#202023; border:1px solid #38383d; border-radius:20px; padding:7px; } QPushButton#roundButton:hover { background:#404044; }');self.alert_button.setIcon(icon('bell'));self.alert_button.setIconSize(QSize(20,20));self.alert_button.setToolTip(self.t('Notificaciones','Notifications'));nav.addWidget(self.alert_button)
-        settings_button=button('',lambda:(self.select_nav('settings'),self.settings()));settings_button.setObjectName('roundButton');settings_button.setStyleSheet('QPushButton#roundButton { background:#202023; border:1px solid #38383d; border-radius:20px; padding:7px; } QPushButton#roundButton:hover { background:#404044; }');settings_button.setIcon(icon('settings'));settings_button.setIconSize(QSize(20,20));settings_button.setToolTip(self.t('Ajustes','Settings'));nav.addWidget(settings_button);self.nav_buttons['settings']=settings_button
-        self.profile_button=button('',self.profiles);self.profile_button.setObjectName('profile');self.profile_button.setFixedSize(42,42);self.profile_button.setIconSize(QSize(34,34));nav.addWidget(self.profile_button)
-        self.root_layout.addWidget(header);self.stack=QStackedWidget();self.root_layout.addWidget(self.stack,1);self.select_nav('home');self.refresh_profile_icon()
-        self.status=QLabel();self.status.setWordWrap(True);self.status.setTextFormat(Qt.TextFormat.PlainText);self.status.setObjectName('status');self.status.hide();self.root_layout.addWidget(self.status)
+        # RC6: desktop-first two-column shell.  The Windows client keeps all
+        # existing routes/controllers; only their Qt presentation is replaced.
+        self.root=QWidget();self.root.setObjectName('appRoot')
+        self.root_layout=QHBoxLayout(self.root)
+        self.root_layout.setContentsMargins(0,0,0,0);self.root_layout.setSpacing(0)
+        self.setCentralWidget(self.root)
+        self.sidebar=QWidget();self.sidebar.setObjectName('sidebar');self.sidebar.setFixedWidth(188)
+        self.nav=QVBoxLayout(self.sidebar);self.nav.setContentsMargins(12,24,12,20);self.nav.setSpacing(5)
+        brand=QLabel('Bruni<span style="color:#b4a1ff">O</span>')
+        brand.setTextFormat(Qt.TextFormat.RichText);brand.setObjectName('brand')
+        self.nav.addWidget(brand);self.nav.addSpacing(30)
+        self.nav_buttons={}
+        routes=[('home','home','Inicio','Home',self.home),
+                ('search','search','Búsqueda','Search',self.search),
+                ('list','list','Mi Lista','My List',self.my_list),
+                ('movies','movies','Películas','Movies',lambda:self.catalog_page(self.t('Películas','Movies'),'/movie/popular','movie')),
+                ('series','series','Series','Series',lambda:self.catalog_page(self.t('Series','Series'),'/tv/popular','series')),
+                ('collections','collections','Explorar','Explore',self.collections),
+                ('live','live','Live TV','Live TV',self.live),
+                ('friends','friends','Amigos','Friends',self.friends),
+                ('calendar','calendar','Calendario','Calendar',self.calendar),
+                ('downloads','downloads','Descargas','Downloads',self.downloads)]
+        self.nav_labels={key:(es,en) for key,_,es,en,_ in routes}
+        for key,glyph,es,en,fn in routes:
+            b=button(self.t(es,en),lambda key=key,fn=fn:(self.select_nav(key),fn()))
+            b.setObjectName('navButton');b.setIcon(icon(glyph,'#c5c6df'))
+            b.setIconSize(QSize(17,17));b.setFixedHeight(35)
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            b.setToolTip(self.t(es,en));b.setAccessibleName(self.t(es,en))
+            self.nav.addWidget(b);self.nav_buttons[key]=b
+        self.nav.addStretch(1)
+        bottom,foot=row();foot.setSpacing(10)
+        settings_button=button('',lambda:(self.select_nav('settings'),self.settings()))
+        settings_button.setObjectName('roundButton');settings_button.setIcon(icon('settings'))
+        settings_button.setIconSize(QSize(19,19));settings_button.setFixedSize(40,40)
+        settings_button.setToolTip(self.t('Ajustes','Settings'))
+        foot.addWidget(settings_button);self.nav_buttons['settings']=settings_button
+        self.alert_button=button('',self.alerts);self.alert_button.setObjectName('roundButton')
+        self.alert_button.setIcon(icon('bell'));self.alert_button.setIconSize(QSize(19,19))
+        self.alert_button.setFixedSize(40,40)
+        self.alert_button.setToolTip(self.t('Notificaciones','Notifications'))
+        foot.addWidget(self.alert_button);foot.addStretch(1)
+        self.nav.addWidget(bottom)
+        self.profile_button=button('',self.profiles);self.profile_button.setObjectName('profile')
+        self.profile_button.setFixedSize(44,44);self.profile_button.setIconSize(QSize(40,40))
+        profile_row,pr=row();pr.setSpacing(10);pr.addWidget(self.profile_button)
+        profile_name=label(self.t('Cambiar perfil','Switch profile'),12)
+        profile_name.setObjectName('profileFootnote');pr.addWidget(profile_name,1)
+        self.nav.addWidget(profile_row)
+        self.root_layout.addWidget(self.sidebar)
+        self.content=QWidget();self.content.setObjectName('contentShell')
+        content_layout=QVBoxLayout(self.content);content_layout.setContentsMargins(0,0,0,0)
+        content_layout.setSpacing(0)
+        self.stack=QStackedWidget();content_layout.addWidget(self.stack,1)
+        self.status=QLabel();self.status.setWordWrap(True)
+        self.status.setTextFormat(Qt.TextFormat.PlainText)
+        self.status.setObjectName('status');self.status.hide();content_layout.addWidget(self.status)
+        self.root_layout.addWidget(self.content,1)
+        self.select_nav('home');self.refresh_profile_icon()
         self.player_event.connect(self.on_player_event)
         self.tick_timer=QTimer(self);self.tick_timer.timeout.connect(self.tick);self.tick_timer.start(1000)
         self.social_timer=QTimer(self);self.social_timer.timeout.connect(self.social_tick);self.social_timer.start(5000)
@@ -81,17 +126,38 @@ class Window(DesktopFeatures,QMainWindow):
         if value.startswith('http'):
             self.image(value,self.profile_button,38,38)
         else:self.profile_button.setIcon(QIcon(str(self.avatar_path(value))))
+    def section_title(self,text,subtitle=None):
+        block,vertical=column();block.setObjectName('sectionHeader')
+        vertical.setContentsMargins(0,0,0,0);vertical.setSpacing(2)
+        headline=label(text,19);headline.setObjectName('sectionTitle');vertical.addWidget(headline)
+        if subtitle:
+            small=label(subtitle,12);small.setObjectName('muted');vertical.addWidget(small)
+        return block
+    def filter_pills(self,parent,labels,on_change,initial='all'):
+        bar,layout=row();bar.setObjectName('filterBar');layout.setSpacing(8)
+        chips={}
+        for key,es,en in labels:
+            pill=button(self.t(es,en),lambda key=key:on_change(key))
+            pill.setObjectName('filterPill');pill.setProperty('selected',key==initial)
+            pill.setFixedHeight(33);layout.addWidget(pill);chips[key]=pill
+        layout.addStretch(1);parent.addWidget(bar)
+        def select(key):
+            for k,pill in chips.items():
+                if not isValid(pill):continue
+                pill.setProperty('selected',k==key)
+                pill.style().unpolish(pill);pill.style().polish(pill)
+        return select
     def platform_rail(self,parent,page):
-        parent.addWidget(label('Streaming',22));w,l=row();l.setSpacing(12)
+        parent.addWidget(self.section_title(self.t('Tus servicios en BruniO','Your services on BruniO')));w,l=row();l.setSpacing(10)
         base='https://cdn.jsdelivr.net/gh/luckynumb3rs/stremio-perfect-setup/collections/streaming/cover/'
         platforms=[('Netflix',8,'netflix.png'),('Disney+',337,'disney-plus.png'),('Prime Video',9,'prime-video.png'),('Apple TV+',350,'apple-tv.png'),('HBO Max',1899,'hbo-max.png'),('Paramount+',531,'paramount-plus.png'),('AMC+',526,'amc'),('Hulu',15,'hulu.png'),('Crunchyroll',283,'crunchyroll.png')]
         for name,pid,asset in platforms:
-            tile=Poster();tile.setText(name);tile.setFixedSize(210,118);tile.setToolTip(name);tile.setAccessibleName(name);tile.clicked.connect(lambda checked=False,name=name,pid=pid:self.provider(name,pid));l.addWidget(tile)
+            tile=Poster();tile.setText(name);tile.setFixedSize(164,86);tile.setToolTip(name);tile.setAccessibleName(name);tile.clicked.connect(lambda checked=False,name=name,pid=pid:self.provider(name,pid));l.addWidget(tile)
             if asset=='amc':
-                pix=QPixmap(204,112);pix.fill(Qt.GlobalColor.transparent);p=QPainter(pix);p.fillRect(pix.rect(),__import__('PySide6.QtGui',fromlist=['QColor']).QColor('#081716'));logo=QPixmap(str(ASSETS/'streaming_amcplus_rp48.png')).scaled(150,75,Qt.AspectRatioMode.KeepAspectRatio,Qt.TransformationMode.SmoothTransformation);p.drawPixmap((204-logo.width())//2,(112-logo.height())//2,logo);p.end();tile.setPixmap(pix)
+                pix=QPixmap(160,82);pix.fill(Qt.GlobalColor.transparent);p=QPainter(pix);p.fillRect(pix.rect(),__import__('PySide6.QtGui',fromlist=['QColor']).QColor('#081716'));logo=QPixmap(str(ASSETS/'streaming_amcplus_rp48.png')).scaled(150,75,Qt.AspectRatioMode.KeepAspectRatio,Qt.TransformationMode.SmoothTransformation);p.drawPixmap((160-logo.width())//2,(82-logo.height())//2,logo);p.end();tile.setPixmap(pix)
             elif asset in ('hulu.png','paramount-plus.png'):tile.setPixmap(QPixmap(str(ASSETS/asset)))
-            else:self.image(base+asset,tile,204,112)
-        l.addStretch();parent.addWidget(EdgeRail(w,130))
+            else:self.image(base+asset,tile,160,82)
+        l.addStretch();parent.addWidget(EdgeRail(w,104))
     def t(self,es,en):return es if self.preferences.get('language')=='es' else en
     def tell(self,text):
         self.status.setText(str(text));self.status.setVisible(bool(text))
@@ -117,14 +183,16 @@ class Window(DesktopFeatures,QMainWindow):
         old=self.stack.currentWidget();self.stack.addWidget(w);self.stack.setCurrentWidget(w)
         if old and old is not getattr(self,'player_page',None):self.stack.removeWidget(old);old.deleteLater()
     def page(self,title):
-        w,l=column();w.setObjectName('screenContent');l.setAlignment(Qt.AlignmentFlag.AlignTop);l.setContentsMargins(32,28,32,36);l.setSpacing(16)
+        w,l=column();w.setObjectName('screenContent');l.setAlignment(Qt.AlignmentFlag.AlignTop);l.setContentsMargins(30,28,30,42);l.setSpacing(16)
         if title!='BruniO':
-            heading=label(title,30);heading.setObjectName('pageTitle');l.addWidget(heading)
+            heading=label(title,28);heading.setObjectName('pageTitle');l.addWidget(heading)
         scroll=QScrollArea();scroll.setWidgetResizable(True);scroll.setFrameShape(QScrollArea.Shape.NoFrame);scroll.setWidget(w);self.show_page(scroll);return l,self.page_id
     def image(self,url,w,width,height,contain=False):
         if not url:return
+        # A fast-changing cinematic carousel must not display stale network art.
+        w.setProperty('_brunioImageUrl',url)
         def apply(data):
-            if isValid(w):
+            if isValid(w) and w.property('_brunioImageUrl')==url:
                 pix=QPixmap();pix.loadFromData(data);scaled=pix.scaled(width,height,Qt.AspectRatioMode.KeepAspectRatio if contain else Qt.AspectRatioMode.KeepAspectRatioByExpanding,Qt.TransformationMode.SmoothTransformation)
                 if hasattr(w,'setPixmap'):w.setPixmap(scaled)
                 else:
@@ -145,16 +213,16 @@ class Window(DesktopFeatures,QMainWindow):
         if value.startswith('special:extra') and value[13:].isdigit() and int(value[13:])>=4:names[value]=f'brunio_avatar_special{value[13:]}.png'
         return ASSETS/names.get(value,'brunio_avatar_astronaut.png')
     def card(self,item):
-        w,l=column();l.setContentsMargins(0,0,0,0);l.setSpacing(7);w.setFixedWidth(160)
-        pic=Poster();pic.setFixedSize(160,236);pic.setCursor(Qt.CursorShape.PointingHandCursor)
+        w,l=column();l.setContentsMargins(0,0,0,0);l.setSpacing(7);w.setFixedWidth(162)
+        pic=Poster();pic.setFixedSize(162,224);pic.setCursor(Qt.CursorShape.PointingHandCursor)
         pic.setToolTip(item['title']+f" · {item.get('year','')} · ★ {item.get('rating',0):.1f}");pic.setAccessibleName(item['title'])
-        pic.clicked.connect(lambda checked=False:self.open(item));self.image(item.get('poster',''),pic,154,230);l.addWidget(pic)
-        title=QLabel();title.setTextFormat(Qt.TextFormat.PlainText);title.setText(title.fontMetrics().elidedText(item['title'],Qt.TextElideMode.ElideRight,156));title.setToolTip(item['title']);title.setStyleSheet('font-size:14px;color:#ededed;');l.addWidget(title)
+        pic.clicked.connect(lambda checked=False:self.open(item));self.image(item.get('poster',''),pic,158,220);l.addWidget(pic)
+        title=QLabel();title.setTextFormat(Qt.TextFormat.PlainText);title.setText(title.fontMetrics().elidedText(item['title'],Qt.TextElideMode.ElideRight,156));title.setToolTip(item['title']);title.setStyleSheet('font-size:13px;color:#ededff;font-weight:600;');l.addWidget(title)
         year=label(str(item.get('year','')),12);year.setStyleSheet('font-size:12px;color:#9b9fa6;');l.addWidget(year);return w
     def rail(self,parent,title,items):
-        parent.addWidget(label(title,22));w,l=row();l.setSpacing(14);l.setContentsMargins(0,4,0,12)
+        parent.addWidget(self.section_title(title));w,l=row();l.setSpacing(12);l.setContentsMargins(0,4,0,12)
         for item in items:l.addWidget(self.card(item))
-        l.addStretch();parent.addWidget(EdgeRail(w,304))
+        l.addStretch();parent.addWidget(EdgeRail(w,292))
     def load_profile(self):
         self.client.language='es-ES' if self.preferences.get('language')=='es' else 'en-US';self.sync_source_settings()
         def load():return self.client.state(),self.client.rest('miflix_ratings?'+urlencode({'profile_id':'eq.'+self.client.profile,'select':'cloud_id,score','limit':1000}))
@@ -163,11 +231,28 @@ class Window(DesktopFeatures,QMainWindow):
         self.run(load,done)
     def home(self):
         if not self.client.session:self.settings();return
-        self.select_nav('home');l,page=self.page('BruniO');l.setSpacing(24)
+        self.select_nav('home');l,page=self.page('BruniO');l.setSpacing(15)
         progress=dict(self.state.get('progress',{}))
-        ids=[k for k,v in sorted(progress.items(),key=lambda x:x[1].get('updatedAt',0),reverse=True) if ':s' not in k and v.get('position',0)>=5 and v.get('percent',0)<90][:12]
+        ids=[k for k,v in sorted(progress.items(),key=lambda x:x[1].get('updatedAt',0),reverse=True)
+             if ':s' not in k and v.get('position',0)>=5 and v.get('percent',0)<90][:12]
+        hero_slot=QWidget();hero_slot.setObjectName('heroSlot')
+        hs=QVBoxLayout(hero_slot);hs.setContentsMargins(0,0,0,0);hs.setSpacing(0)
+        hero_art=Art(hero=True);hero_art.setObjectName('cinematicHero')
+        hero_art.setFixedHeight(380);hs.addWidget(hero_art)
+        l.addWidget(hero_slot)
+        platforms_slot=QWidget();platforms_layout=QVBoxLayout(platforms_slot)
+        platforms_layout.setContentsMargins(0,0,0,0);platforms_layout.setSpacing(2)
+        l.addWidget(platforms_slot)
+        shelves=QWidget();shelves_layout=QVBoxLayout(shelves)
+        shelves_layout.setContentsMargins(0,0,0,0);shelves_layout.setSpacing(2)
+        l.addWidget(shelves)
         def load():
-            paths=[('Tendencias','Trending','/trending/all/week',None),('Películas populares','Popular movies','/movie/popular','movie'),('Series populares','Popular series','/tv/popular','series'),('Mejor valoradas','Top rated','/movie/top_rated','movie'),('En cartelera','Now playing','/movie/now_playing','movie'),('Series destacadas','Top series','/tv/top_rated','series')]
+            paths=[('Tendencias','Trending','/trending/all/week',None),
+                   ('Películas populares','Popular movies','/movie/popular','movie'),
+                   ('Series populares','Popular series','/tv/popular','series'),
+                   ('Mejor valoradas','Top rated','/movie/top_rated','movie'),
+                   ('En cartelera','Now playing','/movie/now_playing','movie'),
+                   ('Series destacadas','Top series','/tv/top_rated','series')]
             import concurrent.futures
             def section(entry):
                 try:return self.t(entry[0],entry[1]),self.client.catalog(entry[2],entry[3])
@@ -176,23 +261,54 @@ class Window(DesktopFeatures,QMainWindow):
                 try:return self.client.by_id(key)
                 except Exception:return None
             with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
-                rows=list(pool.map(section,paths));continued=[x for x in pool.map(resume,ids) if x]
+                rows=list(pool.map(section,paths))
+                continued=[x for x in pool.map(resume,ids) if x]
             return rows,continued
         def done(value):
             if page!=self.page_id:return
             rows,continued=value
-            if rows and rows[0][1]:
-                hero=rows[0][1][0];art=Art(hero=True);art.setMinimumHeight(360);art.setMaximumHeight(400);al=QVBoxLayout(art);al.setContentsMargins(36,32,36,32);al.addStretch()
-                badge=label(self.t('BRUNIO  ·  DESTACADO','BRUNIO  ·  FEATURED'),12);badge.setStyleSheet('background:transparent;color:#c4a6ff;font-size:12px;font-weight:700;letter-spacing:2px;');al.addWidget(badge)
-                title=label(hero['title'],36);title.setMaximumWidth(650);title.setStyleSheet('background:transparent;font-size:36px;font-weight:700;');al.addWidget(title)
-                meta=label(str(hero.get('year',''))+'   ·   ★ '+str(hero.get('rating',0)),13);meta.setStyleSheet('background:transparent;color:#d5d2dd;font-size:13px;');al.addWidget(meta)
-                overview=label(hero['overview'][:230]+('…' if len(hero['overview'])>230 else ''),15);overview.setMaximumWidth(600);overview.setStyleSheet('background:transparent;color:#dddce4;font-size:15px;');al.addWidget(overview)
-                actions,bl=row();actions.setObjectName('heroActions');actions.setStyleSheet('QWidget#heroActions { background:transparent; }');play=button(self.t('▶  Reproducir','▶  Play'),lambda:self.start(hero,1 if hero['type']=='series' else 0,1 if hero['type']=='series' else 0));play.setObjectName('primaryAction');play.setStyleSheet('QPushButton#primaryAction { background:#f8f8f8; color:#111; border:1px solid #f8f8f8; border-radius:20px; padding:10px 22px; font-weight:700; }');bl.addWidget(play);bl.addWidget(button(self.t('Más información','More information'),lambda:self.open(hero)));bl.addStretch();al.addWidget(actions);self.image(hero.get('backdrop',''),art,1200,400);l.addWidget(art)
-            if continued:self.rail(l,self.t('Seguir viendo','Continue watching'),continued)
-            self.platform_rail(l,page)
-            for title,items in rows:
-                if items:self.rail(l,title,items)
-            self.run(self.recommendations,lambda items:self.rail(l,self.t('Para ti','For you'),items) if page==self.page_id and items else None,quiet=True)
+            features=rows[0][1][:5] if rows and rows[0][1] else []
+            if features:
+                featured={'index':0}
+                area=QVBoxLayout(hero_art);area.setContentsMargins(30,26,30,26)
+                area.setSpacing(9);area.addStretch(1)
+                kicker=label(self.t('BRUNIO  /  SELECCIÓN DESTACADA','BRUNIO  /  FEATURED PICK'),12)
+                kicker.setObjectName('heroKicker');area.addWidget(kicker)
+                headline=label('',43);headline.setObjectName('heroHeadline');headline.setMaximumWidth(620)
+                area.addWidget(headline)
+                meta=label('',13);meta.setObjectName('heroMeta');area.addWidget(meta)
+                story=label('',14);story.setObjectName('heroStory');story.setMaximumWidth(510)
+                area.addWidget(story)
+                actions,buttons=row();actions.setObjectName('heroActions');buttons.setSpacing(10)
+                play=button(self.t('▶   Ver ahora','▶   Watch now'),lambda:self.start(features[featured['index']],1 if features[featured['index']]['type']=='series' else 0,1 if features[featured['index']]['type']=='series' else 0))
+                play.setObjectName('primaryAction');buttons.addWidget(play)
+                info=button(self.t('Más información','More info'),lambda:self.open(features[featured['index']]))
+                buttons.addWidget(info);buttons.addStretch(1)
+                dots=[]
+                for i in range(len(features)):
+                    dot=button('●',lambda i=i:display(i));dot.setObjectName('heroDot')
+                    dot.setFixedSize(19,19);buttons.addWidget(dot);dots.append(dot)
+                area.addWidget(actions)
+                def display(index):
+                    if page!=self.page_id:return
+                    featured['index']=index;item=features[index]
+                    headline.setText(item.get('title',''))
+                    meta.setText(f"{item.get('year','')}    ·    {self.t('Serie','Series') if item.get('type')=='series' else self.t('Película','Movie')}    ·    ★ {item.get('rating',0)}    ·    4K")
+                    story.setText(item.get('overview','')[:190])
+                    self.image(item.get('backdrop',''),hero_art,1230,400)
+                    for i,dot in enumerate(dots):
+                        dot.setProperty('selected',i==index)
+                        dot.style().unpolish(dot);dot.style().polish(dot)
+                display(0)
+            else:
+                empty=label(self.t('Tu próxima historia comienza aquí.','Your next story starts here.'),25)
+                empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                hs.addWidget(empty)
+            self.platform_rail(platforms_layout,page)
+            if continued:self.rail(shelves_layout,self.t('Continuar viendo','Continue watching'),continued)
+            for name,items in rows:
+                if items:self.rail(shelves_layout,name,items)
+            self.run(self.recommendations,lambda items:self.rail(shelves_layout,self.t('Para ti','For you'),items) if page==self.page_id and items else None,quiet=True)
         self.run(load,done)
     def recommendations(self):
         seeds=[k for k,v in sorted(self.ratings.items(),key=lambda x:x[1],reverse=True) if v>=6]+self.state.get('favorites',[])
@@ -211,36 +327,142 @@ class Window(DesktopFeatures,QMainWindow):
         self.run(choose,lambda item:self.start(item,0,0))
     def grid(self,l,items):
         grid=QGridLayout();grid.setSpacing(16)
-        columns=max(1,min(8,(self.width()-148)//174))
+        columns=max(1,min(8,(self.width()-265)//186))
         for i,item in enumerate(items):grid.addWidget(self.card(item),i//columns,i%columns)
         l.addLayout(grid)
     def search(self):
-        self.select_nav('search');l,page=self.page(self.t('Buscar','Search'))
-        subtitle=label(self.t('Encuentra tu próxima película o serie.','Find your next movie or series.'),16);subtitle.setObjectName('muted');l.addWidget(subtitle)
-        bar,bl=row();bar.setMaximumWidth(900);q=QLineEdit();q.setPlaceholderText(self.t('Buscar películas y series…','Search movies and shows…'));bl.addWidget(q,1)
-        go=button(self.t('Buscar','Search'),lambda:submit());go.setObjectName('primaryAction');bl.addWidget(go);l.addWidget(bar)
+        self.select_nav('search');l,page=self.page(self.t('Búsqueda','Search'))
+        l.setSpacing(17)
+        subtitle=label(self.t('Explora películas, series, actores y directores.','Explore movies, series, actors and directors.'),13)
+        subtitle.setObjectName('muted');l.addWidget(subtitle)
+        bar,bl=row();bar.setObjectName('searchBar');bar.setMaximumWidth(860)
+        bar.setMinimumHeight(60);bar.setMinimumWidth(510)
+        bl.setContentsMargins(12,4,12,4);bl.setSpacing(8)
+        glyph=QLabel();glyph.setPixmap(icon('search','#b9b3ec').pixmap(24,24));bl.addWidget(glyph)
+        q=QLineEdit();q.setObjectName('searchInput')
+        q.setPlaceholderText(self.t('Buscar películas, series, personas…','Search movies, shows, people…'))
+        q.setClearButtonEnabled(True);bl.addWidget(q,1)
+        go=button(self.t('Buscar','Search'),lambda:submit())
+        go.setObjectName('primaryAction');bl.addWidget(go)
+        l.addWidget(bar,0,Qt.AlignmentFlag.AlignHCenter)
+        filter_state={'value':'all','items':[],'people':[],'query':'','serial':0}
+        filters=[('all','Todo','All'),('movie','Películas','Movies'),('series','Series','Series'),
+                 ('actors','Actores','Actors'),('directors','Directores','Directors'),('genres','Géneros','Genres')]
+        select_filter=None
+        results_title=label(self.t('Descubre algo nuevo','Discover something new'),15)
+        results_title.setObjectName('searchResultTitle')
+        recent,rl=row();recent.setObjectName('recentSearches');rl.setSpacing(8)
         owner=self.client.session.get('userId','')+':'+self.client.profile
-        recent,rl=row()
-        for previous in self.history.get(owner,[])[:10]:rl.addWidget(button(previous,lambda text=previous:(q.setText(text),submit())))
+        for previous in self.history.get(owner,[])[:5]:
+            b=button('⌕  '+previous,lambda text=previous:(q.setText(text),debounce.stop(),submit()))
+            b.setObjectName('historyPill');rl.addWidget(b)
         rl.addStretch();l.addWidget(recent)
-        results=QWidget();result_l=QVBoxLayout(results);result_l.setAlignment(Qt.AlignmentFlag.AlignTop);result_l.setContentsMargins(0,0,0,0);l.addWidget(results)
+        l.addWidget(results_title)
+        results=QWidget();results.setObjectName('searchResults')
+        result_l=QVBoxLayout(results);result_l.setAlignment(Qt.AlignmentFlag.AlignTop)
+        result_l.setContentsMargins(0,0,0,0);result_l.setSpacing(14)
+        l.addWidget(results)
+        def clear_results():
+            while result_l.count():
+                child=result_l.takeAt(0)
+                if child.widget():child.widget().deleteLater()
+                if child.layout():
+                    nested=child.layout()
+                    while nested.count():
+                        x=nested.takeAt(0)
+                        if x.widget():x.widget().deleteLater()
+        def render():
+            if page!=self.page_id:return
+            clear_results()
+            kind=filter_state['value'];query=filter_state['query']
+            if kind=='genres':
+                results_title.setText(self.t('Explorar por género','Browse by genre'))
+                grid=QGridLayout();grid.setSpacing(12)
+                genres=[('Acción','Action',28),('Comedia','Comedy',35),('Drama','Drama',18),
+                        ('Terror','Horror',27),('Ciencia ficción','Sci-Fi',878),
+                        ('Suspenso','Thriller',53),('Animación','Animation',16),('Aventura','Adventure',12)]
+                for i,(es,en,gid) in enumerate(genres):
+                    b=button(self.t(es,en),lambda es=es,en=en,gid=gid:self.catalog_page(self.t(es,en),'/discover/movie','movie',{'with_genres':gid}))
+                    b.setObjectName('genreTile');b.setMinimumHeight(78);grid.addWidget(b,i//4,i%4)
+                result_l.addLayout(grid);return
+            if kind in ('actors','directors'):
+                people=[x for x in filter_state['people'] if (x.get('known_for_department') or 'Acting').lower()==('acting' if kind=='actors' else 'directing')]
+                results_title.setText((self.t('Actores','Actors') if kind=='actors' else self.t('Directores','Directors'))+(f' · {query}' if query else ''))
+                if people:
+                    grid=QGridLayout();grid.setSpacing(14)
+                    cols=max(2,min(7,(self.width()-265)//186))
+                    for i,person in enumerate(people):grid.addWidget(self.person_card(person),i//cols,i%cols)
+                    result_l.addLayout(grid)
+                elif query:result_l.addWidget(label(self.t('No encontramos personas para esta búsqueda.','No people found for this search.'),14))
+                return
+            rows=[x for x in filter_state['items'] if kind=='all' or x.get('type')==kind]
+            results_title.setText((self.t('Resultados para ','Results for ')+'“'+query+'”') if query else self.t('Tendencias para descubrir','Trending to discover'))
+            if rows:self.grid(result_l,rows)
+            else:result_l.addWidget(label(self.t('No se encontraron títulos. Prueba otra búsqueda.','No titles found. Try a different search.'),14))
+        def on_filter(kind):
+            filter_state['value']=kind
+            if select_filter:select_filter(kind)
+            if kind in ('actors','directors') and filter_state['query'] and not filter_state['people']:
+                fetch_people(filter_state['query'])
+            else:render()
+        select_filter=self.filter_pills(l,filters,on_filter)
+        # Move the filter control from the appended position to under the search field.
+        filter_bar=l.itemAt(l.count()-1).widget()
+        l.removeWidget(filter_bar);l.insertWidget(3,filter_bar)
+        def fetch_people(query):
+            serial=filter_state['serial']
+            def found(data):
+                if page!=self.page_id or serial!=filter_state['serial']:return
+                filter_state['people']=data;render()
+            self.run(lambda:self.client.tmdb('/search/person',{'query':query}).get('results',[])[:50],found,quiet=True)
         def submit():
-            query=q.text().strip()
-            if len(query)<2:return
-            self.history[owner]=([query]+[old for old in self.history.get(owner,[]) if normalize(old)!=normalize(query)])[:10];self.persist()
-            def found(rows):
-                if page!=self.page_id:return
-                while result_l.count():
-                    child=result_l.takeAt(0)
-                    if child.widget():child.widget().deleteLater()
-                    if child.layout():
-                        while child.layout().count():
-                            x=child.layout().takeAt(0)
-                            if x.widget():x.widget().deleteLater()
-                if rows:self.grid(result_l,rows)
-                else:result_l.addWidget(label(self.t('Sin resultados para esta búsqueda.','No results found.'),16))
-            self.run(lambda:self.client.search(query),found)
-        q.returnPressed.connect(submit);q.setFocus()
+            query=q.text().strip();filter_state['serial']+=1
+            serial=filter_state['serial'];filter_state['query']=query
+            filter_state['people']=[]
+            if len(query)<2:
+                if not query:
+                    self.run(lambda:self.client.catalog('/trending/all/week'),lambda rows:receive(rows,serial),quiet=True)
+                return
+            self.history[owner]=([query]+[old for old in self.history.get(owner,[]) if normalize(old)!=normalize(query)])[:10]
+            self.persist();results_title.setText(self.t('Buscando…','Searching…'))
+            def receive(rows,request=serial):
+                if page!=self.page_id or request!=filter_state['serial']:return
+                filter_state['items']=rows;render()
+            self.run(lambda:self.client.search(query),receive)
+            if filter_state['value'] in ('actors','directors'):fetch_people(query)
+        def receive(rows,request):
+            if page!=self.page_id or request!=filter_state['serial']:return
+            filter_state['items']=rows;render()
+        debounce=QTimer(results);debounce.setSingleShot(True);debounce.setInterval(420)
+        debounce.timeout.connect(submit)
+        q.textChanged.connect(lambda _:debounce.start())
+        q.returnPressed.connect(lambda:(debounce.stop(),submit()))
+        q.setFocus()
+        self.run(lambda:self.client.catalog('/trending/all/week'),lambda rows:receive(rows,filter_state['serial']),quiet=True)
+    def person_card(self,person):
+        w,l=column();l.setContentsMargins(0,0,0,0);l.setSpacing(6);w.setFixedWidth(160)
+        tile=Poster();tile.setFixedSize(160,204);tile.setAccessibleName(str(person.get('name','')))
+        tile.clicked.connect(lambda checked=False:self.person_detail(person))
+        path=person.get('profile_path')
+        if path:self.image('https://image.tmdb.org/t/p/w342'+path,tile,154,198)
+        else:tile.setText(person.get('name',''))
+        l.addWidget(tile)
+        name=label(person.get('name',''),13);name.setObjectName('personName');l.addWidget(name)
+        return w
+    def person_detail(self,person):
+        name=person.get('name',self.t('Persona','Person'))
+        l,page=self.page(name)
+        l.addWidget(label(self.t('Películas y series relacionadas','Related movies and shows'),15))
+        def load():
+            details=self.client.tmdb('/person/'+str(person['id'])+'/combined_credits')
+            seen={}
+            from .core import media as convert
+            for row in details.get('cast',[])+details.get('crew',[]):
+                if row.get('media_type') not in ('movie','tv') or not row.get('poster_path'):continue
+                kind='series' if row['media_type']=='tv' else 'movie'
+                item=convert(row,kind);seen[item['cloudId']]=item
+            return sorted(seen.values(),key=lambda x:x.get('rating',0),reverse=True)[:60]
+        self.run(load,lambda rows:self.grid(l,rows) if page==self.page_id else None)
     def collections(self):
         l,page=self.page(self.t('Colecciones','Collections'))
         groups=[('Netflix',8),('Disney+',337),('Prime Video',9),('Apple TV+',350),('Max',1899)]
@@ -259,9 +481,33 @@ class Window(DesktopFeatures,QMainWindow):
             return rows
         self.run(load,lambda rows:[self.rail(l,name,items) for name,items in rows] if page==self.page_id else None)
     def my_list(self):
-        self.select_nav('list');l,page=self.page(self.t('Mi lista','My list'));ids=list(self.state.get('favorites',[]))
-        if not ids:
-            l.addWidget(label(self.t('Guarda películas y series para encontrarlas aquí.','Save movies and shows to find them here.'),16));return
+        self.select_nav('list');l,page=self.page(self.t('Mi Lista','My List'))
+        ids=list(self.state.get('favorites',[]))
+        state={'items':[],'active':'all'}
+        result=QWidget();result_l=QVBoxLayout(result)
+        result_l.setContentsMargins(0,0,0,0);result_l.setSpacing(12)
+        result_l.setAlignment(Qt.AlignmentFlag.AlignTop)
+        def show_filtered():
+            if page!=self.page_id:return
+            while result_l.count():
+                part=result_l.takeAt(0)
+                if part.widget():part.widget().deleteLater()
+                if part.layout():
+                    lay=part.layout()
+                    while lay.count():
+                        item=lay.takeAt(0)
+                        if item.widget():item.widget().deleteLater()
+            active=state['active'];items=state['items']
+            if active in ('movie','series'):items=[x for x in items if x['type']==active]
+            if active=='upcoming':items=[x for x in items if x.get('year','').isdigit() and int(x['year'])>time.localtime().tm_year]
+            if items:self.grid(result_l,items)
+            else:result_l.addWidget(label(self.t('Todavía no hay títulos en esta sección.','There are no titles in this section yet.'),15))
+        def change(kind):state['active']=kind;select_filter(kind);show_filtered()
+        filters=[('all','Todo','All'),('movie','Películas','Movies'),('series','Series','Series'),('upcoming','Próximamente','Coming soon')]
+        select_filter=self.filter_pills(l,filters,change)
+        caption=label(self.t('Tu colección personal, en un solo lugar.','Your personal collection, all in one place.'),13)
+        caption.setObjectName('muted');l.addWidget(caption);l.addWidget(result)
+        if not ids:show_filtered();return
         def load():
             rows=[]
             for key in ids:
@@ -272,25 +518,51 @@ class Window(DesktopFeatures,QMainWindow):
             return rows
         def show(items):
             if page!=self.page_id:return
-            if items:self.grid(l,items)
-            else:l.addWidget(label(self.t('No se pudieron cargar los títulos. Inténtalo de nuevo.','Could not load titles. Please try again.'),16))
+            state['items']=items;show_filtered()
         self.run(load,show)
 
     def open(self,item):
-        self.selected=item;l,page=self.page('BruniO')
-        hero=Art(hero=True);hero.setMinimumHeight(340);hero.setMaximumHeight(410);body=QVBoxLayout(hero);body.setContentsMargins(34,28,34,28);body.addStretch()
-        kind=label('BRUNIO  ·  '+('SERIE' if item.get('type')=='series' else self.t('PELÍCULA','MOVIE')),12);kind.setStyleSheet('background:transparent;color:#d2b7ff;font-size:12px;font-weight:700;');body.addWidget(kind)
-        title=label(item.get('title',''),32);title.setMaximumWidth(700);title.setStyleSheet('background:transparent;font-size:32px;font-weight:700;');body.addWidget(title)
-        meta=label(str(item.get('year',''))+'   ·   ★ '+str(item.get('rating',0)),14);meta.setStyleSheet('background:transparent;color:#d4d4da;');body.addWidget(meta)
-        overview=label(item.get('overview','')[:280],15);overview.setMaximumWidth(650);overview.setStyleSheet('background:transparent;color:#dddde3;');body.addWidget(overview)
-        actions,al=row();actions.setObjectName('heroActions');actions.setStyleSheet('QWidget#heroActions { background:transparent; }');play=button(self.t('▶  Reproducir','▶  Play'),lambda:self.start(item,1 if item['type']=='series' else 0,1 if item['type']=='series' else 0));play.setObjectName('primaryAction');play.setStyleSheet('QPushButton#primaryAction { background:#f8f8f8; color:#111; border:1px solid #f8f8f8; border-radius:20px; padding:10px 22px; font-weight:700; }');al.addWidget(play)
-        al.addWidget(button(self.t('Fuentes','Sources'),lambda:self.start(item,1 if item['type']=='series' else 0,1 if item['type']=='series' else 0,manual=True)));al.addWidget(button('♥  '+self.t('Mi lista','My list'),lambda:self.favorite(item)));al.addWidget(button('★',lambda:self.rate(item)))
+        self.selected=item;l,page=self.page('BruniO');l.setSpacing(18)
+        top,back_row=row();back_row.addWidget(button(self.t('‹  Volver','‹  Back'),self.home))
+        back_row.addStretch(1);l.addWidget(top)
+        hero=Art(hero=True);hero.setObjectName('detailHero')
+        hero.setMinimumHeight(385);hero.setMaximumHeight(440)
+        body=QVBoxLayout(hero);body.setContentsMargins(32,30,32,30);body.setSpacing(9)
+        body.addStretch(1)
+        kind=label('BRUNIO  /  '+('SERIE' if item.get('type')=='series' else self.t('PELÍCULA','MOVIE')),12)
+        kind.setObjectName('heroKicker');body.addWidget(kind)
+        title=label(item.get('title',''),42);title.setMaximumWidth(720)
+        title.setObjectName('heroHeadline');body.addWidget(title)
+        meta=label(f"{item.get('year','')}    ·    {self.t('Serie','Series') if item['type']=='series' else self.t('Película','Movie')}    ·    ★ {item.get('rating',0)}    ·    4K",13)
+        meta.setObjectName('heroMeta');body.addWidget(meta)
+        overview=label(item.get('overview','')[:300],14);overview.setMaximumWidth(600)
+        overview.setObjectName('heroStory');body.addWidget(overview)
+        actions,al=row();actions.setObjectName('heroActions');al.setSpacing(9)
+        play=button(self.t('▶   Reproducir','▶   Play'),lambda:self.start(item,1 if item['type']=='series' else 0,1 if item['type']=='series' else 0))
+        play.setObjectName('primaryAction');al.addWidget(play)
+        al.addWidget(button(self.t('Fuentes','Sources'),lambda:self.start(item,1 if item['type']=='series' else 0,1 if item['type']=='series' else 0,manual=True)))
+        al.addWidget(button('♡  '+self.t('Mi Lista','My List'),lambda:self.favorite(item)))
+        al.addWidget(button('★',lambda:self.rate(item)))
         if item['type']=='movie':al.addWidget(button(self.t('Descargar','Download'),lambda:self.download_title(item)))
-        al.addStretch();body.addWidget(actions);self.image(item.get('backdrop',''),hero,1200,410);l.addWidget(hero);play.setFocus()
+        al.addStretch(1);body.addWidget(actions)
+        self.image(item.get('backdrop',''),hero,1240,460);l.addWidget(hero)
         saved=self.state.get('progress',{}).get(item['cloudId'],{})
-        if saved.get('position',0):l.addWidget(button(self.t('Continuar','Resume'),lambda:self.start(item,saved.get('season',0),saved.get('episode',0),position=int(saved['position']*1000))))
+        tabs,tl=row();tabs.setObjectName('detailTabs')
+        tl.setSpacing(10)
+        for name in (self.t('Información','Information'),self.t('Episodios','Episodes') if item['type']=='series' else self.t('Sinopsis','Synopsis')):
+            tab=label(name,13);tab.setObjectName('detailTab');tl.addWidget(tab)
+        tl.addStretch(1);l.addWidget(tabs)
+        if saved.get('position',0):
+            l.addWidget(button(self.t('▶  Continuar viendo','▶  Resume watching'),lambda:self.start(item,saved.get('season',0),saved.get('episode',0),position=int(saved['position']*1000))))
         if item['type']=='series':
-            combo=QComboBox();l.addWidget(combo);l.addWidget(button(self.t('Descargar temporada','Download season'),lambda:self.download_season(item,combo.currentData()) if combo.currentData() is not None else None));episodes=QWidget();el=QVBoxLayout(episodes);l.addWidget(episodes)
+            selector,sl=row()
+            sl.addWidget(self.section_title(self.t('Episodios','Episodes')))
+            sl.addStretch(1)
+            combo=QComboBox();combo.setMinimumWidth(175);sl.addWidget(combo)
+            sl.addWidget(button(self.t('Descargar temporada','Download season'),lambda:self.download_season(item,combo.currentData()) if combo.currentData() is not None else None))
+            l.addWidget(selector)
+            episodes=QWidget();el=QVBoxLayout(episodes);el.setContentsMargins(0,0,0,0)
+            l.addWidget(episodes)
             def season_changed():
                 season=combo.currentData()
                 if season is None:return
@@ -299,11 +571,36 @@ class Window(DesktopFeatures,QMainWindow):
                     while el.count():
                         x=el.takeAt(0)
                         if x.widget():x.widget().deleteLater()
+                        if x.layout():
+                            lay=x.layout()
+                            while lay.count():
+                                entry=lay.takeAt(0)
+                                if entry.widget():entry.widget().deleteLater()
+                    if not rows:
+                        el.addWidget(label(self.t('No hay episodios disponibles.','No episodes available.'),13));return
+                    shelf,layout=row();layout.setSpacing(12)
                     for ep in rows:
-                        al=button(f"E{ep['episode_number']} · {ep.get('name','')}  ▶",lambda ep=ep:self.start(item,season,ep['episode_number']));al.setToolTip(ep.get('overview',''));el.addWidget(al)
+                        tile,vertical=column();tile.setFixedWidth(230)
+                        tile.setObjectName('episodeCard');vertical.setContentsMargins(0,0,0,0);vertical.setSpacing(6)
+                        thumb=Poster();thumb.setFixedSize(226,127)
+                        thumb.clicked.connect(lambda checked=False,ep=ep:self.start(item,season,ep['episode_number']))
+                        still=ep.get('still_path')
+                        if still:self.image('https://image.tmdb.org/t/p/w500'+still,thumb,220,125)
+                        else:thumb.setText('▶')
+                        vertical.addWidget(thumb)
+                        name=label(f"{ep['episode_number']}. {ep.get('name','')}",13)
+                        name.setObjectName('episodeName');vertical.addWidget(name)
+                        runtime=label(f"{ep.get('runtime') or '--'} min",11)
+                        runtime.setObjectName('muted');vertical.addWidget(runtime)
+                        layout.addWidget(tile)
+                    layout.addStretch(1);el.addWidget(EdgeRail(shelf,185))
                 self.run(lambda:self.client.episodes(item,season),show)
             combo.currentIndexChanged.connect(season_changed)
-            self.run(lambda:self.client.details(item),lambda d:[combo.addItem(f'Season {n}',n) for n in range(1,d.get('number_of_seasons',1)+1)] if page==self.page_id else None)
+            self.run(lambda:self.client.details(item),lambda d:[combo.addItem(self.t('Temporada ','Season ')+str(n),n) for n in range(1,d.get('number_of_seasons',1)+1)] if page==self.page_id else None)
+        else:
+            l.addWidget(self.section_title(self.t('Sobre esta película','About this movie')))
+            synopsis=label(item.get('overview',''),14);synopsis.setObjectName('synopsis');l.addWidget(synopsis)
+        play.setFocus()
     def favorite(self,item):
         def save():
             state=self.client.state();fav=state.setdefault('favorites',[])
@@ -683,27 +980,47 @@ class Window(DesktopFeatures,QMainWindow):
         import io
         data=io.BytesIO();qrcode.make(url).save(data,format='PNG');pix=QPixmap();pix.loadFromData(data.getvalue());d=QDialog(self);d.setWindowTitle('BruniO · QR');l=QVBoxLayout(d);image=QLabel();image.setPixmap(pix.scaled(300,300));l.addWidget(image);l.addWidget(button('Open on this PC',lambda:webbrowser.open(url)));d.exec()
     def profiles(self,manage=False):
-        l,page=self.page('BruniO');self.sidebar.hide();l.setAlignment(Qt.AlignmentFlag.AlignHCenter|Qt.AlignmentFlag.AlignTop);l.addSpacing(70)
-        brand=label('BruniO',29);brand.setAlignment(Qt.AlignmentFlag.AlignCenter);brand.setStyleSheet('font-size:29px;font-weight:800;color:#f5f5f8;');l.addWidget(brand)
-        title=label(self.t('¿Quién está viendo?','Who is watching?'),34);title.setAlignment(Qt.AlignmentFlag.AlignCenter);title.setStyleSheet('font-size:34px;font-weight:700;');l.addWidget(title);l.addSpacing(26)
-        panel,grid=row();grid.setAlignment(Qt.AlignmentFlag.AlignHCenter);grid.setSpacing(38)
+        # Full-width cinematic chooser.  No sidebar on profiles, just as on TV.
+        view=Starfield();view.setObjectName('profileChooser')
+        l=QVBoxLayout(view);l.setContentsMargins(32,26,32,45)
+        scroller=QScrollArea();scroller.setWidgetResizable(True)
+        scroller.setFrameShape(QScrollArea.Shape.NoFrame);scroller.setWidget(view)
+        self.show_page(scroller);self.sidebar.hide()
+        l.setAlignment(Qt.AlignmentFlag.AlignHCenter|Qt.AlignmentFlag.AlignTop)
+        header,hl=row();hl.setSpacing(8)
+        mark=label('BruniO',24);mark.setObjectName('profileBrand');hl.addWidget(mark)
+        hl.addStretch(1)
+        manage_button=button(self.t('Listo','Done') if manage else self.t('Administrar perfiles','Manage profiles'),lambda:self.profiles(not manage))
+        manage_button.setObjectName('manageProfiles');hl.addWidget(manage_button)
+        l.addWidget(header);l.addStretch(1)
+        title=label(self.t('¿Quién está viendo?','Who is watching?'),29)
+        title.setObjectName('profileQuestion');title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        l.addWidget(title);l.addSpacing(20)
+        panel,grid=row();grid.setAlignment(Qt.AlignmentFlag.AlignHCenter);grid.setSpacing(26)
         for profile in self.client.account.get('profiles',[]):
-            card,box=column();card.setObjectName('profileChoice');card.setFixedWidth(150);box.setContentsMargins(0,0,0,0);box.setSpacing(8)
-            pic=ProfileAvatar();pic.setFixedSize(136,136);pic.setToolTip(profile.get('name',''));value=profile.get('avatarValue') or 'ai:astronaut'
-            if value.startswith('https://'):self.image(value,pic,136,136)
+            card,box=column();card.setObjectName('profileChoice');card.setFixedWidth(155)
+            box.setContentsMargins(0,0,0,0);box.setSpacing(10)
+            pic=ProfileAvatar();pic.setFixedSize(146,146);pic.setToolTip(profile.get('name',''))
+            value=profile.get('avatarValue') or 'ai:astronaut'
+            if value.startswith('https://'):self.image(value,pic,146,146)
             elif value!='none':pic.setPixmap(QPixmap(str(self.avatar_path(value))))
-            pic.clicked.connect(lambda checked=False,p=profile:self.avatar_picker(p) if manage else self.select_profile(p));box.addWidget(pic,0,Qt.AlignmentFlag.AlignHCenter)
-            name=button(profile['name'],lambda p=profile:self.avatar_picker(p) if manage else self.select_profile(p));name.setObjectName('profileName');box.addWidget(name)
+            pic.clicked.connect(lambda checked=False,p=profile:self.avatar_picker(p) if manage else self.select_profile(p))
+            box.addWidget(pic,0,Qt.AlignmentFlag.AlignHCenter)
+            name=button(profile['name'],lambda p=profile:self.avatar_picker(p) if manage else self.select_profile(p))
+            name.setObjectName('profileName');box.addWidget(name)
             if manage:
                 actions,al=row();al.addWidget(button('Avatar',lambda p=profile:self.avatar_picker(p)))
                 if len(self.client.account['profiles'])>1:
-                    remove=button('✕',lambda p=profile:self.delete_profile(p));remove.setToolTip(self.t('Eliminar perfil','Delete profile'));remove.setFixedWidth(42);al.addWidget(remove)
+                    remove=button('✕',lambda p=profile:self.delete_profile(p))
+                    remove.setToolTip(self.t('Eliminar perfil','Delete profile'))
+                    remove.setFixedWidth(42);al.addWidget(remove)
                 box.addWidget(actions)
             grid.addWidget(card)
-        l.addWidget(panel,0,Qt.AlignmentFlag.AlignHCenter);l.addSpacing(22)
-        manage_button=button(self.t('Listo','Done') if manage else self.t('Administrar perfiles','Manage profiles'),lambda:self.profiles(not manage));manage_button.setObjectName('manageProfiles');manage_button.setStyleSheet('QPushButton#manageProfiles { background:#121214; border:1px solid #5b5b61; border-radius:20px; color:#dddde3; padding:10px 18px; } QPushButton#manageProfiles:hover { background:#333337; }');manage_button.setFixedWidth(210);l.addWidget(manage_button,0,Qt.AlignmentFlag.AlignHCenter)
-        if manage:
-            create=button('+  '+self.t('Crear perfil','Create profile'),self.create_profile);create.setFixedWidth(190);l.addWidget(create,0,Qt.AlignmentFlag.AlignHCenter)
+        l.addWidget(panel,0,Qt.AlignmentFlag.AlignHCenter)
+        add=button('＋  '+self.t('Agregar perfil','Add profile'),self.create_profile)
+        add.setObjectName('addProfile');add.setFixedWidth(190)
+        l.addSpacing(22);l.addWidget(add,0,Qt.AlignmentFlag.AlignHCenter)
+        l.addStretch(2)
     def select_profile(self,profile):
         if self.client.party:self.tell('Leave Party before switching profiles');return
         if self.player:self.player.stop()
@@ -956,8 +1273,7 @@ class Window(DesktopFeatures,QMainWindow):
         language.currentIndexChanged.connect(show);show();d.exec()
     def change_language(self,value):
         self.save_pref('language',value)
-        names={'home':('Inicio','Home'),'search':('Buscar','Search'),'live':('Live TV','Live TV'),'friends':('Amigos','Friends'),'calendar':('Calendario','Calendar'),'downloads':('Descargas','Downloads'),'list':('Mi lista','My List')}
-        for key,(es,en) in names.items():self.nav_buttons[key].setText(self.t(es,en))
+        for key,(es,en) in self.nav_labels.items():self.nav_buttons[key].setText(self.t(es,en))
         self.settings(refresh=False)
 
     def save_pref(self,key,value):self.preferences[key]=value;self.client.language='es-ES' if self.preferences.get('language')=='es' else 'en-US';self.sync_source_settings();self.persist()
@@ -1006,59 +1322,84 @@ class Window(DesktopFeatures,QMainWindow):
         self.client.detach();self.persist();event.accept()
 
 STYLE='''
-QWidget { color:#f8f8fa; font-family:"Segoe UI"; font-size:14px; }
-QWidget#appRoot,QWidget#screenContent { background:#080808; }
-QWidget#topbar { background:#0c0c0e; border-bottom:1px solid #242428; }
-QLabel#brand { color:white; font-size:27px; font-weight:800; letter-spacing:-1px; background:transparent; }
-QWidget#navGroup { background:#171719; border:1px solid #28282c; border-radius:25px; }
-QPushButton { background:#232326; border:1px solid #38383d; border-radius:20px; padding:10px 18px; font-weight:600; }
-QPushButton#pillButton { background:#27272a; border:1px solid #414145; border-radius:19px; padding:10px 18px; font-weight:600; }
-QPushButton#pillButton:hover { background:#404044; border-color:#88888e; }
-QPushButton:hover { background:#353538; border-color:#737377; }
-QPushButton:focus { border:1px solid #dddde2; }
-QPushButton:pressed { background:#49494d; }
-QPushButton#primaryAction { background:#fafafa; color:#111111; border:0; border-radius:22px; font-weight:700; padding:12px 22px; }
-QPushButton#primaryAction:hover { background:#dcdce1; }
-QPushButton#navButton { background:transparent; color:#a9a9b1; border:1px solid transparent; border-radius:20px; padding:9px 12px; font-size:13px; }
-QPushButton#navButton:hover { background:#303034; color:#ffffff; }
-QPushButton#navButton[selected="true"] { color:#ffffff; background:#39393e; border:1px solid #39393e; border-radius:19px; }
-QPushButton#roundButton,QPushButton#profile,QPushButton#playerRound { background:#202023; border:1px solid #38383d; border-radius:21px; padding:7px; min-width:26px; }
-QPushButton#roundButton:hover,QPushButton#profile:hover,QPushButton#playerRound:hover { background:#404044; }
-QPushButton#railEdge { background:rgba(10,10,10,180); border:0; border-radius:13px; padding:4px; }
-QPushButton#railEdge:hover { background:rgba(48,48,50,235); }
-QWidget#profileChoice,QWidget#updateInfo { background:transparent; }
-QPushButton#manageProfiles { background:transparent; border:1px solid #626268; color:#d5d5da; border-radius:22px; }
-QWidget#edgeRail,QWidget#flatRow { background:transparent; }
-QWidget#profileCard,QWidget#friendCard,QWidget#settingsCard,QWidget#channelTile,QWidget#downloadCard,QWidget#updateStrip { background:#151517; border:1px solid #303033; border-radius:18px; }
+QWidget { color:#ecedff; font-family:"Segoe UI"; font-size:13px; }
+QMainWindow,QWidget#appRoot,QWidget#contentShell,QWidget#screenContent { background:#080f1b; }
+QWidget#sidebar { background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #0a101e,stop:1 #0e1424); border-right:1px solid #283347; }
+QWidget#sidebar QLabel { background:transparent; border:0; }
+QLabel#brand { color:#eeebff; font-size:26px; font-weight:800; letter-spacing:-1px; padding-left:9px; }
+QPushButton { color:#e1e2f3; background:rgba(28,35,52,200); border:1px solid #3d4560; border-radius:19px; padding:10px 18px; font-weight:600; }
+QPushButton:hover { color:#ffffff; background:rgba(62,67,99,225); border-color:#8981b9; }
+QPushButton:pressed { background:#696090; }
+QPushButton:focus { border:1px solid #c5b7ff; }
+QPushButton#pillButton { background:#1c2536; border:1px solid #45506a; border-radius:18px; }
+QPushButton#navButton { text-align:left; background:transparent; border:1px solid transparent; border-radius:10px; padding:7px 10px; font-size:12px; font-weight:500; color:#b6b8ce; }
+QPushButton#navButton:hover { color:#f3f0ff; background:#242c42; border:1px solid #2c3853; }
+QPushButton#navButton[selected="true"] { background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #4b477c,stop:1 #292f4e); color:#ffffff; border:1px solid #5e5888; font-weight:700; }
+QPushButton#roundButton,QPushButton#profile { background:#141c2b; border:1px solid #34415a; border-radius:20px; padding:5px; }
+QPushButton#roundButton:hover,QPushButton#profile:hover { border-color:#bcaeff; background:#293554; }
+QLabel#profileFootnote { color:#9ca2bd; font-size:11px; }
+QLabel#pageTitle { font-size:28px; color:#f1efff; font-weight:700; padding-bottom:3px; }
+QWidget#sectionHeader,QWidget#flatRow,QWidget#edgeRail,QWidget#heroActions,QWidget#searchResults,QWidget#filterBar,QWidget#recentSearches,QWidget#detailTabs { background:transparent; border:0; }
+QLabel#sectionTitle { color:#edeaff; font-size:19px; font-weight:700; }
+QLabel#heroKicker { background:transparent; color:#c1aeff; letter-spacing:2px; font-size:11px; font-weight:800; }
+QLabel#heroHeadline { background:transparent; color:#ffffff; font-size:42px; font-weight:800; }
+QLabel#heroMeta { background:transparent; color:#d3d8ee; font-size:12px; font-weight:600; }
+QLabel#heroStory { background:transparent; color:#e2e5f2; font-size:14px; }
+QPushButton#primaryAction { color:#15132c; background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 #aa93ff,stop:.5 #c4b8ff,stop:1 #a998fa); border:1px solid #d3caff; border-radius:20px; padding:11px 23px; font-weight:800; }
+QPushButton#primaryAction:hover { background:#e0d6ff; color:#16112b; }
+QPushButton#heroDot { border:0; background:transparent; color:#505b7b; font-size:15px; padding:0; border-radius:7px; }
+QPushButton#heroDot[selected="true"] { color:#c4b5ff; }
+QPushButton#railEdge { color:white; background:rgba(20,24,40,195); border:1px solid #6b618c; border-radius:16px; padding:4px; }
+QPushButton#railEdge:hover { background:#494271; }
+QPushButton#filterPill { color:#c2c4d6; background:rgba(19,25,38,175); border:1px solid #43506a; border-radius:16px; padding:7px 16px; font-weight:500; }
+QPushButton#filterPill:hover { border-color:#a49bd5; }
+QPushButton#filterPill[selected="true"] { color:#17152d; background:#b5a7fd; border-color:#c6bbff; font-weight:800; }
+QPushButton#historyPill { background:#151e2d; color:#aab1cc; border:1px solid #29384d; font-size:11px; padding:8px 13px; }
+QWidget#searchBar { background:#171d31; border:1px solid #8478c2; border-radius:26px; }
+QLineEdit#searchInput { background:transparent; border:0; padding:6px 10px; font-size:17px; color:white; }
+QLineEdit#searchInput:focus { border:0; }
+QLabel#searchResultTitle { font-size:14px; font-weight:700; color:#dcdcf5; }
+QPushButton#genreTile { border-radius:18px; font-size:16px; background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #252945,stop:1 #111a2c); }
+QLabel#personName { color:#dedcf0; font-size:13px; }
+QLabel#detailTab { color:#c5baff; font-weight:700; border-bottom:2px solid #9185cb; padding:9px 11px; }
+QWidget#episodeCard { background:transparent; }
+QLabel#episodeName { font-size:12px; font-weight:600; }
+QLabel#synopsis { color:#bfc4da; font-size:13px; }
+QLabel#muted { color:#989fb9; }
+QWidget#profileChoice { background:transparent; }
+QLabel#profileQuestion { background:transparent; font-size:29px; color:white; font-weight:800; }
+QLabel#profileBrand { background:transparent; font-size:24px; font-weight:800; color:#c4b5ff; }
+QPushButton#profileName { background:transparent; border:0; color:#eae8f8; font-size:14px; padding:7px 2px; }
+QPushButton#manageProfiles { background:#141b2d; border:1px solid #565376; color:#d9d5f8; font-size:12px; }
+QPushButton#addProfile { background:#211c38; border:1px solid #a495de; color:#e3daff; }
+QWidget#profileCard,QWidget#friendCard,QWidget#settingsCard,QWidget#channelTile,QWidget#downloadCard,QWidget#updateStrip { background:#151e2d; border:1px solid #2b3950; border-radius:17px; }
 QWidget#profileCard QLabel,QWidget#friendCard QLabel,QWidget#settingsCard QLabel,QWidget#channelTile QLabel,QWidget#downloadCard QLabel,QWidget#updateStrip QLabel { background:transparent; border:0; }
-QWidget#channelTile:hover { background:#202023; border-color:#77777d; }
-QLabel#channelCategory { color:#a1a1aa; font-size:10px; font-weight:700; }
-QPushButton#favoritePill { background:#252528; border:1px solid #444448; border-radius:16px; padding:0; font-size:16px; }
-QPushButton#channelName,QPushButton#profileName { background:transparent; border:0; text-align:center; padding:6px 2px; }
-QPushButton#channelName:hover,QPushButton#profileName:hover { color:#ffffff; }
-QPushButton#updateButton { background:#f0f0f2; color:#111; border:0; border-radius:20px; }
-QWidget#player { background:#050505; }
-QWidget#playerPanel { background:#1a1a1d; border:1px solid #333337; border-radius:22px; }
-QWidget#playerControls { background:transparent; }
-QPushButton#playerPlay { background:#f5f5f5; color:#101010; border:0; border-radius:22px; font-size:17px; padding:0; }
-QLabel#status { padding:9px 28px; color:#f5f5fa; background:#29292e; }
-QLabel#muted { color:#a2a2ac; }
-QLabel#noticeCard { background:#18181a; border:1px solid #303034; border-radius:18px; padding:22px; }
-QWidget#multiTile { background:#111; border:1px solid #39393e; border-radius:14px; }
-QLineEdit,QComboBox,QDoubleSpinBox { padding:11px 15px; border:1px solid #3a3a3f; border-radius:20px; background:#1b1b1e; selection-background-color:#6b5c80; }
-QLineEdit:focus,QComboBox:focus { border:1px solid #bdbdc6; }
-QScrollArea { border:0; background:#080808; }
-QSlider::groove:horizontal { height:4px; background:#515159; border-radius:2px; }
-QSlider::sub-page:horizontal { background:#f4f4f5; border-radius:2px; }
-QSlider::handle:horizontal { width:14px; margin:-5px 0; background:#ffffff; border-radius:7px; }
-QScrollBar:vertical { width:7px; background:#080808; }
-QScrollBar::handle:vertical,QScrollBar::handle:horizontal { background:#4b4b4f; border-radius:3px; min-height:24px; }
+QWidget#channelTile:hover { background:#253149; border-color:#766cad; }
+QLabel#channelCategory { color:#a1a8c3; font-size:10px; }
+QPushButton#favoritePill { background:#252740; border:1px solid #514e77; border-radius:16px; padding:0; }
+QPushButton#channelName { background:transparent; border:0; padding:6px 2px; }
+QPushButton#updateButton { color:#201b36; background:#b9aafc; border:0; border-radius:20px; }
+QWidget#player { background:#03050c; }
+QWidget#playerPanel { background:#151d2c; border:1px solid #3c4169; border-radius:22px; }
+QWidget#playerControls,QWidget#playerTop { background:transparent; }
+QPushButton#playerPlay { background:#baabff; color:#101326; border:0; border-radius:22px; font-size:17px; padding:0; }
+QLabel#status { padding:9px 28px; color:#f5f1ff; background:#373157; }
+QLabel#noticeCard { background:#151d2d; border:1px solid #343f5b; border-radius:18px; padding:22px; }
+QWidget#multiTile { background:#0b1020; border:1px solid #474364; border-radius:14px; }
+QLineEdit,QComboBox,QDoubleSpinBox { padding:10px 14px; border:1px solid #48516e; border-radius:18px; background:#161d2d; selection-background-color:#8b78d5; }
+QLineEdit:focus,QComboBox:focus { border:1px solid #b9a8ff; }
+QScrollArea { border:0; background:#080f1b; }
+QSlider::groove:horizontal { height:4px; background:#48516d; border-radius:2px; }
+QSlider::sub-page:horizontal { background:#af9eff; border-radius:2px; }
+QSlider::handle:horizontal { width:14px; margin:-5px 0; background:#c9bcff; border-radius:7px; }
+QScrollBar:vertical { width:7px; background:transparent; }
+QScrollBar::handle:vertical,QScrollBar::handle:horizontal { background:#484963; border-radius:3px; min-height:24px; }
 QScrollBar::add-line,QScrollBar::sub-line { height:0; width:0; }
-QScrollBar:horizontal { height:7px; background:#080808; }
-QCalendarWidget QWidget { alternate-background-color:#202023; }
-QCalendarWidget QToolButton { background:#252528; color:#f5f5fa; border:0; border-radius:12px; padding:6px; }
-QCalendarWidget QAbstractItemView { background:#151517; color:#f0f0f1; selection-background-color:#64646a; selection-color:white; }
-QDialog { background:#111113; }
+QScrollBar:horizontal { height:7px; background:transparent; }
+QCalendarWidget QWidget { alternate-background-color:#222538; }
+QCalendarWidget QToolButton { background:#2b2c49; color:#ecebff; border:0; border-radius:12px; padding:6px; }
+QCalendarWidget QAbstractItemView { background:#151a2c; color:#f0ecff; selection-background-color:#686198; selection-color:white; }
+QDialog { background:#0e1525; }
 '''
 
 

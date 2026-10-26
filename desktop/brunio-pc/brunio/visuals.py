@@ -1,6 +1,6 @@
 """Native Qt visual components; no web view or extra runtime required."""
-from PySide6.QtCore import Qt, QSize, QRectF, QByteArray
-from PySide6.QtGui import QPixmap, QIcon, QPainter, QPainterPath, QColor, QLinearGradient
+from PySide6.QtCore import Qt, QSize, QRectF, QByteArray, QPointF
+from PySide6.QtGui import QPixmap, QIcon, QPainter, QPainterPath, QColor, QLinearGradient, QRadialGradient, QPolygonF, QPen
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QWidget, QPushButton
 
@@ -10,6 +10,8 @@ PATHS={
  'collections':'<rect x="3" y="6" width="18" height="15" rx="3"/><path d="M7 3h10M3 11h18"/>',
  'friends':'<circle cx="9" cy="8" r="4"/><path d="M2 21v-3a7 7 0 0 1 14 0v3M17 5a4 4 0 0 1 0 8M19 16a5 5 0 0 1 3 5"/>',
  'live':'<rect x="2" y="6" width="20" height="15" rx="3"/><path d="m8 2 4 4 4-4m-6 14 5-3-5-3Z"/>',
+ 'movies':'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6m-6 4h6m-6 4h4"/>',
+ 'series':'<rect x="2" y="4" width="20" height="16" rx="3"/><path d="M6 23h12m-6-3v3"/>',
  'list':'<path d="M5 3h14v19l-7-5-7 5Z"/>',
  'calendar':'<rect x="3" y="5" width="18" height="17" rx="2"/><path d="M7 2v6M17 2v6M3 10h18"/>',
  'downloads':'<path d="M12 3v12m-5-5 5 5 5-5M3 17v4h18v-4"/>',
@@ -33,12 +35,13 @@ class Art(QWidget):
     def setPixmap(self,pix):self.pix=pix;self.update()
     def paintEvent(self,event):
         p=QPainter(self);p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        path=QPainterPath();path.addRoundedRect(QRectF(self.rect()),16,16);p.setClipPath(path);p.fillRect(self.rect(),QColor('#19191b'))
+        path=QPainterPath();path.addRoundedRect(QRectF(self.rect()),19,19);p.setClipPath(path);p.fillRect(self.rect(),QColor('#111724'))
         if not self.pix.isNull():
             scaled=self.pix.scaled(self.size(),Qt.AspectRatioMode.KeepAspectRatioByExpanding,Qt.TransformationMode.SmoothTransformation)
             p.drawPixmap((self.width()-scaled.width())//2,(self.height()-scaled.height())//2,scaled)
         if self.hero:
-            gradient=QLinearGradient(0,0,self.width(),0);gradient.setColorAt(0,QColor(8,8,9,245));gradient.setColorAt(.6,QColor(8,8,9,165));gradient.setColorAt(1,QColor(8,8,9,35));p.fillRect(self.rect(),gradient)
+            gradient=QLinearGradient(0,0,self.width(),0);gradient.setColorAt(0,QColor(4,9,19,251));gradient.setColorAt(.37,QColor(5,11,22,227));gradient.setColorAt(.72,QColor(5,11,20,83));gradient.setColorAt(1,QColor(4,10,17,12));p.fillRect(self.rect(),gradient)
+            shade=QLinearGradient(0,self.height()*.45,0,self.height());shade.setColorAt(0,QColor(4,8,16,0));shade.setColorAt(1,QColor(4,8,16,195));p.fillRect(self.rect(),shade)
         p.end()
 
 class Poster(QPushButton):
@@ -46,14 +49,14 @@ class Poster(QPushButton):
     def setPixmap(self,pix):self.pix=pix;self.update()
     def paintEvent(self,event):
         p=QPainter(self);p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        rect=QRectF(self.rect()).adjusted(3,3,-3,-3);path=QPainterPath();path.addRoundedRect(rect,12,12);p.setClipPath(path);p.fillRect(rect,QColor('#19191b'))
+        rect=QRectF(self.rect()).adjusted(3,3,-3,-3);path=QPainterPath();path.addRoundedRect(rect,11,11);p.setClipPath(path);p.fillRect(rect,QColor('#141b29'))
         if not self.pix.isNull():
             pix=self.pix.scaled(self.size()-QSize(6,6),Qt.AspectRatioMode.KeepAspectRatioByExpanding,Qt.TransformationMode.SmoothTransformation)
             p.drawPixmap((self.width()-pix.width())//2,(self.height()-pix.height())//2,pix)
         elif self.text():
             p.setPen(QColor('#f1edf8'));font=p.font();font.setBold(True);font.setPixelSize(19);p.setFont(font);p.drawText(rect,Qt.AlignmentFlag.AlignCenter,self.text())
         p.setClipping(False)
-        if self.underMouse() or self.hasFocus():p.setPen(QColor('#ffffff'));p.drawRoundedRect(QRectF(self.rect()).adjusted(1,1,-2,-2),14,14)
+        if self.underMouse() or self.hasFocus():p.setPen(QPen(QColor('#bcaaff'),2));p.drawRoundedRect(QRectF(self.rect()).adjusted(1,1,-2,-2),12,12)
         p.end()
     def enterEvent(self,e):self.update();super().enterEvent(e)
     def leaveEvent(self,e):self.update();super().leaveEvent(e)
@@ -86,3 +89,44 @@ class ProfileAvatar(Poster):
             pix=self.pix.scaled(self.size()-QSize(10,10),Qt.AspectRatioMode.KeepAspectRatioByExpanding,Qt.TransformationMode.SmoothTransformation)
             p.drawPixmap((self.width()-pix.width())//2,(self.height()-pix.height())//2,pix)
         p.setClipping(False);p.setPen(QColor('#f1f1f1' if self.underMouse() or self.hasFocus() else '#45454a'));p.drawEllipse(rect);p.end()
+
+
+class Starfield(QWidget):
+    """Paint-only profile backdrop, no external image or dependencies.
+
+    Keeps overlays and click targets native Qt widgets, including when offline.
+    """
+    def __init__(self,parent=None):
+        super().__init__(parent)
+        self.setMinimumHeight(545)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground,False)
+    def paintEvent(self,event):
+        p=QPainter(self);p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        w,h=self.width(),self.height()
+        bg=QLinearGradient(0,0,w,h)
+        bg.setColorAt(0,QColor('#050b19'));bg.setColorAt(.46,QColor('#12172d'))
+        bg.setColorAt(1,QColor('#070d1d'))
+        p.fillRect(self.rect(),bg)
+        # A cool violet planet glow above a layered, midnight landscape.
+        halo=QRadialGradient(QPointF(w*.52,h*.30),w*.48)
+        halo.setColorAt(0,QColor(104,90,180,90))
+        halo.setColorAt(1,QColor(40,50,110,0))
+        p.fillRect(self.rect(),halo)
+        p.setPen(Qt.PenStyle.NoPen)
+        radius=min(w*.20,h*.33)
+        planet=QRadialGradient(QPointF(w*.49,h*.26),radius)
+        planet.setColorAt(0,QColor(66,89,155,105))
+        planet.setColorAt(.55,QColor(47,65,119,75))
+        planet.setColorAt(1,QColor(31,42,81,0))
+        p.setBrush(planet)
+        p.drawEllipse(QPointF(w*.49,h*.26),radius,radius)
+        for i in range(130):
+            x=((i*1837+97)%997)/997*w;y=((i*703+31)%997)/997*h*.68
+            c=QColor(195,205,255,38+(i%5)*23)
+            p.setBrush(c);r=0.55+(i%4)*.27;p.drawEllipse(QPointF(x,y),r,r)
+        def mountain(peaks,color):
+            poly=QPolygonF([QPointF(0,h)]+[QPointF(x*w,y*h) for x,y in peaks]+[QPointF(w,h)])
+            p.setBrush(QColor(color));p.drawPolygon(poly)
+        mountain([(0,.72),(.11,.60),(.24,.74),(.38,.56),(.53,.72),(.68,.60),(.78,.68),(.91,.54),(1,.69)],'#17233c')
+        mountain([(0,.81),(.13,.69),(.21,.83),(.34,.67),(.51,.85),(.66,.73),(.78,.82),(.92,.68),(1,.79)],'#0c172b')
+        p.end()

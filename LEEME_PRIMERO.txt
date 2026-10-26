@@ -1,1 +1,21 @@
-Sube desktop/brunio-pc completo y .github/workflows/build-pc.yml a tu repositorio, respetando carpetas. Ejecuta Actions > Build BruniO PC Windows > Run workflow. Consulta desktop/brunio-pc/README.md. El ZIP es código fuente; no contiene un EXE compilado.
+BruniO PC RC6 - PREMIUM REDESIGN (SCREENSHOT 1)
+
+Este ZIP contiene exclusivamente el código fuente de la aplicación de Windows PC.
+No incluye EXE ni APK y no sustituye a Android / Android TV.
+
+Sube/reemplaza en el repositorio Randy3m2/miflix-tv-native:
+  - desktop/brunio-pc/ (carpeta completa)
+  - .github/workflows/build-pc.yml
+
+NO reemplaces ni borres app/, docs/ u otros workflows de Android TV.
+
+Después: GitHub > Actions > Build BruniO PC Windows > Run workflow.
+Descarga el artifact BruniO-PC-Windows-RC6 y prueba el instalador.
+El release será pc-v1.0.0-rc6 y actualizará el canal de PC pc-latest.
+
+El rediseño incluye: Inicio, Búsqueda, Perfiles, Detalle y Mi Lista.
+IMPORTANTE: esta entrega pasó verificación de sintaxis Python, pero todavía NO
+fue probada visualmente ni instalada en Windows. Las pruebas de Qt se ejecutarán
+en GitHub Actions cuando subas estos cambios.
+
+Ver desktop/brunio-pc/README.md.

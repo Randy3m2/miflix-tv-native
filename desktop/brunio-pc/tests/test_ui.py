@@ -30,6 +30,23 @@ class UITests(unittest.TestCase):
         self.w.client.profile='one';self.w.save_profile_pref('retry_links',False)
         self.w.client.profile='two';self.assertTrue(self.w.profile_pref('retry_links',True))
         self.w.client.profile='one';self.assertFalse(self.w.profile_pref('retry_links',True))
+    def test_rc6_screenshot_one_has_sidebar_and_search_filters(self):
+        self.assertEqual(self.w.sidebar.objectName(),'sidebar')
+        self.assertTrue({'home','search','movies','series','list','collections'}.issubset(self.w.nav_buttons))
+        self.w.search();self.app.processEvents()
+        self.assertTrue(self.w.stack.currentWidget().findChild(QLineEdit,'searchInput'))
+        pills=[b.text() for b in self.w.stack.currentWidget().findChildren(QPushButton,'filterPill')]
+        self.assertIn('Actores',pills)
+        self.assertIn('Géneros',pills)
+    def test_rc6_cinematic_profiles_and_detail(self):
+        self.w.profiles();self.app.processEvents()
+        from brunio.visuals import Starfield
+        self.assertTrue(self.w.stack.currentWidget().findChildren(Starfield))
+        self.w.image=lambda *args,**kwargs:None
+        movie={'id':42,'type':'movie','cloudId':'tmdb:movie:42','title':'A sample film','overview':'A story', 'year':'2026','rating':8,'backdrop':''}
+        self.w.open(movie);self.app.processEvents()
+        self.assertTrue(self.w.stack.currentWidget().findChild(QWidget,'detailHero'))
+        self.assertFalse(self.w.sidebar.isHidden())
     def test_source_retry_keeps_position_and_respects_party_and_toggle(self):
         class FakePlayer:
             def get_time(self):return 42000

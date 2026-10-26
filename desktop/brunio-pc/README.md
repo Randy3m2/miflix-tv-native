@@ -1,4 +1,13 @@
-# BruniO PC · Windows x64 · 1.0.0-rc5
+# BruniO PC · Windows x64 · 1.0.0-rc6
+
+## RC6 · Primer screenshot: rediseño de cinco pantallas
+
+Este release es **solo para Windows PC**. Rediseña **Inicio, Búsqueda, Perfiles, Detalle y Mi Lista**, basándose en el primer screenshot de referencia. Añade sidebar vertical con selección, tema negro/azul profundo y acentos violeta glass, portada cinematográfica con cinco títulos destacados y selectores, servicios de streaming en carrusel, fondos redondeados, filtros por categoría, búsqueda de actores/directores mediante TMDB, navegación por géneros, pantallas de detalle con episodios en carrusel y selector de perfiles con fondo espacial pintado por Qt. No incluye cambios en Android/TV, backend, streaming ni descargas.
+
+La búsqueda de personas usa TMDB, requiere la clave TMDB ya configurada para el usuario; el catálogo y las carátulas dependen de la conexión. Los nombres mostrados en la referencia son ilustrativos: RC6 muestra títulos reales de tu catálogo. La sección Próximamente en Mi Lista usa el año de estreno disponible y no garantiza identificar los estrenos restantes del año en curso.
+
+El ZIP incluye pruebas nuevas del rediseño. Se recomienda ejecutar el workflow de Actions; **no se ha validado la RC6 visualmente en Windows en este entorno**, así que prueba dimensiones, accesibilidad, navegación y fuentes de medios antes de usarla como versión estable.
+
 
 Proyecto de la app de escritorio. Este paquete contiene código fuente y el workflow para compilar el instalador; no contiene un instalador ya compilado.
 
@@ -6,10 +15,10 @@ Proyecto de la app de escritorio. Este paquete contiene código fuente y el work
 
 1. Descomprime el ZIP conservando las carpetas. En el repositorio `Randy3m2/miflix-tv-native`, reemplaza `desktop/brunio-pc` con la carpeta incluida y actualiza `.github/workflows/build-pc.yml`. Conserva todos los demás archivos y workflows del repositorio.
 2. En GitHub abre **Actions → Build BruniO PC Windows → Run workflow** en la rama que contiene esos archivos.
-3. Al terminar, descarga el artifact **BruniO-PC-Windows-RC5** o el instalador de la release `pc-v1.0.0-rc5`.
-4. Ejecuta `BruniO-PC-Setup-1.0.0-rc5.exe` en Windows 10/11 x64. No necesitas instalar Python o VLC por separado. El instalador no lleva firma comercial y Windows podría mostrar una advertencia.
+3. Al terminar, descarga el artifact **BruniO-PC-Windows-RC6** o el instalador de la release `pc-v1.0.0-rc6`.
+4. Ejecuta `BruniO-PC-Setup-1.0.0-rc6.exe` en Windows 10/11 x64. No necesitas instalar Python o VLC por separado. El instalador no lleva firma comercial y Windows podría mostrar una advertencia.
 
-El workflow verifica las pruebas, descarga y verifica VLC, construye el instalador y publica los canales de PC `pc-v1.0.0-rc5` y `pc-latest`. No modifica las releases de Android. Si la ejecución falla, revisa el log de Actions: no hay instalador listo hasta que el workflow termine correctamente.
+El workflow verifica las pruebas, descarga y verifica VLC, construye el instalador y publica los canales de PC `pc-v1.0.0-rc6` y `pc-latest`. No modifica las releases de Android. Si la ejecución falla, revisa el log de Actions: no hay instalador listo hasta que el workflow termine correctamente.
 
 ## Uso y alcance
 
@@ -29,7 +38,7 @@ Se probaron el inicio de Qt en modo sin pantalla y contratos con datos simulados
 
 En desarrollo Windows: instala las dependencias de `requirements.txt`, ejecuta `python -m unittest discover -s tests -v` y usa `scripts/build_windows.ps1` para compilar con los requisitos indicados en el script. La sesión local utiliza Windows DPAPI; el proyecto no incluye las credenciales privadas del usuario.
 
-## RC5 · reproducción y actualizaciones
+## RC6 · reproducción y actualizaciones
 
 La pantalla de perfiles aparece al iniciar. En Ajustes puedes cambiar el orden de complementos para audio español o inglés y activar el reintento de fuentes. La prioridad y el reintento son independientes por perfil y se guardan localmente en PC; no sincronizan las preferencias de orden con la TV. El selector prioriza el idioma cuando lo identifica en los metadatos y luego el orden elegido; los metadatos incompletos pueden afectar la selección. Si una fuente VOD falla o queda en carga, se intenta otra de las fuentes ya encontradas, hasta cinco intentos, conservando la posición cuando está disponible. El reintento automático se desactiva durante Watch Party y para archivos locales o canales en vivo. El autoplay del siguiente episodio puede activarse por perfil.
 

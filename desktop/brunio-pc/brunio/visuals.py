@@ -1,6 +1,6 @@
 """Native Qt visual components; no web view or extra runtime required."""
 from PySide6.QtCore import Qt, QSize, QRectF, QByteArray, QPointF
-from PySide6.QtGui import QPixmap, QIcon, QPainter, QPainterPath, QColor, QLinearGradient, QRadialGradient, QPolygonF, QPen
+from PySide6.QtGui import QPixmap, QIcon, QPainter, QPainterPath, QColor, QLinearGradient, QRadialGradient, QPolygonF, QPen, QFont
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QWidget, QPushButton
 
@@ -40,8 +40,18 @@ class Art(QWidget):
             scaled=self.pix.scaled(self.size(),Qt.AspectRatioMode.KeepAspectRatioByExpanding,Qt.TransformationMode.SmoothTransformation)
             p.drawPixmap((self.width()-scaled.width())//2,(self.height()-scaled.height())//2,scaled)
         if self.hero:
-            gradient=QLinearGradient(0,0,self.width(),0);gradient.setColorAt(0,QColor(4,9,19,251));gradient.setColorAt(.37,QColor(5,11,22,227));gradient.setColorAt(.72,QColor(5,11,20,83));gradient.setColorAt(1,QColor(4,10,17,12));p.fillRect(self.rect(),gradient)
-            shade=QLinearGradient(0,self.height()*.45,0,self.height());shade.setColorAt(0,QColor(4,8,16,0));shade.setColorAt(1,QColor(4,8,16,195));p.fillRect(self.rect(),shade)
+            # Vignette only over the text, so the backdrop stays luminous on the right.
+            gradient=QLinearGradient(0,0,self.width(),0)
+            gradient.setColorAt(0,QColor(3,8,19,249))
+            gradient.setColorAt(.23,QColor(3,9,20,202))
+            gradient.setColorAt(.43,QColor(4,10,21,90))
+            gradient.setColorAt(.65,QColor(4,10,20,5))
+            gradient.setColorAt(1,QColor(3,8,18,0))
+            p.fillRect(self.rect(),gradient)
+            shade=QLinearGradient(0,self.height()*.55,0,self.height())
+            shade.setColorAt(0,QColor(4,8,16,0))
+            shade.setColorAt(1,QColor(4,8,16,103))
+            p.fillRect(self.rect(),shade)
         p.end()
 
 class Poster(QPushButton):
@@ -58,6 +68,74 @@ class Poster(QPushButton):
         p.setClipping(False)
         if self.underMouse() or self.hasFocus():p.setPen(QPen(QColor('#bcaaff'),2));p.drawRoundedRect(QRectF(self.rect()).adjusted(1,1,-2,-2),12,12)
         p.end()
+    def enterEvent(self,e):self.update();super().enterEvent(e)
+    def leaveEvent(self,e):self.update();super().leaveEvent(e)
+
+class PlatformTile(QPushButton):
+    """A locally packaged streaming service logo, with native focus styling."""
+    def __init__(self,name,parent=None):
+        super().__init__(parent);self.name=name;self.pix=QPixmap()
+        self.setObjectName('platformTile')
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+    def setPixmap(self,pix):self.pix=pix;self.update()
+    def paintEvent(self,event):
+        p=QPainter(self);p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        rect=QRectF(self.rect()).adjusted(1.5,1.5,-1.5,-1.5)
+        path=QPainterPath();path.addRoundedRect(rect,12,12)
+        p.setClipPath(path);p.fillPath(path,QColor('#0b111e'))
+        if not self.pix.isNull():
+            pix=self.pix.scaled(int(self.width()*.77),int(self.height()*.59),Qt.AspectRatioMode.KeepAspectRatio,Qt.TransformationMode.SmoothTransformation)
+            p.drawPixmap((self.width()-pix.width())//2,(self.height()-pix.height())//2,pix)
+        else:
+            font=QFont('Segoe UI',16,QFont.Weight.Bold);p.setFont(font)
+            p.setPen(QColor({'Netflix':'#e50914','Disney+':'#eaf1ff','HBO Max':'#769fff','Hulu':'#1ce783','Crunchyroll':'#f47521'}.get(self.name,'#d8e1f8')))
+            p.drawText(rect,Qt.AlignmentFlag.AlignCenter,self.name)
+        p.setClipping(False)
+        selected=self.underMouse() or self.hasFocus()
+        p.setPen(QPen(QColor('#aca2ef' if selected else '#30394e'),1.7 if selected else 1))
+        p.drawRoundedRect(rect,12,12);p.end()
+    def enterEvent(self,e):self.update();super().enterEvent(e)
+    def leaveEvent(self,e):self.update();super().leaveEvent(e)
+
+class ContinueCard(QPushButton):
+    """Backdrop-based resume thumbnail with a progress indicator."""
+    def __init__(self,title,percent=0,parent=None):
+        super().__init__(parent);self.title=title;self.pix=QPixmap()
+        self.progress=max(0.0,min(float(percent or 0)/100.0,1.0))
+        self.setObjectName('continueCard')
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setAccessibleName(title)
+    def setPixmap(self,pix):self.pix=pix;self.update()
+    def setProgress(self,value):
+        self.progress=max(0.0,min(float(value or 0)/100.0,1.0));self.update()
+    def paintEvent(self,event):
+        p=QPainter(self);p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        w,h=self.width(),self.height();rect=QRectF(1,1,w-2,h-2)
+        path=QPainterPath();path.addRoundedRect(rect,12,12)
+        p.setClipPath(path);p.fillPath(path,QColor('#151c2b'))
+        if not self.pix.isNull():
+            pix=self.pix.scaled(self.size(),Qt.AspectRatioMode.KeepAspectRatioByExpanding,Qt.TransformationMode.SmoothTransformation)
+            p.drawPixmap((w-pix.width())//2,(h-pix.height())//2,pix)
+        dark=QLinearGradient(0,h*.25,0,h)
+        dark.setColorAt(0,QColor(3,6,14,0))
+        dark.setColorAt(.55,QColor(3,6,14,74))
+        dark.setColorAt(1,QColor(2,5,14,236))
+        p.fillRect(self.rect(),dark)
+        p.setPen(QPen(QColor(244,239,255,210),1.5))
+        p.setBrush(QColor(6,9,23,140))
+        x,y=17,h-55
+        p.drawEllipse(QPointF(x+14,y+14),14,14)
+        p.setPen(Qt.PenStyle.NoPen);p.setBrush(QColor('#f5f2ff'))
+        p.drawPolygon(QPolygonF([QPointF(x+11,y+7),QPointF(x+11,y+21),QPointF(x+22,y+14)]))
+        p.setPen(QColor('#ffffff'));font=QFont('Segoe UI',11,QFont.Weight.DemiBold);p.setFont(font)
+        title=p.fontMetrics().elidedText(self.title,Qt.TextElideMode.ElideRight,max(35,w-77))
+        p.drawText(QRectF(54,h-52,w-65,26),Qt.AlignmentFlag.AlignVCenter|Qt.AlignmentFlag.AlignLeft,title)
+        p.fillRect(QRectF(11,h-9,w-22,3),QColor(205,209,227,86))
+        if self.progress>0:p.fillRect(QRectF(11,h-9,(w-22)*self.progress,3),QColor('#c0adff'))
+        p.setClipping(False)
+        selected=self.underMouse() or self.hasFocus()
+        p.setPen(QPen(QColor('#c6b6ff' if selected else '#34405a'),1.8 if selected else 1))
+        p.drawRoundedRect(rect,12,12);p.end()
     def enterEvent(self,e):self.update();super().enterEvent(e)
     def leaveEvent(self,e):self.update();super().leaveEvent(e)
 

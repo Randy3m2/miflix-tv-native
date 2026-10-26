@@ -1,0 +1,1 @@
+Reemplaza en tu repositorio los dos archivos incluidos, respetando sus carpetas. Después ejecuta nuevamente Actions > Build BruniO PC Windows > Run workflow. No tienes que cambiar el workflow ni volver a subir toda la app.

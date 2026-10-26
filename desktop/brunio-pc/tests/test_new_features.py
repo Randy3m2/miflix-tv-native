@@ -1,4 +1,5 @@
-import tempfile, threading, unittest
+import tempfile, threading, unittest, sqlite3
+from unittest.mock import patch
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from brunio.downloads import DownloadStore, file_extension
 from brunio.playlist import parse_m3u
@@ -21,6 +22,29 @@ class NewFeatures(unittest.TestCase):
                 self.assertEqual(store.list('account:profile-a')[0]['state'],'complete');self.assertEqual(store.list('account:profile-b'),[])
                 self.assertNotIn(b'private-secret',store.db.read_bytes());self.assertFalse(store.remove(entry['id'],'account:profile-b'))
         finally:server.shutdown();server.server_close();thread.join()
+    def test_database_connections_are_closed_after_success_and_failure(self):
+        connections=[]
+        real_connect=sqlite3.connect
+        class TrackedConnection(sqlite3.Connection):
+            closed=False
+            def close(self):
+                self.closed=True
+                super().close()
+        def connect(*args,**kwargs):
+            connection=real_connect(*args,**kwargs,factory=TrackedConnection)
+            connections.append(connection)
+            return connection
+        with tempfile.TemporaryDirectory() as root, patch('brunio.downloads.sqlite3.connect',side_effect=connect):
+            store=DownloadStore(root)
+            store.create('account:one',ITEM,0,0,'.mp4')
+            store.list('account:one')
+            with self.assertRaises(RuntimeError):
+                with store.connect() as db:
+                    db.execute("UPDATE files SET title='temporary'")
+                    raise RuntimeError('rollback')
+            self.assertEqual(store.list('account:one')[0]['title'],'Example')
+            self.assertTrue(connections)
+            self.assertTrue(all(connection.closed for connection in connections))
     def test_only_direct_video_and_m3u_parsing(self):
         self.assertIsNone(file_extension({'url':'https://example.test/live.m3u8'}));self.assertIsNone(file_extension({'url':'file:///secret.mp4'}))
         rows=parse_m3u('#EXTM3U\n#EXTINF:-1 tvg-id="one" group-title="Sports",Canal\nhttps://example.test/live.m3u8\nfile:///bad\n')

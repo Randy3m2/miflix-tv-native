@@ -2,6 +2,7 @@
 from __future__ import annotations
 import hashlib, json, os, re, sqlite3, threading, time, uuid
 from pathlib import Path
+from contextlib import contextmanager
 from urllib.parse import urlsplit
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 from .core import valid_url
@@ -42,8 +43,15 @@ class DownloadStore:
         with self.connect() as db:
             db.execute('''CREATE TABLE IF NOT EXISTS files(id TEXT PRIMARY KEY,owner TEXT NOT NULL,cloud TEXT NOT NULL,title TEXT NOT NULL,poster TEXT NOT NULL,kind TEXT NOT NULL,media_id INTEGER NOT NULL,year TEXT,season INTEGER NOT NULL,episode INTEGER NOT NULL,filename TEXT NOT NULL,state TEXT NOT NULL,done INTEGER NOT NULL DEFAULT 0,total INTEGER NOT NULL DEFAULT 0,error TEXT NOT NULL DEFAULT '',created REAL NOT NULL)''')
             db.execute("UPDATE files SET state='interrupted',error='Interrupted; retry to continue' WHERE state IN ('queued','downloading')")
+    @contextmanager
     def connect(self):
-        db=sqlite3.connect(self.db,timeout=20);db.row_factory=sqlite3.Row;return db
+        db=sqlite3.connect(self.db,timeout=20)
+        try:
+            db.row_factory=sqlite3.Row
+            with db:
+                yield db
+        finally:
+            db.close()
     def list(self,owner):
         with self.connect() as db:return [dict(x) for x in db.execute('SELECT * FROM files WHERE owner=? ORDER BY created DESC',(owner,))]
     def create(self,owner,item,season,episode,ext):

@@ -1,0 +1,1 @@
+Sube desktop/brunio-pc y .github/workflows/build-pc.yml a tu repositorio. Lee desktop/brunio-pc/README.md para generar el instalador con GitHub Actions. Este ZIP no contiene un EXE compilado.

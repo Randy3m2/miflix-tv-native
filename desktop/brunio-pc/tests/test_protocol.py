@@ -8,7 +8,9 @@ class ProtocolTests(unittest.TestCase):
     def make(self,response=None):
         calls=[]
         def http(url,method='GET',headers=None,body=None,**kwargs):
-            calls.append((url,method,headers,body));return response(url,method,body) if response else None
+            calls.append((url,method,headers,body));
+            if url.endswith('/rpc/brunio_rp1_ensure'):return {'actor':'owner'}
+            return response(url,method,body) if response else None
         c=Client(http);c.session=SESSION.copy();return c,calls
     def test_pc_host_uses_exact_tv_state_and_milliseconds(self):
         c,calls=self.make();c.party={'room_code':'123456','host_user_id':'owner','state':{}}
@@ -20,17 +22,17 @@ class ProtocolTests(unittest.TestCase):
         c,calls=self.make();c.party={'room_code':'123456','host_user_id':'other','state':{}}
         for playing in [False,True]:
             c.request_playback({'cloudId':'tmdb:movie:44'},0,0,playing)
-            self.assertTrue(calls[-1][0].endswith('/rpc/miflix_request_playback'))
+            self.assertTrue(calls[-1][0].endswith('/rpc/rp1_miflix_request_playback'))
             self.assertEqual(calls[-1][3],{'code':'123456','media':'tmdb:movie:44','s':0,'e':0,'playing':playing})
     def test_request_access_does_not_join_without_approval(self):
         c,calls=self.make(lambda u,m,b:'pending');self.assertEqual(c.party_join('123456'),'pending')
-        self.assertIsNone(c.party);self.assertEqual(c.pending_room,'123456');self.assertEqual(len(calls),1)
+        self.assertIsNone(c.party);self.assertEqual(c.pending_room,'123456');self.assertEqual(len(calls),2)
     def test_approved_join_loads_tv_room(self):
         def http(url,method,body):
             if 'miflix_request_access' in url:return 'approved'
             if 'miflix_watch_parties?' in url:return [{'room_code':'123456','host_user_id':'tv-host','state':{'cloudId':'tmdb:movie:11','positionMs':55000,'playing':True}}]
         c,calls=self.make(http);self.assertEqual(c.party_join('123456'),'approved');self.assertEqual(c.party['state']['positionMs'],55000)
-        self.assertTrue(any('/rpc/miflix_join_room' in x[0] for x in calls))
+        self.assertTrue(any('/rpc/rp1_miflix_join_room' in x[0] for x in calls))
     def test_leaving_guest_clears_local_room_before_network(self):
         c,calls=self.make();c.party={'room_code':'123456','host_user_id':'tv-host'}
         def failing(url,*args,**kwargs):self.assertIsNone(c.party);raise RuntimeError('Offline')

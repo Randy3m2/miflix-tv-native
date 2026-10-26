@@ -1,94 +1,30 @@
-# BruniO PC · Windows 10/11 x64 · 1.0.0-rc2
+# BruniO PC · Windows x64 · 1.0.0-rc3
 
-Cliente de escritorio real en Python + Qt (PySide6) con LibVLC integrado en la ventana. Comparte el backend y el protocolo de la versión TV. Este ZIP contiene el proyecto para generar el instalador, no un instalador ya compilado.
+Proyecto de la app de escritorio. Este paquete contiene código fuente y el workflow para compilar el instalador; no contiene un instalador ya compilado.
 
-## Generar el .exe con GitHub
+## Generar el instalador
 
-1. Descomprime BruniO_PC_Windows_RC2.zip.
-2. En el mismo repositorio **randy3m2/miflix-tv-native**, añade la carpeta **desktop/brunio-pc** completa y el archivo **.github/workflows/build-pc.yml**. No sustituyas los archivos de Android ni sus workflows. El ZIP ya tiene esa estructura.
-3. Actions → **Build BruniO PC Windows** → Run workflow.
-4. El workflow instala dependencias fijadas, ejecuta tests, prueba Qt, descarga VLC x64 de VideoLAN verificando SHA-256, prueba su decodificador, genera la app y su instalador con Inno Setup. Si falla cualquier check, no publica.
-5. Al terminar descarga **BruniO-PC-Setup-1.0.0-rc2.exe** del artifact **BruniO-PC-Windows-RC2** o de la release **pc-v1.0.0-rc2**.
-6. Ejecuta el instalador. Se instala para tu usuario, con acceso directo. No necesitas instalar Python ni VLC por separado. Es x64; no incluye build ARM64 ni 32 bits. El instalador inicial no está firmado con certificado comercial de Windows y el sistema puede pedir confirmación.
+1. Descomprime el ZIP conservando las carpetas. En el repositorio `Randy3m2/miflix-tv-native`, reemplaza `desktop/brunio-pc` con la carpeta incluida y actualiza `.github/workflows/build-pc.yml`. Conserva todos los demás archivos y workflows del repositorio.
+2. En GitHub abre **Actions → Build BruniO PC Windows → Run workflow** en la rama que contiene esos archivos.
+3. Al terminar, descarga el artifact **BruniO-PC-Windows-RC3** o el instalador de la release `pc-v1.0.0-rc3`.
+4. Ejecuta `BruniO-PC-Setup-1.0.0-rc3.exe` en Windows 10/11 x64. No necesitas instalar Python o VLC por separado. El instalador no lleva firma comercial y Windows podría mostrar una advertencia.
 
-No requiere secrets nuevos, SQL nuevo ni cambiar la TV. Para subir avatares se usa el bucket/SQL de RC28 que ya utiliza TV. QR de acceso y chat móvil reutilizan las páginas de pairing/party existentes.
+El workflow verifica las pruebas, descarga y verifica VLC, construye el instalador y publica los canales de PC `pc-v1.0.0-rc3` y `pc-latest`. No modifica las releases de Android. Si la ejecución falla, revisa el log de Actions: no hay instalador listo hasta que el workflow termine correctamente.
 
-**Los cuatro secrets de firma Android no se usan ni se alteran.** El workflow PC publica solo `pc-v1.0.0-rc2` y `pc-latest`; no toca `native-latest` ni el enlace del Downloader de TV.
+## Uso y alcance
 
-## Primer acceso
+Inicia sesión con tu cuenta de BruniO. El catálogo, complementos, progreso y favoritos utilizan los datos de esa cuenta. El límite de tamaño de fuentes configurado en PC es local y no cambia el límite del móvil o TV.
 
-Settings → inicia sesión con tu cuenta de BruniO TV o usa QR sign-in. La app lee perfiles, token TMDB y complementos privados de esa cuenta desde Supabase. Si no hay token/complementos, introdúcelos en Settings. La app no lleva tu Torrentio ni claves TMDB preinstalados para otros usuarios.
+La interfaz incluye navegación superior, portada destacada, plataformas, búsqueda, detalles, Live TV, calendario, descargas y lista. El reproductor usa VLC, con opciones de audio, subtítulos, selección de fuente y pantalla completa. Live TV puede cargar una lista M3U local. Multiview permite hasta cuatro canales en vivo; el rendimiento depende de la PC y de los streams.
 
-Los tokens de sesión y preferencias sensibles se conservan con Windows DPAPI en `%LOCALAPPDATA%\BruniO\account.dat`. Solo se pueden descifrar desde la misma cuenta Windows. No se guarda la contraseña. Sign out borra esta sesión local.
+Las descargas admiten archivos directos compatibles; no guardan playlists HLS/DASH. Puedes descargar una película, un episodio o poner en cola episodios estrenados de una temporada, según las fuentes disponibles. La app debe permanecer abierta durante las descargas; si se interrumpen, vuelve a intentar desde Descargas. Las carátulas disponibles se guardan localmente y los archivos se separan por cuenta y perfil. Las descargas fallidas se reinician desde el principio.
 
-## PC ↔ TV Watch Party
+El calendario consulta eventos del perfil y suscripciones deportivas compartidas con la TV. La sincronización de suscripciones requiere que `supabase_rp134_calendar_sync.sql` ya esté aplicado en el backend y que la TV/móvil use la versión compatible; en PC se consultan las suscripciones, pero todavía no se editan. La programación depende de los servicios deportivos externos. F1 muestra fechas de carreras, no todas las sesiones.
 
-**Usa dos cuentas distintas para host y guest.** El backend identifica al host por usuario, no por dispositivo; abrir la misma cuenta en PC y TV haría que ambos fueran host de su propia sala.
+Amigos y Watch Party usan el esquema de perfiles RP1 del backend de TV. Chat, control y reproducción entre PC y TV requieren que el esquema y las funciones RP1 estén instalados y que cada participante tenga acceso a sus propias fuentes. Las listas M3U locales no se comparten en Party.
 
-- **TV host → PC guest:** crea una Party en TV; en PC pulsa Friends / Party → Party → Request access y escribe los seis dígitos. El host acepta en TV. PC lee el contenido, resuelve sus propios enlaces y se sincroniza.
-- **PC host → TV guest:** crea la Party desde PC (puede hacerse con el video abierto). Introduce su código en TV o solicita acceso desde Friends. Aparecerá una ventana de aprobación en PC. Acepta y reproduce cualquier película/episodio; TV seguirá el contenido de la sala.
-- El guest puede pausar y reanudar. PC envía las mismas llamadas `miflix_request_playback` de TV; los hosts consumen `miflix_take_playback`. No usa un protocolo separado.
-- Cambiar el título o episodio como host conserva la sala. Cada participante elige su propio Playback link; no se transmite ni comparte el URL privado del host.
-- Cada ~1 segundo se consulta/sincroniza reproducción. Se corrigen diferencias superiores a 1.8 segundos durante reproducción; se evita buscar posiciones antiguas mientras hay una pausa local esperando confirmación.
-- Leave Party libera inmediatamente el video local y la sala local. Las respuestas anteriores se invalidan; la limpieza del servidor se hace en segundo plano. Una desconexión puede impedir esa limpieza remota, pero no debe restaurar el reproductor abandonado.
-- Chat, emojis y frases usan los mismos eventos. El QR de Party abre la web móvil de chat existente. Los avisos de Joined se muestran en la banda inferior; una solicitud de acceso abre una ventana modal por encima de la app.
+## Verificación y limitaciones
 
-## Funciones incluidas
+Se probaron el inicio de Qt en modo sin pantalla y contratos con datos simulados, incluidas descargas, listas y perfiles. No se ha compilado ni probado esta RC en una PC Windows real, ni se ha validado una Party con una TV real; por favor prueba instalación, reproducción, subtítulos, multiview y ambos sentidos de Party. Algunos textos y funciones siguen siendo diferentes de TV. Fuentes, códecs, disponibilidad y servicios externos pueden variar.
 
-- Home con tendencias, películas/series populares, top rated, now playing, continuar viendo y recomendaciones basadas en puntuaciones/favoritos.
-- Carátulas pequeñas seleccionables, resaltado blanco, scroll y navegación con mouse/teclado.
-- Search con historial de diez búsquedas por usuario/perfil y resultados flexibles mediante normalización y variantes de varias palabras.
-- Colecciones por plataforma, películas y series, filas por géneros, años y próximos estrenos.
-- Detalles, episodios por temporada, reproducción rápida y selección manual de enlaces, también dentro del reproductor.
-- VLC integrado: play/pausa, barra de avance, ajustar proporción, speed, audio, subtítulos embebidos/archivo y OpenSubtitles EN/ES. F11 = pantalla completa; Space = play/pausa; Left/Right = ±10 segundos. Un cambio de enlace vuelve a la posición actual.
-- Audio/sub preferidos, filtro de GB, orden calidad → tamaño, descarte TB Download y año de película. Un límite activo excluye tamaño desconocido. Los episodios no se descartan por el año inicial de la serie.
-- IntroDB (botones Skip intro/credits cuando se han obtenido segmentos), autoplay siguiente episodio y recomendaciones al finalizar. La disponibilidad depende de que IntroDB tenga ese título.
-- Pausa: hora, tiempo restante y sinopsis tras cinco segundos, con sinopsis de episodio cuando la consulta devuelve sus datos.
-- Perfiles sincronizados: selección, creación, eliminación, galería completa de TV, quitar foto y subida directa desde PC. Fotos nuevas se recortan a cuadrado en JPEG; el avatar es público como en TV.
-- Favoritos, progreso y puntuación 1–10 sincronizados por perfil. Selección aleatoria apoyada en recomendaciones y excluyendo títulos terminados o puntuados 4 o menos.
-- Friends: presencia, preview de contenido, solicitudes/aceptación de amigos y acceso privado a Party. El listado se refresca manualmente; la presencia, solicitudes y chat siguen consultándose en segundo plano.
-- Live TV / sports con categorías y búsqueda local conservada. Se puede configurar un manifest de deportes personalizado en Settings. La búsqueda filtra el catálogo cargado; esta RC aún no pagina todos los canales de proveedores grandes.
-- Notificaciones de estrenos/cambios en favoritos, badge y botón Clear. Se toma una referencia inicial y se revisa cada 30 minutos (hasta 40 favoritos por revisión).
-- Trakt: conexión con el PKCE ya desplegado, confirmación, importación de watchlist y registro watched al 80% de reproducción. No necesita Client Secret en PC.
-- Check for updates: canal exclusivo PC, comparación numérica de versiones y verificación de hash/tamaño antes de abrir el instalador. En esta RC se descarga en segundo plano con aviso, todavía sin porcentaje/cancelación.
-
-## Qué falta verificar
-
-Es la **primera RC de PC**, no una certificación de que todos los detalles sean idénticos a TV. El diseño y algunos textos de controles son propios de escritorio; la traducción EN/ES todavía es parcial. Joined/reacciones son avisos en la banda inferior, no overlays animados sobre el video. El orden de Home y la selección aleatoria son más simples que las reglas de TV; el motor de reproducción es VLC, no Media3.
-
-Las pruebas locales usan Qt real sin pantalla, fixtures de APIs y el esquema SQL local de TV. No se usaron cuentas reales ni se desplegó nada. La sincronización en una PC Windows y una TV real aún debe probarse; diferencias de buffering/códecs/red pueden requerir ajustes. Algunas cabeceras especiales de streams en vivo distintas de User-Agent/Referer no están implementadas en el motor VLC de esta RC.
-
-La build Windows y la prueba de decodificación de VLC se ejecutan en Actions. Después prueba: instalar → login → reproducir película MKV y serie → cambiar audio/subtítulos/enlace → Party TV host / PC guest → pausar/reanudar ambos → invertir host → salir y reproducir fuera de la sala.
-
-## Desarrollo local en Windows / VS Code
-
-```powershell
-cd desktop\brunio-pc
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-python -m unittest discover -s tests -v
-```
-
-Para ejecutar desde el código instala VLC x64 o usa la carpeta `vendor/vlc-3.0.23` descargada por el script de build. Para generar el instalador local ejecuta `./scripts/build_windows.ps1` desde esa carpeta (Inno Setup 6 debe estar instalado, o Chocolatey para instalarlo).
-
-El proyecto se separa en core.py (API/Party), pairing.py (QR cifrado), vault.py (DPAPI), updater.py (updates PC), ui.py (Qt/reproductor), scripts (build/installer) y tests (contrato/GUI). `VERSION`, workflow, build_windows.ps1 e installer.iss deben cambiar juntos en nuevas versiones; conserva AppId del instalador.
-
-
-## RC2: interfaz y complementos compartidos
-
-Navegación lateral con iconos, perfil y campana; fondo casi negro; banner con
-imagen y acciones compactas; tarjetas de plataformas; carátulas redondeadas,
-títulos truncados con tooltip, año y flechas para desplazar filas. Los logos
-de plataformas se obtienen de TMDB; si no están disponibles se muestra el nombre.
-
-Los complementos y el token TMDB pertenecen a la cuenta, en la fila
-`__account__` de `miflix_user_state`, tal como en TV. PC sincroniza al iniciar
-sesión, al abrir Ajustes y antes de buscar enlaces. Al agregar o eliminar un
-complemento vuelve a leer la configuración remota para preservar otros cambios.
-Una cuenta diferente conserva sus propios complementos. No hace falta SQL nuevo.
-Si agregas un complemento en PC mientras TV está abierta, reinicia la app TV
-para que su sincronización existente recupere el cambio. No es necesario reinstalar.
-
-Para actualizar RC1 reemplaza la carpeta PC y su workflow y ejecuta la build.
-Instala encima de RC1 o usa Check for updates cuando se publique RC2.
+En desarrollo Windows: instala las dependencias de `requirements.txt`, ejecuta `python -m unittest discover -s tests -v` y usa `scripts/build_windows.ps1` para compilar con los requisitos indicados en el script. La sesión local utiliza Windows DPAPI; el proyecto no incluye las credenciales privadas del usuario.

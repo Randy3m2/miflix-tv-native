@@ -85,10 +85,10 @@ class Client:
         if context!=self.context():raise StaleWork('Session changed')
     def detach(self):
         with self.lock:self.epoch+=1;self.party=None;self.pending_room=None
-    def rest(self,path,method='GET',body=None,prefer='return=minimal'):
+    def rest(self,path,method='GET',body=None,prefer='return=minimal',extra_headers=None):
         context=self.context();session=dict(self.session)
         if not session:raise ValueError('Sign in first')
-        def request():return self.transport(SUPABASE_URL+'/rest/v1/'+path,method,{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+self.session['accessToken'],'Prefer':prefer},body)
+        def request():return self.transport(SUPABASE_URL+'/rest/v1/'+path,method,{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+self.session['accessToken'],'Prefer':prefer,**(extra_headers or {})},body)
         try:result=request()
         except RuntimeError as e:
             if not str(e).startswith('HTTP 401'):raise
@@ -176,40 +176,62 @@ class Client:
         self.check(context)
         return filter_streams(rows,item,limit),imdb
     def rpc(self,name,body):return self.rest('rpc/'+name,'POST',body)
+    def social_identity(self):
+        context=self.context();profile=self.profile
+        cached=getattr(self,'_social_cache',None)
+        if cached and cached[0]==context[1:]:return cached[1]
+        headers={'x-brunio-profile':profile}
+        result=self.rest('rpc/brunio_rp1_ensure','POST',{'p_profile':profile},extra_headers=headers)
+        self.check(context)
+        if not isinstance(result,dict) or not result.get('actor'):raise ValueError('No se pudo verificar el perfil social')
+        self._social_cache=(context[1:],result['actor'])
+        return result['actor']
+    def social_rest(self,path,method='GET',body=None,prefer='return=minimal'):
+        self.social_identity()
+        return self.rest(path,method,body,prefer,extra_headers={'x-brunio-profile':self.profile})
+    def social_rpc(self,name,body):return self.social_rest('rpc/'+name,'POST',body)
+    def shared_calendar(self):
+        context=self.context();headers={'x-brunio-profile':self.profile}
+        self.rest('rpc/brunio_rp1_ensure','POST',{'p_profile':self.profile},extra_headers=headers)
+        self.check(context)
+        return self.rest('rp1_miflix_calendar_events?select=*&order=starts_at.asc&limit=500',extra_headers=headers) or []
+    def calendar_subscriptions(self,changes=None):
+        return self.rpc('brunio_calendar_sync_rp134',{'p_profile':self.profile,'p_changes':changes or {}}) or {}
     def party_read(self,room):
-        rows=self.rest('miflix_watch_parties?'+urlencode({'room_code':'eq.'+room,'select':'room_code,host_user_id,state,expires_at'})) or []
+        rows=self.social_rest('rp1_miflix_watch_parties?'+urlencode({'room_code':'eq.'+room,'select':'room_code,host_user_id,state,expires_at'})) or []
         return rows[0] if rows else None
     def party_create(self):
         import secrets
         room=str(secrets.randbelow(900000)+100000);context=self.context()
-        p={'room_code':room,'host_user_id':self.session['userId'],'state':{'cloudId':'','season':0,'episode':0,'positionMs':0,'playing':False,'updatedAt':now_ms(),'liveChannelId':'','liveProvider':'','liveTitle':'','liveType':'tv'},'updated_at':iso(),'expires_at':(dt.datetime.now(dt.timezone.utc)+dt.timedelta(hours=8)).isoformat()}
-        self.rest('miflix_watch_parties','POST',p);self.rpc('miflix_join_room',{'code':room});self.check(context);self.epoch+=1;self.party=p;return p
+        actor=self.social_identity()
+        p={'room_code':room,'host_user_id':actor,'state':{'cloudId':'','season':0,'episode':0,'positionMs':0,'playing':False,'updatedAt':now_ms(),'liveChannelId':'','liveProvider':'','liveTitle':'','liveType':'tv'},'updated_at':iso(),'expires_at':(dt.datetime.now(dt.timezone.utc)+dt.timedelta(hours=8)).isoformat()}
+        self.social_rest('rp1_miflix_watch_parties','POST',p);self.social_rpc('rp1_miflix_join_room',{'code':room});self.check(context);self.epoch+=1;p['_actor']=actor;p['_profile']=self.profile;self.party=p;return p
     def party_join(self,room):
         if not re.fullmatch(r'\d{6}',room):raise ValueError('Enter the six-digit room code')
         if self.party and self.party['room_code']!=room:raise ValueError('Leave your current Party first')
-        context=self.context();decision=self.rpc('miflix_request_access',{'code':room});self.check(context)
+        context=self.context();decision=self.social_rpc('rp1_miflix_request_access',{'code':room});self.check(context)
         if decision!='approved':self.pending_room=room if decision=='pending' else None;return decision
-        self.rpc('miflix_join_room',{'code':room});p=self.party_read(room);self.check(context)
+        self.social_rpc('rp1_miflix_join_room',{'code':room});p=self.party_read(room);self.check(context)
         if not p:raise ValueError('Room closed or expired')
-        self.epoch+=1;self.party=p;self.pending_room=None;return 'approved'
+        self.epoch+=1;p['_actor']=self.social_identity();p['_profile']=self.profile;self.party=p;self.pending_room=None;return 'approved'
     def party_leave(self,snapshot=None):
         if snapshot is None:p=self.party;session=dict(self.session);self.detach()
         else:p,session=snapshot
         if not p or not session:return
-        h={'apikey':SUPABASE_KEY,'Authorization':'Bearer '+session['accessToken']}
-        if p['host_user_id']==session['userId']:
-            self.transport(SUPABASE_URL+'/rest/v1/miflix_watch_parties?'+urlencode({'room_code':'eq.'+p['room_code']}),'DELETE',h)
-        self.transport(SUPABASE_URL+'/rest/v1/miflix_party_members?'+urlencode({'room_code':'eq.'+p['room_code'],'user_id':'eq.'+session['userId']}),'DELETE',h)
-    def host(self):return bool(self.party and self.party['host_user_id']==self.session.get('userId'))
+        actor=p.get('_actor',session['userId']);h={'apikey':SUPABASE_KEY,'Authorization':'Bearer '+session['accessToken'],'x-brunio-profile':p.get('_profile',self.profile)}
+        if p['host_user_id']==actor:
+            self.transport(SUPABASE_URL+'/rest/v1/rp1_miflix_watch_parties?'+urlencode({'room_code':'eq.'+p['room_code']}),'DELETE',h)
+        self.transport(SUPABASE_URL+'/rest/v1/rp1_miflix_party_members?'+urlencode({'room_code':'eq.'+p['room_code'],'user_id':'eq.'+actor}),'DELETE',h)
+    def host(self):return bool(self.party and self.party['host_user_id']==self.party.get('_actor',self.session.get('userId')))
     def host_update(self,state):
         if not self.host():return
         p=self.party;context=self.context()
-        self.rest('miflix_watch_parties?'+urlencode({'room_code':'eq.'+p['room_code']}),'PATCH',{'state':state,'updated_at':iso(),'expires_at':(dt.datetime.now(dt.timezone.utc)+dt.timedelta(hours=8)).isoformat()})
+        self.social_rest('rp1_miflix_watch_parties?'+urlencode({'room_code':'eq.'+p['room_code']}),'PATCH',{'state':state,'updated_at':iso(),'expires_at':(dt.datetime.now(dt.timezone.utc)+dt.timedelta(hours=8)).isoformat()})
         self.check(context)
         if self.party and self.party['room_code']==p['room_code']:self.party['state']=state
     def request_playback(self,item,season,episode,playing):
-        if self.party:self.rpc('miflix_request_playback',{'code':self.party['room_code'],'media':item['cloudId'],'s':season,'e':episode,'playing':playing})
+        if self.party:self.social_rpc('rp1_miflix_request_playback',{'code':self.party['room_code'],'media':item['cloudId'],'s':season,'e':episode,'playing':playing})
     def presence(self,item=None,season=0,episode=0):
-        self.rpc('miflix_set_presence',{'title':item['title'] if item else '', 'media':item['cloudId'] if item else '', 's':season,'e':episode,'room':self.party['room_code'] if self.party else None})
+        self.social_rpc('rp1_miflix_set_presence',{'title':item['title'] if item else '', 'media':item['cloudId'] if item else '', 's':season,'e':episode,'room':self.party['room_code'] if self.party else None})
     def trakt(self,action,**fields):
         return self.transport(SUPABASE_URL+'/functions/v1/miflix-trakt','POST',{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+self.session['accessToken']},{'action':action,**fields})

@@ -1,4 +1,4 @@
-# BruniO PC · Windows x64 · 1.0.0-rc3
+# BruniO PC · Windows x64 · 1.0.0-rc4
 
 Proyecto de la app de escritorio. Este paquete contiene código fuente y el workflow para compilar el instalador; no contiene un instalador ya compilado.
 
@@ -6,16 +6,16 @@ Proyecto de la app de escritorio. Este paquete contiene código fuente y el work
 
 1. Descomprime el ZIP conservando las carpetas. En el repositorio `Randy3m2/miflix-tv-native`, reemplaza `desktop/brunio-pc` con la carpeta incluida y actualiza `.github/workflows/build-pc.yml`. Conserva todos los demás archivos y workflows del repositorio.
 2. En GitHub abre **Actions → Build BruniO PC Windows → Run workflow** en la rama que contiene esos archivos.
-3. Al terminar, descarga el artifact **BruniO-PC-Windows-RC3** o el instalador de la release `pc-v1.0.0-rc3`.
-4. Ejecuta `BruniO-PC-Setup-1.0.0-rc3.exe` en Windows 10/11 x64. No necesitas instalar Python o VLC por separado. El instalador no lleva firma comercial y Windows podría mostrar una advertencia.
+3. Al terminar, descarga el artifact **BruniO-PC-Windows-RC4** o el instalador de la release `pc-v1.0.0-rc4`.
+4. Ejecuta `BruniO-PC-Setup-1.0.0-rc4.exe` en Windows 10/11 x64. No necesitas instalar Python o VLC por separado. El instalador no lleva firma comercial y Windows podría mostrar una advertencia.
 
-El workflow verifica las pruebas, descarga y verifica VLC, construye el instalador y publica los canales de PC `pc-v1.0.0-rc3` y `pc-latest`. No modifica las releases de Android. Si la ejecución falla, revisa el log de Actions: no hay instalador listo hasta que el workflow termine correctamente.
+El workflow verifica las pruebas, descarga y verifica VLC, construye el instalador y publica los canales de PC `pc-v1.0.0-rc4` y `pc-latest`. No modifica las releases de Android. Si la ejecución falla, revisa el log de Actions: no hay instalador listo hasta que el workflow termine correctamente.
 
 ## Uso y alcance
 
 Inicia sesión con tu cuenta de BruniO. El catálogo, complementos, progreso y favoritos utilizan los datos de esa cuenta. El límite de tamaño de fuentes configurado en PC es local y no cambia el límite del móvil o TV.
 
-La interfaz incluye navegación superior, portada destacada, plataformas, búsqueda, detalles, Live TV, calendario, descargas y lista. El reproductor usa VLC, con opciones de audio, subtítulos, selección de fuente y pantalla completa. Live TV puede cargar una lista M3U local. Multiview permite hasta cuatro canales en vivo; el rendimiento depende de la PC y de los streams.
+La interfaz rediseñada incluye navegación superior, portada destacada, tarjetas de plataformas con los recursos de TV, búsqueda, detalles, Live TV, calendario, descargas y lista. Las carátulas de plataformas alojadas externamente necesitan conexión; AMC+, Hulu y Paramount+ se incluyen en la app. El reproductor usa VLC, con opciones de audio, subtítulos, selección de fuente y pantalla completa. Live TV incluye el catálogo M3U distribuido con la versión de TV y permite importar una lista local. Las personalizaciones y favoritos locales de TV no se sincronizan automáticamente con PC; la disponibilidad de cada señal depende de su fuente. Multiview permite hasta cuatro canales en vivo; el rendimiento depende de la PC y de los streams.
 
 Las descargas admiten archivos directos compatibles; no guardan playlists HLS/DASH. Puedes descargar una película, un episodio o poner en cola episodios estrenados de una temporada, según las fuentes disponibles. La app debe permanecer abierta durante las descargas; si se interrumpen, vuelve a intentar desde Descargas. Las carátulas disponibles se guardan localmente y los archivos se separan por cuenta y perfil. Las descargas fallidas se reinician desde el principio.
 

@@ -1,7 +1,7 @@
 """Real Qt widgets offscreen; fixtures avoid production network/account mutations."""
 import os,time,unittest
 os.environ.setdefault('QT_QPA_PLATFORM','offscreen')
-from PySide6.QtWidgets import QApplication,QLineEdit,QPushButton
+from PySide6.QtWidgets import QApplication,QLineEdit,QPushButton,QWidget
 from brunio.ui import Window,java_hash
 class UITests(unittest.TestCase):
     @classmethod
@@ -16,6 +16,16 @@ class UITests(unittest.TestCase):
     def test_search_and_settings_widgets_survive_navigation(self):
         self.w.search();self.assertTrue(self.w.stack.currentWidget().findChildren(QLineEdit));self.w.settings(refresh=False);self.assertTrue(self.w.stack.currentWidget().findChildren(QPushButton));self.w.profiles();self.app.processEvents()
         self.assertTrue(any(b.text()=='Avatar' for b in self.w.stack.currentWidget().findChildren(QPushButton)))
+    def test_pages_are_top_aligned_and_live_uses_tv_playlist(self):
+        self.w.image=lambda *args:None
+        self.w.resize(1000,700);self.w.show();self.w.live()
+        deadline=time.monotonic()+3
+        while not self.w.live_candidates and time.monotonic()<deadline:self.app.processEvents();time.sleep(.01)
+        self.assertGreater(len(self.w.live_candidates),100)
+        self.assertEqual(self.w.live_candidates[0][1],'tv')
+        page=self.w.stack.currentWidget();self.assertLessEqual(page.horizontalScrollBar().maximum(),0)
+        self.w.search();self.app.processEvents();page=self.w.stack.currentWidget()
+        inputs=page.findChildren(QLineEdit);self.assertTrue(inputs);self.assertLess(inputs[0].mapTo(page,inputs[0].rect().topLeft()).y(),300)
     def test_tv_live_hash_matches_kotlin_java(self):
         self.assertEqual(java_hash('abc'),96354);self.assertEqual(java_hash(''),0)
     def test_sidebar_selection_and_small_window_margins(self):

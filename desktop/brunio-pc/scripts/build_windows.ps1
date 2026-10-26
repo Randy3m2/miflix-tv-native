@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-$version = '1.0.0-rc3'
+$version = '1.0.0-rc4'
 $zipUrl = 'https://downloads.videolan.org/videolan/vlc/3.0.23/win64/vlc-3.0.23-win64.zip'
 New-Item -ItemType Directory -Force vendor | Out-Null
 Invoke-WebRequest $zipUrl -OutFile vendor/vlc.zip

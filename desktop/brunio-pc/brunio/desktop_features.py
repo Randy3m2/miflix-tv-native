@@ -152,13 +152,18 @@ class DesktopFeatures:
         self.select_nav('downloads');layout,page=self.page(self.t('Descargas','Downloads'));scope=owner(self.client)
         hint=_label(self.t('Tus películas y series, listas para disfrutar sin conexión.','Your movies and shows, ready to enjoy offline.'),14);hint.setObjectName('muted');layout.addWidget(hint)
         holder=QWidget();box=QVBoxLayout(holder);box.setContentsMargins(0,0,0,0);layout.addWidget(holder)
+        last={'rows':None}
         def refresh():
             if page!=self.page_id or scope!=owner(self.client):timer.stop();return
+            entries=self.store().list(scope)
+            if entries==last['rows']:return
+            last['rows']=entries
             while box.count():
                 x=box.takeAt(0)
                 if x.widget():x.widget().deleteLater()
-            entries=self.store().list(scope)
-            if not entries:box.addWidget(_label(self.t('Todavía no hay descargas.','No downloads yet.')))
+            if not entries:
+                empty=QWidget();empty.setObjectName('downloadCard');empty.setMaximumWidth(720);empty_l=QVBoxLayout(empty);empty_l.setContentsMargins(28,26,28,26)
+                empty_l.addWidget(_label('↓',32));empty_l.addWidget(_label(self.t('Tu colección offline','Your offline collection'),20));empty_l.addWidget(_label(self.t('Descarga una película o episodios desde sus detalles y aparecerán aquí.','Download a movie or episodes from their details and they will appear here.'),14));box.addWidget(empty)
             grouped={}
             for entry in entries:grouped.setdefault((entry['cloud'],entry['season']),[]).append(entry)
             for (_,season),rows in grouped.items():
@@ -195,10 +200,10 @@ class DesktopFeatures:
             self.store().remove(entry['id'],owner(self.client));refresh()
     def calendar(self):
         self.select_nav('calendar');layout,page=self.page(self.t('Calendario','Calendar'));layout.addWidget(_label(self.t('Eventos y deportes seguidos en tu cuenta de BruniO.','Events and sports followed in your BruniO account.')))
-        tools=QHBoxLayout();calendar=QCalendarWidget();calendar.setGridVisible(False);calendar.setMaximumWidth(480);tools.addWidget(calendar)
-        right=QVBoxLayout();tools.addLayout(right,1);layout.addLayout(tools)
-        right.addWidget(_button(self.t('Actualizar','Refresh'),lambda:load()))
-        items=QWidget();items_l=QVBoxLayout(items);items_l.setContentsMargins(0,0,0,0);layout.addWidget(items)
+        tools=QHBoxLayout();tools.setSpacing(20);calendar=QCalendarWidget();calendar.setGridVisible(False);calendar.setVerticalHeaderFormat(QCalendarWidget.VerticalHeaderFormat.NoVerticalHeader);calendar.setFixedWidth(440);calendar.setMinimumHeight(330);tools.addWidget(calendar,0,Qt.AlignmentFlag.AlignTop)
+        side=QWidget();side.setObjectName('downloadCard');side.setMaximumWidth(650);right=QVBoxLayout(side);right.setContentsMargins(22,22,22,22);right.addWidget(_label(self.t('Tu agenda','Your agenda'),21))
+        refresh_button=_button(self.t('Actualizar','Refresh'),lambda:load());refresh_button.setMaximumWidth(150);right.addWidget(refresh_button)
+        items=QWidget();items_l=QVBoxLayout(items);items_l.setContentsMargins(0,8,0,0);items_l.setAlignment(Qt.AlignmentFlag.AlignTop);right.addWidget(items);right.addStretch();tools.addWidget(side,1);tools.addStretch();layout.addLayout(tools)
         data={'shared':[],'sports':[],'subs':{},'warning':''}
         def render():
             while items_l.count():
@@ -315,7 +320,7 @@ class DesktopFeatures:
         for channel,provider,manifest in self.live_candidates[:100]:
             def select(channel=channel,provider=provider,manifest=manifest):
                 dialog.accept();item={'title':channel.get('name','Channel'),'type':'live'}
-                if provider=='m3u':self.multi_add(item,{'url':channel['url'],'name':channel.get('name','Channel')});return
+                if provider in ('tv','m3u'):self.multi_add(item,{'url':channel['url'],'name':channel.get('name','Channel'),'behaviorHints':{'proxyHeaders':{'request':channel.get('headers',{})}}});return
                 url=manifest.removesuffix('/manifest.json')+f"/stream/{quote(channel.get('type','tv'))}/{quote(channel['id'],safe='')}.json"
                 def done(j):
                     rows=[x for x in j.get('streams',[]) if valid_url(x.get('url',''))]

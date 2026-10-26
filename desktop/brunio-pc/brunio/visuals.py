@@ -48,6 +48,8 @@ class Poster(QPushButton):
         if not self.pix.isNull():
             pix=self.pix.scaled(self.size()-QSize(6,6),Qt.AspectRatioMode.KeepAspectRatioByExpanding,Qt.TransformationMode.SmoothTransformation)
             p.drawPixmap((self.width()-pix.width())//2,(self.height()-pix.height())//2,pix)
+        elif self.text():
+            p.setPen(QColor('#f1edf8'));font=p.font();font.setBold(True);font.setPixelSize(19);p.setFont(font);p.drawText(rect,Qt.AlignmentFlag.AlignCenter,self.text())
         p.setClipping(False)
         if self.underMouse() or self.hasFocus():p.setPen(QColor('#ffffff'));p.drawRoundedRect(QRectF(self.rect()).adjusted(1,1,-2,-2),14,14)
         p.end()

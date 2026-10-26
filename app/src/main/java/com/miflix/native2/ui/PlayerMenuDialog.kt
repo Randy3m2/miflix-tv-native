@@ -24,6 +24,14 @@ internal val LocalPlayerMenuSide=staticCompositionLocalOf {false}
 @Composable
 internal fun PlayerMenuDialog(onDismissRequest: () -> Unit,properties: DialogProperties=DialogProperties(),
     forceSide: Boolean=false,fullScreen:Boolean=false,content: @Composable () -> Unit) {
+    if(LocalMobileBrunioRP133.current) {
+        Dialog(onDismissRequest=onDismissRequest,properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
+            Box(Modifier.fillMaxSize().safeDrawingPadding().imePadding().background(Color(0xF0080A0F)).padding(12.dp)) {
+                CompositionLocalProvider(LocalPlayerMenuSide provides false) {content()}
+            }
+        }
+        return
+    }
     if(fullScreen) {
         Dialog(onDismissRequest=onDismissRequest,properties=DialogProperties(
             dismissOnBackPress=properties.dismissOnBackPress,dismissOnClickOutside=properties.dismissOnClickOutside,

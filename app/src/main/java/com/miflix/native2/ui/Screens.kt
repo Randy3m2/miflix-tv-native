@@ -82,7 +82,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlinx.coroutines.ensureActive
 
-private val StreamingTiles = listOf(
+internal val StreamingTiles = listOf(
     CollectionTile("natgeo", "National Geographic", ""),
     CollectionTile(
         "netflix", "Netflix",
@@ -1429,8 +1429,14 @@ internal fun createPlaybackPlayerRP91(context:android.content.Context,state:AppS
 @Composable
 fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     val context = LocalContext.current
+    val mobileRP133=LocalMobileBrunioRP133.current
+    if(mobileRP133 && request.liveType=="youtube") {MobileYoutubeRP133(state,request,onClose);return}
+    val f1MobileRP133=mobileRP133 && request.live && !request.sportsRecordingRP72 && com.miflix.native2.data.F1StatsRP131.channel(request.liveProvider,request.item.title+" "+request.item.overview)
+    val f1RepoMobileRP133=remember {com.miflix.native2.data.F1StatsRP131()}
+    val mobilePortraitRP133=mobileRP133 && androidx.compose.ui.platform.LocalConfiguration.current.orientation==android.content.res.Configuration.ORIENTATION_PORTRAIT
+    val mobileVideoHeightRP133=(androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp*9f/16f).dp
     val mini=state.miniPlayer && state.screen!=Screen.PLAYER
-    val statsAllowedRP95=com.miflix.native2.data.SportsStatsRP95.available(request.live,request.sportsRecordingRP72,request.liveProvider,request.item.title+" "+request.item.overview)
+    val statsAllowedRP95=f1MobileRP133 || com.miflix.native2.data.SportsStatsRP95.available(request.live,request.sportsRecordingRP72,request.liveProvider,request.item.title+" "+request.item.overview)
     var statsOpenRP95 by remember(request.playbackId) {mutableStateOf(false)}
     var statsGameRP95 by remember(request.liveChannelId,request.item.cloudId) {mutableStateOf<com.miflix.native2.data.LiveScoreRP11?>(null)}
     val statsRepoRP95=remember {com.miflix.native2.data.SportsStatsRP95()}
@@ -1990,6 +1996,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     }
     var exitArmedAt by remember(request.playbackId) { mutableStateOf(0L) }
     fun requestExit() {
+        if(mobileRP133) {parkCurrentPlayback();onClose();return}
         val now=android.os.SystemClock.elapsedRealtime()
         if(exitArmedAt!=0L && now-exitArmedAt<=2200L) { exitArmedAt=0L;parkCurrentPlayback();onClose() }
         else exitArmedAt=now
@@ -2104,7 +2111,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                     }
                 }
             },
-            modifier = if(statsOpenRP95 && !mini) Modifier.fillMaxHeight().fillMaxWidth(.64f).align(Alignment.CenterStart)
+            modifier = if(mobilePortraitRP133 && !mini) Modifier.fillMaxWidth().height(mobileVideoHeightRP133).align(Alignment.TopCenter)
+                else if(statsOpenRP95 && !mini) Modifier.fillMaxHeight().fillMaxWidth(.64f).align(Alignment.CenterStart)
                 else if(maximized) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(horizontal=40.dp,vertical=24.dp)
         ) }
         if(!firstFrame && !hadPlaybackError && playbackError==null && state.playbackLoading==null) PlaybackArtwork(state,request)
@@ -2436,12 +2444,14 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
 
         } // full-size controls
         if(statsOpenRP95 && statsAllowedRP95 && !mini && !state.easyModeRP79) {
-            Box(Modifier.fillMaxHeight().fillMaxWidth(.64f).align(Alignment.CenterStart)) {
+            Box(if(mobilePortraitRP133) Modifier.fillMaxWidth().height(mobileVideoHeightRP133).align(Alignment.TopCenter) else Modifier.fillMaxHeight().fillMaxWidth(.64f).align(Alignment.CenterStart)) {
                 FocusButton(tr("Estadísticas · ×","Stats · ×"),modifier=Modifier.align(Alignment.BottomEnd).padding(20.dp).focusRequester(statsVideoFocusRP95)) {closeStatsRP95()}
             }
-            SportsStatsPanelRP95(state,request.item.title,statsRepoRP95,statsGameRP95,
+            if(f1MobileRP133) F1StatsPanelRP131(state,f1RepoMobileRP133,false,{closeStatsRP95()},statsVideoFocusRP95,
+                if(mobilePortraitRP133) Modifier.fillMaxSize().padding(top=mobileVideoHeightRP133) else Modifier.align(Alignment.CenterEnd).fillMaxWidth(.36f))
+            else SportsStatsPanelRP95(state,request.item.title,statsRepoRP95,statsGameRP95,
                 select={statsGameRP95=it},onClose={closeStatsRP95()},videoFocus=statsVideoFocusRP95,
-                modifier=Modifier.align(Alignment.CenterEnd).fillMaxWidth(.36f))
+                modifier=if(mobilePortraitRP133) Modifier.fillMaxSize().padding(top=mobileVideoHeightRP133) else Modifier.align(Alignment.CenterEnd).fillMaxWidth(.36f))
         }
         if(!mini && exitArmedAt!=0L) Text(tr("Presiona dos veces para salir","Double tap to exit"),color=Color.White,fontSize=18.sp,
             modifier=Modifier.align(Alignment.TopCenter).padding(top=32.dp).background(Color(0xE6222222),RoundedCornerShape(16.dp)).padding(horizontal=24.dp,vertical=14.dp))
@@ -2450,6 +2460,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
 
 @Composable
 private fun EpisodePickerOverlay(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
+    if(LocalMobileBrunioRP133.current) {MobileEpisodesRP133(state,request,onClose);return}
     val details = state.details
     var episodeActions by remember {mutableStateOf<EpisodeSummary?>(null)}
     val closeFocus=remember { FocusRequester() }

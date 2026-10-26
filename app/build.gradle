@@ -16,13 +16,14 @@ def hasStableSigning = [signingPath, signingPassword, signingAlias, signingKeyPa
 android {
     namespace 'com.miflix.native2'
     compileSdk 36
+    buildToolsVersion "36.0.0"
 
     defaultConfig {
         applicationId 'com.miflix.native2'
         minSdk 23
         targetSdk 36
-        versionCode 22236
-        versionName '2.0.0-rp132'
+        versionCode 22237
+        versionName '2.0.0-rp133'
 
         buildConfigField 'String', 'SUPABASE_URL', '"https://iwvhigqxsvvgyzdygiqa.supabase.co"'
         buildConfigField 'String', 'SUPABASE_KEY', '"sb_publishable_TdzEQXtDadVMKhSLVe0ihw_EAQ4iNsd"'

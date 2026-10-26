@@ -21,8 +21,11 @@ import java.net.URL
 import java.security.MessageDigest
 
 class UpdateRepository {
-    private val releaseApi="https://api.github.com/repos/Randy3m2/miflix-tv-native/releases/tags/native-latest"
-    private val fallbackApk="https://github.com/Randy3m2/miflix-tv-native/releases/download/native-latest/MiFlix-TV-Native.apk"
+    private val mobileRP133=com.miflix.native2.BuildConfig.APPLICATION_ID.startsWith("com.brunio.mobile")
+    private val channelRP133=if(mobileRP133) "mobile-latest" else "native-latest"
+    private val assetRP133=if(mobileRP133) "BruniO-Mobile.apk" else "MiFlix-TV-Native.apk"
+    private val releaseApi="https://api.github.com/repos/Randy3m2/miflix-tv-native/releases/tags/$channelRP133"
+    private val fallbackApk="https://github.com/Randy3m2/miflix-tv-native/releases/download/$channelRP133/$assetRP133"
 
     suspend fun check(currentVersion: String,currentCode: Int): UpdateInfo {
         val j=JSONObject(Http.text(releaseApi,headers=mapOf("User-Agent" to "BruniO-TV","Cache-Control" to "no-cache")))

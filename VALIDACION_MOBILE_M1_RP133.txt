@@ -1,0 +1,26 @@
+BruniO Mobile M1 / RP133 / 22237
+
+Validación local, sin teléfono físico:
+- Compilación completa Kotlin y Java del módulo móvil: PASS.
+- :mobile:testDebugUnitTest: 436 tests, 0 fallos, 75 suites.
+- :mobile:assembleDebug: PASS.
+- :app:compileReleaseKotlin (TV): PASS.
+- apksigner verify: PASS (firma de depuración, no de producción).
+- Paquete: com.brunio.mobile.preview.
+- Versión: 1.0.0-m1-rp133. Android mínimo: 8.0 / API 26.
+- APK: BruniO-Mobile-M1-RP133-Preview.apk
+- Tamaño exacto: 59510600 bytes.
+- SHA-256: 42250975c93162b6c4501d0a22961d8a79fc49492d123ca367d4fb75ea406c2e
+
+Comando de validación:
+gradle :mobile:testDebugUnitTest :mobile:assembleDebug :app:compileReleaseKotlin -Pkotlin.incremental=false
+
+No se ejecutó :mobile:assembleRelease localmente: no se dispone aquí de la clave permanente del repositorio.
+El workflow adjunto utiliza los secrets existentes y verifica certificado, paquete y versión antes de publicar.
+No se ejecutó ese workflow ni se publicó una release desde esta sesión.
+No se verificó en dispositivo: reproducción, gestos, rotación, rendimiento, redes, notificaciones y proveedores reales.
+No es una garantía de ausencia de bugs. Consulta PRUEBA_EN_TELEFONO_M1.md.
+
+El checkout de validación se reconstruyó desde RP63 y los updates hasta RP132.
+Se restauraron los componentes previos LoadingArtworkRP58 y DirectorRailRP58 del ZIP RP58.
+Estos dos componentes ya forman parte de la base esperada; no se cambian con este update.

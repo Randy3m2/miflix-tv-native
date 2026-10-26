@@ -47,6 +47,12 @@ internal fun partyJoinUrl(code: String) = "https://randy3m2.github.io/miflix-tv-
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 internal fun PlayerSideSheet(title: String,close: () -> Unit,resetKey:Any?=null,content: LazyListScope.() -> Unit) {
+    if(LocalMobileBrunioRP133.current) {
+        MobileSheetRP133(title,close) {
+            LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(bottom=18.dp),verticalArrangement=Arrangement.spacedBy(12.dp),content=content)
+        }
+        return
+    }
     val first=remember {FocusRequester()}
     val sheetScroll=rememberLazyListState()
     val sheetScope=rememberCoroutineScope()

@@ -202,11 +202,15 @@ internal object UpdateNotes {
         "RP128: instala add-ons enviando su manifest.json desde el celular con un QR local y confirmación en la TV." to "RP128: install add-ons by sending manifest.json from your phone using a local QR and TV confirmation.",
         "Corregida la compatibilidad del parser JSON de add-ons con Android." to "Fixed add-on JSON parser compatibility with Android."
     )
-    val changes=listOf(
+    val rp132Changes=listOf(
         "RP132: selectores y marcadores de equipos con logos, sin nombres visibles; F1 con fotos reales de pilotos." to "RP132: logo-only team selectors and scoreboards; F1 with real driver portraits.",
         "F1 reutiliza la tabla de Stats normal: cabecera fija, filas compactas y navegación estable, también con dos pantallas." to "F1 reuses the normal Stats table: fixed header, compact rows and stable navigation, also with two screens."
     )
-    val previousChanges=rp131Changes+rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
+    val changes=listOf(
+        "RP133: BruniO Mobile M1: nueva interfaz táctil para Android con Home, búsqueda, detalles, perfiles y ajustes glass." to "RP133: BruniO Mobile M1: new Android touch interface with Home, search, details, profiles and glass settings.",
+        "Live TV, deportes, calendario, amigos, reproducción y SplitScreen adaptados al celular; instalación y actualizaciones separadas de TV." to "Live TV, sports, calendar, friends, playback and SplitScreen adapted for phones; installation and updates separate from TV."
+    )
+    val previousChanges=rp132Changes+rp131Changes+rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
         "Menú de amigos: Watch, View Details, Recommendations y Close; detalles abre la ficha sin iniciar reproducción." to "Friend menu: Watch, View Details, Recommendations and Close; details opens the title without starting playback.",
         "Enlaces de Comet y Torrentio con texto ordenado e insignias de Dolby/HDR según sus metadatos." to "Clean Comet and Torrentio link metadata with small Dolby/HDR badges when reported by the source.",
         "Envío local a TV por Wi-Fi, con enlace y código de conexión; sin reproducción web." to "Send titles to TV over local Wi-Fi with a connection link and code; no web playback.",

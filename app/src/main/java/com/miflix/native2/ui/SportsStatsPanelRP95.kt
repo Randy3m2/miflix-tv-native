@@ -222,7 +222,7 @@ internal fun StatsTableRowsRP105(table:StatsTableRP105,first:FocusRequester,head
             }
         }.focusable(),state=list,contentPadding=PaddingValues(bottom=8.dp)) {
         itemsIndexed(table.rows,key={_,row ->row.key}) {index,row ->
-            Column(Modifier.fillMaxWidth().height(rowHeightDp.dp)
+            Column(Modifier.fillMaxWidth().height((if(LocalMobileBrunioRP133.current) rowHeightDp.coerceAtLeast(44) else rowHeightDp).dp)
                 .background(if(tableFocused && index==cursor) Color(0xFF292929) else Color.Transparent)
                 ) {
                 StatsTableCellsRP105(row.name,row.values,photo=row.photo,number=row.number,modifier=Modifier.weight(1f))
@@ -266,7 +266,7 @@ private fun ScoreTeamCompactRP105(team:ScoreTeamRP11,score:String,modifier:Modif
 @Composable
 private fun StatsActionRP105(label:String,selected:Boolean,modifier:Modifier=Modifier,description:String=label,click:()->Unit) {
     var focused by remember {mutableStateOf(false)}
-    Box(modifier.height(30.dp).clip(RoundedCornerShape(5.dp))
+    Box(modifier.height(if(LocalMobileBrunioRP133.current) 46.dp else 30.dp).clip(RoundedCornerShape(5.dp))
         .semantics {contentDescription=description}.onFocusChanged {focused=it.isFocused}
         .background(GlassActionBrushRP108(focused,selected))
         .onPreviewKeyEvent {event ->

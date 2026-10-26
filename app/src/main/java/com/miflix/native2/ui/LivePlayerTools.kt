@@ -50,7 +50,9 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun LiveChannelPicker(state: AppState, initialProvider: String, select: (PlayerRequest) -> Unit, close: () -> Unit) {
-    LiveChannelBrowserRP34(state,initialProvider,select,close)
+    if(LocalMobileBrunioRP133.current) {
+        MobileSheetRP133(tr("Canales y juegos","Channels and games"),close) {MobileLiveRP133(state,{select(it);close()})}
+    } else LiveChannelBrowserRP34(state,initialProvider,select,close)
 }
 
 @Composable
@@ -355,7 +357,7 @@ private fun MultiViewSourceDialog(state: AppState,req: PlayerRequest,choose: (co
 }
 
 @Composable
-private fun MultiViewTile(req: PlayerRequest, audible: Boolean, hd: Boolean, pool: MultiPlayerPool, modifier: Modifier, order: Int, statsFooterRP130:Boolean=false, click: () -> Unit) {
+internal fun MultiViewTile(req: PlayerRequest, audible: Boolean, hd: Boolean, pool: MultiPlayerPool, modifier: Modifier, order: Int, statsFooterRP130:Boolean=false, click: () -> Unit) {
     if(req.liveType=="youtube") {
         LidomSplitYoutubeTileRP9(req,audible,modifier,click)
         return
@@ -427,7 +429,7 @@ private fun MultiViewTile(req: PlayerRequest, audible: Boolean, hd: Boolean, poo
 }
 
 /** Main-thread ownership ensures a fifth decoder is never started before old tiles release. */
-private class MultiPlayerPool {
+internal class MultiPlayerPool {
     private val players=mutableMapOf<String,ExoPlayer>()
     var closed=false
         private set

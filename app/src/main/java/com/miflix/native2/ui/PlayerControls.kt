@@ -55,6 +55,12 @@ internal fun CompactPlayerControls(
     nextAvailable: Boolean, onNext: () -> Unit, onEpisodes: () -> Unit, onQueue: () -> Unit, onInfo: () -> Unit, onPip: () -> Unit, onMultiView: () -> Unit, onMoment: () -> Unit,
     previousChannelVisible:Boolean=false,previousChannelAvailable:Boolean=false,previousChannelName:String="",onPreviousChannel:()->Unit={},onScores:()->Unit={},onStatsRP95:()->Unit={},channelFavoriteRP36: @Composable ()->Unit={},badgePlayerRP26:androidx.media3.exoplayer.ExoPlayer?=null,easyModeRP79:Boolean=false
 ) {
+    if(LocalMobileBrunioRP133.current) {
+        MobilePlayerControlsRP133(request,paused,position,duration,seekable,nextAvailable,easyModeRP79,badgePlayerRP26,
+            onInteraction,onPlay,onClose,onSeek,onMenu,onLinks,
+            {if(request.live) onMenu("channels") else onEpisodes()},onNext,onParty,onChat,onReactions,onMultiView,onStatsRP95,onInfo,onPip)
+        return
+    }
     if(easyModeRP79) {
         val easySeekFocusRP89=remember {FocusRequester()}
         Box(Modifier.fillMaxSize()) {
@@ -226,6 +232,10 @@ private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seek
 @Composable
 internal fun PlayerOptionsDialog(menu: String, player: Player, tracks: Tracks, speed: Float,
     onSpeed: (Float) -> Unit, externalSubtitles: List<SubtitleChoice>, subtitleLoading: Boolean, onExternalSubtitle: (SubtitleChoice) -> Unit, series: Boolean, party: Boolean, onEpisodes: () -> Unit, onParty: () -> Unit, onTiming: () -> Unit, spanishOnlyRP83:Boolean=false, onClose: () -> Unit) {
+    if(LocalMobileBrunioRP133.current) {
+        MobileTracksRP133(menu,player,tracks,speed,onSpeed,externalSubtitles,subtitleLoading,onExternalSubtitle,spanishOnlyRP83,series,party,onEpisodes,onParty,onTiming,onClose)
+        return
+    }
     var audioStatus by remember(player,menu) { mutableStateOf("") }
     var pendingAudio by remember(player,menu) { mutableStateOf<TrackSelectionOverride?>(null) }
     LaunchedEffect(player,pendingAudio) {

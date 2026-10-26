@@ -32,6 +32,9 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
     val baseContext=LocalContext.current
     val context = baseContext.applicationContext
     val state = remember { AppState(context) }
+    val mobileRP133=remember { (baseContext.getSystemService(android.content.Context.UI_MODE_SERVICE) as? android.app.UiModeManager)?.currentModeType!=android.content.res.Configuration.UI_MODE_TYPE_TELEVISION }
+    val systemDensityRP133=androidx.compose.ui.platform.LocalDensity.current
+    LaunchedEffect(mobileRP133,state.localExtrasScope()) {if(mobileRP133) MobileUiPrefsRP133.load(context,state.localExtrasScope())}
     DisposableEffect(baseContext) {
         val lifecycle=(baseContext as? androidx.lifecycle.LifecycleOwner)?.lifecycle
         state.appForeground=lifecycle?.currentState?.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)==true
@@ -51,7 +54,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         config.setLocale(java.util.Locale.forLanguageTag(if(state.interfaceLanguage=="es") "es-MX" else "en-US"))
         android.view.ContextThemeWrapper(baseContext,0).apply { applyOverrideConfiguration(config) }
     }
-    CompositionLocalProvider(LocalCardFreshnessLoad provides {item: com.miflix.native2.model.MediaSummary -> state.requestCardFreshness(item)},LocalCardFreshness provides {item: com.miflix.native2.model.MediaSummary -> state.cardFreshness(item)},LocalPlayerMenuSide provides (state.screen==Screen.PLAYER || state.screen==Screen.MULTIVIEW),LocalContext provides localizedContext,LocalProfileManage provides {state.socialProfileEditor=true},LocalCastPair provides {state.localCastPairing=true},LocalTitleActions provides {item: com.miflix.native2.model.MediaSummary -> state.titleActions(item)}) {
+    CompositionLocalProvider(LocalMobileBrunioRP133 provides mobileRP133,androidx.compose.ui.platform.LocalDensity provides (if(mobileRP133) androidx.compose.ui.unit.Density(systemDensityRP133.density,systemDensityRP133.fontScale*MobileUiPrefsRP133.scale) else systemDensityRP133),LocalCardFreshnessLoad provides {item: com.miflix.native2.model.MediaSummary -> state.requestCardFreshness(item)},LocalCardFreshness provides {item: com.miflix.native2.model.MediaSummary -> state.cardFreshness(item)},LocalPlayerMenuSide provides (state.screen==Screen.PLAYER || state.screen==Screen.MULTIVIEW),LocalContext provides localizedContext,LocalProfileManage provides {state.socialProfileEditor=true},LocalCastPair provides {state.localCastPairing=true},LocalTitleActions provides {item: com.miflix.native2.model.MediaSummary -> state.titleActions(item)}) {
     val originalDensity=androidx.compose.ui.platform.LocalDensity.current
     CompositionLocalProvider(LocalSimpleHome provides state.easyModeRP79,androidx.compose.ui.platform.LocalDensity provides
         androidx.compose.ui.unit.Density(originalDensity.density,if(state.easyModeRP79) maxOf(originalDensity.fontScale,1.2f) else originalDensity.fontScale)) {
@@ -106,7 +109,8 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         navigationState.SaveableStateProvider("${state.session?.userId}:${state.activeProfile.id}:${state.screen.name}") {
         val destination=if(state.easyModeRP79 && !com.miflix.native2.data.EasyModePolicyRP79.allowsScreen(state.screen.name)) Screen.HOME else if(state.kidsMode && state.screen !in setOf(Screen.HOME,Screen.SEARCH,Screen.MY_LIST,Screen.DETAILS,Screen.PROFILES,Screen.NOTIFICATIONS,Screen.PLAYER)) Screen.HOME else state.screen
         LaunchedEffect(destination,state.screen) {if(destination!=state.screen) state.screen=destination}
-        if(state.easyModeRP79 && destination!=Screen.PLAYER) EasyScreenRP79(state,destination)
+        if(mobileRP133) MobileAppRP133(state,destination)
+        else if(state.easyModeRP79 && destination!=Screen.PLAYER) EasyScreenRP79(state,destination)
         else when (destination) {
             Screen.SPLASH -> BruniOSplashScreen()
             Screen.HOME -> if(state.kidsMode) KidsHomeScreen(state) else HomeScreen(state) { state.screen = it }
@@ -151,7 +155,10 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
             key(req.playbackId) {
                 Box(if(state.miniPlayer && state.screen!=Screen.PLAYER) Modifier.align(Alignment.BottomEnd).padding(20.dp).width(320.dp).height(220.dp) else Modifier.fillMaxSize()) {
                     CompositionLocalProvider(LocalPlayerMenuSide provides true) {
+                    Box(Modifier.fillMaxSize().then(if(mobileRP133) Modifier.safeDrawingPadding() else Modifier)) {
+                    MobilePlayerEnvironmentRP133(mobileRP133)
                     PlayerScreen(state,req) { state.miniPlayer=false;state.screen=req.returnScreen ?: if(req.live) Screen.LIVE_TV else Screen.DETAILS }
+                    }
                     }
                 }
             }
@@ -210,11 +217,11 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
                 modifier=Modifier.padding(bottom=32.dp).background(Color(0xE6222222),RoundedCornerShape(16.dp)).padding(horizontal=24.dp,vertical=14.dp))
         }
         if(!state.easyModeRP79 && state.changelogOpen) ChangelogDialog(state) {state.changelogOpen=false}
-        MenuScreensaver(state)
+        if(!mobileRP133) MenuScreensaver(state)
         if(!state.easyModeRP79 && state.socialProfileEditor) SocialSettingsDialog(state) {state.socialProfileEditor=false}
         if(!state.easyModeRP79) LocalCastHost(state)
-        state.contextTitle?.takeUnless {state.easyModeRP79}?.let {title -> TitleActionsDialog(state,title,state.contextContinue) {state.contextTitle=null} }
-        state.sourceSelection?.takeUnless {state.easyModeRP79}?.let { SourcePickerOverlay(state, it) }
+        state.contextTitle?.takeUnless {state.easyModeRP79}?.let {title -> if(mobileRP133) MobileTitleActionsRP133(state,title,state.contextContinue) {state.contextTitle=null} else TitleActionsDialog(state,title,state.contextContinue) {state.contextTitle=null} }
+        state.sourceSelection?.takeUnless {state.easyModeRP79}?.let { if(mobileRP133) MobileSourcesRP133(state,it) else SourcePickerOverlay(state, it) }
 
         if(state.playbackLoading==null) state.busyMessage?.let {LoadingOverlay(it)}
         LaunchedEffect(state.error) {if(state.error!=null) state.abortPlaybackLoading()}

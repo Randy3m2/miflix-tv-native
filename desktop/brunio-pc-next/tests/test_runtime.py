@@ -5,6 +5,8 @@ from unittest.mock import Mock
 spec=importlib.util.spec_from_file_location('runtime_bridge_test',Path(__file__).resolve().parents[1]/'backend'/'bridge.py')
 module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
 class Vault:
+    def save(self,value): self.saved=value
+
     def load(self):return {'session':{'userId':'user'},'profile':'kids','preferences':{'profile_playback':{'user:kids':{'audio':'en','addon_order_en':['comet-first']}}}}
 class RuntimeTests(unittest.TestCase):
     def setUp(self):

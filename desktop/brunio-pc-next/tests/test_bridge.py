@@ -10,6 +10,8 @@ spec.loader.exec_module(module)
 
 
 class Vault:
+    def save(self,value): self.saved=value
+
     def load(self):
         return {'session': {'accessToken': 'secret'}, 'preferences': {'language': 'es'}}
 

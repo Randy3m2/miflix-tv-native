@@ -7,6 +7,8 @@ spec=importlib.util.spec_from_file_location('bridge_screens_test',Path(__file__)
 module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
 
 class MemoryVault:
+    def save(self,value): self.saved=value
+
     def load(self):return {'session':{'userId':'owner','accessToken':'private'},'profile':'kids'}
 
 class ScreenTests(unittest.TestCase):

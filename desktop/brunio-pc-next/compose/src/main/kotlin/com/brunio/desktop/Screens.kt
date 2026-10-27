@@ -52,7 +52,12 @@ fun RemoteArtwork(url: String, modifier: Modifier = Modifier, description: Strin
         if (url.isNotBlank()) value = withContext(Dispatchers.IO) {
             runCatching {
                 val uri = URI(url)
-                val stream = if (url.startsWith("asset:")) {
+                val stream = if (url.startsWith("cover:")) {
+                    val hash=url.removePrefix("cover:")
+                    require(hash.matches(Regex("[a-f0-9]{64}")))
+                    val base=java.nio.file.Path.of(System.getenv("LOCALAPPDATA") ?: System.getProperty("user.home"),"BruniO","PCNext","Downloads")
+                    java.nio.file.Files.newInputStream(base.resolve("cover-$hash.img"))
+                } else if (url.startsWith("asset:")) {
                     val name = url.removePrefix("asset:")
                     require(name.matches(Regex("[A-Za-z0-9_.-]+")))
                     val roots = listOf(java.nio.file.Path.of("..", "..", "brunio-pc", "assets"), java.nio.file.Path.of("desktop", "brunio-pc", "assets"))
@@ -175,7 +180,7 @@ private fun FeedScreen(tab: DesktopTab, state: DesktopScreenState, onAction: (St
     Column(Modifier.fillMaxSize().padding(36.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(tab.title, style = MaterialTheme.typography.headlineLarge, modifier = Modifier.weight(1f))
-            if (tab == DesktopTab.Friends) OutlinedButton(onClick = { onAction("friends:add") }) { Text("Agregar amigo") }
+            if (tab == DesktopTab.Friends) { OutlinedButton(onClick = { onAction("party:open") }) { Text("Watch Party") }; OutlinedButton(onClick = { onAction("friends:add") }) { Text("Agregar amigo") } }
             if (tab == DesktopTab.Calendar) OutlinedButton(onClick = { onAction("calendar:subscriptions") }) { Text("Suscripciones") }
         }
         if (state.entries.isEmpty()) EmptyState(when(tab) {

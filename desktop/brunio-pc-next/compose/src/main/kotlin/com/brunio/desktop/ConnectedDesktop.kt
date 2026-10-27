@@ -18,12 +18,22 @@ fun ConnectedDesktop(onFullscreen: () -> Unit) {
     val scope = rememberCoroutineScope()
     val bridge = remember { BridgeClient() }
     val controller = remember { AppController(scope, bridge) }
+    val utilities = remember { Utilities(scope, bridge) }
     DisposableEffect(bridge) { onDispose { bridge.close() } }
     LaunchedEffect(controller) { controller.restore() }
     val account = controller.account
+    LaunchedEffect(account?.optString("profile")) { utilities.reset() }
+    fun action(id: String) {
+        when(id) {
+            "party:open" -> utilities.open("party")
+            "settings:Buscar actualización" -> utilities.open("updates")
+            "settings:Administrar complementos", "settings:Prioridad de complementos" -> utilities.open("addons")
+            else -> controller.action(id)
+        }
+    }
     val playback = controller.playback
     when {
-        playback != null -> PlayerScreen(playback, controller::closePlayer, onFullscreen, { position, duration -> controller.saveProgress(playback, position, duration) }, { controller.nextEpisode(playback) }, { controller.message = it })
+        playback != null -> PlayerScreen(playback, controller::closePlayer, onFullscreen, { position, duration -> controller.saveProgress(playback, position, duration) }, { controller.nextEpisode(playback) }, { if(it in listOf("party","chat","reactions")) utilities.open("party") else controller.message = "La función $it aún no está integrada." })
         account == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             if (controller.message == null) CircularProgressIndicator(color = Color.White)
             else Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -52,11 +62,14 @@ fun ConnectedDesktop(onFullscreen: () -> Unit) {
                     Text(controller.month.toString(), Modifier.weight(1f))
                     TextButton(onClick = { controller.changeMonth(1) }) { Text("Mes siguiente ›") }
                 }
-                DesktopScreen(controller.tab, controller.screen, controller::action, controller::search)
+                if(controller.tab == DesktopTab.Downloads) DownloadsScreen(utilities) { data ->
+                    controller.playback = PlaybackSession(data.getJSONObject("item"), data.getJSONArray("streams").objects(), data.getString("scope"), data.optInt("season"), data.optInt("episode"))
+                } else DesktopScreen(controller.tab, controller.screen, ::action, controller::search)
             }
             DesktopNavigation(controller.tab, { controller.select(it) }, controller::showProfiles)
         }
     }
+    UtilityDialog(utilities)
     controller.settings?.let { SettingsDialog(it, controller::saveSetting, { controller.settings = null }) }
     if (controller.addFriend) {
         var nickname by remember { mutableStateOf("") }
@@ -78,10 +91,12 @@ fun ConnectedDesktop(onFullscreen: () -> Unit) {
                         seasons.forEach { row -> TextButton(onClick = { season = row.getInt("season_number"); controller.chooseEpisodes(item, season) }) { Text("T${row.getInt("season_number")}") } }
                     }
                     Button(onClick = { controller.chooseEpisodes(item, season) }) { Text("Ver episodios") }
-                    controller.episodes?.forEach { ep -> TextButton(onClick = { controller.play(item, season, ep.getInt("episode_number")) }) { Text("E${ep.getInt("episode_number")} · ${ep.optString("name")}") } }
-                } else Button(onClick = { controller.play(item) }) { Text("Reproducir") }
+                    OutlinedButton(onClick = { utilities.transfer(item, season, fullSeason = true) }) { Text("Descargar temporada") }
+                    controller.episodes?.forEach { ep -> TextButton(onClick = { controller.play(item, season, ep.getInt("episode_number")) }) { Text("E${ep.getInt("episode_number")} · ${ep.optString("name")}") }; TextButton(onClick = { utilities.transfer(item, season, ep.getInt("episode_number")) }) { Text("Descargar E${ep.getInt("episode_number")}") } }
+                } else Row { Button(onClick = { controller.play(item) }) { Text("Reproducir") }; TextButton(onClick = { utilities.transfer(item) }) { Text("Descargar") } }
             } }, confirmButton = { TextButton(onClick = { controller.detail = null }) { Text("Cerrar") } })
     }
+    if(utilities.dialog == null && utilities.error != null) AlertDialog(onDismissRequest={utilities.error=null},title={Text("BruniO")},text={Text(utilities.error?:"")},confirmButton={TextButton(onClick={utilities.error=null}){Text("Cerrar")}})
     controller.message?.takeIf { account != null }?.let { message ->
         AlertDialog(onDismissRequest = { controller.message = null }, title = { Text("BruniO") }, text = { Text(message) },
             confirmButton = { TextButton(onClick = { controller.message = null }) { Text("Cerrar") } })

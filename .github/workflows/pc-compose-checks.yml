@@ -1,5 +1,9 @@
 name: BruniO PC Compose Checks (development)
 on:
+  pull_request:
+    paths:
+      - desktop/brunio-pc-next/**
+      - .github/workflows/pc-compose-checks.yml
   workflow_dispatch:
   push:
     branches: [codex/brunio-pc-compose-rebuild]

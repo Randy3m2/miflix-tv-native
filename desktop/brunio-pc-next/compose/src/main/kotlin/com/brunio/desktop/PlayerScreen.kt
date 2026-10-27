@@ -90,7 +90,7 @@ fun PlayerScreen(session: PlaybackSession, onClose: () -> Unit, onFullscreen: ()
             "sources", "audio", "subtitles" -> menu = id
             "next" -> onNext()
             "retry" -> if(source + 1 < session.streams.size) { resume = ui.position; source++ } else menu = "sources"
-            else -> onUnavailable("La función $id todavía no está integrada con el reproductor nuevo.")
+            else -> onUnavailable(id)
         }
     }
     Box(Modifier.fillMaxSize().background(Color.Black).onPreviewKeyEvent {

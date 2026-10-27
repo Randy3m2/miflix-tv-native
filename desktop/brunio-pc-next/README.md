@@ -12,7 +12,7 @@ Las presentaciones de pestañas, selector de perfiles y controles están en Kotl
 
 ## Validación y límites
 
-- 25 pruebas Python pasan con fixtures y catálogo M3U local.
+- 37 pruebas Python pasan con fixtures y catálogo M3U local.
 - Hay pruebas Kotlin definidas para hover y condiciones de botones VOD/series/Live; no ejecutadas.
 - Gradle se descargó, pero este entorno no resuelve el plugin Kotlin. No se consiguió compilar ni ejecutar Compose aquí.
 - No se ha probado contra la cuenta personal ni en Windows. No se afirma paridad completa con TV.
@@ -21,7 +21,9 @@ Se añadió integración de VLCJ con cuadros de vídeo en Compose, controles de 
 
 Los ajustes básicos de audio, subtítulos, límite de archivo para PC, autoplay y retry tienen formularios y servicios conectados. La traducción completa de la interfaz sigue pendiente.
 
-Todavía sin conectar: Watch Party/chat/reacciones, suscripciones deportivas del calendario, descargas, notificaciones, edición de perfiles, ajustes avanzados de complementos y actualizador. Las acciones pendientes muestran un aviso explícito. No publicar ni distribuir como versión final.
+Se añadieron servicios y vistas para cola de descargas, temporadas, biblioteca agrupada, cancelación, eliminación y reproducción offline; chat/reacciones de Party y solicitudes de acceso; administración y prioridad de complementos; y comprobación, descarga verificada y apertura del instalador. Las transferencias mantienen las URLs sólo en memoria. La biblioteca de desarrollo está en `BruniO/PCNext/Downloads`; no migra ni modifica las descargas del cliente anterior. El código de actualización reserva la versión `2.0.0-rc1` y rechaza como actualización las versiones anteriores de PC. No se ha publicado esa versión.
+
+Todavía pendientes de implementación: sincronización del vídeo de Watch Party, suscripciones deportivas del calendario, PiP y multiview, notificaciones, edición de perfiles y otros ajustes avanzados. También faltan empaquetado autónomo del servicio Python/VLC, pruebas completas y revisión visual en Windows. Las acciones pendientes muestran un aviso explícito. No publicar ni distribuir como versión final.
 
 ## Desarrollo
 

@@ -13,9 +13,10 @@ from brunio.core import Client
 from brunio.vault import Vault
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from screens import Screens
+from remaining import Remaining
 
 
-class Bridge(Screens):
+class Bridge(Screens, Remaining):
     def __init__(self, client=None, vault=None):
         self.client = client or Client()
         self.vault = vault or Vault()
@@ -30,9 +31,12 @@ class Bridge(Screens):
         }
 
         self.operations.update(self.screen_operations())
+        self.operations.update(self.remaining_operations())
 
     def persist(self):
         self.local.update(session=self.client.session, profile=self.client.profile)
+        if isinstance(self.client.account,dict) and self.client.account.get('profiles'):
+            self.local['cached_profiles']=self.client.account['profiles']
         if os.name == 'nt':
             self.vault.save(self.local)
 
@@ -45,8 +49,12 @@ class Bridge(Screens):
 
     def restore(self):
         if self.client.session:
-            self.client.load_account()
-            self.persist()
+            try:
+                self.client.load_account()
+                self.persist()
+            except Exception:
+                self.client.account={'profiles':self.local.get('cached_profiles',[])}
+                return {**self.account_view(),'offline':True}
         return self.account_view()
 
     def login(self, email, password):
@@ -55,6 +63,8 @@ class Bridge(Screens):
         return self.account_view()
 
     def logout(self):
+        self.cancel_transfers()
+        if self.client.party: self.client.party_leave()
         self.client.detach()
         self.client.session = {}
         self.client.account = {}
@@ -70,6 +80,8 @@ class Bridge(Screens):
     def select_profile(self, profile_id):
         if profile_id not in [p.get('id') for p in self.client.account.get('profiles', [])]:
             raise ValueError('Unknown profile')
+        self.cancel_transfers()
+        if self.client.party: self.client.party_leave()
         self.client.detach()
         self.client.profile = profile_id
         self.persist()
@@ -122,6 +134,7 @@ def main():
             response = {'id': None, 'error': 'Invalid request'}
         sys.stdout.write(json.dumps(response, ensure_ascii=False, separators=(',', ':')) + '\n')
         sys.stdout.flush()
+    bridge.cancel_transfers()
 
 
 if __name__ == '__main__':

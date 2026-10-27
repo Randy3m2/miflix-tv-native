@@ -8,6 +8,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.*
 
 fun main(args:Array<String>) {
+    if("--visual-smoke" in args) {
+        System.setProperty("skiko.renderApi","SOFTWARE")
+        visualSmoke(java.nio.file.Path.of(args.getOrNull(args.indexOf("--visual-smoke")+1)?:error("Missing screenshot directory")))
+        return
+    }
     if("--smoke" in args) {
         try {
             kotlinx.coroutines.runBlocking { BridgeClient().use { it.call("session.restore") } }

@@ -45,6 +45,10 @@ try {
         $env:PATH = (($env:PATH -split ';') | Where-Object { $_ -ne $savedVlcHome }) -join ';'
         $smoke = Start-Process $launcher -ArgumentList '--smoke' -PassThru -Wait
         if ($smoke.ExitCode -ne 0) { throw 'Bundled application smoke test failed' }
+        $reviewRoot = Join-Path $projectRoot 'ui-review'
+        $visual = Start-Process $launcher -ArgumentList @('--visual-smoke', ('"' + $reviewRoot + '"')) -PassThru
+        if (-not $visual.WaitForExit(120000)) { $visual.Kill(); throw 'Visual smoke timed out' }
+        if ($visual.ExitCode -ne 0) { throw 'Visual smoke failed' }
     } finally {
         $env:BRUNIO_VLC_HOME = $savedVlcHome
         $env:VLC_PLUGIN_PATH = $savedPlugins

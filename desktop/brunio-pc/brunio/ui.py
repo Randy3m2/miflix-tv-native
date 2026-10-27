@@ -139,6 +139,7 @@ class Window(DesktopFeatures,QMainWindow):
         self.status.setObjectName('status');self.status.hide();content_layout.addWidget(self.status)
         self.root_layout.addWidget(self.content,1)
         self.select_nav('home');self.refresh_profile_icon()
+        QTimer.singleShot(9000,self.prune_image_cache)
         self.player_event.connect(self.on_player_event)
         self.tick_timer=QTimer(self);self.tick_timer.timeout.connect(self.tick);self.tick_timer.start(1000)
         self.social_timer=QTimer(self);self.social_timer.timeout.connect(self.social_tick);self.social_timer.start(5000)
@@ -249,34 +250,90 @@ class Window(DesktopFeatures,QMainWindow):
         if self.multi_page is not None:self.close_multiview()
         self.sidebar.show()
         self.page_id+=1
-        old=self.stack.currentWidget();self.stack.addWidget(w);self.stack.setCurrentWidget(w)
-        if old and old is not getattr(self,'player_page',None):self.stack.removeWidget(old);old.deleteLater()
+        old=self.stack.currentWidget()
+        if self.stack.indexOf(w)<0:self.stack.addWidget(w)
+        self.stack.setCurrentWidget(w)
+        if old and old is not w and old is not getattr(self,'player_page',None):
+            if old is self._home_screen and self._home_ready:
+                # Keep the fully-rendered Home widget alive so returning is instant.
+                pass
+            else:
+                self.stack.removeWidget(old);old.deleteLater()
+                if old is self._home_screen:
+                    self._home_screen=None;self._home_ready=False
     def page(self,title):
-        w,l=column();w.setObjectName('screenContent');l.setAlignment(Qt.AlignmentFlag.AlignTop);l.setContentsMargins(30,28,30,42);l.setSpacing(16)
+        w,l=column();w.setObjectName('screenContent')
+        l.setAlignment(Qt.AlignmentFlag.AlignTop)
+        l.setContentsMargins(30,20,30,34);l.setSpacing(14)
         if title!='BruniO':
             heading=label(title,28);heading.setObjectName('pageTitle');l.addWidget(heading)
-        scroll=QScrollArea();scroll.setWidgetResizable(True);scroll.setFrameShape(QScrollArea.Shape.NoFrame);scroll.setWidget(w);self.show_page(scroll);return l,self.page_id
+        scroll=QScrollArea();scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        scroll.setWidget(w);self.show_page(scroll);return l,self.page_id
     def image(self,url,w,width,height,contain=False):
         if not url:return
-        # A fast-changing cinematic carousel must not display stale network art.
+        # Deduplicate network requests and retain poster artwork across restarts.
         w.setProperty('_brunioImageUrl',url)
-        def apply(data):
-            if isValid(w) and w.property('_brunioImageUrl')==url:
-                pix=QPixmap();pix.loadFromData(data);scaled=pix.scaled(width,height,Qt.AspectRatioMode.KeepAspectRatio if contain else Qt.AspectRatioMode.KeepAspectRatioByExpanding,Qt.TransformationMode.SmoothTransformation)
-                if hasattr(w,'setPixmap'):w.setPixmap(scaled)
-                else:
-                    w.setIcon(QIcon(scaled))
-                    if isinstance(w,QPushButton):w.setText('')
-        if url in self.images:apply(self.images[url]);return
-        req=QNetworkRequest(QUrl(url));req.setTransferTimeout(15000);reply=self.network.get(req)
+        def display(data,widget=w,target_w=width,target_h=height,fit=contain):
+            if not isValid(widget) or widget.property('_brunioImageUrl')!=url:return
+            pix=QPixmap()
+            if not pix.loadFromData(data):return
+            pix=pix.scaled(target_w,target_h,
+                Qt.AspectRatioMode.KeepAspectRatio if fit
+                else Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                Qt.TransformationMode.SmoothTransformation)
+            if hasattr(widget,'setPixmap'):widget.setPixmap(pix)
+            else:
+                widget.setIcon(QIcon(pix))
+                if isinstance(widget,QPushButton):widget.setText('')
+        if url in self.images:
+            display(self.images[url]);return
+        cached=None
+        cache_path=None
+        if self.image_cache_dir is not None:
+            cache_path=self.image_cache_dir/(hashlib.sha256(url.encode('utf-8')).hexdigest()+'.img')
+            try:
+                if cache_path.is_file() and 0<cache_path.stat().st_size<8*1024*1024:
+                    cached=cache_path.read_bytes()
+            except OSError:pass
+        if cached and QPixmap().loadFromData(cached):
+            if len(self.images)>240:self.images.clear()
+            self.images[url]=cached;display(cached);return
+        if url in self.pending_images:
+            self.pending_images[url].append(display);return
+        self.pending_images[url]=[display]
+        req=QNetworkRequest(QUrl(url));req.setTransferTimeout(15000)
+        reply=self.network.get(req)
         def finish():
+            callbacks=self.pending_images.pop(url,[])
             if reply.error()==reply.NetworkError.NoError:
                 data=bytes(reply.readAll())
-                if len(data)<8*1024*1024:
-                    if len(self.images)>160:self.images.clear()
-                    self.images[url]=data;apply(data)
+                if 0<len(data)<8*1024*1024 and QPixmap().loadFromData(data):
+                    if len(self.images)>240:self.images.clear()
+                    self.images[url]=data
+                    if cache_path is not None:
+                        try:
+                            tmp=cache_path.with_suffix('.tmp')
+                            tmp.write_bytes(data);tmp.replace(cache_path)
+                        except OSError:pass
+                    for callback in callbacks:callback(data)
             reply.deleteLater()
         reply.finished.connect(finish)
+    def prune_image_cache(self):
+        folder=self.image_cache_dir
+        if folder is None:return
+        try:
+            images=sorted(folder.glob('*.img'),key=lambda p:p.stat().st_mtime,reverse=True)
+            size=0
+            for index,path in enumerate(images):
+                size+=path.stat().st_size
+                if index>=650 or size>300*1024*1024:path.unlink(missing_ok=True)
+        except OSError:pass
+    def discard_home_cache(self):
+        page=self._home_screen;self._home_screen=None;self._home_ready=False
+        if page is not None and isValid(page):
+            if self.stack.currentWidget() is not page:
+                self.stack.removeWidget(page);page.deleteLater()
     def avatar_path(self,value):
         names={'ai:astronaut':'brunio_avatar_astronaut.png','ai:fox':'brunio_avatar_fox.png','ai:robot':'brunio_avatar_robot.png','ai:dragon':'brunio_avatar_dragon.png','special:photo':'brunio_avatar_special.png','special:extra':'brunio_avatar_extra.png','special:extra3':'brunio_avatar_special3.jpg'}
         if value.startswith('special:extra') and value[13:].isdigit() and int(value[13:])>=4:names[value]=f'brunio_avatar_special{value[13:]}.png'
@@ -300,7 +357,18 @@ class Window(DesktopFeatures,QMainWindow):
         self.run(load,done)
     def home(self):
         if not self.client.session:self.settings();return
-        self.select_nav('home');l,page=self.page('BruniO');l.setSpacing(15)
+        self.select_nav('home')
+        owner=self.client.session.get('userId','')+':'+self.client.profile
+        if (self._home_screen is not None and isValid(self._home_screen)
+                and self._home_ready and self._home_owner==owner
+                and time.monotonic()-self._home_loaded_at<360):
+            self.show_page(self._home_screen)
+            return
+        self.discard_home_cache()
+        l,page=self.page('BruniO');l.setSpacing(14)
+        self._home_screen=self.stack.currentWidget()
+        self._home_owner=owner
+        self._home_ready=False
         progress=dict(self.state.get('progress',{}))
         ids=[k for k,v in sorted(progress.items(),key=lambda x:x[1].get('updatedAt',0),reverse=True)
              if ':s' not in k and v.get('position',0)>=5 and v.get('percent',0)<90][:12]
@@ -380,6 +448,8 @@ class Window(DesktopFeatures,QMainWindow):
             if continued:self.continue_rail(shelves_layout,continued)
             for name,items in rows:
                 if items:self.rail(shelves_layout,name,items)
+            self._home_ready=True
+            self._home_loaded_at=time.monotonic()
             self.run(self.recommendations,lambda items:self.rail(shelves_layout,self.t('Para ti','For you'),items) if page==self.page_id and items else None,quiet=True)
         self.run(load,done)
     def recommendations(self):

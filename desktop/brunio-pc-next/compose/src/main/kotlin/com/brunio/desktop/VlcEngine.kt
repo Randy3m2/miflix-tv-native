@@ -29,7 +29,7 @@ class VlcEngine : Closeable {
     private val factory: MediaPlayerFactory
     val player: uk.co.caprica.vlcj.player.embedded.EmbeddedMediaPlayer
     init {
-        System.getenv("BRUNIO_VLC_HOME")?.let { NativeLibrary.addSearchPath("vlc", it) }
+        System.getenv("BRUNIO_VLC_HOME")?.let { path -> listOf("vlc", "libvlc", "libvlccore").forEach { NativeLibrary.addSearchPath(it, path) } }
         NativeDiscovery().discover()
         factory = MediaPlayerFactory("--no-video-title-show", "--network-caching=1000")
         player = factory.mediaPlayers().newEmbeddedMediaPlayer()

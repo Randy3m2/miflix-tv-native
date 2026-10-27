@@ -51,6 +51,7 @@ try {
         $visual = Start-Process $launcher -ArgumentList @('--visual-smoke', ('"' + $reviewRoot + '"')) -PassThru
         if (-not $visual.WaitForExit(120000)) { $visual.Kill(); throw 'Visual smoke timed out' }
         if ($visual.ExitCode -ne 0) { throw 'Visual smoke failed' }
+        if ((Get-Content (Join-Path $reviewRoot 'artwork-result.txt') -Raw).Trim() -ne 'PASS') { throw 'Packaged artwork rendering failed; inspect UI review diagnostics' }
     } finally {
         $env:BRUNIO_VLC_HOME = $savedVlcHome
         $env:VLC_PLUGIN_PATH = $savedPlugins

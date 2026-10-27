@@ -184,6 +184,29 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
             } catch(e: Exception) { message = e.message }
         }
     }
+    fun detailMutation(method:String,args:JSONObject)=scope.launch {
+        val current=detail?:return@launch
+        val cloud=current.getJSONObject("item").getString("cloudId");val ticket=revision
+        args.put("scope",current.getString("scope")).put("cloud_id",cloud)
+        try {
+            val result=bridge.call(method,args) as JSONObject
+            if(ticket!=revision || detail?.getJSONObject("item")?.optString("cloudId")!=cloud)return@launch
+            val next=JSONObject(detail.toString())
+            when(method) {
+                "catalog.favorite"->next.put("saved",result.getBoolean("saved"))
+                "catalog.rate"->next.put("user_rating",result.getInt("score"))
+                "catalog.mark"->{val progress=next.optJSONObject("progress")?:JSONObject();progress.put(result.getString("key"),result.getJSONObject("progress"));progress.put(cloud,result.getJSONObject("progress"));next.put("progress",progress)}
+            }
+            detail=next;cache.remove(DesktopTab.Library);cache.remove(DesktopTab.Home)
+        }catch(e:Exception){if(ticket==revision)message=e.message}
+    }
+    fun openPerson(id:Int,name:String)=scope.launch {
+        val ticket=revision
+        try {
+            val rows=array("catalog.person",JSONObject().put("id",id)).map(::tile)
+            if(ticket==revision){detail=null;tab=DesktopTab.Search;screen=DesktopScreenState(heading=name,tiles=rows);rawTiles=rows}
+        }catch(e:Exception){if(ticket==revision)message=e.message}
+    }
     fun play(item: JSONObject, season: Int = 0, episode: Int = 0, position:Long? = null) = scope.launch {
         val ticket = ++revision
         message = null

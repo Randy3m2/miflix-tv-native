@@ -14,6 +14,8 @@ import java.awt.GraphicsEnvironment
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.imageio.ImageIO
+import org.json.JSONObject
+import org.json.JSONArray
 
 /** Explicit fixture gallery for CI screenshots. It never loads a user account or posts data. */
 fun visualSmoke(directory:Path)=application {
@@ -40,19 +42,26 @@ fun visualSmoke(directory:Path)=application {
                     DesktopNavigation(tab,{},{})
                 } else if(scene==routes.size) ProfilePicker(listOf(
                     MediaTile("a","Principal","asset:brunio_avatar_astronaut.png"),MediaTile("b","Randy","asset:brunio_avatar_fox.png"),MediaTile("c","Kids","asset:brunio_avatar_robot.png")),{}, {})
-                else TvPlayerControls(PlaybackUi("Revisión visual del reproductor",source="Fuente de prueba · 1080p",paused=false,position=65000,duration=3600000,seekable=true),{},{},{})
+                else if(scene==routes.size+1) TvPlayerControls(PlaybackUi("Revisión visual del reproductor",source="Fuente de prueba · 1080p",paused=false,position=65000,duration=3600000,seekable=true),{},{},{})
+                else DetailsContent(JSONObject().put("scope","fixture").put("saved",true).put("progress",JSONObject()).put("user_rating",9)
+                    .put("item",JSONObject().put("cloudId","tmdb:series:1").put("type","series").put("title","Una nueva forma de ver").put("year","2026").put("backdrop",art).put("overview","Ficha de prueba para revisar los episodios, la lista y los controles de contenido."))
+                    .put("details",JSONObject().put("vote_average",8.8).put("seasons",JSONArray().put(JSONObject().put("season_number",1)))),
+                    listOf(JSONObject().put("episode_number",1).put("name","El comienzo").put("air_date","2026-01-01")),{})
             }
             }
             LaunchedEffect(Unit) {
                 Files.createDirectories(directory)
-                for(index in 0 until routes.size+2) {
+                for(index in 0 until routes.size+3) {
                     scene=index;delay(1500)
                     withContext(Dispatchers.IO) {
                         val image=Robot().createScreenCapture(window.bounds)
-                        val name=routes.getOrNull(index)?.name ?: if(index==routes.size)"Profiles" else "Player"
+                        val name=routes.getOrNull(index)?.name ?: if(index==routes.size)"Profiles" else if(index==routes.size+1)"Player" else "Details"
                         ImageIO.write(image,"png",directory.resolve("$name.png").toFile())
                     }
                 }
+                val required=listOf("asset:brunio_splash.png","asset:brunio_avatar_astronaut.png","asset:brunio_avatar_fox.png","asset:brunio_avatar_robot.png")
+                val missing=required.filter{ArtworkCache.get(it)==null}
+                Files.writeString(directory.resolve("artwork-result.txt"),if(missing.isEmpty())"PASS" else "FAIL: "+missing.joinToString())
                 exitApplication()
             }
         }

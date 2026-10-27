@@ -61,7 +61,7 @@ class Screens:
             animation=''
             if pid!=526:
                 animation=('https://raw.githubusercontent.com/Randy3m2/miflix-tv-native/main/app/src/main/assets/streaming_rp48/'+stem+'.gif') if pid in (15,531) else 'https://cdn.jsdelivr.net/gh/luckynumb3rs/stremio-perfect-setup/collections/streaming/focused/'+stem+'.gif'
-            rows.append({'id':f'provider:{pid}','title':name,'poster':'asset:'+file,'animation':animation})
+            rows.append({'id':f'provider:{pid}','title':name,'poster':('asset:'+file if pid in (15,531,526) else 'https://cdn.jsdelivr.net/gh/luckynumb3rs/stremio-perfect-setup/collections/streaming/cover/'+file),'animation':animation})
         return rows
 
     def genres(self):
@@ -276,6 +276,7 @@ class Screens:
         if not all(isinstance(v,int) and not isinstance(v,bool) and v>=0 for v in (season,episode)):raise ValueError('Invalid episode')
         key=cloud_id+(f':s{season}e{episode}' if season else '')
         state=self.client.state();old=state.setdefault('progress',{}).get(key,{})
-        value={**old,'percent':100 if watched else 0,'position':old.get('duration',0) if watched else 0,'duration':old.get('duration',0),'updatedAt':now_ms(),'season':season,'episode':episode}
-        state['progress'][key]=value;self.client.save_state(state)
-        return {'saved':True,'watched':watched}
+        duration=old.get('duration',0) or 1
+        value={**old,'percent':100 if watched else 0,'position':duration if watched else 0,'duration':duration,'updatedAt':now_ms(),'season':season,'episode':episode}
+        state['progress'][key]=value;state['progress'][cloud_id]=value;self.client.save_state(state)
+        return {'saved':True,'watched':watched,'progress':value,'key':key}

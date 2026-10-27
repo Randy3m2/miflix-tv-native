@@ -108,12 +108,21 @@ class Bridge(Screens, Remaining):
         return self.client.search(query) if query.strip() else []
 
     def details(self, cloud_id):
-        if not self.client.session:
-            raise ValueError('Sign in first')
-        item = self.client.by_id(cloud_id)
+        import re
+        from urllib.parse import urlencode
+        from brunio.core import media
+        match=re.fullmatch(r'tmdb:(movie|series):([0-9]+)',cloud_id)
+        if not match:raise ValueError('Unknown content ID')
+        kind=match[1];details=self.client.details({'type':kind,'id':int(match[2])})
+        item=media(details,kind)
         state=self.client.state()
         progress={key:value for key,value in state.get('progress',{}).items() if key==cloud_id or key.startswith(cloud_id+':s')}
-        return {'item':item,'details':self.client.details(item),'saved':cloud_id in state.get('favorites',[]),'scope':self.scope_id(),'progress':progress}
+        rating=0
+        try:
+            rows=self.client.rest('miflix_ratings?'+urlencode({'profile_id':'eq.'+self.client.profile,'cloud_id':'eq.'+cloud_id,'select':'score','limit':1})) or []
+            if rows:rating=rows[0].get('score',0)
+        except Exception:pass
+        return {'item':item,'details':details,'saved':cloud_id in state.get('favorites',[]),'scope':self.scope_id(),'progress':progress,'user_rating':rating}
 
     def dispatch(self, request):
         request_id = request.get('id') if isinstance(request, dict) else None

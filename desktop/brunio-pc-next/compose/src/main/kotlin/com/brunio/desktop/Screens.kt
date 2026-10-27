@@ -47,6 +47,7 @@ data class ContentRow(val title: String, val tiles: List<MediaTile>, val wide: B
 data class FeedEntry(val id: String, val title: String, val detail: String, val action: String? = null,val online:Boolean?=null)
 data class DesktopScreenState(
     val busy: Boolean = false, val error: String? = null,
+    val heading:String?=null,
     val calendarMonth: String = java.time.YearMonth.now().toString(),
     val hero: MediaTile? = null, val heroes:List<MediaTile> = emptyList(), val rows: List<ContentRow> = emptyList(),
     val tiles: List<MediaTile> = emptyList(), val entries: List<FeedEntry> = emptyList(),
@@ -80,22 +81,11 @@ fun RemoteArtwork(url: String, modifier: Modifier = Modifier, description: Strin
                 stream.use { input ->
                     val bytes = input.readNBytes(12 * 1024 * 1024 + 1)
                     require(bytes.size <= 12 * 1024 * 1024)
-                    val svg=bytes.take(1024).toByteArray().toString(Charsets.UTF_8).contains("<svg",ignoreCase=true)
-                    if(svg) {
-                        val data=org.jetbrains.skia.Data.makeFromBytes(bytes)
-                        val dom=org.jetbrains.skia.svg.SVGDOM(data)
-                        val surface=org.jetbrains.skia.Surface.makeRasterN32Premul(256,256)
-                        try {dom.setContainerSize(256f,256f);dom.render(surface.canvas);surface.makeImageSnapshot().toComposeImageBitmap()}
-                        finally {surface.close();dom.close();data.close()}
-                    } else {
-                        val decoded=javax.imageio.ImageIO.read(java.io.ByteArrayInputStream(bytes))
-                        requireNotNull(decoded){"Unsupported artwork format"}
-                        decoded.toComposeImageBitmap()
-                    }
+                    decodeArtwork(bytes)
                 }
             }.onFailure{error->
                 if(url.startsWith("asset:"))System.getProperty("brunio.visualOutput")?.let{folder->
-                    java.nio.file.Files.writeString(java.nio.file.Path.of(folder,"artwork-errors.txt"),url+" · "+error.javaClass.name+" · "+error.message+"\n",java.nio.file.StandardOpenOption.CREATE,java.nio.file.StandardOpenOption.APPEND)
+                    java.nio.file.Files.writeString(java.nio.file.Path.of(folder,"artwork-errors.txt"),url+" · "+error.stackTraceToString()+"\n",java.nio.file.StandardOpenOption.CREATE,java.nio.file.StandardOpenOption.APPEND)
                 }
             }.getOrNull()
         }
@@ -190,7 +180,7 @@ private fun HomeScreen(state: DesktopScreenState, onAction: (String) -> Unit) {
 private fun SearchScreen(state: DesktopScreenState, onAction: (String) -> Unit, onSearch: (String) -> Unit) {
     var query by remember { mutableStateOf("") }
     Column(Modifier.fillMaxSize().padding(36.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
-        Text(ui("Encuentra tu próxima historia"), style = MaterialTheme.typography.headlineLarge)
+        Text(state.heading?:ui("Encuentra tu próxima historia"), style = MaterialTheme.typography.headlineLarge)
         OutlinedTextField(query, { query = it; onSearch(it) }, placeholder = { Text(ui("Películas, series, actores o directores")) }, singleLine = true,
             shape = RoundedCornerShape(30.dp), modifier = Modifier.fillMaxWidth())
         TileGrid(state.tiles, false, onAction)

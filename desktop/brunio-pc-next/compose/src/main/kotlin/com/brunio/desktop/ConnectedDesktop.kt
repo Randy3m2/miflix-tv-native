@@ -110,22 +110,21 @@ fun ConnectedDesktop(onFullscreen: () -> Unit, onPip: () -> Unit, onPlayerClosed
             dismissButton = { TextButton(onClick = { controller.addFriend = false }) { Text(ui("Cancelar")) } })
     }
     controller.detail?.let { value ->
-        val item = value.getJSONObject("item")
-        AlertDialog(onDismissRequest = { controller.detail = null }, title = { Text(item.optString("title")) },
-            text = { Column(Modifier.widthIn(max = 620.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                RemoteArtwork(item.optString("backdrop"), Modifier.fillMaxWidth().height(220.dp))
-                Text(item.optString("overview"))
-                if (item.optString("type") == "series") {
-                    var season by remember(item.optString("cloudId")) { mutableStateOf(1) }
-                    val seasons = value.optJSONObject("details")?.optJSONArray("seasons")?.objects().orEmpty().filter { it.optInt("season_number") > 0 }
-                    Row {
-                        seasons.forEach { row -> TextButton(onClick = { season = row.getInt("season_number"); controller.chooseEpisodes(item, season) }) { Text("T${row.getInt("season_number")}") } }
-                    }
-                    Button(onClick = { controller.chooseEpisodes(item, season) }) { Text(ui("Ver episodios")) }
-                    OutlinedButton(onClick = { utilities.transfer(item, season, fullSeason = true) }) { Text(ui("Descargar temporada")) }
-                    controller.episodes?.forEach { ep -> TextButton(onClick = { controller.play(item, season, ep.getInt("episode_number")) }) { Text("E${ep.getInt("episode_number")} · ${ep.optString("name")}") }; TextButton(onClick = { utilities.transfer(item, season, ep.getInt("episode_number")) }) { Text("Descargar E${ep.getInt("episode_number")}") };TextButton(onClick={controller.queue.add(QueueEntry(item,season,ep.getInt("episode_number")))}){Text(ui("Añadir a la cola"))} }
-                } else Row { Button(onClick = { controller.play(item) }) { Text(ui("Reproducir")) }; TextButton(onClick = { utilities.transfer(item) }) { Text(ui("Descargar")) };TextButton(onClick={controller.queue.add(QueueEntry(item))}){Text(ui("Añadir a la cola"))} }
-            } }, confirmButton = { TextButton(onClick = { controller.detail = null }) { Text(ui("Cerrar")) } })
+        val item=value.getJSONObject("item")
+        val guest=utilities.party?.isNull("room")==false && utilities.party?.optBoolean("host")!=true
+        DetailsSheet(value,controller.episodes,canPlay=!guest,onAction={event->
+            when(event) {
+                DetailAction.Close->controller.detail=null
+                is DetailAction.Episodes->controller.chooseEpisodes(item,event.season)
+                is DetailAction.Play->if(!guest)controller.play(item,event.season,event.episode)
+                is DetailAction.Download->utilities.transfer(item,event.season,event.episode,event.fullSeason)
+                is DetailAction.Queue->controller.queue.add(QueueEntry(item,event.season,event.episode))
+                is DetailAction.Saved->controller.detailMutation("catalog.favorite",org.json.JSONObject().put("enabled",event.enabled))
+                is DetailAction.Rate->controller.detailMutation("catalog.rate",org.json.JSONObject().put("score",event.score))
+                is DetailAction.Mark->controller.detailMutation("catalog.mark",org.json.JSONObject().put("watched",event.watched).put("season",event.season).put("episode",event.episode))
+                is DetailAction.Person->if(playback==null)controller.openPerson(event.id,event.name)else controller.message="Cierra el reproductor para explorar el reparto."
+            }
+        })
     }
     if(utilities.dialog == null && utilities.error != null) AlertDialog(onDismissRequest={utilities.error=null},title={Text(ui("BruniO"))},text={Text(utilities.error?:"")},confirmButton={TextButton(onClick={utilities.error=null}){Text(ui("Cerrar"))}})
     controller.message?.takeIf { account != null }?.let { message ->

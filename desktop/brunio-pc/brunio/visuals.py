@@ -134,14 +134,17 @@ class ArtworkTile(QPushButton):
     """Full-cover art for provider, category and featured collections."""
     def __init__(self,title,subtitle='',accent='#a795e5',parent=None):
         super().__init__(parent);self.title=title;self.subtitle=subtitle
-        self.pix=QPixmap();self.accent=QColor(accent)
+        self.pix=QPixmap();self.accent=QColor(accent);self.logo_mode=False
         self.setObjectName('artworkTile')
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setAccessibleName(title)
         self.setToolTip(title)
         self.setMinimumHeight(140)
     def setPixmap(self,pix):
-        self.pix=pix;self.update()
+        self.pix=pix;self.logo_mode=False;self.update()
+    def setLogoPixmap(self,pix):
+        # Brand marks stay fully legible over an edge-to-edge gradient card.
+        self.pix=pix;self.logo_mode=True;self.update()
     def paintEvent(self,event):
         p=QPainter(self);p.setRenderHint(QPainter.RenderHint.Antialiasing)
         rect=QRectF(self.rect());path=QPainterPath();path.addRoundedRect(rect,17,17)
@@ -150,13 +153,20 @@ class ArtworkTile(QPushButton):
         back.setColorAt(0,QColor('#282b49'));back.setColorAt(1,QColor('#0b1427'))
         p.fillRect(self.rect(),back)
         if not self.pix.isNull():
-            scaled=self.pix.scaled(self.size(),Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-                                   Qt.TransformationMode.SmoothTransformation)
-            p.drawPixmap((self.width()-scaled.width())//2,(self.height()-scaled.height())//2,scaled)
+            if self.logo_mode:
+                box=QSize(max(40,int(self.width()*.78)),max(32,int(self.height()*.54)))
+                logo=self.pix.scaled(box,Qt.AspectRatioMode.KeepAspectRatio,
+                                     Qt.TransformationMode.SmoothTransformation)
+                p.drawPixmap((self.width()-logo.width())//2,
+                             max(5,(self.height()-70-logo.height())//2),logo)
+            else:
+                scaled=self.pix.scaled(self.size(),Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                                       Qt.TransformationMode.SmoothTransformation)
+                p.drawPixmap((self.width()-scaled.width())//2,(self.height()-scaled.height())//2,scaled)
         gradient=QLinearGradient(0,0,self.width(),self.height())
-        gradient.setColorAt(0,QColor(4,8,20,153))
-        gradient.setColorAt(.5,QColor(3,8,18,55))
-        gradient.setColorAt(1,QColor(4,9,20,214))
+        gradient.setColorAt(0,QColor(4,8,20,12 if self.logo_mode else 153))
+        gradient.setColorAt(.5,QColor(3,8,18,0 if self.logo_mode else 55))
+        gradient.setColorAt(1,QColor(4,9,20,205 if self.logo_mode else 214))
         p.fillRect(self.rect(),gradient)
         p.setPen(QColor('#ffffff'))
         titlefont=QFont('Segoe UI',19,QFont.Weight.Bold);p.setFont(titlefont)

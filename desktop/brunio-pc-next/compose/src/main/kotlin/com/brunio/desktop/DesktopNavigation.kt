@@ -35,7 +35,7 @@ fun DesktopNavigation(selected: DesktopTab, onSelect: (DesktopTab) -> Unit, onPr
     val width by animateDpAsState(if (expanded) 244.dp else 76.dp, tween(180))
     Box(Modifier.fillMaxHeight().width(width).clipToBounds().background(Color(0xFA111114))
         .hoverable(interaction).onFocusChanged { state.focus(it.hasFocus, now()) }) {
-        Column(Modifier.width(244.dp).fillMaxHeight().padding(12.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.fillMaxWidth().fillMaxHeight().padding(12.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("B", Modifier.padding(12.dp, 20.dp), style = MaterialTheme.typography.headlineMedium)
             DesktopTab.entries.forEach { route ->
                 Surface(onClick = { onSelect(route) }, shape = RoundedCornerShape(28.dp),
@@ -44,13 +44,13 @@ fun DesktopNavigation(selected: DesktopTab, onSelect: (DesktopTab) -> Unit, onPr
                     Row(Modifier.height(48.dp).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                         PlayerGlyph(route.glyph, Color.White, Modifier.size(24.dp))
-                        Text(route.title, maxLines = 1)
+                        if(expanded)Text(route.title, maxLines = 1)
                     }
                 }
             }
             Surface(onClick = onProfiles, shape = RoundedCornerShape(28.dp), color = Color(0xFF202025), modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Cambiar perfil" }) {
                 Row(Modifier.height(48.dp).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                    PlayerGlyph("party", Color.White, Modifier.size(24.dp)); Text("Cambiar perfil", maxLines = 1)
+                    PlayerGlyph("party", Color.White, Modifier.size(24.dp)); if(expanded)Text("Cambiar perfil", maxLines = 1)
                 }
             }
         }

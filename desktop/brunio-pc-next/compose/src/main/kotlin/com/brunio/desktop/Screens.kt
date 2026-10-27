@@ -72,7 +72,7 @@ fun RemoteArtwork(url: String, modifier: Modifier = Modifier, description: Strin
                     val path = roots.map { it.resolve(name) }.first { java.nio.file.Files.isRegularFile(it) }
                     java.nio.file.Files.newInputStream(path)
                 } else {
-                    require(uri.scheme == "https" && uri.userInfo == null)
+                    require(uri.scheme in listOf("http","https") && uri.userInfo == null)
                     val connection = uri.toURL().openConnection()
                     connection.connectTimeout = 8000; connection.readTimeout = 8000
                     connection.getInputStream()
@@ -89,6 +89,10 @@ fun RemoteArtwork(url: String, modifier: Modifier = Modifier, description: Strin
                         finally {surface.close();dom.close();data.close()}
                     } else SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap()
                 }
+            }.onFailure{error->
+                if(url.startsWith("asset:"))System.getProperty("brunio.visualOutput")?.let{folder->
+                    java.nio.file.Files.writeString(java.nio.file.Path.of(folder,"artwork-errors.txt"),url+" · "+error.javaClass.name+" · "+error.message+"\n",java.nio.file.StandardOpenOption.CREATE,java.nio.file.StandardOpenOption.APPEND)
+                }
             }.getOrNull()
         }
         value?.let{ArtworkCache.put(url,it)}
@@ -99,13 +103,14 @@ fun RemoteArtwork(url: String, modifier: Modifier = Modifier, description: Strin
 }
 
 @Composable
-private fun MediaCard(tile: MediaTile, wide: Boolean, onOpen: (String) -> Unit) {
+private fun MediaCard(tile: MediaTile, wide: Boolean, onOpen: (String) -> Unit, fillCell:Boolean=false) {
     val interaction=remember{MutableInteractionSource()}
     val hovered by interaction.collectIsHoveredAsState()
     val scale by animateFloatAsState(if(hovered)1.025f else 1f)
-    Column(Modifier.width(if (wide) 300.dp else 174.dp).hoverable(interaction).graphicsLayer(scaleX=scale,scaleY=scale).clickable { onOpen(tile.id) }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val bounds=if(fillCell)Modifier.fillMaxWidth()else Modifier.width(if(wide)300.dp else 174.dp)
+    Column(bounds.hoverable(interaction).graphicsLayer(scaleX=scale,scaleY=scale).clickable { onOpen(tile.id) }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box {
-            HoverArtwork(tile.image,tile.animation,hovered,Modifier.fillMaxWidth().height(if(wide)169.dp else 252.dp).clip(RoundedCornerShape(12.dp)).border(1.dp,if(hovered)Color.White.copy(alpha=.6f)else Color.Transparent,RoundedCornerShape(12.dp)))
+            HoverArtwork(tile.image,tile.animation,hovered,Modifier.fillMaxWidth().aspectRatio(if(wide)16f/9f else 2f/3f).clip(RoundedCornerShape(12.dp)).border(1.dp,if(hovered)Color.White.copy(alpha=.6f)else Color.Transparent,RoundedCornerShape(12.dp)))
             tile.progress?.let { progress -> LinearProgressIndicator(progress = { progress.coerceIn(0f, 1f) },
                 modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp), color = Color.White) }
         }
@@ -205,7 +210,7 @@ private fun CatalogScreen(tab: DesktopTab, state: DesktopScreenState, onAction: 
 private fun TileGrid(tiles: List<MediaTile>, wide: Boolean, onOpen: (String) -> Unit) {
     if (tiles.isEmpty()) EmptyState("No hay contenido para mostrar", "Los resultados y tus selecciones aparecerán aquí.")
     else LazyVerticalGrid(columns = GridCells.Adaptive(if (wide) 300.dp else 174.dp), horizontalArrangement = Arrangement.spacedBy(18.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
-        items(tiles, key = { it.id }) { MediaCard(it, wide, onOpen) }
+        items(tiles, key = { it.id }) { MediaCard(it, wide, onOpen,fillCell=true) }
     }
 }
 

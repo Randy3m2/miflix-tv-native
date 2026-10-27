@@ -67,5 +67,5 @@ jobs:
       - uses: actions/upload-artifact@v6
         with:
           name: BruniO-PC-UI-Review-${{ github.sha }}
-          path: desktop/brunio-pc-next/ui-review/*.png
+          path: desktop/brunio-pc-next/ui-review/*
           if-no-files-found: error

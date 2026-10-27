@@ -1,6 +1,8 @@
 package com.brunio.desktop
 
 import androidx.compose.material3.*
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
@@ -10,7 +12,11 @@ import androidx.compose.ui.window.*
 fun main(args:Array<String>) {
     if("--visual-smoke" in args) {
         System.setProperty("skiko.renderApi","SOFTWARE")
-        visualSmoke(java.nio.file.Path.of(args.getOrNull(args.indexOf("--visual-smoke")+1)?:error("Missing screenshot directory")))
+        val output=java.nio.file.Path.of(args.getOrNull(args.indexOf("--visual-smoke")+1)?:error("Missing screenshot directory"))
+        java.nio.file.Files.createDirectories(output)
+        System.setProperty("brunio.visualOutput",output.toString())
+        java.nio.file.Files.writeString(output.resolve("resources.txt"),"resources="+System.getProperty("compose.application.resources.dir"))
+        visualSmoke(output)
         return
     }
     if("--smoke" in args) {
@@ -33,11 +39,14 @@ fun main(args:Array<String>) {
     var previousPlacement by remember{mutableStateOf(WindowPlacement.Floating)}
     fun restore() { if(pip){pip=false;state.size=previousSize;state.placement=previousPlacement} }
     Window(state=state,alwaysOnTop=pip,onCloseRequest={if(pip)restore() else exitApplication()},title="BruniO PC · Desarrollo") {
-        MaterialTheme(colorScheme=darkColorScheme(background=Color(0xFF080809),surface=Color(0xFF151518),primary=Color.White,onPrimary=Color.Black)) {
+        LaunchedEffect(Unit){applyWindowTheme(window)}
+        BrunioTheme {
+            Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background,contentColor=MaterialTheme.colorScheme.onBackground) {
             ConnectedDesktop(
                 onFullscreen={state.placement=if(state.placement==WindowPlacement.Fullscreen)WindowPlacement.Floating else WindowPlacement.Fullscreen},
                 onPip={if(pip)restore() else{previousSize=state.size;previousPlacement=state.placement;pip=true;state.placement=WindowPlacement.Floating;state.size=DpSize(560.dp,340.dp)}},
                 onPlayerClosed=::restore)
+            }
         }
     }
 }

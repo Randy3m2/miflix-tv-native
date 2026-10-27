@@ -16,6 +16,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Service packaging failed' }
     Copy-Item 'build/service/BruniO-service' "$resourceRoot/bridge" -Recurse -Force
     Copy-Item '../brunio-pc/assets' "$resourceRoot/assets" -Recurse -Force
+    if (-not (Test-Path "$resourceRoot/assets/brunio_splash.png")) { throw 'Bundled artwork missing from resource input' }
     Copy-Item '../brunio-pc/LICENSE.txt' $resourceRoot -Force
     Copy-Item 'THIRD_PARTY_NOTICES.md' $resourceRoot -Force
     if (-not $env:BRUNIO_VLC_HOME -or -not (Test-Path "$env:BRUNIO_VLC_HOME/libvlc.dll")) { throw 'Verified VLC runtime must be prepared first' }
@@ -35,6 +36,7 @@ try {
     } finally { Pop-Location }
     $launcher = Join-Path $projectRoot 'compose/build/compose/binaries/main/app/BruniO-PC/BruniO-PC.exe'
     if (-not (Test-Path $launcher)) { throw 'Packaged launcher missing' }
+    Get-ChildItem (Join-Path (Split-Path $launcher) 'app/resources') -Depth 1 | Select-Object FullName | Format-Table -AutoSize
     # Smoke test must use bundled natives, not the VLC directory prepared for unit tests.
     $savedVlcHome = $env:BRUNIO_VLC_HOME
     $savedPlugins = $env:VLC_PLUGIN_PATH

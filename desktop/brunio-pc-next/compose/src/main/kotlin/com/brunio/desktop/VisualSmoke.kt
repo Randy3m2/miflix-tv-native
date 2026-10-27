@@ -23,11 +23,13 @@ fun visualSmoke(directory:Path)=application {
     val width=(bounds.width-40).coerceIn(800,1440);val height=(bounds.height-80).coerceIn(600,900)
     val state=rememberWindowState(width=width.dp,height=height.dp,position=WindowPosition(20.dp,20.dp))
     Window(onCloseRequest=::exitApplication,state=state,title="BruniO · UI fixture review") {
-        MaterialTheme(colorScheme=darkColorScheme(background=Color(0xFF080809),surface=Color(0xFF151518),primary=Color.White,onPrimary=Color.Black)) {
+        LaunchedEffect(Unit){applyWindowTheme(window)}
+        BrunioTheme {
             val art="asset:brunio_splash.png"
             val cards=(1..12).map{MediaTile("test:$it","Título de prueba $it",art,"2026",if(it<4).4f else null)}
             val tab=routes.getOrNull(scene)
-            Box(Modifier.fillMaxSize().background(Color(0xFF080809))) {
+            Surface(Modifier.fillMaxSize(),color=Color(0xFF080809),contentColor=Color.White) {
+            Box(Modifier.fillMaxSize()) {
                 if(tab!=null) {
                     Box(Modifier.fillMaxSize().padding(start=76.dp)) {
                         DesktopScreen(tab,DesktopScreenState(
@@ -39,6 +41,7 @@ fun visualSmoke(directory:Path)=application {
                 } else if(scene==routes.size) ProfilePicker(listOf(
                     MediaTile("a","Principal","asset:brunio_avatar_astronaut.png"),MediaTile("b","Randy","asset:brunio_avatar_fox.png"),MediaTile("c","Kids","asset:brunio_avatar_robot.png")),{}, {})
                 else TvPlayerControls(PlaybackUi("Revisión visual del reproductor",source="Fuente de prueba · 1080p",paused=false,position=65000,duration=3600000,seekable=true),{},{},{})
+            }
             }
             LaunchedEffect(Unit) {
                 Files.createDirectories(directory)

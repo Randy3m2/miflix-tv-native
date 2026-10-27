@@ -391,8 +391,8 @@ class Window(DesktopFeatures,QMainWindow):
     def search(self):
         self.select_nav('search');l,page=self.page('BruniO')
         l.setSpacing(17)
-        bar,bl=row();bar.setObjectName('searchBar');bar.setMaximumWidth(860)
-        bar.setMinimumHeight(60);bar.setMinimumWidth(510)
+        bar,bl=row();bar.setObjectName('searchBar');bar.setMaximumWidth(980)
+        bar.setMinimumHeight(62);bar.setMinimumWidth(460)
         bl.setContentsMargins(12,4,12,4);bl.setSpacing(8)
         glyph=QLabel();glyph.setPixmap(icon('search','#b9b3ec').pixmap(24,24));bl.addWidget(glyph)
         q=QLineEdit();q.setObjectName('searchInput')
@@ -401,7 +401,7 @@ class Window(DesktopFeatures,QMainWindow):
         glow=QGraphicsDropShadowEffect(bar);glow.setBlurRadius(23)
         glow.setColor(QColor(139,116,245,102));glow.setOffset(0,0)
         bar.setGraphicsEffect(glow)
-        l.addWidget(bar,0,Qt.AlignmentFlag.AlignHCenter)
+        l.addSpacing(8);l.addWidget(bar,0,Qt.AlignmentFlag.AlignHCenter)
         filter_state={'value':'all','items':[],'people':[],'query':'','serial':0}
         filters=[('all','Todo','All'),('movie','Películas','Movies'),('series','Series','Series'),
                  ('actors','Actores','Actors'),('directors','Directores','Directors'),('genres','Géneros','Genres')]
@@ -413,7 +413,8 @@ class Window(DesktopFeatures,QMainWindow):
         for previous in self.history.get(owner,[])[:5]:
             b=button('⌕  '+previous,lambda text=previous:(q.setText(text),debounce.stop(),submit()))
             b.setObjectName('historyPill');rl.addWidget(b)
-        rl.addStretch();l.addWidget(recent)
+        rl.addStretch()
+        if self.history.get(owner,[]):l.addWidget(recent)
         l.addWidget(results_title)
         results=QWidget();results.setObjectName('searchResults')
         result_l=QVBoxLayout(results);result_l.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -465,7 +466,8 @@ class Window(DesktopFeatures,QMainWindow):
         select_filter=self.filter_pills(l,filters,on_filter)
         # Move the filter control from the appended position to under the search field.
         filter_bar=l.itemAt(l.count()-1).widget()
-        l.removeWidget(filter_bar);l.insertWidget(1,filter_bar)
+        l.removeWidget(filter_bar);filter_bar.setMaximumWidth(880)
+        l.insertWidget(2,filter_bar,0,Qt.AlignmentFlag.AlignHCenter)
         def fetch_people(query):
             serial=filter_state['serial']
             def found(data):
@@ -521,12 +523,66 @@ class Window(DesktopFeatures,QMainWindow):
             return sorted(seen.values(),key=lambda x:x.get('rating',0),reverse=True)[:60]
         self.run(load,lambda rows:self.grid(l,rows) if page==self.page_id else None)
     def collections(self):
-        l,page=self.page(self.t('Colecciones','Collections'))
-        groups=[('Netflix',8),('Disney+',337),('Prime Video',9),('Apple TV+',350),('Max',1899)]
-        for name,pid in groups:l.addWidget(button(name,lambda name=name,pid=pid:self.provider(name,pid)))
-        for name,gid in [('Action',28),('Comedy',35),('Drama',18),('Horror',27),('Sci-Fi',878),('Thriller',53),('Animation',16)]:l.addWidget(button(name,lambda name=name,gid=gid:self.catalog_page(name,'/discover/movie','movie',{'with_genres':gid})))
-        l.addWidget(button(self.t('Próximamente','Coming soon'),lambda:self.catalog_page('Coming soon','/discover/movie','movie',{'primary_release_date.gte':time.strftime('%Y-%m-%d')})))
-        for year in range(time.localtime().tm_year,1999,-1):l.addWidget(button(str(year),lambda year=year:self.catalog_page(str(year),'/discover/movie','movie',{'primary_release_year':year})))
+        self.select_nav('collections')
+        l,page=self.page('BruniO')
+        head,hl=row();hl.setSpacing(12)
+        titles,tl=column();tl.setContentsMargins(0,0,0,0);tl.setSpacing(4)
+        title=label(self.t('Explorar','Explore'),30);title.setObjectName('pageTitle');tl.addWidget(title)
+        subtitle=label(self.t('Un universo de historias, a tu manera.','Discover a world of stories.'),13)
+        subtitle.setObjectName('muted');tl.addWidget(subtitle)
+        hl.addWidget(titles,1);l.addWidget(head)
+        l.addWidget(self.section_title(self.t('Tus plataformas favoritas','Your favorite platforms')))
+        providers=[('Netflix',8,'N','Series y películas','Shows & movies'),
+                   ('Disney+',337,'✦','Magia para todos','For every age'),
+                   ('Prime Video',9,'▶','Historias sin límites','Infinite stories'),
+                   ('Apple TV+',350,'◉','Originales premiados','Award-winning originals'),
+                   ('HBO Max',1899,'◆','Grandes producciones','Premium entertainment'),
+                   ('Paramount+',531,'★','Cine y series','Movies and series')]
+        grid=QGridLayout();grid.setSpacing(13);grid.setContentsMargins(0,0,0,0)
+        for i,(name,pid,symbol,es,en) in enumerate(providers):
+            tile=button(symbol+'    '+name+'\n'+self.t(es,en)+'     ↗',
+                        lambda name=name,pid=pid:self.provider(name,pid))
+            tile.setObjectName('collectionTile');tile.setMinimumHeight(114)
+            tile.setSizePolicy(QSizePolicy.Policy.Expanding,QSizePolicy.Policy.Fixed)
+            tile.setToolTip(name);grid.addWidget(tile,i//3,i%3)
+        l.addLayout(grid)
+        l.addWidget(self.section_title(self.t('Descubre por género','Browse by genre'),
+                                      self.t('Encuentra justo lo que te apetece ver.','Find something for every mood.')))
+        genres=[('Acción','Action',28,'⚡'),('Comedia','Comedy',35,'☺'),
+                ('Drama','Drama',18,'◈'),('Terror','Horror',27,'☾'),
+                ('Ciencia ficción','Sci-Fi',878,'✧'),('Suspenso','Thriller',53,'◇'),
+                ('Animación','Animation',16,'✿'),('Aventura','Adventure',12,'➤')]
+        g=QGridLayout();g.setSpacing(12);g.setContentsMargins(0,0,0,0)
+        for i,(es,en,gid,symbol) in enumerate(genres):
+            name=self.t(es,en)
+            tile=button(symbol+'    '+name+'     ↗',
+                lambda gid=gid,name=name:self.catalog_page(name,'/discover/movie','movie',{'with_genres':gid}))
+            tile.setObjectName('genreTile');tile.setMinimumHeight(86)
+            tile.setSizePolicy(QSizePolicy.Policy.Expanding,QSizePolicy.Policy.Fixed)
+            g.addWidget(tile,i//4,i%4)
+        l.addLayout(g)
+        l.addWidget(self.section_title(self.t('Colecciones especiales','Curated collections')))
+        special,sl=row();sl.setSpacing(12)
+        upcoming=button('✧   '+self.t('Próximamente','Coming soon')+'    ↗',
+            lambda:self.catalog_page(self.t('Próximamente','Coming soon'),'/discover/movie','movie',
+                                     {'primary_release_date.gte':time.strftime('%Y-%m-%d')}))
+        upcoming.setObjectName('collectionWide');upcoming.setMinimumHeight(78);sl.addWidget(upcoming,1)
+        recent=button('★   '+self.t('Más valoradas','Top rated')+'    ↗',
+            lambda:self.catalog_page(self.t('Más valoradas','Top rated'),'/movie/top_rated','movie'))
+        recent.setObjectName('collectionWide');recent.setMinimumHeight(78);sl.addWidget(recent,1)
+        l.addWidget(special)
+        l.addWidget(self.section_title(self.t('Viaja en el tiempo','Explore by year')))
+        years,yl=row();yl.setSpacing(9)
+        for year in range(time.localtime().tm_year,2015,-1):
+            chip=button(str(year),lambda year=year:self.catalog_page(str(year),'/discover/movie','movie',{'primary_release_year':year}))
+            chip.setObjectName('yearPill');chip.setFixedSize(92,40);yl.addWidget(chip)
+        yl.addStretch();l.addWidget(EdgeRail(years,58))
+        older=button(self.t('Explorar años anteriores  ↗','Explore older years  ↗'),lambda:self.years_picker())
+        older.setObjectName('secondaryAction');older.setMaximumWidth(260);l.addWidget(older)
+    def years_picker(self):
+        years=[str(y) for y in range(time.localtime().tm_year,1899,-1)]
+        value,ok=QInputDialog.getItem(self,'BruniO',self.t('Selecciona el año','Choose a year'),years,0,False)
+        if ok and value:self.catalog_page(value,'/discover/movie','movie',{'primary_release_year':int(value)})
     def catalog_page(self,title,path,kind,params=None):
         l,page=self.page(title);self.run(lambda:self.client.catalog(path,kind,params),lambda items:self.grid(l,items) if page==self.page_id else None)
     def provider(self,title,pid):

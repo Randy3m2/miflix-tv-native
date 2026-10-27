@@ -79,7 +79,7 @@ class UITests(unittest.TestCase):
         self.assertTrue(self.w.extra_nav.isHidden())
         self.w.toggle_more();self.assertFalse(self.w.extra_nav.isHidden())
         self.w.toggle_more();self.assertTrue(self.w.extra_nav.isHidden())
-        self.w.select_nav('live');self.assertFalse(self.w.extra_nav.isHidden())
+        self.w.select_nav('friends');self.assertFalse(self.w.extra_nav.isHidden())
         self.assertIsInstance(PlatformTile('Netflix'),QPushButton)
         resume=ContinueCard('A movie',62)
         self.assertAlmostEqual(resume.progress,.62)
@@ -92,6 +92,44 @@ class UITests(unittest.TestCase):
         entries=host.findChildren(ContinueCard)
         self.assertEqual(len(entries),1)
         self.assertAlmostEqual(entries[0].progress,.72)
+
+    def test_rc8_appearance_navigation_and_theme_preference(self):
+        self.w.settings(refresh=False)
+        page=self.w.stack.currentWidget()
+        self.assertTrue(page.findChildren(QPushButton,'settingsNavButton'))
+        self.assertTrue(page.findChild(QPushButton,'updateButton'))
+        self.w.change_theme('light')
+        self.assertEqual(self.w.preferences['theme'],'light')
+        self.assertTrue(self.app.property('lightTheme'))
+        self.w.change_theme('dark')
+        self.assertEqual(self.w.preferences['theme'],'dark')
+        self.assertFalse(self.app.property('lightTheme'))
+        self.w.change_theme('auto')
+        self.assertEqual(self.w.preferences['theme'],'auto')
+        self.w.change_theme('dark')
+
+    def test_rc8_explore_uses_visual_tiles_and_year_picker(self):
+        self.w.collections()
+        page=self.w.stack.currentWidget()
+        self.assertGreaterEqual(len(page.findChildren(QPushButton,'collectionTile')),6)
+        self.assertGreaterEqual(len(page.findChildren(QPushButton,'genreTile')),8)
+        self.assertGreaterEqual(len(page.findChildren(QPushButton,'yearPill')),5)
+        self.assertFalse(any(b.text()=='Netflix' for b in page.findChildren(QPushButton,'pillButton')))
+
+    def test_rc8_live_tv_quick_filters_and_brand_animation_api(self):
+        from brunio.visuals import PlatformTile
+        from brunio.ui import PLATFORM_ASSETS
+        self.w.image=lambda *a,**kw:None
+        self.w.live()
+        labels=[b.text() for b in self.w.stack.currentWidget().findChildren(QPushButton,'filterPill')]
+        self.assertIn('Favoritos',labels)
+        self.assertIn('Deportes',labels)
+        widget=PlatformTile('Netflix')
+        self.assertTrue((PLATFORM_ASSETS/'netflix.gif').is_file())
+        widget.setAnimatedLogo(PLATFORM_ASSETS/'netflix.gif')
+        self.assertIsNotNone(widget.movie)
+        widget.movie.stop()
+        widget.close()
 
     def test_tv_live_hash_matches_kotlin_java(self):
         self.assertEqual(java_hash('abc'),96354);self.assertEqual(java_hash(''),0)

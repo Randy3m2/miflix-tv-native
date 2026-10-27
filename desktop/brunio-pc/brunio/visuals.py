@@ -1,6 +1,6 @@
 """Native Qt visual components; no web view or extra runtime required."""
 from PySide6.QtCore import Qt, QSize, QRectF, QByteArray, QPointF
-from PySide6.QtGui import QPixmap, QIcon, QPainter, QPainterPath, QColor, QLinearGradient, QRadialGradient, QPolygonF, QPen, QFont
+from PySide6.QtGui import QPixmap, QIcon, QPainter, QPainterPath, QColor, QLinearGradient, QRadialGradient, QPolygonF, QPen, QFont, QMovie
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QWidget, QPushButton
 
@@ -16,7 +16,7 @@ PATHS={
  'calendar':'<rect x="3" y="5" width="18" height="17" rx="2"/><path d="M7 2v6M17 2v6M3 10h18"/>',
  'downloads':'<path d="M12 3v12m-5-5 5 5 5-5M3 17v4h18v-4"/>',
  'profiles':'<circle cx="12" cy="8" r="4"/><path d="M3 22v-3a9 9 0 0 1 18 0v3"/>',
- 'settings':'<path d="m9 2-1 4-4 1-2 5 3 3v5l5 2 3-3 5 1 3-5-2-4 1-5-5-2-3 3Z"/><circle cx="12" cy="12" r="3"/>',
+ 'settings':'<path d="M3 7h18M3 17h18"/><circle cx="9" cy="7" r="3"/><circle cx="16" cy="17" r="3"/>',
  'bell':'<path d="M4 18h16l-2-4V9a6 6 0 0 0-12 0v5ZM9 21h6"/>',
  'volume':'<path d="M3 10v4h4l5 4V6l-5 4H3Zm12-1a5 5 0 0 1 0 6m3-9a9 9 0 0 1 0 12"/>',
  'fullscreen':'<path d="M4 9V4h5m6 0h5v5M4 15v5h5m6 0h5v-5"/>',
@@ -78,13 +78,28 @@ class PlatformTile(QPushButton):
         self.setObjectName('platformTile')
         self.setCursor(Qt.CursorShape.PointingHandCursor)
     def setPixmap(self,pix):self.pix=pix;self.update()
+    def setAnimatedLogo(self,path):
+        if getattr(self,'movie',None):
+            self.movie.stop();self.movie.deleteLater()
+        self.movie=QMovie(str(path),QByteArray(),self)
+        self.movie.setCacheMode(QMovie.CacheMode.CacheNone)
+        self.movie.frameChanged.connect(lambda _frame:self.update())
+        if self.isVisible():self.movie.start()
+    def showEvent(self,event):
+        super().showEvent(event)
+        if getattr(self,'movie',None):self.movie.start()
+    def hideEvent(self,event):
+        if getattr(self,'movie',None):self.movie.stop()
+        super().hideEvent(event)
     def paintEvent(self,event):
         p=QPainter(self);p.setRenderHint(QPainter.RenderHint.Antialiasing)
         rect=QRectF(self.rect()).adjusted(1.5,1.5,-1.5,-1.5)
         path=QPainterPath();path.addRoundedRect(rect,12,12)
         p.setClipPath(path);p.fillPath(path,QColor('#0b111e'))
-        if not self.pix.isNull():
-            pix=self.pix.scaled(int(self.width()*.77),int(self.height()*.59),Qt.AspectRatioMode.KeepAspectRatio,Qt.TransformationMode.SmoothTransformation)
+        animated=self.movie.currentPixmap() if getattr(self,'movie',None) else QPixmap()
+        source=animated if not animated.isNull() else self.pix
+        if not source.isNull():
+            pix=source.scaled(int(self.width()*.78),int(self.height()*.62),Qt.AspectRatioMode.KeepAspectRatio,Qt.TransformationMode.SmoothTransformation)
             p.drawPixmap((self.width()-pix.width())//2,(self.height()-pix.height())//2,pix)
         else:
             font=QFont('Segoe UI',16,QFont.Weight.Bold);p.setFont(font)
@@ -147,8 +162,11 @@ class EdgeRail(QWidget):
         outer=QHBoxLayout(self);outer.setContentsMargins(0,0,0,0)
         self.scroll=QScrollArea();self.scroll.setWidgetResizable(True);self.scroll.setFrameShape(QScrollArea.Shape.NoFrame)
         self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff);self.scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff);self.scroll.setWidget(content);outer.addWidget(self.scroll)
-        self.previous=QPushButton(self);self.previous.setObjectName('railEdge');self.previous.setIcon(icon('left','#ffffff'));self.previous.setToolTip('Anterior')
-        self.next=QPushButton(self);self.next.setObjectName('railEdge');self.next.setIcon(icon('right','#ffffff'));self.next.setToolTip('Siguiente')
+        self.previous=QPushButton(self);self.previous.setObjectName('railEdge');self.previous.setIcon(icon('left','#ece5ff'));self.previous.setToolTip('Anterior')
+        self.next=QPushButton(self);self.next.setObjectName('railEdge');self.next.setIcon(icon('right','#ece5ff'));self.next.setToolTip('Siguiente')
+        self.previous.setIconSize(QSize(18,18));self.next.setIconSize(QSize(18,18))
+        self.previous.setCursor(Qt.CursorShape.PointingHandCursor);self.next.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.previous.setAccessibleName('Previous items');self.next.setAccessibleName('Next items')
         self.previous.clicked.connect(lambda:self.move_by(-1));self.next.clicked.connect(lambda:self.move_by(1))
         bar=self.scroll.horizontalScrollBar();bar.valueChanged.connect(self.update_buttons);bar.rangeChanged.connect(self.update_buttons)
     def move_by(self,direction):
@@ -156,8 +174,11 @@ class EdgeRail(QWidget):
     def update_buttons(self,*args):
         bar=self.scroll.horizontalScrollBar();self.previous.setVisible(bar.value()>bar.minimum());self.next.setVisible(bar.value()<bar.maximum());self.previous.raise_();self.next.raise_()
     def resizeEvent(self,event):
-        super().resizeEvent(event);height=min(90,max(44,self.height()-24));y=(self.height()-height)//2
-        self.previous.setGeometry(0,y,44,height);self.next.setGeometry(max(0,self.width()-44),y,44,height);self.update_buttons()
+        super().resizeEvent(event)
+        diameter=38;y=(self.height()-diameter)//2
+        self.previous.setGeometry(5,y,diameter,diameter)
+        self.next.setGeometry(max(5,self.width()-diameter-5),y,diameter,diameter)
+        self.update_buttons()
 
 class ProfileAvatar(Poster):
     def paintEvent(self,event):

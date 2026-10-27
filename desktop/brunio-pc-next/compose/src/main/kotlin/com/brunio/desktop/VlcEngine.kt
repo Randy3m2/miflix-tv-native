@@ -7,6 +7,11 @@ import java.nio.ByteOrder
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import com.sun.jna.NativeLibrary
+import com.sun.jna.Native
+import com.sun.jna.WString
+import com.sun.jna.win32.StdCallLibrary
+import java.nio.file.Files
+import java.nio.file.Path
 import uk.co.caprica.vlcj.factory.MediaPlayerFactory
 import uk.co.caprica.vlcj.factory.discovery.NativeDiscovery
 import uk.co.caprica.vlcj.player.base.MediaPlayer
@@ -15,6 +20,8 @@ import uk.co.caprica.vlcj.player.embedded.videosurface.callback.BufferFormat
 import uk.co.caprica.vlcj.player.embedded.videosurface.callback.BufferFormatCallback
 import uk.co.caprica.vlcj.player.embedded.videosurface.callback.RenderCallback
 import uk.co.caprica.vlcj.player.embedded.videosurface.callback.format.RV32BufferFormat
+
+internal interface DllSearchPath:StdCallLibrary { fun SetDllDirectoryW(path:WString):Boolean }
 
 /** CPU video frames permit Compose controls to overlay video without heavyweight-window clipping. */
 class VlcEngine(private val maxWidth:Int?=null) : Closeable {
@@ -29,8 +36,12 @@ class VlcEngine(private val maxWidth:Int?=null) : Closeable {
     private val factory: MediaPlayerFactory
     val player: uk.co.caprica.vlcj.player.embedded.EmbeddedMediaPlayer
     init {
-        System.getenv("BRUNIO_VLC_HOME")?.let { path -> listOf("vlc", "libvlc", "libvlccore").forEach { NativeLibrary.addSearchPath(it, path) } }
-        NativeDiscovery().discover()
+        val bundled=System.getProperty("compose.application.resources.dir")?.let{Path.of(it,"vlc")}?.takeIf{Files.isDirectory(it)}
+        val home=System.getenv("BRUNIO_VLC_HOME") ?: bundled?.toString()
+        if(home!=null) {
+            listOf("vlc","libvlc","libvlccore").forEach{NativeLibrary.addSearchPath(it,home)}
+            if(System.getProperty("os.name").startsWith("Windows"))Native.load("kernel32",DllSearchPath::class.java).SetDllDirectoryW(WString(home))
+        } else NativeDiscovery().discover()
         factory = MediaPlayerFactory("--no-video-title-show", "--network-caching=1000")
         player = factory.mediaPlayers().newEmbeddedMediaPlayer()
         val format = object : BufferFormatCallback {

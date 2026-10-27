@@ -12,6 +12,7 @@ from brunio import updater
 from sports import scoreboard,follows
 import datetime as dt
 import json
+import sys
 
 PC_VERSION='2.0.0-rc1'  # Reserved for the Compose client; no release is published here.
 
@@ -36,7 +37,9 @@ class Remaining:
         if scope!=self.scope_id():raise ValueError('Profile changed')
     def download_store(self):
         if self._download_store is None:
-            root=Path(os.environ.get('LOCALAPPDATA',str(Path.home())))/'BruniO'/'PCNext'/'Downloads'
+            root=Path(os.environ.get('LOCALAPPDATA',str(Path.home())))/'BruniO'
+            if not getattr(sys,'frozen',False):root=root/'PCNext'
+            root=root/'Downloads'
             self._download_store=DownloadStore(root)
         return self._download_store
     def download_list(self):
@@ -262,7 +265,8 @@ class Remaining:
 
     def subscriptions(self):
         entries=self.client.calendar_subscriptions()
-        teams=json.loads((Path(__file__).resolve().parents[1]/'assets'/'calendar_teams.json').read_text())
+        folder=Path(sys._MEIPASS)/'assets' if getattr(sys,'frozen',False) else Path(__file__).resolve().parents[1]/'assets'
+        teams=json.loads((folder/'calendar_teams.json').read_text())
         return {'scope':self.scope_id(),'entries':entries,'teams':teams}
     def subscribe(self,scope,key,enabled):
         self.require_scope(scope)

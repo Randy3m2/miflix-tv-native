@@ -21,6 +21,12 @@ class BridgeClient : Closeable {
     private fun start() {
         check(!closed) { "La conexión se cerró" }
         if (process != null) return
+        val packaged=System.getProperty("compose.application.resources.dir")?.let{Path.of(it,"bridge","BruniO-service.exe")}
+        if(packaged!=null && Files.isRegularFile(packaged)) {
+            process=ProcessBuilder(packaged.toAbsolutePath().toString()).redirectError(ProcessBuilder.Redirect.DISCARD).start()
+            input=process!!.inputStream.bufferedReader(Charsets.UTF_8);output=process!!.outputStream.bufferedWriter(Charsets.UTF_8)
+            return
+        }
         val configured = System.getenv("BRUNIO_BRIDGE")?.let { Path.of(it) }
         val path = configured ?: sequenceOf(
             Path.of("..", "backend", "bridge.py"),

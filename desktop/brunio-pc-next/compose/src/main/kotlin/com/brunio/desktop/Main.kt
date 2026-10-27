@@ -7,7 +7,21 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.*
 
-fun main() = application {
+fun main(args:Array<String>) {
+    if("--smoke" in args) {
+        try {
+            kotlinx.coroutines.runBlocking { BridgeClient().use { it.call("session.restore") } }
+            val media=System.getenv("BRUNIO_SMOKE_MEDIA")?:error("Missing native smoke fixture")
+            VlcEngine().use { engine ->
+                engine.play(media)
+                val until=System.nanoTime()+12_000_000_000L
+                while(engine.frame.get()==null && !engine.failed.get() && System.nanoTime()<until)Thread.sleep(20)
+                check(engine.frame.get()!=null && !engine.failed.get())
+            }
+            kotlin.system.exitProcess(0)
+        } catch(_:Throwable) { System.err.println("Bundled application smoke failed");kotlin.system.exitProcess(1) }
+    }
+    application {
     val state=rememberWindowState(width=1280.dp,height=800.dp)
     var pip by remember{mutableStateOf(false)}
     var previousSize by remember{mutableStateOf(DpSize(1280.dp,800.dp))}
@@ -21,4 +35,6 @@ fun main() = application {
                 onPlayerClosed=::restore)
         }
     }
+}
+
 }

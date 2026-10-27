@@ -15,7 +15,7 @@ permissions:
 jobs:
   check:
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-java@v5
@@ -56,3 +56,11 @@ jobs:
       - name: Compile interface and test navigation
         working-directory: desktop/brunio-pc-next/compose
         run: gradle --no-daemon test compileKotlin
+      - name: Build and smoke-test self-contained PC preview
+        shell: pwsh
+        run: desktop/brunio-pc-next/scripts/build_windows.ps1
+      - uses: actions/upload-artifact@v6
+        with:
+          name: BruniO-PC-Compose-Preview-${{ github.sha }}
+          path: desktop/brunio-pc-next/installer/BruniO-PC-Setup-2.0.0-rc1.exe
+          if-no-files-found: error

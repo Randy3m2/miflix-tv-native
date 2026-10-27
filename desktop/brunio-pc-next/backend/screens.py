@@ -3,10 +3,11 @@ from pathlib import Path
 from urllib.parse import urlencode, quote
 import datetime as dt
 import re
+import sys
 from brunio.core import LIVE, valid_url, now_ms
 from brunio.playlist import read_m3u
 
-ASSETS = Path(__file__).resolve().parents[2] / 'brunio-pc' / 'assets'
+ASSETS = Path(sys._MEIPASS)/'assets' if getattr(sys,'frozen',False) else Path(__file__).resolve().parents[2] / 'brunio-pc' / 'assets'
 PLATFORMS = [('Netflix',8),('Disney+',337),('Prime Video',9),('Apple TV+',350),('HBO Max',1899),('Paramount+',531),('AMC+',526),('Hulu',15),('Crunchyroll',283)]
 GENRES = [('Acción',28),('Comedia',35),('Drama',18),('Terror',27),('Ciencia ficción',878),('Animación',16)]
 SHELVES = {'popular_movies':('/movie/popular','movie'), 'popular_series':('/tv/popular','series'), 'top':('/movie/top_rated','movie')}

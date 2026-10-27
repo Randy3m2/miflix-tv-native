@@ -9,16 +9,19 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'brunio-pc'))
-from brunio.core import Client
+from brunio.core import Client,get_json
 from brunio.vault import Vault
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from screens import Screens
 from remaining import Remaining
 
 
+def local_transport(url,method='GET',headers=None,body=None,timeout=8):
+    return get_json(url,method,headers,body,min(timeout,8))
+
 class Bridge(Screens, Remaining):
     def __init__(self, client=None, vault=None):
-        self.client = client or Client()
+        self.client = client or Client(transport=local_transport)
         self.vault = vault or Vault()
         self.local = self.vault.load()
         self.offline=False
@@ -43,7 +46,7 @@ class Bridge(Screens, Remaining):
 
     def account_view(self):
         # Never return account.privateSetup, sessions, tokens or addon URLs.
-        return {'signedIn': bool(self.client.session), 'profile': self.client.profile, 'scope':self.scope_id(),
+        return {'signedIn': bool(self.client.session), 'profile': self.client.profile, 'scope':self.scope_id(),'language':self.local.get('preferences',{}).get('language','es'),
                 'profiles': [{'id': p.get('id', ''), 'name': p.get('name', ''),
                               'avatar': self.profile_avatar(p.get('avatarValue',p.get('avatar','ai:astronaut'))), 'primary': bool(p.get('primary'))}
                              for p in self.client.account.get('profiles', [])]}
@@ -108,7 +111,9 @@ class Bridge(Screens, Remaining):
         if not self.client.session:
             raise ValueError('Sign in first')
         item = self.client.by_id(cloud_id)
-        return {'item': item, 'details': self.client.details(item)}
+        state=self.client.state()
+        progress={key:value for key,value in state.get('progress',{}).items() if key==cloud_id or key.startswith(cloud_id+':s')}
+        return {'item':item,'details':self.client.details(item),'saved':cloud_id in state.get('favorites',[]),'scope':self.scope_id(),'progress':progress}
 
     def dispatch(self, request):
         request_id = request.get('id') if isinstance(request, dict) else None
@@ -124,9 +129,18 @@ class Bridge(Screens, Remaining):
             result = self.operations[request['method']](**params)
             if self.client.session: self.persist()
             return {'id': request_id, 'result': result}
-        except Exception:
-            # Upstream exceptions can contain passwords, tokens, or provider URLs.
-            return {'id': request_id, 'error': 'Operation failed'}
+        except Exception as error:
+            # Return only fixed codes; never upstream URLs, tokens or provider errors.
+            import urllib.error
+            message=str(error)
+            method=request.get('method','') if isinstance(request,dict) else ''
+            code='operation.failed'
+            if message in ('Profile changed','Session changed'):code='scope.changed'
+            elif message=='Configure your TMDB token in Settings':code='setup.tmdb'
+            elif message=='Add your own Torrentio or Comet in Settings':code='setup.addons'
+            elif method=='session.login' and message.startswith(('HTTP 400','HTTP 401')):code='auth.invalid'
+            elif isinstance(error,(urllib.error.URLError,TimeoutError,ConnectionError)):code='network.unavailable'
+            return {'id': request_id, 'error': 'Operation failed','code':code}
 
 
 def main():

@@ -15,6 +15,7 @@ import json
 import sys
 
 from build_version import PC_VERSION
+from pc_updates import get_latest
 
 class Remaining:
     def remaining_operations(self):
@@ -167,7 +168,7 @@ class Remaining:
     def update_check(self):
         with self._update_lock:
             if self._update_status=='downloading':raise ValueError('Update already downloading')
-        info=updater.check()
+        info=get_latest()
         self._update_info=info if info and updater.version(info['version'])>updater.version(PC_VERSION) else None
         self._update_path=None
         return {'current':PC_VERSION,'available':self._update_info['version'] if self._update_info else None}

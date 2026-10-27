@@ -42,9 +42,9 @@ enum class DesktopTab(val title: String, val glyph: String) {
     Calendar("Calendario", "calendar"), Downloads("Descargas", "download"),
     Notifications("Notificaciones", "notifications"), Settings("Ajustes", "settings")
 }
-data class MediaTile(val id: String, val title: String, val image: String = "", val subtitle: String = "", val progress: Float? = null, val animation:String="")
+data class MediaTile(val id: String, val title: String, val image: String = "", val subtitle: String = "", val progress: Float? = null, val animation:String="",val favorite:Boolean=false)
 data class ContentRow(val title: String, val tiles: List<MediaTile>, val wide: Boolean = false)
-data class FeedEntry(val id: String, val title: String, val detail: String, val action: String? = null)
+data class FeedEntry(val id: String, val title: String, val detail: String, val action: String? = null,val online:Boolean?=null)
 data class DesktopScreenState(
     val busy: Boolean = false, val error: String? = null,
     val calendarMonth: String = java.time.YearMonth.now().toString(),
@@ -87,7 +87,11 @@ fun RemoteArtwork(url: String, modifier: Modifier = Modifier, description: Strin
                         val surface=org.jetbrains.skia.Surface.makeRasterN32Premul(256,256)
                         try {dom.setContainerSize(256f,256f);dom.render(surface.canvas);surface.makeImageSnapshot().toComposeImageBitmap()}
                         finally {surface.close();dom.close();data.close()}
-                    } else SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap()
+                    } else {
+                        val decoded=javax.imageio.ImageIO.read(java.io.ByteArrayInputStream(bytes))
+                        requireNotNull(decoded){"Unsupported artwork format"}
+                        decoded.toComposeImageBitmap()
+                    }
                 }
             }.onFailure{error->
                 if(url.startsWith("asset:"))System.getProperty("brunio.visualOutput")?.let{folder->
@@ -111,6 +115,7 @@ private fun MediaCard(tile: MediaTile, wide: Boolean, onOpen: (String) -> Unit, 
     Column(bounds.hoverable(interaction).graphicsLayer(scaleX=scale,scaleY=scale).clickable { onOpen(tile.id) }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box {
             HoverArtwork(tile.image,tile.animation,hovered,Modifier.fillMaxWidth().aspectRatio(if(wide)16f/9f else 2f/3f).clip(RoundedCornerShape(12.dp)).border(1.dp,if(hovered)Color.White.copy(alpha=.6f)else Color.Transparent,RoundedCornerShape(12.dp)))
+            if(tile.id.startsWith("live:"))TextButton(onClick={onOpen("favorite:"+tile.id)},modifier=Modifier.align(Alignment.TopEnd)){Text(if(tile.favorite)"★" else "☆",color=Color.White)}
             tile.progress?.let { progress -> LinearProgressIndicator(progress = { progress.coerceIn(0f, 1f) },
                 modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp), color = Color.White) }
         }
@@ -125,7 +130,7 @@ fun DesktopScreen(tab: DesktopTab, state: DesktopScreenState, onAction: (String)
         if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Color.White)
         state.error?.let { message -> Surface(color = Color(0xFF302024), modifier = Modifier.fillMaxWidth()) {
             Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(message, modifier = Modifier.weight(1f)); TextButton(onClick = { onAction("retry") }) { Text("Reintentar") }
+                Text(ui(message), modifier = Modifier.weight(1f)); TextButton(onClick = { onAction("retry") }) { Text(ui("Reintentar")) }
             }
         } }
         when (tab) {
@@ -157,13 +162,13 @@ private fun HomeScreen(state: DesktopScreenState, onAction: (String) -> Unit) {
                     Text(hero.title, style = MaterialTheme.typography.displayMedium, color = Color.White)
                     Text(hero.subtitle, maxLines = 3, color = Color(0xFFC7C7CF))
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp),verticalAlignment=Alignment.CenterVertically) {
-                    Button(onClick = { onAction(hero.id) }, colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black), shape = RoundedCornerShape(28.dp)) { Text("Ver detalles", Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) }
+                    Button(onClick = { onAction(hero.id) }, colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black), shape = RoundedCornerShape(28.dp)) { Text(ui("Ver detalles"), Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) }
                     Spacer(Modifier.weight(1f))
                     if(candidates.size>1)Surface(shape=RoundedCornerShape(28.dp),color=Color(0x99303036)) {
                         Row(verticalAlignment=Alignment.CenterVertically) {
-                            TextButton(onClick={index=(index-1+candidates.size)%candidates.size}){Text("‹")}
+                            TextButton(onClick={index=(index-1+candidates.size)%candidates.size}){Text(ui("‹"))}
                             Text("${index+1} / ${candidates.size}",style=MaterialTheme.typography.labelMedium)
-                            TextButton(onClick={index=(index+1)%candidates.size}){Text("›")}
+                            TextButton(onClick={index=(index+1)%candidates.size}){Text(ui("›"))}
                         }
                     }
                     }
@@ -172,7 +177,7 @@ private fun HomeScreen(state: DesktopScreenState, onAction: (String) -> Unit) {
         }
         items(state.rows) { row ->
             Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                Text(row.title, fontSize = 23.sp, color = Color.White, modifier = Modifier.padding(horizontal = 36.dp))
+                Text(ui(row.title), fontSize = 23.sp, color = Color.White, modifier = Modifier.padding(horizontal = 36.dp))
                 LazyRow(contentPadding = PaddingValues(horizontal = 36.dp,vertical=8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     items(row.tiles, key = { it.id }) { tile -> MediaCard(tile, row.wide, onAction) }
                 }
@@ -185,8 +190,8 @@ private fun HomeScreen(state: DesktopScreenState, onAction: (String) -> Unit) {
 private fun SearchScreen(state: DesktopScreenState, onAction: (String) -> Unit, onSearch: (String) -> Unit) {
     var query by remember { mutableStateOf("") }
     Column(Modifier.fillMaxSize().padding(36.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
-        Text("Encuentra tu próxima historia", style = MaterialTheme.typography.headlineLarge)
-        OutlinedTextField(query, { query = it; onSearch(it) }, placeholder = { Text("Películas, series, actores o directores") }, singleLine = true,
+        Text(ui("Encuentra tu próxima historia"), style = MaterialTheme.typography.headlineLarge)
+        OutlinedTextField(query, { query = it; onSearch(it) }, placeholder = { Text(ui("Películas, series, actores o directores")) }, singleLine = true,
             shape = RoundedCornerShape(30.dp), modifier = Modifier.fillMaxWidth())
         TileGrid(state.tiles, false, onAction)
     }
@@ -196,10 +201,10 @@ private fun SearchScreen(state: DesktopScreenState, onAction: (String) -> Unit, 
 private fun CatalogScreen(tab: DesktopTab, state: DesktopScreenState, onAction: (String) -> Unit) {
     var filter by remember(tab) { mutableStateOf("Todos") }
     Column(Modifier.fillMaxSize().padding(36.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
-        Text(tab.title, style = MaterialTheme.typography.headlineLarge)
+        Text(ui(tab.title), style = MaterialTheme.typography.headlineLarge)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(if ((tab == DesktopTab.Live || tab == DesktopTab.Sports)) listOf("Todos") + state.tiles.map { it.subtitle }.filter { it.isNotBlank() }.distinct().sorted() else listOf("Todos", "Películas", "Series")) { title ->
-                FilterChip(selected = filter == title, onClick = { filter = title; onAction("filter:$title") }, label = { Text(title) }, shape = RoundedCornerShape(24.dp))
+            items(if ((tab == DesktopTab.Live || tab == DesktopTab.Sports)) listOf("Todos","Favoritos") + state.tiles.map { it.subtitle }.filter { it.isNotBlank() }.distinct().sorted() else listOf("Todos", "Películas", "Series")) { title ->
+                FilterChip(selected = filter == title, onClick = { filter = title; onAction("filter:$title") }, label = { Text(ui(title)) }, shape = RoundedCornerShape(24.dp))
             }
         }
         TileGrid(state.tiles, (tab == DesktopTab.Live || tab == DesktopTab.Sports), onAction)
@@ -218,10 +223,10 @@ private fun TileGrid(tiles: List<MediaTile>, wide: Boolean, onOpen: (String) -> 
 private fun FeedScreen(tab: DesktopTab, state: DesktopScreenState, onAction: (String) -> Unit) {
     Column(Modifier.fillMaxSize().padding(36.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(tab.title, style = MaterialTheme.typography.headlineLarge, modifier = Modifier.weight(1f))
-            if (tab == DesktopTab.Friends) { OutlinedButton(onClick = { onAction("party:open") }) { Text("Watch Party") }; OutlinedButton(onClick = { onAction("friends:add") }) { Text("Agregar amigo") } }
-            if (tab == DesktopTab.Notifications) {TextButton(onClick={onAction("notifications:refresh")}){Text("Actualizar")};TextButton(onClick={onAction("notifications:clear")}){Text("Borrar")}}
-            if (tab == DesktopTab.Calendar) OutlinedButton(onClick = { onAction("calendar:subscriptions") }) { Text("Suscripciones") }
+            Text(ui(tab.title), style = MaterialTheme.typography.headlineLarge, modifier = Modifier.weight(1f))
+            if (tab == DesktopTab.Friends) { OutlinedButton(onClick = { onAction("party:open") }) { Text(ui("Watch Party")) }; OutlinedButton(onClick = { onAction("friends:add") }) { Text(ui("Agregar amigo")) } }
+            if (tab == DesktopTab.Notifications) {TextButton(onClick={onAction("notifications:refresh")}){Text(ui("Actualizar"))};TextButton(onClick={onAction("notifications:clear")}){Text(ui("Borrar"))}}
+            if (tab == DesktopTab.Calendar) OutlinedButton(onClick = { onAction("calendar:subscriptions") }) { Text(ui("Suscripciones")) }
         }
         if (state.entries.isEmpty()) EmptyState(when(tab) {
             DesktopTab.Friends -> "Tus amigos y tu Watch Party"
@@ -236,6 +241,9 @@ private fun FeedScreen(tab: DesktopTab, state: DesktopScreenState, onAction: (St
             items(state.entries, key = { it.id }) { entry ->
                 Surface(color = Color(0xFF151518), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(22.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                        if(tab==DesktopTab.Friends)Surface(shape=RoundedCornerShape(28.dp),color=Color(0xFF303036),modifier=Modifier.size(56.dp)) {
+                            Box(contentAlignment=Alignment.Center){Text(entry.title.removePrefix("@").take(1).uppercase(),style=MaterialTheme.typography.titleLarge)}
+                        }
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) { Text(entry.title); Text(entry.detail, color = Color.Gray) }
                         entry.action?.let { action -> OutlinedButton(onClick = { onAction(entry.id) }) { Text(action) } }
                     }
@@ -251,12 +259,12 @@ private fun SettingsScreen(onAction: (String) -> Unit) {
     var group by remember { mutableStateOf(groups.first()) }
     Row(Modifier.fillMaxSize().padding(36.dp), horizontalArrangement = Arrangement.spacedBy(36.dp)) {
         Column(Modifier.width(220.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Ajustes", style = MaterialTheme.typography.headlineLarge)
+            Text(ui("Ajustes"), style = MaterialTheme.typography.headlineLarge)
             Spacer(Modifier.height(16.dp))
-            groups.forEach { item -> FilterChip(selected = group == item, onClick = { group = item }, label = { Text(item) }, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) }
+            groups.forEach { item -> FilterChip(selected = group == item, onClick = { group = item }, label = { Text(ui(item)) }, shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth()) }
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(22.dp)) {
-            Text(group, style = MaterialTheme.typography.headlineMedium)
+            Text(ui(group), style = MaterialTheme.typography.headlineMedium)
             val fields = when (group) {
                 "Cuenta y perfiles" -> listOf("Administrar perfiles", "Conectar cuenta", "Cerrar sesión")
                 "Reproducción" -> listOf("Autoplay", "Reintentar otra fuente", "Límite de tamaño para PC")
@@ -268,7 +276,7 @@ private fun SettingsScreen(onAction: (String) -> Unit) {
             }
             fields.forEach { field ->
                 Surface(onClick = { onAction("settings:$field") }, shape = RoundedCornerShape(22.dp), color = Color(0xFF17171B), modifier = Modifier.fillMaxWidth()) {
-                    Row(Modifier.padding(24.dp)) { Text(field, Modifier.weight(1f)); Text("›", color = Color.Gray) }
+                    Row(Modifier.padding(24.dp)) { Text(ui(field), Modifier.weight(1f)); Text(ui("›"), color = Color.Gray) }
                 }
             }
         }
@@ -278,8 +286,8 @@ private fun SettingsScreen(onAction: (String) -> Unit) {
 @Composable
 fun EmptyState(title: String, detail: String) {
     Column(Modifier.fillMaxWidth().padding(vertical = 44.dp, horizontal = 36.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text(title, style = MaterialTheme.typography.headlineSmall, color = Color.White)
-        Text(detail, color = Color(0xFF95959E))
+        Text(ui(title), style = MaterialTheme.typography.headlineSmall, color = Color.White)
+        Text(ui(detail), color = Color(0xFF95959E))
     }
 }
 
@@ -287,7 +295,7 @@ fun EmptyState(title: String, detail: String) {
 fun ProfilePicker(profiles: List<MediaTile>, onSelect: (String) -> Unit, onManage: () -> Unit) {
     Box(Modifier.fillMaxSize().background(Color(0xFF080809)), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(40.dp)) {
-            Text("¿Quién está viendo?", style = MaterialTheme.typography.displaySmall)
+            Text(ui("¿Quién está viendo?"), style = MaterialTheme.typography.displaySmall)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(32.dp)) {
                 items(profiles, key = { it.id }) { profile ->
                     Column(Modifier.width(132.dp).clickable { onSelect(profile.id) }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -296,7 +304,7 @@ fun ProfilePicker(profiles: List<MediaTile>, onSelect: (String) -> Unit, onManag
                     }
                 }
             }
-            OutlinedButton(onClick = onManage, shape = RoundedCornerShape(24.dp)) { Text("Administrar perfiles") }
+            OutlinedButton(onClick = onManage, shape = RoundedCornerShape(24.dp)) { Text(ui("Administrar perfiles")) }
         }
     }
 }
@@ -310,8 +318,8 @@ private fun CalendarScreen(state: DesktopScreenState, onAction: (String) -> Unit
     }.getOrNull()
     Row(Modifier.fillMaxSize().padding(36.dp), horizontalArrangement = Arrangement.spacedBy(32.dp)) {
         Column(Modifier.weight(1.4f), verticalArrangement = Arrangement.spacedBy(24.dp)) {
-            Text("Tu calendario", style = MaterialTheme.typography.headlineLarge)
-            Text("Estrenos y eventos compartidos con tu TV", color = Color.Gray)
+            Text(ui("Tu calendario"), style = MaterialTheme.typography.headlineLarge)
+            Text(ui("Estrenos y eventos compartidos con tu TV"), color = Color.Gray)
             Row(Modifier.fillMaxWidth()) { listOf("L", "M", "X", "J", "V", "S", "D").forEach { Text(it, Modifier.weight(1f).padding(14.dp), color = Color.Gray) } }
             val offset = month.atDay(1).dayOfWeek.value - 1
             val count = month.lengthOfMonth()
@@ -327,7 +335,7 @@ private fun CalendarScreen(state: DesktopScreenState, onAction: (String) -> Unit
                                 modifier = Modifier.weight(1f).height(66.dp)) {
                                 Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text(number.toString())
-                                    if (state.entries.any { day(it) == number }) Text("•")
+                                    if (state.entries.any { day(it) == number }) Text(ui("•"))
                                 }
                             }
                         }
@@ -336,9 +344,9 @@ private fun CalendarScreen(state: DesktopScreenState, onAction: (String) -> Unit
             }
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-            Text("${selected} · ${month.month.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.forLanguageTag("es"))}", style = MaterialTheme.typography.headlineSmall)
+            Text("${selected} · ${month.month.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.forLanguageTag(LocalUiLanguage.current))}", style = MaterialTheme.typography.headlineSmall)
             val events = state.entries.filter { day(it) == selected }
-            if (events.isEmpty()) Text("Sin eventos para este día", color = Color.Gray)
+            if (events.isEmpty()) Text(ui("Sin eventos para este día"), color = Color.Gray)
             LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 items(events) { event ->
                     Surface(shape = RoundedCornerShape(20.dp), color = Color(0xFF17171C)) {

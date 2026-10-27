@@ -28,7 +28,7 @@ fun PinnedScore(utilities:Utilities) {
             .width(296.dp).pointerInput(minX,maxY){detectDragGestures{change,drag->change.consume();position=Offset((position.x+drag.x).coerceIn(minX,0f),(position.y+drag.y).coerceIn(0f,maxY))}},
             shape=RoundedCornerShape(24.dp),color=Color(0xEB222228)) {
             Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                Row {Text(event.optString("league"),Modifier.weight(1f),style=MaterialTheme.typography.labelMedium);TextButton(onClick={utilities.pinned=null}){Text("Cerrar")}}
+                Row {Text(event.optString("league"),Modifier.weight(1f),style=MaterialTheme.typography.labelMedium);TextButton(onClick={utilities.pinned=null}){Text(ui("Cerrar"))}}
                 Text(event.optString("title"),maxLines=2)
                 Row(horizontalArrangement=Arrangement.spacedBy(14.dp),verticalAlignment=Alignment.CenterVertically) {
                     val logos=event.optJSONArray("logos");val scores=event.optJSONArray("scores")

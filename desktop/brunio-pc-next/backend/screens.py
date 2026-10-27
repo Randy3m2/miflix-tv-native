@@ -4,7 +4,7 @@ from urllib.parse import urlencode, quote
 import datetime as dt
 import re
 import sys
-from brunio.core import LIVE, valid_url, now_ms
+from brunio.core import LIVE, valid_url, now_ms, media
 from brunio.playlist import read_m3u
 
 ASSETS = Path(sys._MEIPASS)/'assets' if getattr(sys,'frozen',False) else Path(__file__).resolve().parents[2] / 'brunio-pc' / 'assets'
@@ -19,19 +19,27 @@ class Screens:
                 'catalog.genres':self.genres, 'catalog.discover':self.discover,
                 'friends.list':self.friend_list, 'friends.add':self.friend_add,
                 'friends.accept':self.friend_accept, 'calendar.list':self.calendar_list,
-                'live.list':self.live_list, 'live.sources':self.live_sources,
+                'live.list':self.live_list, 'live.sources':self.live_sources,'live.favorite':self.live_favorite,
                 'catalog.sources':self.sources, 'catalog.favorite':self.favorite,
-                'catalog.episodes':self.episodes, 'catalog.next':self.next_episode, 'playback.progress':self.progress,
+                'catalog.episodes':self.episodes, 'catalog.next':self.next_episode,'catalog.person':self.person,'catalog.rate':self.rate,'catalog.mark':self.mark_watched, 'playback.progress':self.progress,
                 'settings.get':self.settings_get, 'settings.set':self.settings_set}
 
     def continued(self):
         progress=self.client.state().get('progress',{})
         ids=[k for k,v in sorted(progress.items(),key=lambda x:x[1].get('updatedAt',0),reverse=True)
              if ':s' not in k and v.get('position',0)>=5 and v.get('percent',0)<90][:12]
-        return [{**self.client.by_id(k),'progress':progress[k]} for k in ids]
+        from concurrent.futures import ThreadPoolExecutor
+        def resolve(key):
+            try:return {**self.client.by_id(key),'progress':progress[key]}
+            except Exception:return None
+        with ThreadPoolExecutor(max_workers=6) as pool:return [r for r in pool.map(resolve,ids) if r]
 
     def saved(self):
-        return [self.client.by_id(k) for k in self.client.state().get('favorites',[])[:100]]
+        from concurrent.futures import ThreadPoolExecutor
+        def resolve(key):
+            try:return self.client.by_id(key)
+            except Exception:return None
+        with ThreadPoolExecutor(max_workers=8) as pool:return [r for r in pool.map(resolve,self.client.state().get('favorites',[])[:100]) if r]
 
     def shelf(self, key):
         if key=='recommendations':
@@ -61,6 +69,7 @@ class Screens:
         cache=getattr(self,'_genre_cache',{})
         def cover(pair):
             name,gid=pair;key=(self.client.language,gid)
+            if self.client.language.startswith('en'):name={28:'Action',35:'Comedy',18:'Drama',27:'Horror',878:'Science fiction',16:'Animation'}[gid]
             if key not in cache:
                 try:
                     rows=self.client.catalog('/discover/movie','movie',{'with_genres':gid,'vote_count.gte':150,'sort_by':'popularity.desc'})
@@ -80,7 +89,9 @@ class Screens:
         if genre:
             if genre not in [g[1] for g in GENRES]:raise ValueError('Unknown genre')
             params['with_genres']=genre
-        return self.client.catalog('/discover/movie','movie',params)+self.client.catalog('/discover/tv','series',params)
+        tv_params=dict(params)
+        if genre:tv_params['with_genres']={28:10759,27:9648,878:10765}.get(genre,genre)
+        return self.client.catalog('/discover/movie','movie',params)+self.client.catalog('/discover/tv','series',tv_params)
 
     def friend_list(self):
         activity=self.client.social_rpc('rp1_miflix_friend_activity',{}) or []
@@ -123,7 +134,8 @@ class Screens:
         self.live_cache=getattr(self,'live_cache',{})
         self.live_cache[provider]={str(r['id']):r for r in rows}
         # Raw playback URLs remain in this process until an explicit playback request.
-        return [{k:r.get(k,'') for k in ('id','name','logo','poster','category','description')} for r in rows]
+        favorites=self.local.get('preferences',{}).get('live_favorites',{}).get(self.scope_id(),[])
+        return [{**{k:r.get(k,'') for k in ('id','name','logo','poster','category','description')},'favorite':str(r['id']) in favorites} for r in rows]
 
     def live_sources(self,provider,channel_id):
         row=getattr(self,'live_cache',{}).get(provider,{}).get(channel_id)
@@ -143,9 +155,10 @@ class Screens:
         rows,imdb=self.client.streams(self.client.by_id(cloud_id),season,episode,preferences.get('download_limit' if download else 'limit',0))
         saved=self.client.state().get('progress',{}).get(cloud_id+(f':s{season}e{episode}' if season else ''),{})
         resume=int(saved.get('position',0)*1000) if saved.get('percent',0)<90 else 0
-        return {'resume_ms':resume,'streams':rows,'imdb':imdb,'scope':scope,'audio':self.client.source_audio,'sub':selected.get('sub',preferences.get('sub','es'))}
+        return {'resume_ms':resume,'streams':rows,'imdb':imdb,'scope':scope,'audio':self.client.source_audio,'sub':selected.get('sub',preferences.get('sub','es')),'sub_scale':selected.get('sub_scale',100)}
 
-    def favorite(self,cloud_id,enabled):
+    def favorite(self,cloud_id,enabled,scope=None):
+        if scope is not None:self.require_scope(scope)
         self.client.by_id(cloud_id) # Validate the content identifier.
         if not isinstance(enabled,bool):raise ValueError('Invalid favorite')
         state=self.client.state();ids=state.setdefault('favorites',[])
@@ -183,13 +196,15 @@ class Screens:
         preferences=self.local.get('preferences',{})
         scope=str(self.client.session.get('userId','local'))+':'+self.client.profile
         selected=preferences.get('profile_playback',{}).get(scope,{})
-        return {'scope':scope,**{key:selected.get(key,preferences.get(key,default)) for key,default in {'audio':'es','sub':'es','autoplay':True,'retry':True,'limit':0,'language':'es','download_limit':0,'source_limit':7}.items()}}
+        return {'scope':scope,**{key:selected.get(key,preferences.get(key,default)) for key,default in {'audio':'es','sub':'es','autoplay':True,'retry':True,'limit':0,'language':'es','download_limit':0,'source_limit':7,'sub_scale':100}.items()}}
 
     def settings_set(self,key,value,scope):
         import math
         if scope!=str(self.client.session.get('userId','local'))+':'+self.client.profile:raise ValueError('Profile changed')
         if key in ('autoplay','retry'):
             if not isinstance(value,bool):raise ValueError('Invalid switch')
+        elif key=='sub_scale':
+            if isinstance(value,bool) or not isinstance(value,int) or not 50<=value<=200:raise ValueError('Invalid subtitle scale')
         elif key=='source_limit':
             if isinstance(value,bool) or not isinstance(value,int) or not 1<=value<=500:raise ValueError('Invalid source limit')
         elif key in ('limit','download_limit'):
@@ -200,7 +215,7 @@ class Screens:
             if value not in ('es','en','off'):raise ValueError('Invalid subtitle')
         else:raise ValueError('Unknown setting')
         preferences=self.local.setdefault('preferences',{})
-        if key in ('audio','sub'):
+        if key in ('audio','sub','sub_scale'):
             scope=str(self.client.session.get('userId','local'))+':'+self.client.profile
             preferences.setdefault('profile_playback',{}).setdefault(scope,{})[key]=value
         else:preferences[key]=value
@@ -232,3 +247,35 @@ class Screens:
         self.client.save_state(state)
         self.local['pending_progress'].pop(scope,None)
         self.persist()
+
+    def live_favorite(self,scope,provider,channel_id,enabled):
+        self.require_scope(scope)
+        if not isinstance(enabled,bool) or channel_id not in getattr(self,'live_cache',{}).get(provider,{}):raise ValueError('Unknown channel')
+        rows=self.local.setdefault('preferences',{}).setdefault('live_favorites',{}).setdefault(scope,[])
+        if enabled and channel_id not in rows:rows.append(channel_id)
+        if not enabled:rows[:]=[value for value in rows if value!=channel_id]
+        self.persist();return {'favorite':enabled}
+
+    def rate(self,scope,cloud_id,score):
+        self.require_scope(scope)
+        if not isinstance(score,int) or isinstance(score,bool) or not 1<=score<=10:raise ValueError('Invalid rating')
+        if not re.fullmatch(r'tmdb:(movie|series):[0-9]+',cloud_id):raise ValueError('Invalid content')
+        self.client.rest('miflix_ratings?on_conflict=user_id,profile_id,cloud_id','POST',{'user_id':self.client.session['userId'],'profile_id':self.client.profile,'cloud_id':cloud_id,'score':score},'resolution=merge-duplicates,return=minimal')
+        return {'saved':True,'score':score}
+    def person(self,id):
+        if not isinstance(id,int) or isinstance(id,bool) or id<=0:raise ValueError('Invalid person')
+        details=self.client.tmdb('/person/'+str(id)+'/combined_credits')
+        rows={}
+        for row in details.get('cast',[]):
+            if row.get('media_type') in ('movie','tv') and row.get('id'):
+                item=media(row);rows[item['cloudId']]=item
+        return list(rows.values())
+    def mark_watched(self,scope,cloud_id,watched,season=0,episode=0):
+        self.require_scope(scope)
+        if not isinstance(watched,bool) or not re.fullmatch(r'tmdb:(movie|series):[0-9]+',cloud_id):raise ValueError('Invalid content')
+        if not all(isinstance(v,int) and not isinstance(v,bool) and v>=0 for v in (season,episode)):raise ValueError('Invalid episode')
+        key=cloud_id+(f':s{season}e{episode}' if season else '')
+        state=self.client.state();old=state.setdefault('progress',{}).get(key,{})
+        value={**old,'percent':100 if watched else 0,'position':old.get('duration',0) if watched else 0,'duration':old.get('duration',0),'updatedAt':now_ms(),'season':season,'episode':episode}
+        state['progress'][key]=value;self.client.save_state(state)
+        return {'saved':True,'watched':watched}

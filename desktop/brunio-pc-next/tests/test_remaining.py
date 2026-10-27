@@ -54,7 +54,7 @@ class RemainingTests(unittest.TestCase):
             result=self.call('downloads.list')['result']
             self.assertEqual(len(result['files']),1);self.assertNotIn('url',result['files'][0])
     def test_updates_never_offer_legacy_version_as_upgrade(self):
-        with patch.object(remaining.updater,'check',return_value={'version':'1.0.0-rc99'}):
+        with patch.object(remaining,'get_latest',return_value={'version':'1.0.0-rc99'}):
             self.assertIsNone(self.call('updates.check')['result']['available'])
     def test_update_prepare_requires_trusted_check(self):
         with patch.object(remaining.updater,'download') as download:

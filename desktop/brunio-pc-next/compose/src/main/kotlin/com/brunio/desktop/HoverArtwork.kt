@@ -17,12 +17,15 @@ import java.util.concurrent.atomic.AtomicReference
 
 private object GifBytes {
     private val items=LinkedHashMap<String,ByteArray>(8,.75f,true)
+    @Synchronized fun clear(){items.clear()}
     @Synchronized fun get(url:String):ByteArray?=items[url]
     @Synchronized fun put(url:String,bytes:ByteArray) {
         items[url]=bytes
         while(items.values.sumOf{it.size.toLong()}>32L*1024*1024)items.remove(items.keys.first())
     }
 }
+
+fun clearAnimatedArtwork(){GifBytes.clear()}
 
 /** Java's GIF producer composites disposal frames; the observer is detached on hover exit. */
 @Composable

@@ -10,6 +10,8 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 /** Private child-process IPC. No listening port, shell command interpolation, or token logging. */
+private class BridgeFailure(message:String):IllegalStateException(message)
+
 class BridgeClient : Closeable {
     private val executor = Executors.newSingleThreadExecutor { task -> Thread(task, "brunio-ipc").apply { isDaemon = true } }
     private var process: Process? = null
@@ -57,11 +59,19 @@ class BridgeClient : Closeable {
             }
             val response = JSONObject(line.toString())
             check(response.optLong("id") == id) { "Respuesta fuera de secuencia" }
-            check(!response.has("error")) { "No se pudo completar la operación. Comprueba la conexión y la configuración de tu cuenta." }
+            if(response.has("error"))throw BridgeFailure(when(response.optString("code")) {
+                "auth.invalid"->"Revisa el correo, la contraseña y la confirmación de tu cuenta."
+                "setup.tmdb"->"Configura el token de TMDB en Ajustes para cargar el catálogo."
+                "setup.addons"->"Agrega tus complementos en Ajustes para buscar fuentes."
+                "scope.changed"->"El perfil cambió. Vuelve a abrir esta pantalla."
+                "network.unavailable"->"No hay conexión con el servicio. Comprueba tu conexión e inténtalo de nuevo."
+                else->"No se pudo completar la operación. Comprueba la conexión y la configuración de tu cuenta."
+            })
             response.opt("result") ?: JSONObject.NULL
         }
         try { future.get(120, TimeUnit.SECONDS) }
         catch (e: Exception) {
+            if(e is java.util.concurrent.ExecutionException && e.cause is BridgeFailure)throw e.cause as BridgeFailure
             if (e is java.util.concurrent.TimeoutException) close()
             throw IllegalStateException(if (e is java.util.concurrent.TimeoutException) "El servicio local no respondió a tiempo" else "No se pudo completar la operación local", e)
         }

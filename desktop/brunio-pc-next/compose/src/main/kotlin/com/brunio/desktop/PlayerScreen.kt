@@ -25,7 +25,7 @@ import org.json.JSONObject
 /** The only media URLs in the UI belong to an explicit playback session. They are never displayed. */
 data class PlaybackSession(val item: JSONObject, val streams: List<JSONObject>, val owner: String = "",
     val season: Int = 0, val episode: Int = 0, val audio: String = "es", val subtitles: String = "es",
-    val startMs: Long = 0, val retry: Boolean = true, val autoplay: Boolean = true, val nextAvailable: Boolean = false, val sourceLimit:Int=7)
+    val startMs: Long = 0, val retry: Boolean = true, val autoplay: Boolean = true, val nextAvailable: Boolean = false, val sourceLimit:Int=7,val subtitleScale:Int=100)
 
 @Composable
 fun PlayerScreen(session: PlaybackSession, onClose: () -> Unit, onFullscreen: () -> Unit,
@@ -82,7 +82,7 @@ fun PlayerScreen(session: PlaybackSession, onClose: () -> Unit, onFullscreen: ()
         if(engine == null) return@LaunchedEffect
         val stream = session.streams.getOrNull(source)
         if(stream == null) { ui = ui.copy(error = "No hay fuentes disponibles", buffering = false); return@LaunchedEffect }
-        val options = mutableListOf(":audio-language=${session.audio}", ":sub-language=${if(session.subtitles == "off") "none" else session.subtitles}")
+        val options = mutableListOf(":sub-text-scale=${session.subtitleScale}",":audio-language=${session.audio}", ":sub-language=${if(session.subtitles == "off") "none" else session.subtitles}")
         if (resume > 0 && !live) options.add(":start-time=${resume / 1000.0}")
         val headers = stream.optJSONObject("behaviorHints")?.optJSONObject("proxyHeaders")?.optJSONObject("request")
         listOf("User-Agent" to "http-user-agent", "Referer" to "http-referrer").forEach { (header, option) ->
@@ -143,7 +143,7 @@ fun PlayerScreen(session: PlaybackSession, onClose: () -> Unit, onFullscreen: ()
         if(showControls && controlsVisible) TvPlayerControls(ui.copy(nextAvailable=(ui.nextAvailable || hasQueued) && canControl), ::action, { engine?.seek(it) }, { volume = it; engine?.volume(it); ui = ui.copy(volume = it) })
     }
     menu?.let { kind ->
-        AlertDialog(onDismissRequest = { menu = null }, title = { Text(when(kind) { "sources" -> "Fuentes"; "audio" -> "Audio"; "info" -> "Información técnica"; else -> "Subtítulos" }) },
+        AlertDialog(onDismissRequest = { menu = null }, title = { Text(ui(when(kind) { "sources" -> "Fuentes"; "audio" -> "Audio"; "info" -> "Información técnica"; else -> "Subtítulos" })) },
             text = { LazyColumn(Modifier.heightIn(max = 420.dp)) {
                 if(kind == "sources") {
                     val counts=mutableMapOf<String,Int>()
@@ -151,22 +151,22 @@ fun PlayerScreen(session: PlaybackSession, onClose: () -> Unit, onFullscreen: ()
                     items(visible) { index ->
                     TextButton(onClick = { resume = ui.position; source = index; attempt++; menu = null }) { Text(session.streams[index].optString("name", "Fuente ${index+1}")+" · "+session.streams[index].optString("title").take(100)) }
                     }
-                    if(visible.size<session.streams.size)item{TextButton(onClick={sourcePage++}){Text("Mostrar más fuentes")}}
+                    if(visible.size<session.streams.size)item{TextButton(onClick={sourcePage++}){Text(ui("Mostrar más fuentes"))}}
                 } else if(kind == "audio") {
                     items(engine?.player?.audio()?.trackDescriptions().orEmpty()) { track -> TextButton(onClick = { engine?.player?.audio()?.setTrack(track.id()); menu = null }) { Text(track.description()) } }
                 } else if(kind=="subtitles") {
-                    item { TextButton(onClick = { engine?.player?.subpictures()?.setTrack(-1); menu = null }) { Text("Desactivar") } }
+                    item { TextButton(onClick = { engine?.player?.subpictures()?.setTrack(-1); menu = null }) { Text(ui("Desactivar")) } }
                     items(engine?.player?.subpictures()?.trackDescriptions().orEmpty()) { track -> TextButton(onClick = { engine?.player?.subpictures()?.setTrack(track.id()); menu = null }) { Text(track.description()) } }
                 } else item {
                     Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
                         Text(ui.title)
-                        Text("Motor · VLC")
+                        Text(ui("Motor · VLC"))
                         Text("Resolución de salida · ${bitmap?.width?:0} × ${bitmap?.height?:0}")
-                        Text("Posición · "+playbackTime(ui.position)+" / "+playbackTime(ui.duration))
-                        Text("Fuente · "+ui.source)
-                        session.streams.getOrNull(source)?.optJSONObject("behaviorHints")?.optLong("videoSize")?.takeIf{it>0}?.let{Text("Archivo · %.2f GB".format(it/1e9))}
+                        Text(ui("Posición · ")+playbackTime(ui.position)+" / "+playbackTime(ui.duration))
+                        Text(ui("Fuente · ")+ui.source)
+                        session.streams.getOrNull(source)?.optJSONObject("behaviorHints")?.optLong("videoSize")?.takeIf{it>0}?.let{Text(ui("Archivo · %.2f GB").format(it/1e9))}
                     }
                 }
-            } }, confirmButton = { TextButton(onClick = { menu = null }) { Text("Cerrar") } })
+            } }, confirmButton = { TextButton(onClick = { menu = null }) { Text(ui("Cerrar")) } })
     }
 }

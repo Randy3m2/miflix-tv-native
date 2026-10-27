@@ -91,9 +91,9 @@ fun TvPlayerControls(
         state.error?.let { message ->
             Surface(Modifier.align(Alignment.Center).widthIn(max = 480.dp), color = Color(0xEF19191C), shape = RoundedCornerShape(24.dp)) {
                 Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("No se pudo reproducir esta fuente", style = MaterialTheme.typography.titleLarge)
-                    Text(message)
-                    Button(onClick = { onAction("retry") }) { Text("Probar otra fuente") }
+                    Text(ui("No se pudo reproducir esta fuente"), style = MaterialTheme.typography.titleLarge)
+                    Text(ui(message))
+                    Button(onClick = { onAction("retry") }) { Text(ui("Probar otra fuente")) }
                 }
             }
         }
@@ -103,7 +103,7 @@ fun TvPlayerControls(
             Text(state.title, color = Color.White, fontSize = 22.sp, maxLines = 1)
             Text((if (state.series) "S${state.season} E${state.episode} · " else "") + state.source,
                 color = Color(0xFFBBBBBB), fontSize = 12.sp, maxLines = 1)
-            Text(label, color = Color.White, fontSize = 12.sp, modifier = Modifier.height(18.dp))
+            Text(ui(label), color = Color.White, fontSize = 12.sp, modifier = Modifier.height(18.dp))
             if (!state.live) {
                 val end = state.duration.coerceAtLeast(1)
                 Slider(value = preview ?: (state.position.toFloat() / end).coerceIn(0f, 1f),

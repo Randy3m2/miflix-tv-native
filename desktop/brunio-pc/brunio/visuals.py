@@ -72,43 +72,104 @@ class Poster(QPushButton):
     def leaveEvent(self,e):self.update();super().leaveEvent(e)
 
 class PlatformTile(QPushButton):
-    """A locally packaged streaming service logo, with native focus styling."""
+    """Full-bleed streaming artwork: static by default, animated on hover only."""
     def __init__(self,name,parent=None):
-        super().__init__(parent);self.name=name;self.pix=QPixmap()
+        super().__init__(parent)
+        self.name=name;self.pix=QPixmap();self.movie=None
         self.setObjectName('platformTile')
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-    def setPixmap(self,pix):self.pix=pix;self.update()
+        self.setAccessibleName(name)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+    def setPixmap(self,pix):
+        self.pix=pix;self.update()
     def setAnimatedLogo(self,path):
-        if getattr(self,'movie',None):
+        if self.movie:
             self.movie.stop();self.movie.deleteLater()
         self.movie=QMovie(str(path),QByteArray(),self)
         self.movie.setCacheMode(QMovie.CacheMode.CacheNone)
         self.movie.frameChanged.connect(lambda _frame:self.update())
-        if self.isVisible():self.movie.start()
+        # Retain the PNG as the default still; never animate until hovered.
+        if self.underMouse():self.movie.start()
+        self.update()
     def showEvent(self,event):
         super().showEvent(event)
-        if getattr(self,'movie',None):self.movie.start()
+        if self.movie and self.underMouse():self.movie.start()
     def hideEvent(self,event):
-        if getattr(self,'movie',None):self.movie.stop()
+        if self.movie:self.movie.stop()
         super().hideEvent(event)
+    def enterEvent(self,event):
+        if self.movie:self.movie.start()
+        self.update();super().enterEvent(event)
+    def leaveEvent(self,event):
+        if self.movie:self.movie.stop()
+        self.update();super().leaveEvent(event)
+    def focusInEvent(self,event):
+        self.update();super().focusInEvent(event)
+    def focusOutEvent(self,event):
+        self.update();super().focusOutEvent(event)
     def paintEvent(self,event):
-        p=QPainter(self);p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        rect=QRectF(self.rect()).adjusted(1.5,1.5,-1.5,-1.5)
-        path=QPainterPath();path.addRoundedRect(rect,12,12)
-        p.setClipPath(path);p.fillPath(path,QColor('#0b111e'))
-        animated=self.movie.currentPixmap() if getattr(self,'movie',None) else QPixmap()
+        painter=QPainter(self);painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        rect=QRectF(self.rect());clip=QPainterPath();clip.addRoundedRect(rect,13,13)
+        painter.setClipPath(clip)
+        painter.fillPath(clip,QColor('#11182a'))
+        animated=self.movie.currentPixmap() if self.movie and self.underMouse() else QPixmap()
         source=animated if not animated.isNull() else self.pix
         if not source.isNull():
-            pix=source.scaled(int(self.width()*.78),int(self.height()*.62),Qt.AspectRatioMode.KeepAspectRatio,Qt.TransformationMode.SmoothTransformation)
-            p.drawPixmap((self.width()-pix.width())//2,(self.height()-pix.height())//2,pix)
+            # Fill the *whole* button, rather than a 78%-width logo in a box.
+            pix=source.scaled(self.size(),Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                              Qt.TransformationMode.SmoothTransformation)
+            painter.drawPixmap((self.width()-pix.width())//2,(self.height()-pix.height())//2,pix)
         else:
-            font=QFont('Segoe UI',16,QFont.Weight.Bold);p.setFont(font)
-            p.setPen(QColor({'Netflix':'#e50914','Disney+':'#eaf1ff','HBO Max':'#769fff','Hulu':'#1ce783','Crunchyroll':'#f47521'}.get(self.name,'#d8e1f8')))
-            p.drawText(rect,Qt.AlignmentFlag.AlignCenter,self.name)
+            painter.setFont(QFont('Segoe UI',18,QFont.Weight.Bold))
+            painter.setPen(QColor('#f0eaff'))
+            painter.drawText(rect,Qt.AlignmentFlag.AlignCenter,self.name)
+        if self.underMouse() or self.hasFocus():
+            painter.fillPath(clip,QColor(170,139,239,18))
+            painter.setClipping(False)
+            painter.setPen(QPen(QColor('#ac9af7'),2))
+            painter.drawRoundedRect(rect.adjusted(1,1,-1,-1),12,12)
+        painter.end()
+
+class ArtworkTile(QPushButton):
+    """Full-cover art for provider, category and featured collections."""
+    def __init__(self,title,subtitle='',accent='#a795e5',parent=None):
+        super().__init__(parent);self.title=title;self.subtitle=subtitle
+        self.pix=QPixmap();self.accent=QColor(accent)
+        self.setObjectName('artworkTile')
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setAccessibleName(title)
+        self.setToolTip(title)
+        self.setMinimumHeight(140)
+    def setPixmap(self,pix):
+        self.pix=pix;self.update()
+    def paintEvent(self,event):
+        p=QPainter(self);p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        rect=QRectF(self.rect());path=QPainterPath();path.addRoundedRect(rect,17,17)
+        p.setClipPath(path)
+        back=QLinearGradient(0,0,self.width(),self.height())
+        back.setColorAt(0,QColor('#282b49'));back.setColorAt(1,QColor('#0b1427'))
+        p.fillRect(self.rect(),back)
+        if not self.pix.isNull():
+            scaled=self.pix.scaled(self.size(),Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                                   Qt.TransformationMode.SmoothTransformation)
+            p.drawPixmap((self.width()-scaled.width())//2,(self.height()-scaled.height())//2,scaled)
+        gradient=QLinearGradient(0,0,self.width(),self.height())
+        gradient.setColorAt(0,QColor(4,8,20,153))
+        gradient.setColorAt(.5,QColor(3,8,18,55))
+        gradient.setColorAt(1,QColor(4,9,20,214))
+        p.fillRect(self.rect(),gradient)
+        p.setPen(QColor('#ffffff'))
+        titlefont=QFont('Segoe UI',19,QFont.Weight.Bold);p.setFont(titlefont)
+        t=p.fontMetrics().elidedText(self.title,Qt.TextElideMode.ElideRight,max(40,self.width()-38))
+        p.drawText(QRectF(20,self.height()-70,self.width()-38,31),Qt.AlignmentFlag.AlignVCenter,t)
+        if self.subtitle:
+            p.setPen(QColor('#d8d9eb'));p.setFont(QFont('Segoe UI',10))
+            sub=p.fontMetrics().elidedText(self.subtitle,Qt.TextElideMode.ElideRight,max(40,self.width()-38))
+            p.drawText(QRectF(20,self.height()-40,self.width()-38,21),Qt.AlignmentFlag.AlignVCenter,sub)
         p.setClipping(False)
-        selected=self.underMouse() or self.hasFocus()
-        p.setPen(QPen(QColor('#aca2ef' if selected else '#30394e'),1.7 if selected else 1))
-        p.drawRoundedRect(rect,12,12);p.end()
+        if self.underMouse() or self.hasFocus():
+            p.setPen(QPen(self.accent,2));p.drawRoundedRect(rect.adjusted(1,1,-1,-1),16,16)
+        p.end()
     def enterEvent(self,e):self.update();super().enterEvent(e)
     def leaveEvent(self,e):self.update();super().leaveEvent(e)
 

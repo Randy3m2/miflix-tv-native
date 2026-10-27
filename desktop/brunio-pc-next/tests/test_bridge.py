@@ -52,6 +52,17 @@ class BridgeTests(unittest.TestCase):
         self.client.search.return_value = [{'title': 'Example'}]
         self.assertEqual(self.request('catalog.search', query='Example')['result'][0]['title'], 'Example')
 
+    def test_home_reuses_recent_catalog_and_read_does_not_rewrite_vault(self):
+        self.client.catalog.return_value=[{'title':'Example'}]
+        self.assertEqual(self.request('catalog.home')['result'][0]['title'],'Example')
+        self.assertEqual(self.request('catalog.home')['result'][0]['title'],'Example')
+        self.client.catalog.assert_called_once()
+        self.assertFalse(hasattr(self.bridge.vault,'saved'))
+
+    def test_expired_tmdb_token_has_actionable_error(self):
+        self.client.catalog.side_effect=RuntimeError('HTTP 401: request failed')
+        self.assertEqual(self.request('catalog.home')['code'],'setup.tmdb.invalid')
+
     def test_invalid_payload_is_rejected(self):
         self.assertIn('error', self.bridge.dispatch({'id': 2, 'method': 'catalog.search', 'params': []}))
         self.assertIn('error', self.bridge.dispatch(None))

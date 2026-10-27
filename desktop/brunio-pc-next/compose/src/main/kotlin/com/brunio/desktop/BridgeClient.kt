@@ -79,6 +79,7 @@ class BridgeClient : Closeable {
             if(response.has("error"))throw BridgeFailure(when(response.optString("code")) {
                 "auth.invalid"->"Revisa el correo, la contraseña y la confirmación de tu cuenta."
                 "setup.tmdb"->"Configura el token de TMDB en Ajustes para cargar el catálogo."
+                "setup.tmdb.invalid"->"TMDB rechazó el token. Actualízalo en Ajustes > Cuenta y pulsa Reintentar."
                 "setup.addons"->"Agrega tus complementos en Ajustes para buscar fuentes."
                 "scope.changed"->"El perfil cambió. Vuelve a abrir esta pantalla."
                 "network.unavailable"->"No hay conexión con el servicio. Comprueba tu conexión e inténtalo de nuevo."

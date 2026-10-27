@@ -98,18 +98,23 @@ fun RemoteArtwork(url: String, modifier: Modifier = Modifier, description: Strin
 
 @Composable
 private fun MediaCard(tile: MediaTile, wide: Boolean, onOpen: (String) -> Unit, fillCell:Boolean=false) {
+    val live=tile.id.startsWith("live:")
     val interaction=remember{MutableInteractionSource()}
     val hovered by interaction.collectIsHoveredAsState()
     val scale by animateFloatAsState(if(hovered)1.025f else 1f)
     val bounds=if(fillCell)Modifier.fillMaxWidth()else Modifier.width(if(wide)300.dp else 174.dp)
     Column(bounds.hoverable(interaction).graphicsLayer(scaleX=scale,scaleY=scale).clickable { onOpen(tile.id) }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Box {
-            HoverArtwork(tile.image,tile.animation,hovered,Modifier.fillMaxWidth().aspectRatio(if(wide)16f/9f else 2f/3f).clip(RoundedCornerShape(12.dp)).border(1.dp,if(hovered)Color.White.copy(alpha=.6f)else Color.Transparent,RoundedCornerShape(12.dp)),contentScale=if(tile.id.startsWith("live:"))ContentScale.Fit else ContentScale.Crop)
-            if(tile.id.startsWith("live:"))TextButton(onClick={onOpen("favorite:"+tile.id)},modifier=Modifier.align(Alignment.TopEnd)){Text(if(tile.favorite)"★" else "☆",color=Color.White)}
+        Box(Modifier.fillMaxWidth().aspectRatio(if(wide)16f/9f else 2f/3f).clip(RoundedCornerShape(if(live)22.dp else 12.dp))
+            .background(if(live)Brush.linearGradient(listOf(Color(0xFF252730),Color(0xFF111217))) else Brush.linearGradient(listOf(Color(0xFF1B1B20),Color(0xFF1B1B20))))
+            .border(1.dp,if(hovered)Color.White.copy(alpha=.55f)else if(live)Color.White.copy(alpha=.1f)else Color.Transparent,RoundedCornerShape(if(live)22.dp else 12.dp))) {
+            HoverArtwork(tile.image,tile.animation,hovered,if(live)Modifier.fillMaxSize().padding(horizontal=32.dp,vertical=20.dp).clip(RoundedCornerShape(12.dp)) else Modifier.fillMaxSize(),contentScale=if(live)ContentScale.Fit else ContentScale.Crop)
+            if(live)Surface(onClick={onOpen("favorite:"+tile.id)},modifier=Modifier.align(Alignment.TopEnd).padding(10.dp),shape=RoundedCornerShape(50),color=Color(0xD9212229)) {
+                Text(if(tile.favorite)"★" else "☆",Modifier.padding(horizontal=12.dp,vertical=5.dp),color=if(tile.favorite)Color(0xFFFFD76A)else Color.White)
+            }
             tile.progress?.let { progress -> LinearProgressIndicator(progress = { progress.coerceIn(0f, 1f) },
                 modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp), color = Color.White) }
         }
-        Text(tile.title, maxLines = 1, color = Color.White)
+        Text(tile.title, maxLines = 1, color = Color.White,style=if(live)MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium)
         if (tile.subtitle.isNotBlank()) Text(tile.subtitle, color = Color(0xFF9B9BA5), fontSize = 12.sp, maxLines = 1)
     }
 }

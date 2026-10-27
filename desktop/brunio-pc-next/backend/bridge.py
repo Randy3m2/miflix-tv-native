@@ -6,6 +6,7 @@ Only explicit operations are exposed; credentials and private addon URLs stay he
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'brunio-pc'))
@@ -27,6 +28,7 @@ class Bridge(Screens, Remaining):
         self.offline=False
         self.client.session = self.local.get('session', {})
         self.client.profile = self.local.get('profile', 'default')
+        self._catalog_cache = {}
         self.operations = {
             'session.restore': self.restore, 'session.login': self.login,
             'session.logout': self.logout, 'profiles.list': self.profiles,
@@ -98,7 +100,12 @@ class Bridge(Screens, Remaining):
     def home(self):
         if not self.client.session:
             raise ValueError('Sign in first')
-        return self.client.catalog('/trending/all/week')
+        key=(self.client.session.get('userId'),self.client.language,self.client.token)
+        cached=self._catalog_cache.get(key)
+        if cached and time.monotonic()-cached[0]<300:return cached[1]
+        rows=self.client.catalog('/trending/all/week')
+        self._catalog_cache={key:(time.monotonic(),rows)}
+        return rows
 
     def search(self, query):
         if not self.client.session:
@@ -135,8 +142,11 @@ class Bridge(Screens, Remaining):
             if not request['method'].startswith('session.') and not self.client.session:
                 raise ValueError('Sign in first')
             self.client.language = 'es-ES' if self.local.get('preferences', {}).get('language', 'es') == 'es' else 'en-US'
+            old_session=dict(self.client.session)
             result = self.operations[request['method']](**params)
-            if self.client.session: self.persist()
+            # Most reads do not change local state. DPAPI encryption and a disk write
+            # after every catalog request made startup needlessly slow on Windows.
+            if self.client.session and (request['method'].startswith('session.') or old_session!=self.client.session): self.persist()
             return {'id': request_id, 'result': result}
         except Exception as error:
             # Return only fixed codes; never upstream URLs, tokens or provider errors.
@@ -147,6 +157,7 @@ class Bridge(Screens, Remaining):
             if message in ('Profile changed','Session changed'):code='scope.changed'
             elif message=='Configure your TMDB token in Settings':code='setup.tmdb'
             elif message=='Add your own Torrentio or Comet in Settings':code='setup.addons'
+            elif message.startswith(('HTTP 401','HTTP 403')) and method.startswith('catalog.'):code='setup.tmdb.invalid'
             elif method=='session.login' and message.startswith(('HTTP 400','HTTP 401')):code='auth.invalid'
             elif isinstance(error,(urllib.error.URLError,TimeoutError,ConnectionError)):code='network.unavailable'
             return {'id': request_id, 'error': 'Operation failed','code':code}

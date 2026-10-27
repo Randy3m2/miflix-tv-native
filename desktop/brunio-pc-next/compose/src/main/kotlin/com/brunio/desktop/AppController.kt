@@ -63,10 +63,6 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
             try {
                 val loaded = when (next) {
                     DesktopTab.Home -> {
-                        var heroError:String?=null
-                        val trending = try { array("catalog.home").map { tile(it).copy(image = it.optString("backdrop").ifBlank { it.optString("poster") }) } }
-                            catch (e:Exception) { heroError=e.message; emptyList() }
-                        if (ticket == revision) screen = DesktopScreenState(busy = true, hero = trending.firstOrNull(),heroes=trending.take(5))
                         val rows = mutableListOf<ContentRow>()
                         val rowErrors=mutableListOf<String>()
                         suspend fun append(title: String, method: String, params: JSONObject = JSONObject(), wide: Boolean = false) {
@@ -75,12 +71,19 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
                             rows.add(ContentRow(title, cards, wide))
                             if (ticket == revision) screen = screen.copy(rows = rows.toList())
                         }
-                        append("Seguir viendo", "catalog.continue", wide = true)
+                        // Show the local platform shelf immediately, before any network request.
                         append("Streaming", "catalog.providers", wide = true)
-                        append("Explorar por género", "catalog.genres", wide = true)
-                        append("Para ti · Tus valoraciones", "catalog.shelf", JSONObject().put("key", "recommendations"))
-                        append("Películas populares", "catalog.shelf", JSONObject().put("key", "popular_movies"))
-                        append("Series populares", "catalog.shelf", JSONObject().put("key", "popular_series"))
+                        var heroError:String?=null
+                        val trending = try { array("catalog.home").map { tile(it).copy(image = it.optString("backdrop").ifBlank { it.optString("poster") }) } }
+                            catch (e:Exception) { heroError=e.message; emptyList() }
+                        if (ticket == revision) screen = screen.copy(hero = trending.firstOrNull(),heroes=trending.take(5))
+                        append("Seguir viendo", "catalog.continue", wide = true)
+                        if(heroError==null) {
+                            append("Explorar por género", "catalog.genres", wide = true)
+                            append("Para ti · Tus valoraciones", "catalog.shelf", JSONObject().put("key", "recommendations"))
+                            append("Películas populares", "catalog.shelf", JSONObject().put("key", "popular_movies"))
+                            append("Series populares", "catalog.shelf", JSONObject().put("key", "popular_series"))
+                        }
                         DesktopScreenState(hero = trending.firstOrNull(), heroes=trending.take(5),rows = rows,
                             error=heroError ?: if(rowErrors.isEmpty())null else "No se pudieron cargar algunas filas: "+rowErrors.joinToString())
                     }

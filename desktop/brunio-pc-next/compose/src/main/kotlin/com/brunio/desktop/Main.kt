@@ -24,9 +24,9 @@ import kotlinx.coroutines.delay
 
 /** Explicit development gallery. No sample title or fake playback is presented as real content. */
 fun main() = application {
-    Window(onCloseRequest = ::exitApplication, title = "BruniO PC · Galería de desarrollo") {
+    Window(onCloseRequest = ::exitApplication, title = "BruniO PC · Reconstrucción en desarrollo") {
         MaterialTheme(colorScheme = darkColorScheme(background = Color(0xFF080809), surface = Color(0xFF151518), primary = Color.White, onPrimary = Color.Black)) {
-            DesktopGallery()
+            ConnectedDesktop()
         }
     }
 }

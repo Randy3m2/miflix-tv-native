@@ -11,9 +11,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'brunio-pc'))
 from brunio.core import Client
 from brunio.vault import Vault
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from screens import Screens
 
 
-class Bridge:
+class Bridge(Screens):
     def __init__(self, client=None, vault=None):
         self.client = client or Client()
         self.vault = vault or Vault()
@@ -26,6 +28,8 @@ class Bridge:
             'profiles.select': self.select_profile, 'catalog.home': self.home,
             'catalog.search': self.search, 'catalog.details': self.details,
         }
+
+        self.operations.update(self.screen_operations())
 
     def persist(self):
         self.local.update(session=self.client.session, profile=self.client.profile)
@@ -97,7 +101,11 @@ class Bridge:
             params = request.get('params', {})
             if not isinstance(params, dict):
                 raise ValueError('Invalid parameters')
+            if not request['method'].startswith('session.') and not self.client.session:
+                raise ValueError('Sign in first')
+            self.client.language = 'es-ES' if self.local.get('preferences', {}).get('language', 'es') == 'es' else 'en-US'
             result = self.operations[request['method']](**params)
+            if self.client.session: self.persist()
             return {'id': request_id, 'result': result}
         except Exception:
             # Upstream exceptions can contain passwords, tokens, or provider URLs.

@@ -31,7 +31,7 @@ import java.net.URI
 /** Presentation models are independent from credentials and the legacy widget classes. */
 enum class DesktopTab(val title: String, val glyph: String) {
     Home("Inicio", "play"), Search("Buscar", "search"), Library("Mi lista", "queue"),
-    Live("Live TV", "grid"), Friends("Amigos & Party", "party"),
+    Live("Live TV", "grid"), Sports("Deportes", "score"), Friends("Amigos & Party", "party"),
     Calendar("Calendario", "calendar"), Downloads("Descargas", "download"),
     Notifications("Notificaciones", "notifications"), Settings("Ajustes", "settings")
 }
@@ -40,6 +40,7 @@ data class ContentRow(val title: String, val tiles: List<MediaTile>, val wide: B
 data class FeedEntry(val id: String, val title: String, val detail: String, val action: String? = null)
 data class DesktopScreenState(
     val busy: Boolean = false, val error: String? = null,
+    val calendarMonth: String = java.time.YearMonth.now().toString(),
     val hero: MediaTile? = null, val rows: List<ContentRow> = emptyList(),
     val tiles: List<MediaTile> = emptyList(), val entries: List<FeedEntry> = emptyList(),
 )
@@ -51,10 +52,19 @@ fun RemoteArtwork(url: String, modifier: Modifier = Modifier, description: Strin
         if (url.isNotBlank()) value = withContext(Dispatchers.IO) {
             runCatching {
                 val uri = URI(url)
-                require(uri.scheme == "https" && uri.userInfo == null)
-                val connection = uri.toURL().openConnection()
-                connection.connectTimeout = 8000; connection.readTimeout = 8000
-                connection.getInputStream().use { input ->
+                val stream = if (url.startsWith("asset:")) {
+                    val name = url.removePrefix("asset:")
+                    require(name.matches(Regex("[A-Za-z0-9_.-]+")))
+                    val roots = listOf(java.nio.file.Path.of("..", "..", "brunio-pc", "assets"), java.nio.file.Path.of("desktop", "brunio-pc", "assets"))
+                    val path = roots.map { it.resolve(name) }.first { java.nio.file.Files.isRegularFile(it) }
+                    java.nio.file.Files.newInputStream(path)
+                } else {
+                    require(uri.scheme == "https" && uri.userInfo == null)
+                    val connection = uri.toURL().openConnection()
+                    connection.connectTimeout = 8000; connection.readTimeout = 8000
+                    connection.getInputStream()
+                }
+                stream.use { input ->
                     val bytes = input.readNBytes(12 * 1024 * 1024 + 1)
                     require(bytes.size <= 12 * 1024 * 1024)
                     SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap()
@@ -92,7 +102,8 @@ fun DesktopScreen(tab: DesktopTab, state: DesktopScreenState, onAction: (String)
         when (tab) {
             DesktopTab.Home -> HomeScreen(state, onAction)
             DesktopTab.Search -> SearchScreen(state, onAction, onSearch)
-            DesktopTab.Library, DesktopTab.Live -> CatalogScreen(tab, state, onAction)
+            DesktopTab.Library, DesktopTab.Live, DesktopTab.Sports -> CatalogScreen(tab, state, onAction)
+            DesktopTab.Calendar -> CalendarScreen(state, onAction)
             DesktopTab.Settings -> SettingsScreen(onAction)
             else -> FeedScreen(tab, state, onAction)
         }
@@ -143,11 +154,11 @@ private fun CatalogScreen(tab: DesktopTab, state: DesktopScreenState, onAction: 
     Column(Modifier.fillMaxSize().padding(36.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         Text(tab.title, style = MaterialTheme.typography.headlineLarge)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(if (tab == DesktopTab.Live) listOf("Todos", "Favoritos", "General", "Cine", "Deportes", "Infantiles") else listOf("Todos", "Películas", "Series")) { title ->
+            items(if ((tab == DesktopTab.Live || tab == DesktopTab.Sports)) listOf("Todos") + state.tiles.map { it.subtitle }.filter { it.isNotBlank() }.distinct().sorted() else listOf("Todos", "Películas", "Series")) { title ->
                 FilterChip(selected = filter == title, onClick = { filter = title; onAction("filter:$title") }, label = { Text(title) }, shape = RoundedCornerShape(24.dp))
             }
         }
-        TileGrid(state.tiles, tab == DesktopTab.Live, onAction)
+        TileGrid(state.tiles, (tab == DesktopTab.Live || tab == DesktopTab.Sports), onAction)
     }
 }
 
@@ -241,6 +252,59 @@ fun ProfilePicker(profiles: List<MediaTile>, onSelect: (String) -> Unit, onManag
                 }
             }
             OutlinedButton(onClick = onManage, shape = RoundedCornerShape(24.dp)) { Text("Administrar perfiles") }
+        }
+    }
+}
+
+@Composable
+private fun CalendarScreen(state: DesktopScreenState, onAction: (String) -> Unit) {
+    val month = java.time.YearMonth.parse(state.calendarMonth)
+    var selected by remember(month) { mutableStateOf(if (java.time.YearMonth.now() == month) java.time.LocalDate.now().dayOfMonth else 1) }
+    fun day(entry: FeedEntry): Int? = runCatching {
+        java.time.OffsetDateTime.parse(entry.detail).atZoneSameInstant(java.time.ZoneId.systemDefault()).dayOfMonth
+    }.getOrNull()
+    Row(Modifier.fillMaxSize().padding(36.dp), horizontalArrangement = Arrangement.spacedBy(32.dp)) {
+        Column(Modifier.weight(1.4f), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+            Text("Tu calendario", style = MaterialTheme.typography.headlineLarge)
+            Text("Estrenos y eventos compartidos con tu TV", color = Color.Gray)
+            Row(Modifier.fillMaxWidth()) { listOf("L", "M", "X", "J", "V", "S", "D").forEach { Text(it, Modifier.weight(1f).padding(14.dp), color = Color.Gray) } }
+            val offset = month.atDay(1).dayOfWeek.value - 1
+            val count = month.lengthOfMonth()
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                repeat((offset + count + 6) / 7) { week ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        repeat(7) { column ->
+                            val number = week * 7 + column - offset + 1
+                            if (number !in 1..count) Spacer(Modifier.weight(1f).height(66.dp))
+                            else Surface(onClick = { selected = number }, shape = RoundedCornerShape(18.dp),
+                                color = if (selected == number) Color.White else Color(0xFF17171C),
+                                contentColor = if (selected == number) Color.Black else Color.White,
+                                modifier = Modifier.weight(1f).height(66.dp)) {
+                                Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(number.toString())
+                                    if (state.entries.any { day(it) == number }) Text("•")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            Text("${selected} · ${month.month.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.forLanguageTag("es"))}", style = MaterialTheme.typography.headlineSmall)
+            val events = state.entries.filter { day(it) == selected }
+            if (events.isEmpty()) Text("Sin eventos para este día", color = Color.Gray)
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(events) { event ->
+                    Surface(shape = RoundedCornerShape(20.dp), color = Color(0xFF17171C)) {
+                        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Text(event.title, style = MaterialTheme.typography.titleMedium)
+                            Text(event.detail, color = Color.Gray, fontSize = 12.sp)
+                            if (event.action != null) TextButton(onClick = { onAction(event.id) }) { Text(event.action) }
+                        }
+                    }
+                }
+            }
         }
     }
 }

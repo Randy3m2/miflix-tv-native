@@ -1,26 +1,26 @@
-# BruniO PC: reconstrucción en desarrollo
+# BruniO PC — reconstrucción en desarrollo
 
-Este directorio NO es una versión final ni un instalador. No reemplaza todavía al cliente anterior.
-Móvil (`mobile/`), TV (`app/`) y sus flujos de compilación quedan fuera del alcance.
+No es una versión final ni un instalador. Móvil (`mobile/`), TV (`app/`) y sus flujos de compilación quedan fuera del alcance. El cliente anterior se conserva para trasladar sus funciones.
 
-## Estado comprobable
+## Código conectado
 
-- Puente local por stdio para cuenta, perfiles, catálogo, detalles y búsqueda, reutilizando el protocolo existente.
-- No devuelve tokens ni configuración privada de complementos a la interfaz.
-- Seis pruebas Python del puente pasan.
-- Módulo independiente Kotlin/Compose con presentaciones para Inicio, Buscar, Mi lista, Live TV, Amigos & Party, Calendario, Descargas, Notificaciones, Ajustes y selector de perfiles.
-- Controles visuales de reproducción basados en `app/.../PlayerControls.kt`: título/fuente, progreso, play/pause, episodios, canales, CC, audio, enlaces, Party, chat, reacciones, cola, información, PiP, maximizar, scores y multiview. Se reutilizan los glifos de BruniO TV sin modificar su archivo original.
-- Los componentes reciben datos y callbacks del host; aún NO están conectados al puente, a un motor de vídeo o a los controladores de esas funciones. No hay reproducción funcional en este módulo.
-- La galería de desarrollo permite inspeccionar pestañas y controles VOD/Live. Muestra explícitamente que no tiene motor conectado. No contiene títulos, canales o progresos simulados como contenido real.
-- Pruebas Kotlin definidas para las condiciones de botones VOD/series/Live y los tiempos en milisegundos. Todavía no ejecutadas: Gradle no resuelve el plugin Kotlin en el entorno local.
-- Temporización del hover separada de los componentes para evitar aperturas accidentales y cierres al cruzar espacios.
+`ConnectedDesktop` es la entrada de Compose. `BridgeClient` mantiene un proceso Python privado por stdio, con identificadores de petición, límite de respuesta y cierre del proceso al salir. No publica un servidor HTTP ni registra credenciales. El servicio usa el `Client` existente y su almacén DPAPI de Windows.
 
-## Pendiente antes de una entrega
+Se escribieron conexiones para restaurar sesión, login, selección de perfil, búsqueda, detalles, lista, filas de Inicio, actividad y solicitudes de amigos, aceptación de solicitudes, calendario compartido y catálogos de Live TV/deportes. El calendario tiene navegación mensual y vista por día. Inicio sigue el orden Seguir viendo → Streaming → Géneros → Recomendaciones → otras filas. El servicio respeta prioridades de complementos por perfil/idioma y ofrece resolución de fuentes, todavía sin consumidor de vídeo en Compose.
 
-Conectar interfaz y puente; migrar perfiles, inicio, búsqueda, detalles, series, biblioteca, TV en vivo,
-multiview, calendario, amigos, Watch Party, descargas, ajustes y actualización.
-Integrar motor de vídeo, audio, subtítulos, fuentes, retry, autoplay y progreso por perfil.
-Comprobar rendimiento, accesibilidad, caché, instalador y actualización reales en Windows.
-Eliminar el cliente anterior únicamente cuando todo lo anterior tenga reemplazo comprobado.
+Las presentaciones de pestañas, selector de perfiles y controles están en Kotlin/Compose. Los controles reciben datos/callbacks del host y reutilizan los glifos de BruniO TV. La navegación se despliega encima del contenido con temporización de hover; no cambia el espacio reservado a la página.
 
-No publicar en el canal de actualización ni presentar este banco como una aplicación terminada.
+## Validación y límites
+
+- 15 pruebas Python pasan con fixtures y catálogo M3U local.
+- Hay pruebas Kotlin definidas para hover y condiciones de botones VOD/series/Live; no ejecutadas.
+- Gradle se descargó, pero este entorno no resuelve el plugin Kotlin. No se consiguió compilar ni ejecutar Compose aquí.
+- No se ha probado contra la cuenta personal ni en Windows. No se afirma paridad completa con TV.
+
+Todavía sin conectar: motor de vídeo y controles de transporte, Watch Party/chat/reacciones, suscripciones deportivas del calendario, descargas, notificaciones, edición de perfiles, formularios de ajustes y actualizador. Las acciones pendientes muestran un aviso explícito. No publicar ni distribuir como versión final.
+
+## Desarrollo
+
+Para pruebas del servicio: `python -m unittest discover -s desktop/brunio-pc-next/tests -v` desde la raíz del repositorio.
+
+Para desarrollo de la interfaz: desde `compose/`, ejecutar `gradle run` con Gradle 8.14.3, JDK 17 y Python disponible como `python`. `BRUNIO_PYTHON` permite indicar el ejecutable y `BRUNIO_BRIDGE` la ruta absoluta a `backend/bridge.py`. No hay empaquetado autónomo todavía.

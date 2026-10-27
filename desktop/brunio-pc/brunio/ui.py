@@ -1318,13 +1318,13 @@ class Window(DesktopFeatures,QMainWindow):
             notices=self.preferences.setdefault('notifications',{}).setdefault(owner,[])
             for text in updates:
                 if text not in notices:notices.insert(0,text)
-            del notices[100:];self.alert_button.setText(''+(' '+str(len(notices))+'+' if notices else ''));self.persist()
+            del notices[100:];self.alert_button.setText(self.t('Notificaciones','Notifications')+('  ·  '+str(len(notices)) if notices else ''));self.persist()
             if done:done(notices)
         self.run(load,received,quiet=True)
     def alerts(self):
         l,page=self.page(self.t('Notificaciones','Notifications'));owner=self.client.session.get('userId','')+':'+self.client.profile
         sub=label(self.t('Novedades de tus favoritos.','Updates from your favorites.'),15);sub.setObjectName('muted');l.addWidget(sub)
-        def clear():self.preferences.setdefault('notifications',{})[owner]=[];self.alert_button.setText('');self.persist();shown([])
+        def clear():self.preferences.setdefault('notifications',{})[owner]=[];self.alert_button.setText(self.t('Notificaciones','Notifications'));self.persist();shown([])
         clear_button=button(self.t('Borrar notificaciones','Clear notifications'),clear);clear_button.setMaximumWidth(210);l.addWidget(clear_button)
         holder=QWidget();holder.setMaximumWidth(900);box=QVBoxLayout(holder);box.setContentsMargins(0,0,0,0);l.addWidget(holder)
         def shown(rows):
@@ -1646,6 +1646,9 @@ class Window(DesktopFeatures,QMainWindow):
     def change_language(self,value):
         self.save_pref('language',value)
         for key,(es,en) in self.nav_labels.items():self.nav_buttons[key].setText(self.t(es,en))
+        self.nav_buttons['settings'].setText(self.t('Ajustes','Settings'))
+        self.alert_button.setText(self.t('Notificaciones','Notifications'))
+        self.more_button.setText(self.t('Más','More')+('  ⌃' if not self.extra_nav.isHidden() else '  ⌄'))
         self.settings(refresh=False)
 
     def save_pref(self,key,value):self.preferences[key]=value;self.client.language='es-ES' if self.preferences.get('language')=='es' else 'en-US';self.sync_source_settings();self.persist()

@@ -16,7 +16,7 @@ PATHS={
  'calendar':'<rect x="3" y="5" width="18" height="17" rx="2"/><path d="M7 2v6M17 2v6M3 10h18"/>',
  'downloads':'<path d="M12 3v12m-5-5 5 5 5-5M3 17v4h18v-4"/>',
  'profiles':'<circle cx="12" cy="8" r="4"/><path d="M3 22v-3a9 9 0 0 1 18 0v3"/>',
- 'settings':'<path d="m9 2-1 4-4 1-2 5 3 3v5l5 2 3-3 5 1 3-5-2-4 1-5-5-2-3 3Z"/><circle cx="12" cy="12" r="3"/>',
+ 'settings':'<path d="M3 7h18M3 17h18"/><circle cx="9" cy="7" r="3"/><circle cx="16" cy="17" r="3"/>',
  'bell':'<path d="M4 18h16l-2-4V9a6 6 0 0 0-12 0v5ZM9 21h6"/>',
  'volume':'<path d="M3 10v4h4l5 4V6l-5 4H3Zm12-1a5 5 0 0 1 0 6m3-9a9 9 0 0 1 0 12"/>',
  'fullscreen':'<path d="M4 9V4h5m6 0h5v5M4 15v5h5m6 0h5v-5"/>',

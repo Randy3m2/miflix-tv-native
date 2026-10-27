@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json, os, random, sys, time, uuid, webbrowser
+import json, os, random, sys, time, uuid, webbrowser, hashlib
 from pathlib import Path
 from urllib.parse import urlencode,quote
 from PySide6.QtCore import Qt,QObject,Signal,QRunnable,QThreadPool,QTimer,QUrl,QSize
@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QApplication,QMainWindow,QWidget,QVBoxLayout,QHBo
 from shiboken6 import isValid
 from .core import Client,StaleWork,SUPABASE_URL,SUPABASE_KEY,LIVE,REPO,iso,now_ms,media,stream_size,stream_quality,normalize,valid_url
 from .vault import Vault
-from .visuals import Art,Poster,ProfileAvatar,EdgeRail,Starfield,PlatformTile,ContinueCard,icon
+from .visuals import Art,Poster,ProfileAvatar,EdgeRail,Starfield,PlatformTile,ArtworkTile,ContinueCard,icon
 from .desktop_features import DesktopFeatures
 
 def java_hash(value):
@@ -52,7 +52,13 @@ class Window(DesktopFeatures,QMainWindow):
         self.client.profile=self.local.get('profile','default');self.preferences=self.local.get('preferences',{'language':'es','audio':'es','sub':'es','limit':0,'autoplay':True,'theme':'dark'})
         self.apply_theme()
         self.state={'favorites':[],'progress':{}};self.history=self.local.get('history',{});self.ratings={};self.selected=None;self.current=None;self.sources=[]
-        self.pool=QThreadPool(self);self.pool.setMaxThreadCount(6);self.tasks=set();self.network=QNetworkAccessManager(self);self.images={};self.known_members=None
+        self.pool=QThreadPool(self);self.pool.setMaxThreadCount(6);self.tasks=set();self.network=QNetworkAccessManager(self);self.images={};self.pending_images={}
+        self._home_screen=None;self._home_owner=None;self._home_ready=False;self._home_loaded_at=0
+        self._genre_art={};self._genre_art_requested=False
+        self.image_cache_dir=Path(os.getenv('LOCALAPPDATA') or (Path.home()/'.cache'))/'BruniO-PC'/'artwork'
+        try:self.image_cache_dir.mkdir(parents=True,exist_ok=True)
+        except OSError:self.image_cache_dir=None
+        self.known_members=None
         self.setup_desktop_features();self.play_id=0;self.page_id=0;self.poll_busy=False;self.social_busy=False;self.sync_applying=False;self.guest_intent=None;self.guest_until=0;self.last_event=-1;self.paused_at=0;self.resume_pending=0;self.trakt_started=False
         self.fallback_urls=set();self.source_activity=time.monotonic();self.source_last_pos=0;self.vlc=None;self.player=None;self.library=None;self.segments={};self.imdb='';self.chat_dialog=None
         # RC6: desktop-first two-column shell.  The Windows client keeps all
@@ -61,8 +67,8 @@ class Window(DesktopFeatures,QMainWindow):
         self.root_layout=QHBoxLayout(self.root)
         self.root_layout.setContentsMargins(0,0,0,0);self.root_layout.setSpacing(0)
         self.setCentralWidget(self.root)
-        self.sidebar=QWidget();self.sidebar.setObjectName('sidebar');self.sidebar.setFixedWidth(210)
-        self.nav=QVBoxLayout(self.sidebar);self.nav.setContentsMargins(13,28,13,18);self.nav.setSpacing(5)
+        self.sidebar=QWidget();self.sidebar.setObjectName('sidebar');self.sidebar.setFixedWidth(226)
+        self.nav=QVBoxLayout(self.sidebar);self.nav.setContentsMargins(15,28,15,18);self.nav.setSpacing(6)
         brand=QLabel('Bruni<span style="color:#b4a1ff">O</span>')
         brand.setTextFormat(Qt.TextFormat.RichText);brand.setObjectName('brand')
         self.nav.addWidget(brand);self.nav.addSpacing(26)
@@ -86,7 +92,7 @@ class Window(DesktopFeatures,QMainWindow):
         for key,glyph,es,en,fn in routes:
             b=button(self.t(es,en),lambda key=key,fn=fn:(self.select_nav(key),fn()))
             b.setObjectName('navButton');b.setIcon(icon(glyph,'#c5c6df'))
-            b.setIconSize(QSize(18,18));b.setFixedHeight(41)
+            b.setIconSize(QSize(20,20));b.setFixedHeight(44)
             b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.setToolTip(self.t(es,en));b.setAccessibleName(self.t(es,en))
             if key in self.secondary_routes:extra_layout.addWidget(b)
@@ -95,20 +101,20 @@ class Window(DesktopFeatures,QMainWindow):
         self.more_button=button(self.t('Más','More')+'  ⌄',self.toggle_more)
         self.more_button.setObjectName('navButton')
         self.more_button.setIcon(icon('collections','#c5c6df'))
-        self.more_button.setIconSize(QSize(17,17));self.more_button.setFixedHeight(39)
+        self.more_button.setIconSize(QSize(20,20));self.more_button.setFixedHeight(43)
         self.nav.addWidget(self.more_button)
         self.nav.addWidget(self.extra_nav);self.extra_nav.hide()
         self.nav.addStretch(1)
         self.nav.addWidget(QLabel('────────────────'),0,Qt.AlignmentFlag.AlignHCenter)
         settings_button=button(self.t('Ajustes','Settings'),lambda:(self.select_nav('settings'),self.settings()))
         settings_button.setObjectName('navButton');settings_button.setIcon(icon('settings','#b9b8d5'))
-        settings_button.setIconSize(QSize(19,19));settings_button.setFixedHeight(41)
+        settings_button.setIconSize(QSize(20,20));settings_button.setFixedHeight(44)
         self.nav.addWidget(settings_button)
         self.nav_buttons['settings']=settings_button;self.nav_glyphs['settings']='settings'
         self.alert_button=button(self.t('Notificaciones','Notifications'),self.alerts)
         self.alert_button.setObjectName('navButton')
         self.alert_button.setIcon(icon('bell','#b9b8d5'));self.alert_button.setIconSize(QSize(19,19))
-        self.alert_button.setFixedHeight(41)
+        self.alert_button.setFixedHeight(44)
         self.nav.addWidget(self.alert_button)
         self.profile_button=ProfileAvatar();self.profile_button.setObjectName('profileAvatarButton')
         self.profile_button.clicked.connect(lambda:self.profiles())
@@ -185,27 +191,26 @@ class Window(DesktopFeatures,QMainWindow):
         return select
     def platform_rail(self,parent,page):
         parent.addWidget(self.section_title(self.t('Tus servicios en BruniO','Your services on BruniO')))
-        w,l=row();l.setSpacing(10)
+        w,l=row();l.setSpacing(13)
         platforms=[('Netflix',8,'netflix.png'),('Disney+',337,'disney-plus.png'),
                    ('HBO Max',1899,'hbo-max.png'),('Prime Video',9,'prime-video.png'),
                    ('Apple TV+',350,'apple-tv.png'),('YouTube',None,None),
                    ('Paramount+',531,'paramount-plus.png'),('AMC+',526,'amcplus.png'),
                    ('Hulu',15,'hulu.png'),('Crunchyroll',283,'crunchyroll.png')]
         for name,pid,asset in platforms:
-            tile=PlatformTile(name);tile.setFixedSize(162,91)
+            tile=PlatformTile(name);tile.setFixedSize(218,122)
             tile.setToolTip(name);tile.setAccessibleName(name)
             if pid is not None:tile.clicked.connect(lambda checked=False,name=name,pid=pid:self.provider(name,pid))
             else:tile.clicked.connect(lambda:self.tell(self.t('YouTube no tiene todavía una colección TMDB.','YouTube does not have a TMDB collection yet.')))
             file=PLATFORM_ASSETS/asset if asset else None
             animation=PLATFORM_ASSETS/((asset or '').removesuffix('.png')+'.gif') if asset else None
-            if animation and animation.is_file():
-                tile.setAnimatedLogo(animation)
-            elif file and file.is_file():
-                tile.setPixmap(QPixmap(str(file)))
+            # Static brand art is visible immediately; GIF plays only on hover.
+            if file and file.is_file():tile.setPixmap(QPixmap(str(file)))
+            if animation and animation.is_file():tile.setAnimatedLogo(animation)
             elif name=='AMC+':tile.setPixmap(QPixmap(str(ASSETS/'streaming_amcplus_rp48.png')))
             elif name in ('Hulu','Paramount+'):tile.setPixmap(QPixmap(str(ASSETS/(name.lower().replace('+','-plus')+'.png'))))
             l.addWidget(tile)
-        l.addStretch();parent.addWidget(EdgeRail(w,101))
+        l.addStretch();parent.addWidget(EdgeRail(w,140))
 
     def continue_rail(self,parent,items):
         """Continue Watching uses cinematic backdrops and real resume progress."""
@@ -1811,7 +1816,7 @@ QLabel#searchResultTitle { color:#26314a; }
 QWidget#player { background:#03050c; }
 '''
 CINEMATIC_STYLE='''
-QPushButton#navButton { border-radius:12px; padding:8px 13px; font-size:13px; font-weight:600; }
+QPushButton#navButton { border-radius:12px; padding:9px 13px; font-size:15px; font-weight:600; }
 QPushButton#navButton:hover { background:#212c47; border-color:#414467; }
 QPushButton#navButton[selected="true"] {
     background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #5f528f,stop:1 #302a50);
@@ -1886,6 +1891,8 @@ QWidget#searchBar { border-radius:29px; border:1px solid #aa97ee; background:#18
 QLineEdit#searchInput { font-size:18px; }
 QPushButton#filterPill { padding:8px 16px; font-size:12px; }
 QPushButton#filterPill[selected="true"] { background:#c1b0ff; border-color:#d5c9ff; }
+QPushButton#platformTile { border:0; background:transparent; padding:0; }
+QPushButton#artworkTile { border:0; background:transparent; padding:0; }
 '''
 def main(smoke=False,smoke_vlc=False):
     app=QApplication(sys.argv);app.setStyleSheet(STYLE);window=Window(smoke);window.show()

@@ -49,7 +49,8 @@ class Window(DesktopFeatures,QMainWindow):
         super().__init__();self.setWindowTitle('BruniO · PC');self.resize(1280,820);self.setMinimumSize(900,640)
         self.setWindowIcon(QIcon(str(ASSETS/'brunio_icon.png')))
         self.client=Client();self.vault=Vault();self.local=self.vault.load();self.client.session=self.local.get('session',{})
-        self.client.profile=self.local.get('profile','default');self.preferences=self.local.get('preferences',{'language':'es','audio':'es','sub':'es','limit':0,'autoplay':True})
+        self.client.profile=self.local.get('profile','default');self.preferences=self.local.get('preferences',{'language':'es','audio':'es','sub':'es','limit':0,'autoplay':True,'theme':'dark'})
+        self.apply_theme()
         self.state={'favorites':[],'progress':{}};self.history=self.local.get('history',{});self.ratings={};self.selected=None;self.current=None;self.sources=[]
         self.pool=QThreadPool(self);self.pool.setMaxThreadCount(6);self.tasks=set();self.network=QNetworkAccessManager(self);self.images={};self.known_members=None
         self.setup_desktop_features();self.play_id=0;self.page_id=0;self.poll_busy=False;self.social_busy=False;self.sync_applying=False;self.guest_intent=None;self.guest_until=0;self.last_event=-1;self.paused_at=0;self.resume_pending=0;self.trakt_started=False
@@ -195,7 +196,11 @@ class Window(DesktopFeatures,QMainWindow):
             if pid is not None:tile.clicked.connect(lambda checked=False,name=name,pid=pid:self.provider(name,pid))
             else:tile.clicked.connect(lambda:self.tell(self.t('YouTube no tiene todavía una colección TMDB.','YouTube does not have a TMDB collection yet.')))
             file=PLATFORM_ASSETS/asset if asset else None
-            if file and file.is_file():tile.setPixmap(QPixmap(str(file)))
+            animation=PLATFORM_ASSETS/((asset or '').removesuffix('.png')+'.gif') if asset else None
+            if animation and animation.is_file():
+                tile.setAnimatedLogo(animation)
+            elif file and file.is_file():
+                tile.setPixmap(QPixmap(str(file)))
             elif name=='AMC+':tile.setPixmap(QPixmap(str(ASSETS/'streaming_amcplus_rp48.png')))
             elif name in ('Hulu','Paramount+'):tile.setPixmap(QPixmap(str(ASSETS/(name.lower().replace('+','-plus')+'.png'))))
             l.addWidget(tile)
@@ -344,8 +349,11 @@ class Window(DesktopFeatures,QMainWindow):
                 buttons.addWidget(info);buttons.addStretch(1)
                 dots=[]
                 for i in range(len(features)):
-                    dot=button('●',lambda i=i:display(i));dot.setObjectName('heroDot')
-                    dot.setFixedSize(19,19);buttons.addWidget(dot);dots.append(dot)
+                    dot=button('',lambda i=i:display(i));dot.setObjectName('heroDot')
+                    dot.setFixedSize(22,6);buttons.addWidget(dot);dots.append(dot)
+                next_hero=button('›',lambda:display((featured['index']+1)%len(features)))
+                next_hero.setObjectName('heroArrow');next_hero.setFixedSize(38,38)
+                buttons.addSpacing(12);buttons.addWidget(next_hero)
                 area.addWidget(actions)
                 def display(index):
                     if page!=self.page_id:return
@@ -1581,7 +1589,7 @@ class Window(DesktopFeatures,QMainWindow):
         system_dark=app.styleHints().colorScheme()==Qt.ColorScheme.Dark
         light=(choice=='light') or (choice=='auto' and not system_dark)
         app.setProperty('lightTheme',light)
-        app.setStyleSheet(STYLE+(LIGHT_STYLE if light else ''))
+        app.setStyleSheet(STYLE+CINEMATIC_STYLE+(LIGHT_STYLE if light else ''))
 
     def qr_login(self):
         from .pairing import Pairing
@@ -1765,8 +1773,115 @@ QDialog { background:#0e1525; }
 
 
 
+LIGHT_STYLE='''
+QWidget { color:#18223a; }
+QMainWindow,QWidget#appRoot,QWidget#contentShell,QWidget#screenContent,QScrollArea { background:#f1f3fa; }
+QWidget#sidebar { background:#e9edf7; border-right:1px solid #d5dcec; }
+QLabel#brand,QLabel#pageTitle,QLabel#sectionTitle,QLabel#settingsPageHeading,
+QLabel#settingsGroupHeading { color:#202a45; }
+QWidget#settingsContent,QWidget#settingsPane,QWidget#searchResults { background:transparent; }
+QWidget#settingsCard,QWidget#updateStrip,QWidget#channelTile,QWidget#downloadCard {
+    background:#ffffff; border:1px solid #d6dfed; }
+QWidget#settingsNav { background:#ffffff; border:1px solid #d6dfed; }
+QWidget#profileFooter { background:#ffffff; border:1px solid #d6dfed; }
+QLabel#profileDisplayName,QLabel#profileFootnote { color:#26314a; }
+QLabel#muted,QLabel#channelCategory,QLabel#channelCount { color:#65718d; }
+QPushButton { color:#26314a; background:#ffffff; border:1px solid #ced7e9; }
+QPushButton:hover { color:#171c31; background:#edf0fb; border:1px solid #a79ae0; }
+QPushButton#navButton,QPushButton#settingsNavButton { color:#45516b; background:transparent; }
+QPushButton#navButton:hover,QPushButton#settingsNavButton:hover { background:#e1e5f1; color:#1e2840; }
+QPushButton#navButton[selected="true"],QPushButton#settingsNavButton[selected="true"] {
+    color:#342659; background:#ddd3ff; border-color:#c2b4f4; }
+QPushButton#collectionTile,QPushButton#genreTile,QPushButton#collectionWide { color:#f8f6ff; }
+QPushButton#filterPill { color:#46516b; background:#ffffff; border:1px solid #cdd6e7; }
+QPushButton#filterPill[selected="true"] { color:#251b46; background:#c9bcff; }
+QWidget#searchBar,QLineEdit,QComboBox,QDoubleSpinBox {
+    color:#1c2944; background:#ffffff; border:1px solid #becae4; }
+QLineEdit#searchInput { color:#15203b; background:transparent; border:0; }
+QPushButton#themeOption { background:#ffffff; color:#25314c; }
+QPushButton#themeOption[selected="true"] { background:#d6caff; border-color:#9c87ef; color:#241943; }
+QLabel#searchResultTitle { color:#26314a; }
+QWidget#player { background:#03050c; }
+'''
+CINEMATIC_STYLE='''
+QPushButton#navButton { border-radius:12px; padding:8px 13px; font-size:13px; font-weight:600; }
+QPushButton#navButton:hover { background:#212c47; border-color:#414467; }
+QPushButton#navButton[selected="true"] {
+    background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #5f528f,stop:1 #302a50);
+    border:1px solid #8376b2; font-weight:750; }
+QWidget#profileFooter { background:#131c2d; border:1px solid #323951; border-radius:15px; }
+QPushButton#profileAvatarButton {
+    background:#1c2440; border:2px solid #a695ee; border-radius:23px; padding:2px; }
+QPushButton#profileAvatarButton:hover { border-color:#e0d6ff; background:#414061; }
+QLabel#profileDisplayName { font-size:13px; font-weight:700; color:#f3f0ff; }
+QLabel#profileFootnote { font-size:11px; color:#a5a8c5; }
+QPushButton#heroDot { border:0; background:#555f79; border-radius:3px; padding:0; }
+QPushButton#heroDot[selected="true"] { background:#d0bbff; }
+QPushButton#heroArrow {
+    border:1px solid #726c97; background:rgba(15,20,37,177);
+    border-radius:19px; color:#f2eaff; padding:0; font-size:28px; font-weight:400; }
+QPushButton#heroArrow:hover { background:rgba(86,73,137,220); border-color:#cbb8ff; }
+QPushButton#railEdge {
+    background:rgba(27,29,50,215); border:1px solid #8276ad;
+    color:#fff; border-radius:19px; padding:0; }
+QPushButton#railEdge:hover { background:#71639b; border-color:#c7b2ff; }
+QWidget#settingsNav { background:#101827; border:1px solid #303a52; border-radius:20px; }
+QWidget#settingsContent,QWidget#settingsPane { background:transparent; }
+QWidget#settingsCard { border-radius:20px; border:1px solid #333f59; background:#151e2d; }
+QLabel#settingsPageHeading { color:#f3f0ff; font-weight:800; font-size:24px; }
+QLabel#settingsGroupHeading { color:#efebff; font-weight:750; font-size:18px; }
+QPushButton#settingsNavButton {
+    text-align:left; border-radius:12px; padding:10px 14px; border:1px solid transparent;
+    background:transparent; color:#b7bcd5; font-weight:600; }
+QPushButton#settingsNavButton:hover { background:#273048; border-color:#454666; }
+QPushButton#settingsNavButton[selected="true"] {
+    background:#4f437b; border-color:#8370b2; color:#ffffff; }
+QPushButton#themeOption { color:#e2dafa; background:#202940; border:1px solid #464c6a;
+    border-radius:15px; font-size:14px; font-weight:700; }
+QPushButton#themeOption:hover { background:#323052; border-color:#9485c7; }
+QPushButton#themeOption[selected="true"] {
+    color:#1a1434; background:#c7b6ff; border:1px solid #dbceff; }
+QLabel#versionBadge { color:#c4b6ff; background:#21233c; padding:9px 14px;
+    border:1px solid #514773; border-radius:11px; }
+QPushButton#collectionTile {
+    text-align:left; border-radius:18px; padding:18px 22px;
+    background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #282743,stop:.55 #151d33,stop:1 #11192b);
+    border:1px solid #444262; font-size:17px; line-height:1.4; }
+QPushButton#collectionTile:hover { background:#3c315c; border:1px solid #a591ef; }
+QPushButton#genreTile {
+    text-align:left; border-radius:16px; padding:17px 20px;
+    background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #292640,stop:1 #111c30);
+    border:1px solid #454266; font-size:14px; }
+QPushButton#genreTile:hover { background:#3a315a; border-color:#a995e9; }
+QPushButton#collectionWide {
+    text-align:left; padding:18px 25px; border-radius:16px;
+    background:#1b2540; border:1px solid #434567; font-size:17px; }
+QPushButton#collectionWide:hover { background:#343458; border-color:#a58fea; }
+QPushButton#yearPill,QPushButton#secondaryAction {
+    background:#1d2639; border:1px solid #4b526c; border-radius:18px;
+    color:#d9ddf4; font-weight:600; }
+QPushButton#yearPill:hover,QPushButton#secondaryAction:hover {
+    background:#41385d; border-color:#ab98e6; }
+QLabel#liveBadge { color:#ff7c8f; background:#262038; border:1px solid #5e3a55;
+    border-radius:12px; padding:9px 13px; font-weight:800; }
+QLabel#channelCount { color:#afb9d9; font-size:13px; }
+QWidget#channelTile { background:#121b2b; border:1px solid #303d57; border-radius:18px; }
+QWidget#channelTile:hover { background:#1e2940; border-color:#9580d7; }
+QLabel#channelCategory { color:#a59cdb; font-size:11px; }
+QPushButton#channelName { color:#f2f1ff; font-weight:650; padding:6px 2px;
+    background:transparent; border:0; text-align:center; }
+QPushButton#favoritePill { border:1px solid #625681; border-radius:16px;
+    background:#262338; color:#f1e1fa; padding:0; font-size:16px; }
+QPushButton#favoritePill[selected="true"] { background:#6e3c73; color:white; }
+QWidget#searchBar { border-radius:29px; border:1px solid #aa97ee; background:#181d31; }
+QLineEdit#searchInput { font-size:18px; }
+QPushButton#filterPill { padding:8px 16px; font-size:12px; }
+QPushButton#filterPill[selected="true"] { background:#c1b0ff; border-color:#d5c9ff; }
+'''
 def main(smoke=False,smoke_vlc=False):
     app=QApplication(sys.argv);app.setStyleSheet(STYLE);window=Window(smoke);window.show()
+    try:app.styleHints().colorSchemeChanged.connect(lambda _:window.apply_theme())
+    except AttributeError:pass
     if smoke_vlc:window.ensure_player()
     if smoke:QTimer.singleShot(200,app.quit)
     return app.exec()

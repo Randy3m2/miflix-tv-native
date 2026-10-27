@@ -1429,7 +1429,7 @@ class Window(DesktopFeatures,QMainWindow):
         version_label.setObjectName('versionBadge');update_card.addWidget(version_label)
         updater=button(self.t('↻   Buscar actualización','↻   Check for updates'),
                        self.check_updates)
-        updater.setObjectName('primaryAction');updater.setMaximumWidth(265)
+        updater.setObjectName('updateButton');updater.setMaximumWidth(265)
         update_card.addWidget(updater)
         update_card.addWidget(label(self.t(
             'La descarga comprueba la versión, el tamaño y SHA-256 antes de abrir el instalador.',
@@ -1841,6 +1841,8 @@ QPushButton#themeOption { color:#e2dafa; background:#202940; border:1px solid #4
 QPushButton#themeOption:hover { background:#323052; border-color:#9485c7; }
 QPushButton#themeOption[selected="true"] {
     color:#1a1434; background:#c7b6ff; border:1px solid #dbceff; }
+QPushButton#updateButton { color:#1c1636; background:#c5b5ff; border:1px solid #d8ccff; border-radius:19px; font-weight:800; }
+QPushButton#updateButton:hover { background:#e4dcff; }
 QLabel#versionBadge { color:#c4b6ff; background:#21233c; padding:9px 14px;
     border:1px solid #514773; border-radius:11px; }
 QPushButton#collectionTile {

@@ -666,63 +666,107 @@ class Window(DesktopFeatures,QMainWindow):
                 item=convert(row,kind);seen[item['cloudId']]=item
             return sorted(seen.values(),key=lambda x:x.get('rating',0),reverse=True)[:60]
         self.run(load,lambda rows:self.grid(l,rows) if page==self.page_id else None)
+    def genre_tile(self,name,gid,description=''):
+        tile=ArtworkTile(name,description)
+        tile.setObjectName('genreTile')
+        tile.clicked.connect(lambda checked=False,genre=gid,label=name:
+                             self.catalog_page(label,'/discover/movie','movie',
+                                               {'with_genres':genre}))
+        tile.setMinimumHeight(149)
+        saved=self._genre_art.get('genre:'+str(gid),'')
+        if saved:self.image(saved,tile,470,225)
+        return tile
+    def fill_genre_art(self,page,targets):
+        # Map artwork to the exact genre rather than generic gradients.
+        requests=[(key,gid) for key,gid,tile in targets]
+        for key,gid,tile in targets:
+            url=self._genre_art.get(key,'')
+            if url and isValid(tile):self.image(url,tile,500,270)
+        if all(key in self._genre_art for key,_,_ in targets):return
+        def received(data):
+            if page!=self.page_id:return
+            for key,gid,tile in targets:
+                url=data.get(key,'')
+                if url and isValid(tile):self.image(url,tile,500,270)
+        self.run(lambda:self.load_genre_art(requests),received,quiet=True)
     def collections(self):
         self.select_nav('collections')
         l,page=self.page('BruniO')
-        head,hl=row();hl.setSpacing(12)
-        titles,tl=column();tl.setContentsMargins(0,0,0,0);tl.setSpacing(4)
-        title=label(self.t('Explorar','Explore'),30);title.setObjectName('pageTitle');tl.addWidget(title)
-        subtitle=label(self.t('Un universo de historias, a tu manera.','Discover a world of stories.'),13)
-        subtitle.setObjectName('muted');tl.addWidget(subtitle)
-        hl.addWidget(titles,1);l.addWidget(head)
+        header,hl=row();hl.setSpacing(10)
+        headlines,headline_col=column()
+        headline_col.setContentsMargins(0,0,0,0);headline_col.setSpacing(2)
+        title=label(self.t('Explorar','Explore'),30);title.setObjectName('pageTitle')
+        headline_col.addWidget(title)
+        subtitle=label(self.t('Encuentra una nueva obsesión.','Find your next obsession.'),14)
+        subtitle.setObjectName('muted');headline_col.addWidget(subtitle)
+        hl.addWidget(headlines,1);l.addWidget(header)
         l.addWidget(self.section_title(self.t('Tus plataformas favoritas','Your favorite platforms')))
-        providers=[('Netflix',8,'N','Series y películas','Shows & movies'),
-                   ('Disney+',337,'✦','Magia para todos','For every age'),
-                   ('Prime Video',9,'▶','Historias sin límites','Infinite stories'),
-                   ('Apple TV+',350,'◉','Originales premiados','Award-winning originals'),
-                   ('HBO Max',1899,'◆','Grandes producciones','Premium entertainment'),
-                   ('Paramount+',531,'★','Cine y series','Movies and series')]
-        grid=QGridLayout();grid.setSpacing(13);grid.setContentsMargins(0,0,0,0)
-        for i,(name,pid,symbol,es,en) in enumerate(providers):
-            tile=button(symbol+'    '+name+'\n'+self.t(es,en)+'     ↗',
-                        lambda name=name,pid=pid:self.provider(name,pid))
-            tile.setObjectName('collectionTile');tile.setMinimumHeight(114)
+        services=[
+            ('Netflix',8,'netflix.png','Series y películas','Movies and series'),
+            ('Disney+',337,'disney-plus.png','Magia para todos','Discover magic'),
+            ('Prime Video',9,'prime-video.png','Películas y originales','Films and originals'),
+            ('Apple TV+',350,'apple-tv.png','Originales premiados','Award-winning originals'),
+            ('HBO Max',1899,'hbo-max.png','Grandes producciones','Premium storytelling'),
+            ('Paramount+',531,'paramount-plus.png','Cine y televisión','Films and shows'),
+            ('Hulu',15,'hulu.png','Series que enamoran','Must-see series'),
+            ('Crunchyroll',283,'crunchyroll.png','El mundo del anime','Anime universe'),
+        ]
+        provider_grid=QGridLayout();provider_grid.setSpacing(13)
+        provider_grid.setContentsMargins(0,0,0,0)
+        for i,(name,pid,image_name,es,en) in enumerate(services):
+            tile=ArtworkTile(name,self.t(es,en))
+            tile.setObjectName('collectionTile')
+            tile.setFixedHeight(165)
+            path=PLATFORM_ASSETS/image_name
+            if path.is_file():tile.setPixmap(QPixmap(str(path)))
+            tile.clicked.connect(lambda checked=False,name=name,pid=pid:
+                                 self.provider(name,pid))
             tile.setSizePolicy(QSizePolicy.Policy.Expanding,QSizePolicy.Policy.Fixed)
-            tile.setToolTip(name);grid.addWidget(tile,i//3,i%3)
-        l.addLayout(grid)
+            provider_grid.addWidget(tile,i//4,i%4)
+        l.addLayout(provider_grid)
         l.addWidget(self.section_title(self.t('Descubre por género','Browse by genre'),
-                                      self.t('Encuentra justo lo que te apetece ver.','Find something for every mood.')))
-        genres=[('Acción','Action',28,'⚡'),('Comedia','Comedy',35,'☺'),
-                ('Drama','Drama',18,'◈'),('Terror','Horror',27,'☾'),
-                ('Ciencia ficción','Sci-Fi',878,'✧'),('Suspenso','Thriller',53,'◇'),
-                ('Animación','Animation',16,'✿'),('Aventura','Adventure',12,'➤')]
-        g=QGridLayout();g.setSpacing(12);g.setContentsMargins(0,0,0,0)
-        for i,(es,en,gid,symbol) in enumerate(genres):
+                         self.t('Colecciones visuales para cada momento.',
+                                'Explore collections for every mood.')))
+        genres=[('Acción','Action',28),('Comedia','Comedy',35),
+                ('Drama','Drama',18),('Terror','Horror',27),
+                ('Ciencia ficción','Sci-Fi',878),('Suspenso','Thriller',53),
+                ('Animación','Animation',16),('Aventura','Adventure',12)]
+        art_targets=[]
+        genre_grid=QGridLayout();genre_grid.setSpacing(13)
+        genre_grid.setContentsMargins(0,0,0,0)
+        for i,(es,en,gid) in enumerate(genres):
             name=self.t(es,en)
-            tile=button(symbol+'    '+name+'     ↗',
-                lambda gid=gid,name=name:self.catalog_page(name,'/discover/movie','movie',{'with_genres':gid}))
-            tile.setObjectName('genreTile');tile.setMinimumHeight(86)
-            tile.setSizePolicy(QSizePolicy.Policy.Expanding,QSizePolicy.Policy.Fixed)
-            g.addWidget(tile,i//4,i%4)
-        l.addLayout(g)
-        l.addWidget(self.section_title(self.t('Colecciones especiales','Curated collections')))
-        special,sl=row();sl.setSpacing(12)
-        upcoming=button('✧   '+self.t('Próximamente','Coming soon')+'    ↗',
-            lambda:self.catalog_page(self.t('Próximamente','Coming soon'),'/discover/movie','movie',
-                                     {'primary_release_date.gte':time.strftime('%Y-%m-%d')}))
-        upcoming.setObjectName('collectionWide');upcoming.setMinimumHeight(78);sl.addWidget(upcoming,1)
-        recent=button('★   '+self.t('Más valoradas','Top rated')+'    ↗',
-            lambda:self.catalog_page(self.t('Más valoradas','Top rated'),'/movie/top_rated','movie'))
-        recent.setObjectName('collectionWide');recent.setMinimumHeight(78);sl.addWidget(recent,1)
+            tile=self.genre_tile(name,gid,
+                 self.t('Ver colección  ↗','Browse collection  ↗'))
+            genre_grid.addWidget(tile,i//4,i%4)
+            art_targets.append(('genre:'+str(gid),gid,tile))
+        l.addLayout(genre_grid)
+        l.addWidget(self.section_title(self.t('Colecciones destacadas','Featured collections')))
+        special,sl=row();sl.setSpacing(13)
+        for title_es,title_en,path,extra in [
+            ('Próximamente','Coming soon','/movie/upcoming',
+             self.t('Lo mejor está por llegar','See what is next')),
+            ('Mejor valoradas','Top rated','/movie/top_rated',
+             self.t('Lo más aclamado','Critically acclaimed'))]:
+            tile=ArtworkTile(self.t(title_es,title_en),extra)
+            tile.setObjectName('collectionWide');tile.setFixedHeight(152)
+            tile.clicked.connect(lambda checked=False,title=self.t(title_es,title_en),
+                         path=path:self.catalog_page(title,path,'movie'))
+            sl.addWidget(tile,1)
+            art_targets.append(('special:'+path,path,tile))
         l.addWidget(special)
+        self.fill_genre_art(page,art_targets)
         l.addWidget(self.section_title(self.t('Viaja en el tiempo','Explore by year')))
         years,yl=row();yl.setSpacing(9)
         for year in range(time.localtime().tm_year,2015,-1):
-            chip=button(str(year),lambda year=year:self.catalog_page(str(year),'/discover/movie','movie',{'primary_release_year':year}))
+            chip=button(str(year),lambda year=year:self.catalog_page(
+                str(year),'/discover/movie','movie',{'primary_release_year':year}))
             chip.setObjectName('yearPill');chip.setFixedSize(92,40);yl.addWidget(chip)
         yl.addStretch();l.addWidget(EdgeRail(years,58))
-        older=button(self.t('Explorar años anteriores  ↗','Explore older years  ↗'),lambda:self.years_picker())
-        older.setObjectName('secondaryAction');older.setMaximumWidth(260);l.addWidget(older)
+        older=button(self.t('Explorar años anteriores  ↗','Explore older years  ↗'),
+                    self.years_picker)
+        older.setObjectName('secondaryAction');older.setMaximumWidth(260)
+        l.addWidget(older)
     def years_picker(self):
         years=[str(y) for y in range(time.localtime().tm_year,1899,-1)]
         value,ok=QInputDialog.getItem(self,'BruniO',self.t('Selecciona el año','Choose a year'),years,0,False)

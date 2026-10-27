@@ -573,20 +573,54 @@ class Window(DesktopFeatures,QMainWindow):
                     while nested.count():
                         x=nested.takeAt(0)
                         if x.widget():x.widget().deleteLater()
+        def landing():
+            results_title.setText(self.t('¿Qué quieres ver hoy?','What would you like to watch?'))
+            intro=label(self.t('Descubre películas, series y nuevas historias.',
+                               'Explore movies, series and new stories.'),14)
+            intro.setObjectName('muted')
+            result_l.addWidget(intro)
+            platforms=QGridLayout();platforms.setSpacing(13)
+            featured=[('Netflix','netflix.png',8),('Disney+','disney-plus.png',337),
+                      ('Prime Video','prime-video.png',9),('HBO Max','hbo-max.png',1899)]
+            for i,(name,art,provider_id) in enumerate(featured):
+                tile=PlatformTile(name);tile.setFixedHeight(132)
+                tile.setMinimumWidth(150)
+                path=PLATFORM_ASSETS/art
+                if path.is_file():tile.setPixmap(QPixmap(str(path)))
+                tile.clicked.connect(lambda checked=False,n=name,p=provider_id:self.provider(n,p))
+                platforms.addWidget(tile,i//4,i%4)
+            result_l.addLayout(platforms)
+            result_l.addWidget(self.section_title(self.t('Explora por género','Explore by genre')))
+            picks=QGridLayout();picks.setSpacing(12)
+            for index,(es,en,gid) in enumerate([
+                ('Acción','Action',28),('Comedia','Comedy',35),
+                ('Suspenso','Thriller',53),('Ciencia ficción','Sci-Fi',878)]):
+                t=self.genre_tile(self.t(es,en),gid)
+                t.setFixedHeight(156)
+                picks.addWidget(t,index//4,index%4)
+            result_l.addLayout(picks)
         def render():
             if page!=self.page_id:return
             clear_results()
             kind=filter_state['value'];query=filter_state['query']
+            if not query and kind=='all' and not filter_state['items']:
+                landing();return
             if kind=='genres':
                 results_title.setText(self.t('Explorar por género','Browse by genre'))
                 grid=QGridLayout();grid.setSpacing(12)
                 genres=[('Acción','Action',28),('Comedia','Comedy',35),('Drama','Drama',18),
                         ('Terror','Horror',27),('Ciencia ficción','Sci-Fi',878),
                         ('Suspenso','Thriller',53),('Animación','Animation',16),('Aventura','Adventure',12)]
+                targets=[]
                 for i,(es,en,gid) in enumerate(genres):
-                    b=button(self.t(es,en),lambda es=es,en=en,gid=gid:self.catalog_page(self.t(es,en),'/discover/movie','movie',{'with_genres':gid}))
-                    b.setObjectName('genreTile');b.setMinimumHeight(78);grid.addWidget(b,i//4,i%4)
-                result_l.addLayout(grid);return
+                    tile=self.genre_tile(self.t(es,en),gid,
+                        self.t('Ver colección  ↗','Explore collection  ↗'))
+                    tile.setFixedHeight(164)
+                    grid.addWidget(tile,i//4,i%4)
+                    targets.append(('genre:'+str(gid),gid,tile))
+                result_l.addLayout(grid)
+                self.fill_genre_art(page,targets)
+                return
             if kind in ('actors','directors'):
                 people=[x for x in filter_state['people'] if (x.get('known_for_department') or 'Acting').lower()==('acting' if kind=='actors' else 'directing')]
                 results_title.setText((self.t('Actores','Actors') if kind=='actors' else self.t('Directores','Directors'))+(f' · {query}' if query else ''))
@@ -641,7 +675,10 @@ class Window(DesktopFeatures,QMainWindow):
         q.textChanged.connect(lambda _:debounce.start())
         q.returnPressed.connect(lambda:(debounce.stop(),submit()))
         q.setFocus()
-        self.run(lambda:self.catalog_cached('/trending/all/week'),lambda rows:receive(rows,filter_state['serial']),quiet=True)
+        # Show interactive artwork immediately, while remote trending results load.
+        render()
+        self.run(lambda:self.catalog_cached('/trending/all/week'),
+                 lambda rows:receive(rows,filter_state['serial']),quiet=True)
     def person_card(self,person):
         w,l=column();l.setContentsMargins(0,0,0,0);l.setSpacing(6);w.setFixedWidth(160)
         tile=Poster();tile.setFixedSize(160,204);tile.setAccessibleName(str(person.get('name','')))

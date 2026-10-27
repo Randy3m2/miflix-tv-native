@@ -75,10 +75,25 @@ fun ConnectedDesktop(onFullscreen: () -> Unit, onPip: () -> Unit, onPlayerClosed
         }
     }
     if(utilities.pinned!=null && (playback!=null || controller.multiview.isNotEmpty()))PinnedScore(utilities)
-    if(controller.queueDialog) AlertDialog(onDismissRequest={controller.queueDialog=false},title={Text("Cola de reproducción")},text={Column(Modifier.heightIn(max=520.dp).verticalScroll(rememberScrollState())) {
-        if(controller.queue.isEmpty())Text("Añade películas o episodios desde sus detalles.")
-        controller.queue.toList().forEachIndexed { index,entry->Row {Text(entry.item.optString("title")+(if(entry.season>0)" · T${entry.season} E${entry.episode}" else ""),Modifier.weight(1f));TextButton(onClick={controller.playQueued(index)},enabled=utilities.party?.isNull("room")!=false || utilities.party?.optBoolean("host")==true){Text("Reproducir")};TextButton(onClick={controller.queue.removeAt(index)}){Text("Quitar")} }
-    }},confirmButton={TextButton(onClick={controller.queueDialog=false}){Text("Cerrar")}})
+    if(controller.queueDialog) {
+        AlertDialog(
+            onDismissRequest={controller.queueDialog=false},
+            title={Text("Cola de reproducción")},
+            text={
+                Column(Modifier.heightIn(max=520.dp).verticalScroll(rememberScrollState())) {
+                    if(controller.queue.isEmpty())Text("Añade películas o episodios desde sus detalles.")
+                    controller.queue.toList().forEachIndexed { index,entry ->
+                        Row {
+                            Text(entry.item.optString("title")+(if(entry.season>0)" · T${entry.season} E${entry.episode}" else ""),Modifier.weight(1f))
+                            TextButton(onClick={controller.playQueued(index)},enabled=utilities.party?.isNull("room")!=false || utilities.party?.optBoolean("host")==true){Text("Reproducir")}
+                            TextButton(onClick={controller.queue.removeAt(index)}){Text("Quitar")}
+                        }
+                    }
+                }
+            },
+            confirmButton={TextButton(onClick={controller.queueDialog=false}){Text("Cerrar")}}
+        )
+    }
     UtilityDialog(utilities,controller::accountChanged)
     controller.settings?.let { SettingsDialog(it, controller::saveSetting, { controller.settings = null }) }
     if (controller.addFriend) {

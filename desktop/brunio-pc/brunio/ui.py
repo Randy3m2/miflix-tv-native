@@ -53,6 +53,7 @@ class Window(DesktopFeatures,QMainWindow):
         self.apply_theme()
         self.state={'favorites':[],'progress':{}};self.history=self.local.get('history',{});self.ratings={};self.selected=None;self.current=None;self.sources=[]
         self.pool=QThreadPool(self);self.pool.setMaxThreadCount(6);self.tasks=set();self.network=QNetworkAccessManager(self);self.images={};self.pending_images={}
+        self.image_queue=[];self.image_running=0
         self._home_screen=None;self._home_owner=None;self._home_ready=False;self._home_loaded_at=0
         self._genre_art={};self._genre_art_requested=False
         self._catalog_cache={};self._catalog_lock=__import__('threading').Lock()
@@ -309,23 +310,33 @@ class Window(DesktopFeatures,QMainWindow):
         if url in self.pending_images:
             self.pending_images[url].append(display);return
         self.pending_images[url]=[display]
-        req=QNetworkRequest(QUrl(url));req.setTransferTimeout(15000)
-        reply=self.network.get(req)
-        def finish():
-            callbacks=self.pending_images.pop(url,[])
-            if reply.error()==reply.NetworkError.NoError:
-                data=bytes(reply.readAll())
-                if 0<len(data)<8*1024*1024 and QPixmap().loadFromData(data):
-                    if len(self.images)>240:self.images.clear()
-                    self.images[url]=data
-                    if cache_path is not None:
-                        try:
-                            tmp=cache_path.with_suffix('.tmp')
-                            tmp.write_bytes(data);tmp.replace(cache_path)
-                        except OSError:pass
-                    for callback in callbacks:callback(data)
-            reply.deleteLater()
-        reply.finished.connect(finish)
+        self.image_queue.append((url,cache_path))
+        self.pump_image_queue()
+    def pump_image_queue(self):
+        # Prioritize visible first-row art over hundreds of offscreen thumbnails.
+        while self.image_running<6 and self.image_queue:
+            url,cache_path=self.image_queue.pop(0)
+            self.image_running+=1
+            request=QNetworkRequest(QUrl(url));request.setTransferTimeout(12000)
+            reply=self.network.get(request)
+            def finish(url=url,cache_path=cache_path,reply=reply):
+                callbacks=self.pending_images.pop(url,[])
+                try:
+                    if reply.error()==reply.NetworkError.NoError:
+                        data=bytes(reply.readAll())
+                        if 0<len(data)<8*1024*1024 and QPixmap().loadFromData(data):
+                            if len(self.images)>240:self.images.clear()
+                            self.images[url]=data
+                            if cache_path is not None:
+                                try:
+                                    cache_path.write_bytes(data)
+                                except OSError:pass
+                            for callback in callbacks:callback(data)
+                finally:
+                    reply.deleteLater()
+                    self.image_running-=1
+                    self.pump_image_queue()
+            reply.finished.connect(finish)
     def prune_image_cache(self):
         folder=self.image_cache_dir
         if folder is None:return
@@ -431,6 +442,8 @@ class Window(DesktopFeatures,QMainWindow):
         shelves=QWidget();shelves_layout=QVBoxLayout(shelves)
         shelves_layout.setContentsMargins(0,0,0,0);shelves_layout.setSpacing(2)
         l.addWidget(shelves)
+        # Display bundled streaming artwork before waiting for any API requests.
+        self.platform_rail(platforms_layout,page)
         def load():
             paths=[('Tendencias','Trending','/trending/all/week',None),
                    ('Películas populares','Popular movies','/movie/popular','movie'),
@@ -492,7 +505,6 @@ class Window(DesktopFeatures,QMainWindow):
                 empty=label(self.t('Tu próxima historia comienza aquí.','Your next story starts here.'),25)
                 empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 hs.addWidget(empty)
-            self.platform_rail(platforms_layout,page)
             if continued:self.continue_rail(shelves_layout,continued)
             for name,items in rows:
                 if items:self.rail(shelves_layout,name,items)

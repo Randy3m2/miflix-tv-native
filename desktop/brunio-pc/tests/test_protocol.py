@@ -117,6 +117,41 @@ class UpdateTests(unittest.TestCase):
         with self.assertRaises(ValueError):validate({**info,'channel':'tv'})
         with self.assertRaises(ValueError):validate({**info,'version':'1.0.0-rc3'})
 
+    def test_release_url_accepts_canonical_github_account_case_only(self):
+        from brunio.updater import trusted_release_url
+        repo='Randy3m2/miflix-tv-native'
+        url=f'https://github.com/{repo}/releases/download/pc-latest/pc-update.json'
+        self.assertTrue(trusted_release_url(url,'pc-latest','pc-update.json'))
+        self.assertFalse(trusted_release_url(url.replace('github.com','github.com.attacker.test'),'pc-latest','pc-update.json'))
+        self.assertFalse(trusted_release_url(url.replace('https:', 'http:'),'pc-latest','pc-update.json'))
+        self.assertFalse(trusted_release_url(url.replace('/pc-latest/', '/native-latest/'),'pc-latest','pc-update.json'))
+        self.assertFalse(trusted_release_url(url+'?unexpected=1','pc-latest','pc-update.json'))
+        self.assertFalse(trusted_release_url(url.replace('pc-update.json','other.json'),'pc-latest','pc-update.json'))
+        self.assertFalse(trusted_release_url(url.replace('miflix-tv-native/','miflix-tv-native.evil/'),'pc-latest','pc-update.json'))
+
+    def test_check_update_uses_canonical_asset_url_not_constructed_lowercase(self):
+        from brunio import updater
+        from brunio.core import REPO
+        from unittest.mock import patch
+        import hashlib
+        payload=b'MZstub-windows-installer'
+        info={'channel':'pc-windows-x64','version':'99.0.0-rc1',
+              'sizeBytes':len(payload),'sha256':hashlib.sha256(payload).hexdigest(),
+              'downloadUrl':f'https://github.com/Randy3m2/miflix-tv-native/releases/download/pc-v99.0.0-rc1/BruniO-PC-Setup-99.0.0-rc1.exe'}
+        asset_url='https://github.com/Randy3m2/miflix-tv-native/releases/download/pc-latest/pc-update.json'
+        with patch.object(updater,'get_json',side_effect=[
+            {'tag_name':'pc-latest','assets':[{'name':'pc-update.json','browser_download_url':asset_url}]},
+            info,
+        ]) as fetch:
+            self.assertEqual(updater.check(),info)
+            self.assertTrue(fetch.call_args_list[1].args[0].startswith(asset_url+'?t='))
+            self.assertIn('BruniO-PC',fetch.call_args_list[1].kwargs['headers']['User-Agent'])
+        wrong='https://github.com/someone-else/miflix-tv-native/releases/download/pc-latest/pc-update.json'
+        with patch.object(updater,'get_json',return_value={
+            'assets':[{'name':'pc-update.json','browser_download_url':wrong}]}):
+            with self.assertRaisesRegex(ValueError,'Unexpected PC update metadata'):
+                updater.check()
+
     def test_update_check_and_download_verify_release(self):
         import hashlib,io,tempfile
         from pathlib import Path

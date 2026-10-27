@@ -15,7 +15,9 @@ class Utilities(private val scope: CoroutineScope, private val bridge: BridgeCli
     var error by mutableStateOf<String?>(null)
     var busy by mutableStateOf(false)
     private var generation=0L
-    fun reset() { generation++; dialog=null;downloads=null;addons=null;profiles=null;party=null;updates=null;error=null;busy=false }
+    var playbackActive=false
+    private var partyJob:Job?=null
+    fun reset() { partyJob?.cancel();partyJob=null;generation++; dialog=null;downloads=null;addons=null;profiles=null;party=null;updates=null;error=null;busy=false }
     fun run(method: String, params: JSONObject=JSONObject(), done:(Any)->Unit={}) {
         val epoch=generation
         scope.launch {
@@ -48,9 +50,24 @@ class Utilities(private val scope: CoroutineScope, private val bridge: BridgeCli
     fun refreshDownloads() = run("downloads.list") { downloads=it as JSONObject }
     fun refreshAddons() = run("addons.list") { addons=it as JSONObject }
     fun pollParty() = run("party.poll") { party=it as JSONObject }
-    fun join(code:String) = run("party.join",JSONObject().put("code",code)) { party=it as JSONObject }
-    fun create() = run("party.create") { party=it as JSONObject }
-    fun leave() = run("party.leave") { party=it as JSONObject }
+    fun join(code:String) = run("party.join",JSONObject().put("code",code)) { party=it as JSONObject;partyLoop() }
+    fun create() = run("party.create") { party=it as JSONObject;partyLoop() }
+    fun leave() { partyJob?.cancel();partyJob=null;run("party.leave") { party=it as JSONObject } }
+    private fun partyLoop() {
+        partyJob?.cancel();val epoch=generation
+        partyJob=scope.launch {
+            while(epoch==generation) {
+                delay(2500)
+                if(playbackActive)continue
+                try {
+                    val value=bridge.call("party.state") as JSONObject
+                    if(epoch!=generation)break
+                    party=value
+                    if(value.isNull("room") && value.isNull("pending"))break
+                } catch(e:Exception) { if(epoch==generation)error=e.message }
+            }
+        }
+    }
     fun send(body:String,kind:String="chat") {
         val p=party?:return
         run("party.send",JSONObject().put("scope",p.getString("scope")).put("room",p.getString("room")).put("body",body).put("kind",kind)) { pollParty() }
@@ -58,6 +75,19 @@ class Utilities(private val scope: CoroutineScope, private val bridge: BridgeCli
     fun decide(request:JSONObject,approve:Boolean) {
         val p=party?:return
         run("party.decide",JSONObject().put("scope",p.getString("scope")).put("code",request.getString("room_code")).put("guest",request.getString("user_id")).put("approve",approve)) { pollParty() }
+    }
+    fun tick(session:PlaybackSession,position:Long,playing:Boolean,onRemote:(JSONObject)->Unit) {
+        val p=party?:return
+        if(p.isNull("room") || p.optString("room").isBlank())return
+        val item=session.item
+        val state=JSONObject().put("cloudId",item.optString("cloudId")).put("season",session.season).put("episode",session.episode)
+            .put("positionMs",position).put("playing",playing).put("liveChannelId",item.optString("liveChannelId"))
+            .put("liveProvider",item.optString("liveProvider")).put("liveTitle",if(item.optString("type")=="live")item.optString("title") else "").put("liveType",item.optString("liveType","tv"))
+        run("party.tick",JSONObject().put("scope",p.getString("scope")).put("room",p.getString("room")).put("playback",state)) { value -> party=value as JSONObject;onRemote(value) }
+    }
+    fun requestPlaying(playing:Boolean) {
+        val p=party?:return
+        run("party.tick",JSONObject().put("scope",p.getString("scope")).put("room",p.getString("room")).put("request",playing)) { party=it as JSONObject }
     }
     fun add(manifest:String) {
         val data=addons?:return

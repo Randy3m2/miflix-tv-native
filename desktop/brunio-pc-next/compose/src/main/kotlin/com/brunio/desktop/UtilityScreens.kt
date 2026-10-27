@@ -81,7 +81,7 @@ fun UtilityDialog(utilities:Utilities,onProfileChanged:(JSONObject)->Unit) {
                         party?.optString("pending")?.takeUnless{it=="null"||it.isBlank()}?.let{Text("Solicitud pendiente · $it")}
                     } else {
                         Text("Sala $room",style=MaterialTheme.typography.headlineMedium)
-                        Text("El chat está conectado. La sincronización del vídeo aún requiere integración y pruebas.",color=Color.Gray)
+                        Text("Sala conectada · La sincronización del vídeo se aplica durante la reproducción.",color=Color.Gray)
                         party?.optJSONArray("requests")?.objects()?.forEach { request ->
                             Text(request.optString("nickname","Invitado")+" solicita acceso")
                             Row { TextButton(onClick={utilities.decide(request,true)}){Text("Aceptar")};TextButton(onClick={utilities.decide(request,false)}){Text("Rechazar")} }

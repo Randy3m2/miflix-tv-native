@@ -21,6 +21,7 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
     private var revision = 0L
     private var searchJob: Job? = null
     private var episodeRevision = 0L
+    private var remoteLoading: String? = null
     private var rawTiles = emptyList<MediaTile>()
     private val cache = mutableMapOf<DesktopTab, DesktopScreenState>()
 
@@ -130,7 +131,7 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
                         val parts = id.split(":", limit = 3)
                         val rows = array("live.sources", JSONObject().put("provider", parts[1]).put("channel_id", parts[2]))
                         val title = rawTiles.firstOrNull { it.id == id }?.title ?: "Live"
-                        if(ticket == revision && rows.isNotEmpty()) playback = PlaybackSession(JSONObject().put("title", title).put("type", "live"), rows)
+                        if(ticket == revision && rows.isNotEmpty()) playback = PlaybackSession(JSONObject().put("title", title).put("type", "live").put("cloudId","tmdb:live:${parts[2].hashCode()}").put("liveChannelId",parts[2]).put("liveProvider",if(parts[1]=="tv")"nauta" else "sports").put("liveType","tv"), rows)
                     }
                     id.startsWith("tmdb:") -> { val value = bridge.call("catalog.details", JSONObject().put("cloud_id", id)) as JSONObject; if (ticket == revision) detail = value }
                     id.startsWith("provider:") || id.startsWith("genre:") -> {
@@ -144,7 +145,7 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
             } catch(e: Exception) { message = e.message }
         }
     }
-    fun play(item: JSONObject, season: Int = 0, episode: Int = 0) = scope.launch {
+    fun play(item: JSONObject, season: Int = 0, episode: Int = 0, position:Long? = null) = scope.launch {
         val ticket = ++revision
         message = null
         try {
@@ -159,7 +160,7 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
                 }.getOrDefault(false) else false
                 if(ticket != revision) return@launch
                 playback = PlaybackSession(item, streams, result.getString("scope"), season, episode,
-                    result.optString("audio", "es"), result.optString("sub", "es"), startMs = result.optLong("resume_ms"), retry = settings.optBoolean("retry", true), autoplay = settings.optBoolean("autoplay", true), nextAvailable = next)
+                    result.optString("audio", "es"), result.optString("sub", "es"), startMs = position ?: result.optLong("resume_ms"), retry = settings.optBoolean("retry", true), autoplay = settings.optBoolean("autoplay", true), nextAvailable = next)
             }
         } catch(e: Exception) { if(ticket == revision) message = e.message }
     }
@@ -180,7 +181,34 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
             if(playback === session && result is JSONObject) play(session.item, result.getInt("season"), result.getInt("episode"))
         } catch(e: Exception) { if(playback === session) message = e.message }
     }
-    fun closePlayer() { playback = null; cache.remove(DesktopTab.Home) }
+    fun applyParty(value:JSONObject) {
+        if(value.optString("scope")!=account?.optString("scope") || value.optBoolean("host") || value.isNull("room"))return
+        val state=value.optJSONObject("state")?:return
+        val cloud=state.optString("cloudId")
+        if(cloud.isBlank())return
+        val current=playback
+        if(current?.item?.optString("cloudId")==cloud && current.season==state.optInt("season") && current.episode==state.optInt("episode"))return
+        val key=cloud+":"+state.optInt("season")+":"+state.optInt("episode")
+        if(remoteLoading==key)return
+        remoteLoading=key
+        val ticket=revision
+        scope.launch {
+            try {
+                if(state.optString("liveChannelId").isNotBlank()) {
+                    val provider=if(state.optString("liveProvider")=="sports")"sports" else "tv"
+                    array("live.list",JSONObject().put("provider",provider))
+                    val rows=array("live.sources",JSONObject().put("provider",provider).put("channel_id",state.getString("liveChannelId")))
+                    if(ticket==revision && remoteLoading==key)playback=PlaybackSession(JSONObject().put("type","live").put("title",state.optString("liveTitle")).put("cloudId",cloud).put("liveChannelId",state.getString("liveChannelId")).put("liveProvider",state.optString("liveProvider")).put("liveType",state.optString("liveType","tv")),rows)
+                } else {
+                    val details=bridge.call("catalog.details",JSONObject().put("cloud_id",cloud)) as JSONObject
+                    val sources=bridge.call("catalog.sources",JSONObject().put("cloud_id",cloud).put("season",state.optInt("season")).put("episode",state.optInt("episode"))) as JSONObject
+                    if(ticket==revision && remoteLoading==key)playback=PlaybackSession(details.getJSONObject("item"),sources.getJSONArray("streams").objects(),sources.getString("scope"),state.optInt("season"),state.optInt("episode"),sources.optString("audio","es"),sources.optString("sub","es"),startMs=state.optLong("positionMs"),autoplay=false)
+                }
+            } catch(e:Exception) { if(ticket==revision)message=e.message }
+            finally { if(remoteLoading==key)remoteLoading=null }
+        }
+    }
+    fun closePlayer() { revision++;remoteLoading=null;playback = null; cache.remove(DesktopTab.Home) }
     fun saveSetting(key: String, value: Any) = scope.launch {
         val current = settings ?: return@launch
         try {

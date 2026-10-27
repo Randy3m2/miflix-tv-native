@@ -14,7 +14,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun ConnectedDesktop(onFullscreen: () -> Unit) {
+fun ConnectedDesktop(onFullscreen: () -> Unit, onPip: () -> Unit, onPlayerClosed: () -> Unit) {
     val scope = rememberCoroutineScope()
     val bridge = remember { BridgeClient() }
     val controller = remember { AppController(scope, bridge) }
@@ -32,8 +32,10 @@ fun ConnectedDesktop(onFullscreen: () -> Unit) {
         }
     }
     val playback = controller.playback
+    LaunchedEffect(playback) { utilities.playbackActive=playback!=null }
+    LaunchedEffect(utilities.party) { utilities.party?.let { controller.applyParty(it) } }
     when {
-        playback != null -> PlayerScreen(playback, controller::closePlayer, onFullscreen, { position, duration -> controller.saveProgress(playback, position, duration) }, { controller.nextEpisode(playback) }, { if(it in listOf("party","chat","reactions")) utilities.open("party") else controller.message = "La función $it aún no está integrada." })
+        playback != null -> PlayerScreen(playback, { if(utilities.party?.isNull("room")==false)utilities.leave();controller.closePlayer();onPlayerClosed() }, onFullscreen, { position, duration -> controller.saveProgress(playback, position, duration) }, { controller.nextEpisode(playback) }, { if(it=="pip")onPip() else if(it in listOf("party","chat","reactions")) utilities.open("party") else controller.message = "La función $it aún no está integrada." }, party=utilities.party, onPartyTick={position,playing->utilities.tick(playback,position,playing,controller::applyParty)}, onRequestPlaying=utilities::requestPlaying)
         account == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             if (controller.message == null) CircularProgressIndicator(color = Color.White)
             else Column(horizontalAlignment = Alignment.CenterHorizontally) {

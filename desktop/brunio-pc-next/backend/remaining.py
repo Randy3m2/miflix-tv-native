@@ -20,7 +20,7 @@ class Remaining:
                 'downloads.cancel':self.download_cancel,'downloads.remove':self.download_remove,
                 'downloads.open':self.download_open,'downloads.season':self.download_season,
                 'party.create':self.party_create,'party.join':self.party_join,'party.leave':self.party_leave,
-                'party.poll':self.party_poll,'party.send':self.party_send,'party.decide':self.party_decide,
+                'party.poll':self.party_poll,'party.send':self.party_send,'party.decide':self.party_decide,'party.tick':self.party_tick,'party.state':self.party_state,
                 'addons.list':self.addons_list,'addons.add':self.addons_add,'addons.remove':self.addons_remove,
                 'addons.order':self.addons_order,'profiles.save':self.profile_save,'profiles.delete':self.profile_delete,
                 'updates.check':self.update_check,
@@ -217,3 +217,40 @@ class Remaining:
         self.client.account['profiles']=rows
         if self.client.profile==id:self.client.detach();self.client.profile=rows[0]['id']
         self.persist();return self.account_view()
+
+    def party_tick(self,scope,room,playback=None,request=None):
+        self.require_scope(scope)
+        if not self.client.party or self.client.party['room_code']!=room:raise ValueError('Room changed')
+        desired=None
+        if self.client.host():
+            desired=self.client.social_rpc('rp1_miflix_take_playback',{'code':room})
+            if playback is not None:
+                if not isinstance(playback,dict):raise ValueError('Invalid playback')
+                cloud=playback.get('cloudId','')
+                if not isinstance(cloud,str) or not re.fullmatch(r'tmdb:(movie|series|live):-?[0-9]+',cloud):raise ValueError('Invalid media')
+                for key in ('positionMs','season','episode'):
+                    v=playback.get(key,0)
+                    if not isinstance(v,int) or isinstance(v,bool) or v<0:raise ValueError('Invalid playback time')
+                if not isinstance(playback.get('playing'),bool):raise ValueError('Invalid playback status')
+                state={key:playback.get(key,default) for key,default in {'cloudId':'','season':0,'episode':0,'positionMs':0,'playing':False,'liveChannelId':'','liveProvider':'','liveTitle':'','liveType':'tv'}.items()}
+                for key in ('liveChannelId','liveProvider','liveTitle','liveType'):
+                    if not isinstance(state[key],str) or len(state[key])>1000:raise ValueError('Invalid live metadata')
+                state['updatedAt']=__import__('time').time_ns()//1_000_000
+                if isinstance(desired,bool):state['playing']=desired
+                self.client.host_update(state)
+        elif request is not None:
+            if not isinstance(request,bool):raise ValueError('Invalid request')
+            state=self.client.party.get('state',{})
+            if state.get('cloudId'):self.client.request_playback({'cloudId':state['cloudId']},state.get('season',0),state.get('episode',0),request)
+        current=self.client.party_read(room)
+        if current is None:self.client.detach()
+        else:self.client.party=current
+        return {**self.party_view(),'controlPlaying':desired if isinstance(desired,bool) else None}
+
+    def party_state(self):
+        if self.client.pending_room:self.client.party_join(self.client.pending_room)
+        if self.client.party:
+            current=self.client.party_read(self.client.party['room_code'])
+            if current is None:self.client.detach()
+            else:self.client.party=current
+        return self.party_view()

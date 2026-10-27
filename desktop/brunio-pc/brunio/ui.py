@@ -1175,21 +1175,52 @@ class Window(DesktopFeatures,QMainWindow):
     def live_manifest(self,provider):return self.preferences.get('sports_manifest') or LIVE['sports'] if provider=='sports' else LIVE['channels']
     def live(self):
         from .playlist import read_m3u
-        self.select_nav('live');l,page=self.page('Live TV');description=label(self.t('Canales en vivo y deportes en un solo lugar.','Live channels and sports in one place.'),16);description.setObjectName('muted');l.addWidget(description)
+        self.select_nav('live');l,page=self.page('BruniO')
+        top,top_row=row()
+        title=label('Live TV',30);title.setObjectName('pageTitle');top_row.addWidget(title)
+        top_row.addStretch(1)
+        live_tag=label('●  '+self.t('EN DIRECTO','LIVE NOW'),12)
+        live_tag.setObjectName('liveBadge');top_row.addWidget(live_tag);l.addWidget(top)
+        description=label(self.t('Descubre canales, deportes y programas en vivo.','Explore live TV, sports and entertainment.'),14)
+        description.setObjectName('muted');l.addWidget(description)
         owner=self.client.session.get('userId','local')+':'+self.client.profile
         toolbar,bar=row();provider=QComboBox();provider.addItem('BruniO TV','tv');provider.addItem('IPTV · M3U','m3u');provider.addItem('Live sports','sports');provider.setMinimumWidth(180);bar.addWidget(provider)
         category=QComboBox();category.setMinimumWidth(180);bar.addWidget(category);search=QLineEdit();search.setPlaceholderText(self.t('Buscar canal…','Search channels…'));bar.addWidget(search,1)
         bar.addWidget(button(self.t('Importar M3U','Import M3U'),lambda:import_playlist()));bar.addWidget(button('Stats',self.sports_scores));l.addWidget(toolbar)
-        hint=label('',14);hint.setObjectName('muted');l.addWidget(hint);holder=QWidget();hl=QGridLayout(holder);hl.setContentsMargins(0,0,0,0);hl.setSpacing(10);l.addWidget(holder)
-        more=button(self.t('Mostrar más','Show more'),lambda:show_more());more.setMaximumWidth(200);more.hide();l.addWidget(more)
-        state={'rows':[],'visible':80,'provider':'tv','manifest':''}
+        def quick_select(key):
+            if key in ('all','favorites'):
+                index=category.findData('*' if key=='all' else 'favorites')
+                if index>=0:category.setCurrentIndex(index)
+                return
+            synonyms={
+                'sports':['deport','sport','fútbol','football','nba','mlb'],
+                'movies':['cine','movie','film','película'],
+                'series':['serie','show','24/7'],
+                'news':['noticia','news','informativo'],
+                'kids':['infantil','kids','niñ','animación','cartoon'],
+            }
+            targets=synonyms.get(key,[])
+            for i in range(category.count()):
+                group=normalize(str(category.itemData(i) or category.itemText(i)))
+                if any(k in group for k in targets):
+                    category.setCurrentIndex(i);return
+            self.tell(self.t('Esa categoría no está disponible en esta fuente.','That category is unavailable for this source.'))
+        filters=[('all','Todos','All'),('favorites','Favoritos','Favorites'),
+                 ('sports','Deportes','Sports'),('movies','Cine','Movies'),
+                 ('series','Series','Series'),('news','Noticias','News'),('kids','Infantil','Kids')]
+        select_quick=self.filter_pills(l,filters,quick_select)
+        hint=label('',13);hint.setObjectName('channelCount');l.addWidget(hint)
+        holder=QWidget();holder.setObjectName('liveChannels')
+        hl=QGridLayout(holder);hl.setContentsMargins(0,0,0,0);hl.setSpacing(13);l.addWidget(holder)
+        more=button(self.t('＋  Cargar más canales','＋  Load more channels'),lambda:show_more());more.setObjectName('secondaryAction');more.setMaximumWidth(240);more.hide();l.addWidget(more)
+        state={'rows':[],'visible':56,'provider':'tv','manifest':''}
         def import_playlist():
             path,_=QFileDialog.getOpenFileName(self,self.t('Abrir lista M3U','Open M3U playlist'),'','M3U (*.m3u *.m3u8);;All files (*)')
             if not path:return
             self.preferences.setdefault('playlists',{})[owner]=path;self.persist();index=provider.findData('m3u')
             if provider.currentIndex()==index:categories()
             else:provider.setCurrentIndex(index)
-        def show_more():state['visible']+=80;render()
+        def show_more():state['visible']+=56;render()
         def render():
             if page!=self.page_id:return
             while hl.count():
@@ -1198,15 +1229,15 @@ class Window(DesktopFeatures,QMainWindow):
             cat=category.currentData();q=normalize(search.text());favorites=self.preferences.setdefault('live_favorites',{}).setdefault(owner,[])
             rows=[x for x in state['rows'] if (cat in (None,'*') or (cat=='favorites' and x['id'] in favorites) or x.get('category')==cat) and (not q or q in normalize(x.get('name','')))]
             self.live_candidates=[(channel,state['provider'],state['manifest']) for channel in rows]
-            hint.setText(self.t(f'{len(rows)} canales','{n} channels'.format(n=len(rows))))
-            columns=max(4,min(7,(self.width()-80)//185))
+            hint.setText(self.t(f'{len(rows):,} canales disponibles','{n:,} available channels'.format(n=len(rows)))+'   ·   '+str(provider.currentText()))
+            columns=max(3,min(6,(self.content.width()-75)//205))
             for i,channel in enumerate(rows[:state['visible']]):
-                card=QWidget();card.setObjectName('channelTile');card.setMinimumWidth(0);card.setSizePolicy(QSizePolicy.Policy.Ignored,QSizePolicy.Policy.Fixed);card.setFixedHeight(172)
-                line=QVBoxLayout(card);line.setContentsMargins(12,10,12,12);line.setSpacing(4)
-                head,hlayout=row();category_label=label(channel.get('category','LIVE'),10);category_label.setObjectName('channelCategory');category_label.setMaximumHeight(20);hlayout.addWidget(category_label,1)
-                ident=str(channel.get('id',''));star=button('★' if ident in favorites else '☆',lambda id=ident:toggle(id));star.setObjectName('favoritePill');star.setFixedSize(32,32);hlayout.addWidget(star);line.addWidget(head)
-                pic=QLabel();pic.setFixedSize(68,68);pic.setAlignment(Qt.AlignmentFlag.AlignCenter);line.addWidget(pic,0,Qt.AlignmentFlag.AlignHCenter)
-                if channel.get('logo','').startswith(('https://','http://')):self.image(channel['logo'],pic,64,64,contain=True)
+                card=QWidget();card.setObjectName('channelTile');card.setMinimumWidth(0);card.setSizePolicy(QSizePolicy.Policy.Ignored,QSizePolicy.Policy.Fixed);card.setFixedHeight(177)
+                line=QVBoxLayout(card);line.setContentsMargins(15,12,15,13);line.setSpacing(7)
+                head,hlayout=row();category_label=label('●  '+channel.get('category','LIVE'),10);category_label.setObjectName('channelCategory');category_label.setMaximumHeight(20);hlayout.addWidget(category_label,1)
+                ident=str(channel.get('id',''));star=button('♥' if ident in favorites else '♡',lambda id=ident:toggle(id));star.setObjectName('favoritePill');star.setProperty('selected',ident in favorites);star.setFixedSize(32,32);hlayout.addWidget(star);line.addWidget(head)
+                pic=QLabel();pic.setObjectName('channelLogo');pic.setFixedSize(78,78);pic.setAlignment(Qt.AlignmentFlag.AlignCenter);line.addWidget(pic,0,Qt.AlignmentFlag.AlignHCenter)
+                if channel.get('logo','').startswith(('https://','http://')):self.image(channel['logo'],pic,75,75,contain=True)
                 name=button(channel.get('name','Channel'),lambda c=channel:play(c));name.setText(name.fontMetrics().elidedText(channel.get('name','Channel'),Qt.TextElideMode.ElideRight,130));name.setObjectName('channelName');name.setToolTip(channel.get('name',''));name.setMinimumWidth(0);name.setSizePolicy(QSizePolicy.Policy.Ignored,QSizePolicy.Policy.Fixed);line.addWidget(name)
                 hl.addWidget(card,i//columns,i%columns)
             more.setVisible(len(rows)>state['visible'])
@@ -1223,11 +1254,11 @@ class Window(DesktopFeatures,QMainWindow):
             else:self.play_channel(c,'sports',state['manifest'])
         def apply(rows,key,manifest=''):
             if page!=self.page_id or provider.currentData()!=key:return
-            state.update(rows=rows,provider=key,manifest=manifest,visible=80);category.blockSignals(True);category.clear();category.addItem(self.t('Todos','All'),'*');category.addItem(self.t('Favoritos','Favorites'),'favorites')
+            state.update(rows=rows,provider=key,manifest=manifest,visible=56);category.blockSignals(True);category.clear();category.addItem(self.t('Todos','All'),'*');category.addItem(self.t('Favoritos','Favorites'),'favorites')
             for group in sorted(set(x.get('category','Others') for x in rows),key=str.casefold):category.addItem(group,group)
             category.blockSignals(False);render()
         def categories():
-            key=provider.currentData();state['rows']=[];state['visible']=80;render()
+            key=provider.currentData();state['rows']=[];state['visible']=56;render()
             if key in ('tv','m3u'):
                 path=ASSETS/'final_channels_rp97.m3u' if key=='tv' else self.preferences.get('playlists',{}).get(owner,'')
                 if not path:hint.setText(self.t('Importa una lista M3U para comenzar.','Import an M3U playlist to begin.'));return
@@ -1242,7 +1273,7 @@ class Window(DesktopFeatures,QMainWindow):
                     except Exception:continue
                 return result
             self.run(load,lambda rows:apply(rows,key,manifest))
-        provider.currentIndexChanged.connect(categories);category.currentIndexChanged.connect(lambda:(state.update(visible=80),render()));search.textChanged.connect(lambda:(state.update(visible=80),render()));categories()
+        provider.currentIndexChanged.connect(categories);category.currentIndexChanged.connect(lambda:(state.update(visible=56),render()));search.textChanged.connect(lambda:(state.update(visible=56),render()));categories()
     def play_channel(self,channel,provider,manifest):
         if self.client.party and not self.client.host():self.tell('The host chooses the channel');return
         item={'id':0,'type':'live','cloudId':'tmdb:live:'+str(java_hash(channel['id'])),'title':channel.get('name','Channel'),'overview':channel.get('description',''),'liveChannelId':channel['id'],'liveProvider':'sports' if provider=='sports' else 'nauta','liveType':channel.get('type','tv')}

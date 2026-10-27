@@ -67,11 +67,17 @@ fun UtilityDialog(utilities:Utilities,onProfileChanged:(JSONObject)->Unit) {
     LaunchedEffect(kind,utilities.updates?.optString("status")) {
         if(kind=="updates" && utilities.updates?.optString("status")=="downloading")while(true){delay(2000);utilities.pollUpdate()}
     }
-    AlertDialog(onDismissRequest={utilities.dialog=null},title={Text(ui(when(kind){"party"->"Friends & Party";"addons"->"Complementos";"profiles"->"Perfiles";"account"->"Configurar catálogo";"subscriptions"->"Suscripciones";"scores"->"Deportes en vivo";else->"Actualizaciones"}))},
+    AlertDialog(onDismissRequest={utilities.dialog=null},title={Text(ui(when(kind){"social"->"Mi nombre de usuario";"party"->"Friends & Party";"addons"->"Complementos";"profiles"->"Perfiles";"account"->"Configurar catálogo";"subscriptions"->"Suscripciones";"scores"->"Deportes en vivo";else->"Actualizaciones"}))},
         text={Column(Modifier.widthIn(min=420.dp,max=640.dp).heightIn(max=620.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             if(utilities.busy)LinearProgressIndicator(Modifier.fillMaxWidth())
             utilities.error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
             when(kind) {
+                "social" -> {
+                    Text(ui("Comparte este nombre para que tus amigos te encuentren."))
+                    Text("@"+(utilities.social?.optString("nickname")?:""),color=Color.Gray)
+                    OutlinedTextField(text,{text=it.lowercase().take(24)},label={Text(ui("Nombre de usuario"))},singleLine=true,shape=RoundedCornerShape(24.dp))
+                    Button(onClick={utilities.saveNickname(text)},enabled=text.matches(Regex("[a-z0-9_]{3,24}"))&&!utilities.busy){Text(ui("Guardar"))}
+                }
                 "party" -> {
                     val party=utilities.party;val room=party?.optString("room")?.takeUnless{it.isBlank()||it=="null"}
                     if(room==null) {

@@ -5,6 +5,12 @@ on:
       - desktop/brunio-pc-next/**
       - .github/workflows/pc-compose-checks.yml
   workflow_dispatch:
+    inputs:
+      publish_pc:
+        description: 'Publish this verified PC build and update the PC update channel'
+        type: boolean
+        required: false
+        default: false
   push:
     branches: [codex/brunio-pc-compose-rebuild]
     paths:
@@ -69,3 +75,38 @@ jobs:
           name: BruniO-PC-UI-Review-${{ github.sha }}
           path: desktop/brunio-pc-next/ui-review/*
           if-no-files-found: error
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_pc
+    needs: check
+    runs-on: windows-latest
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Download and publish verified PC installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          gh run download $env:GITHUB_RUN_ID --name "BruniO-PC-Compose-Preview-$env:GITHUB_SHA" --dir release
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot download verified build' }
+          $metadata = Get-Content release/pc-update.json -Raw | ConvertFrom-Json
+          if ($metadata.version -notmatch '^2\.0\.0-rc\d+$' -or $metadata.channel -ne 'pc-windows-x64') { throw 'Invalid PC channel' }
+          $tag = 'pc-v' + $metadata.version
+          $name = 'BruniO-PC-Setup-' + $metadata.version + '.exe'
+          $exe = Join-Path release $name
+          $expectedUrl = 'https://github.com/' + $env:GITHUB_REPOSITORY.ToLowerInvariant() + '/releases/download/' + $tag + '/' + $name
+          if ($metadata.downloadUrl.ToLowerInvariant() -ne $expectedUrl.ToLowerInvariant()) { throw 'Unexpected installer destination' }
+          if ((Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant() -ne $metadata.sha256 -or (Get-Item $exe).Length -ne $metadata.sizeBytes) { throw 'Installer integrity failed' }
+          gh release create $tag $exe --target $env:GITHUB_SHA --prerelease --latest=false --title "BruniO PC $($metadata.version)" --notes 'Windows x64 PC build. Includes Java, VLC and the local service. TV and mobile are unchanged.'
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot publish immutable PC release' }
+          gh release view pc-latest *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create pc-latest --target $env:GITHUB_SHA --prerelease --latest=false --title 'BruniO PC update channel' --notes 'PC installer update metadata.'
+            if ($LASTEXITCODE -ne 0) { throw 'Cannot create PC channel' }
+          }
+          gh release upload pc-latest release/pc-update.json --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot update PC metadata' }

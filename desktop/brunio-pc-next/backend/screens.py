@@ -18,7 +18,7 @@ class Screens:
                 'catalog.shelf':self.shelf, 'catalog.providers':self.providers,
                 'catalog.genres':self.genres, 'catalog.discover':self.discover,
                 'friends.list':self.friend_list, 'friends.add':self.friend_add,
-                'friends.accept':self.friend_accept, 'calendar.list':self.calendar_list,
+                'friends.accept':self.friend_accept, 'friends.identity':self.friend_identity,'friends.nickname':self.friend_nickname,'friends.presence':self.friend_presence, 'calendar.list':self.calendar_list,
                 'live.list':self.live_list, 'live.sources':self.live_sources,'live.favorite':self.live_favorite,
                 'catalog.sources':self.sources, 'catalog.favorite':self.favorite,
                 'catalog.episodes':self.episodes, 'catalog.next':self.next_episode,'catalog.person':self.person,'catalog.rate':self.rate,'catalog.mark':self.mark_watched, 'playback.progress':self.progress,
@@ -97,7 +97,30 @@ class Screens:
         activity=self.client.social_rpc('rp1_miflix_friend_activity',{}) or []
         identity=self.client.social_identity()
         pending=self.client.social_rest('rp1_miflix_friendships?select=sender_id,receiver_id,status') or []
-        return {'activity':activity,'pending':[r for r in pending if r.get('receiver_id')==identity and r.get('status')=='pending']}
+        return {'activity':[{**r,'avatar':self.profile_avatar(r.get('avatar_value','ai:astronaut'))} for r in activity],'pending':[r for r in pending if r.get('receiver_id')==identity and r.get('status')=='pending']}
+
+    def friend_identity(self):
+        identity=self.client.social_identity()
+        rows=self.client.social_rest('rp1_miflix_social_profiles?'+urlencode({'user_id':'eq.'+identity,'select':'nickname'})) or []
+        return {'scope':self.scope_id(),'nickname':rows[0].get('nickname','') if rows else ''}
+
+    def friend_nickname(self,scope,nickname):
+        self.require_scope(scope)
+        nickname=nickname.strip().lower()
+        if not re.fullmatch('[a-z0-9_]{3,24}',nickname):raise ValueError('Invalid nickname')
+        identity=self.client.social_identity()
+        self.client.social_rest('rp1_miflix_social_profiles?on_conflict=user_id','POST',{'user_id':identity,'nickname':nickname},prefer='resolution=merge-duplicates,return=minimal')
+        return {'scope':scope,'nickname':nickname}
+
+    def friend_presence(self,scope,cloud_id='',season=0,episode=0):
+        self.require_scope(scope)
+        if not isinstance(season,int) or isinstance(season,bool) or season<0 or not isinstance(episode,int) or isinstance(episode,bool) or episode<0:raise ValueError('Invalid episode')
+        item=None
+        if cloud_id:
+            if not isinstance(cloud_id,str) or not re.fullmatch(r'tmdb:(movie|series|live):-?[0-9]+',cloud_id):raise ValueError('Invalid media')
+            if ':live:' not in cloud_id:item=self.client.by_id(cloud_id)
+        self.client.presence(item,season,episode)
+        return {'updated':True}
 
     def friend_add(self,nickname):
         nickname=nickname.strip().lower()

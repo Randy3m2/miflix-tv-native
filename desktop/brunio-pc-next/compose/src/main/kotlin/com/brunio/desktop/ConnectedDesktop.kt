@@ -26,6 +26,7 @@ fun ConnectedDesktop(onFullscreen: () -> Unit, onPip: () -> Unit, onPlayerClosed
     LaunchedEffect(account?.optString("scope")) { utilities.reset() }
     fun action(id: String) {
         when(id) {
+            "friends:identity" -> utilities.open("social")
             "party:open" -> utilities.open("party")
             "calendar:subscriptions" -> utilities.open("subscriptions")
             "settings:Conectar cuenta" -> utilities.open("account")
@@ -39,6 +40,15 @@ fun ConnectedDesktop(onFullscreen: () -> Unit, onPip: () -> Unit, onPlayerClosed
     }
     val playback = controller.playback
     LaunchedEffect(playback) { utilities.playbackActive=playback!=null }
+    LaunchedEffect(account?.optString("scope"),controller.profilePicker,playback?.item?.optString("cloudId"),playback?.season,playback?.episode) {
+        val owner=account?.optString("scope")
+        if(account?.optBoolean("signedIn")==true && !controller.profilePicker && !owner.isNullOrBlank()) {
+            while(true) {
+                try { bridge.call("friends.presence",org.json.JSONObject().put("scope",owner).put("cloud_id",playback?.item?.optString("cloudId")?:"").put("season",playback?.season?:0).put("episode",playback?.episode?:0)) }catch(_:Exception){}
+                kotlinx.coroutines.delay(30000)
+            }
+        }
+    }
     LaunchedEffect(utilities.party) { utilities.party?.let { controller.applyParty(it) } }
     when {
         controller.multiview.isNotEmpty() -> MultiViewScreen(controller,onFullscreen)
@@ -77,6 +87,18 @@ fun ConnectedDesktop(onFullscreen: () -> Unit, onPip: () -> Unit, onPlayerClosed
                 } else DesktopScreen(controller.tab, controller.screen, ::action, controller::search)
             }
             DesktopNavigation(controller.tab, { controller.select(it) }, controller::showProfiles)
+        }
+    }
+    if(utilities.dialog!="party" && utilities.party?.optBoolean("host")==true) {
+        val request=utilities.party?.optJSONArray("requests")?.objects()?.firstOrNull{it.optString("room_code")==utilities.party?.optString("room")}
+        if(request!=null)Box(Modifier.fillMaxSize().padding(24.dp),contentAlignment=Alignment.TopEnd) {
+            Surface(shape=RoundedCornerShape(24.dp),color=Color(0xEE202026),contentColor=Color.White) {
+                Row(Modifier.padding(18.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                    Text("@"+request.optString("nickname")+" · "+ui("Solicita acceso"))
+                    TextButton(onClick={utilities.decide(request,true)}){Text(ui("Aceptar"))}
+                    TextButton(onClick={utilities.decide(request,false)}){Text(ui("Rechazar"))}
+                }
+            }
         }
     }
     if(controller.channelPicker)ChannelPicker(controller)

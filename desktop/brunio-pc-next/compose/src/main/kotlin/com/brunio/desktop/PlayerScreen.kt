@@ -95,18 +95,19 @@ fun PlayerScreen(session: PlaybackSession, onClose: () -> Unit, onFullscreen: ()
         var lastParty = 0L
         var started = false
         val began = System.nanoTime()
+        var lastFrame=began
         while(true) {
             delay(33)
-            engine.frame.getAndSet(null)?.let { bitmap = it.image().toComposeImageBitmap() }
+            engine.frame.getAndSet(null)?.let { bitmap = it.image().toComposeImageBitmap();lastFrame=System.nanoTime() }
             val position = engine.player.status().time().coerceAtLeast(0)
             val duration = engine.player.status().length().coerceAtLeast(0)
             val playing = engine.player.status().isPlaying
-            if (playing) started = true
+            if (playing) started = true else lastFrame=System.nanoTime()
             ui = ui.copy(position = position, duration = duration, paused = !playing,
                 seekable = engine.player.status().isSeekable && canControl, buffering = !started && !engine.failed.get())
             val elapsed = (System.nanoTime() - began) / 1_000_000
             if(elapsed-lastParty>=2000) { latestPartyTick(position, playing);lastParty=elapsed }
-            if(engine.failed.get() || !started && elapsed > 30000) {
+            if(engine.failed.get() || !started && elapsed > 30000 || started && playing && (System.nanoTime()-lastFrame)>30_000_000_000L) {
                 if(session.retry && source + 1 < session.streams.size) { resume = position; source++; break }
                 ui = ui.copy(error = "La fuente no respondió. Puedes seleccionar otra.", buffering = false)
                 break

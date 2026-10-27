@@ -10,6 +10,8 @@ class Utilities(private val scope: CoroutineScope, private val bridge: BridgeCli
     var downloads by mutableStateOf<JSONObject?>(null)
     var addons by mutableStateOf<JSONObject?>(null)
     var profiles by mutableStateOf<JSONObject?>(null)
+    var social by mutableStateOf<JSONObject?>(null)
+    private var tickActive=false
     var subscriptions by mutableStateOf<JSONObject?>(null)
     var accountSetup by mutableStateOf<JSONObject?>(null)
     var scores by mutableStateOf<List<JSONObject>>(emptyList())
@@ -21,7 +23,7 @@ class Utilities(private val scope: CoroutineScope, private val bridge: BridgeCli
     private var generation=0L
     var playbackActive=false
     private var partyJob:Job?=null
-    fun reset() { partyJob?.cancel();partyJob=null;generation++; dialog=null;downloads=null;addons=null;profiles=null;subscriptions=null;scores=emptyList();pinned=null;party=null;updates=null;error=null;busy=false }
+    fun reset() { partyJob?.cancel();partyJob=null;generation++; dialog=null;downloads=null;addons=null;profiles=null;subscriptions=null;scores=emptyList();pinned=null;party=null;social=null;tickActive=false;updates=null;error=null;busy=false }
     fun run(method: String, params: JSONObject=JSONObject(), done:(Any)->Unit={}) {
         val epoch=generation
         scope.launch {
@@ -39,9 +41,14 @@ class Utilities(private val scope: CoroutineScope, private val bridge: BridgeCli
             "profiles" -> run("profiles.list") { profiles=it as JSONObject }
             "subscriptions" -> run("calendar.subscriptions") { subscriptions=it as JSONObject }
             "scores" -> loadScores("NBA")
+            "social" -> run("friends.identity"){social=it as JSONObject}
             "party" -> pollParty()
             "updates" -> run("updates.check") { updates=it as JSONObject }
         }
+    }
+    fun saveNickname(nickname:String) {
+        val data=social?:return
+        run("friends.nickname",JSONObject().put("scope",data.getString("scope")).put("nickname",nickname)){social=it as JSONObject;dialog=null}
     }
     fun saveProfile(name:String,id:String?,avatar:String?,done:(JSONObject)->Unit) {
         val data=profiles?:return
@@ -84,9 +91,9 @@ class Utilities(private val scope: CoroutineScope, private val bridge: BridgeCli
         partyJob=scope.launch {
             while(epoch==generation) {
                 delay(2500)
-                if(playbackActive)continue
+                if(playbackActive && party?.optBoolean("host")!=true)continue
                 try {
-                    val value=bridge.call("party.state") as JSONObject
+                    val value=bridge.call(if(party?.optBoolean("host")==true)"party.poll" else "party.state") as JSONObject
                     if(epoch!=generation)break
                     party=value
                     if(value.isNull("room") && value.isNull("pending"))break
@@ -105,11 +112,20 @@ class Utilities(private val scope: CoroutineScope, private val bridge: BridgeCli
     fun tick(session:PlaybackSession,position:Long,playing:Boolean,onRemote:(JSONObject)->Unit) {
         val p=party?:return
         if(p.isNull("room") || p.optString("room").isBlank())return
+        if(tickActive)return
+        tickActive=true
         val item=session.item
         val state=JSONObject().put("cloudId",item.optString("cloudId")).put("season",session.season).put("episode",session.episode)
             .put("positionMs",position).put("playing",playing).put("liveChannelId",item.optString("liveChannelId"))
             .put("liveProvider",item.optString("liveProvider")).put("liveTitle",if(item.optString("type")=="live")item.optString("title") else "").put("liveType",item.optString("liveType","tv"))
-        run("party.tick",JSONObject().put("scope",p.getString("scope")).put("room",p.getString("room")).put("playback",state)) { value -> party=value as JSONObject;onRemote(value) }
+        val epoch=generation
+        scope.launch {
+            try {
+                val value=bridge.call("party.tick",JSONObject().put("scope",p.getString("scope")).put("room",p.getString("room")).put("playback",state)) as JSONObject
+                if(epoch==generation){party=value;onRemote(value)}
+            } catch(e:Exception){if(epoch==generation)error=e.message}
+            finally {if(epoch==generation)tickActive=false}
+        }
     }
     fun requestPlaying(playing:Boolean) {
         val p=party?:return

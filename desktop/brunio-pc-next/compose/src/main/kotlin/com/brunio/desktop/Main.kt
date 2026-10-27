@@ -38,7 +38,7 @@ fun main(args:Array<String>) {
     var previousSize by remember{mutableStateOf(DpSize(1280.dp,800.dp))}
     var previousPlacement by remember{mutableStateOf(WindowPlacement.Floating)}
     fun restore() { if(pip){pip=false;state.size=previousSize;state.placement=previousPlacement} }
-    Window(state=state,alwaysOnTop=pip,onCloseRequest={if(pip)restore() else exitApplication()},title="BruniO PC · Desarrollo") {
+    Window(state=state,alwaysOnTop=pip,onCloseRequest={if(pip)restore() else exitApplication()},title="BruniO PC") {
         LaunchedEffect(Unit){applyWindowTheme(window)}
         BrunioTheme {
             Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background,contentColor=MaterialTheme.colorScheme.onBackground) {

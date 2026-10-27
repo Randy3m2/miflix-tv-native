@@ -204,5 +204,8 @@
   "El perfil cambió. Vuelve a abrir esta pantalla.": "The profile changed. Open this screen again.",
   "No hay conexión con el servicio. Comprueba tu conexión e inténtalo de nuevo.": "The service is unavailable. Check your connection and try again.",
   "No se pudo completar la operación. Comprueba la conexión y la configuración de tu cuenta.": "The operation failed. Check your connection and account configuration.",
-  "Cierra el reproductor para explorar el reparto.": "Close the player to explore the cast."
+  "Cierra el reproductor para explorar el reparto.": "Close the player to explore the cast.",
+  "Mi nombre de usuario": "My username",
+  "Comparte este nombre para que tus amigos te encuentren.": "Share this username so your friends can find you.",
+  "Solicita acceso": "Requests access"
 }

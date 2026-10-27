@@ -52,4 +52,39 @@ class ScreenTests(unittest.TestCase):
         self.assertIn('error',self.call('catalog.discover',provider=999999))
         self.client.catalog.assert_not_called()
 
+class SocialAndDetailTests(unittest.TestCase):
+    setUp=ScreenTests.setUp
+    call=ScreenTests.call
+    def test_nickname_uses_selected_social_actor_and_preserves_profile(self):
+        self.client.social_identity.return_value='kids-actor'
+        result=self.call('friends.nickname',scope='owner:kids',nickname='  Randy_PC  ')
+        self.assertEqual(result['result']['nickname'],'randy_pc')
+        self.client.social_rest.assert_called_once_with('rp1_miflix_social_profiles?on_conflict=user_id','POST',{'user_id':'kids-actor','nickname':'randy_pc'},prefer='resolution=merge-duplicates,return=minimal')
+    def test_stale_profile_cannot_publish_presence(self):
+        self.assertIn('error',self.call('friends.presence',scope='owner:other',cloud_id='tmdb:movie:1'))
+        self.client.presence.assert_not_called()
+    def test_presence_clear_does_not_fetch_metadata(self):
+        self.call('friends.presence',scope='owner:kids')
+        self.client.by_id.assert_not_called();self.client.presence.assert_called_once_with(None,0,0)
+    def test_marking_an_episode_preserves_unrelated_progress(self):
+        self.client.state.return_value={'favorites':['saved'],'custom':True,'progress':{'other':{'position':12}}}
+        result=self.call('catalog.mark',scope='owner:kids',cloud_id='tmdb:series:9',season=2,episode=3,watched=True)['result']
+        state=self.client.save_state.call_args.args[0]
+        self.assertEqual(state['progress']['other'],{'position':12});self.assertTrue(state['custom'])
+        self.assertEqual(state['progress']['tmdb:series:9:s2e3']['percent'],100)
+        self.assertEqual(result['key'],'tmdb:series:9:s2e3')
+    def test_details_returns_scoped_saved_rating_and_progress(self):
+        self.client.details.return_value={'id':1,'title':'One','release_date':'2026-01-01'}
+        self.client.state.return_value={'favorites':['tmdb:movie:1'],'progress':{'tmdb:movie:1':{'position':20},'tmdb:movie:2':{'position':99}}}
+        self.client.rest.return_value=[{'score':9}]
+        result=self.call('catalog.details',cloud_id='tmdb:movie:1')['result']
+        self.assertTrue(result['saved']);self.assertEqual(result['user_rating'],9)
+        self.assertEqual(result['scope'],'owner:kids');self.assertEqual(list(result['progress']),['tmdb:movie:1'])
+    def test_provider_artwork_has_real_local_or_tv_cover_source(self):
+        rows=self.call('catalog.providers')['result']
+        amc=next(row for row in rows if row['id']=='provider:526')
+        netflix=next(row for row in rows if row['id']=='provider:8')
+        self.assertEqual(amc['poster'],'asset:streaming_amcplus_rp48.png')
+        self.assertTrue(netflix['poster'].endswith('/streaming/cover/netflix.png'))
+
 if __name__=='__main__':unittest.main()

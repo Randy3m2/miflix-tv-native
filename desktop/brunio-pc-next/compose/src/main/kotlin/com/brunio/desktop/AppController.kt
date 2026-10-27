@@ -89,7 +89,7 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
                     DesktopTab.Friends -> {
                         val response = bridge.call("friends.list") as JSONObject
                         val activity = (response.optJSONArray("activity") ?: JSONArray()).objects().map {
-                            FeedEntry(if(it.optString("room_code").isNotBlank())"join:"+it.optString("room_code")else it.optString("user_id", it.optString("nickname")), "@"+it.optString("nickname"), it.optString("title").ifBlank { if (it.optBoolean("online")) "En línea" else "Desconectado" },if(it.optString("room_code").isNotBlank())"Solicitar acceso" else null,online=it.optBoolean("online"))
+                            FeedEntry(if(it.optString("room_code").isNotBlank())"join:"+it.optString("room_code")else it.optString("user_id", it.optString("nickname")), "@"+it.optString("nickname"), it.optString("title").ifBlank { if (it.optBoolean("online")) "En línea" else "Desconectado" },if(it.optString("room_code").isNotBlank())"Solicitar acceso" else null,online=it.optBoolean("online"),avatar=it.optString("avatar"))
                         }
                         val pending = (response.optJSONArray("pending") ?: JSONArray()).objects().map {
                             FeedEntry("accept:"+it.getString("sender_id"), "Solicitud de amistad", it.getString("sender_id").take(8), "Aceptar")

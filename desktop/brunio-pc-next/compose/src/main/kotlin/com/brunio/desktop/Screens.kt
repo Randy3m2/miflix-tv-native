@@ -44,7 +44,7 @@ enum class DesktopTab(val title: String, val glyph: String) {
 }
 data class MediaTile(val id: String, val title: String, val image: String = "", val subtitle: String = "", val progress: Float? = null, val animation:String="",val favorite:Boolean=false)
 data class ContentRow(val title: String, val tiles: List<MediaTile>, val wide: Boolean = false)
-data class FeedEntry(val id: String, val title: String, val detail: String, val action: String? = null,val online:Boolean?=null)
+data class FeedEntry(val id: String, val title: String, val detail: String, val action: String? = null,val online:Boolean?=null,val avatar:String="")
 data class DesktopScreenState(
     val busy: Boolean = false, val error: String? = null,
     val heading:String?=null,
@@ -214,7 +214,8 @@ private fun FeedScreen(tab: DesktopTab, state: DesktopScreenState, onAction: (St
     Column(Modifier.fillMaxSize().padding(36.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(ui(tab.title), style = MaterialTheme.typography.headlineLarge, modifier = Modifier.weight(1f))
-            if (tab == DesktopTab.Friends) { OutlinedButton(onClick = { onAction("party:open") }) { Text(ui("Watch Party")) }; OutlinedButton(onClick = { onAction("friends:add") }) { Text(ui("Agregar amigo")) } }
+            if (tab == DesktopTab.Friends) { OutlinedButton(onClick = { onAction("party:open") }) { Text(ui("Watch Party")) }; OutlinedButton(onClick={onAction("friends:identity")}){Text(ui("Mi nombre de usuario"))}
+                OutlinedButton(onClick = { onAction("friends:add") }) { Text(ui("Agregar amigo")) } }
             if (tab == DesktopTab.Notifications) {TextButton(onClick={onAction("notifications:refresh")}){Text(ui("Actualizar"))};TextButton(onClick={onAction("notifications:clear")}){Text(ui("Borrar"))}}
             if (tab == DesktopTab.Calendar) OutlinedButton(onClick = { onAction("calendar:subscriptions") }) { Text(ui("Suscripciones")) }
         }
@@ -232,8 +233,9 @@ private fun FeedScreen(tab: DesktopTab, state: DesktopScreenState, onAction: (St
                 Surface(color = Color(0xFF151518), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(22.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                         if(tab==DesktopTab.Friends)Surface(shape=RoundedCornerShape(28.dp),color=Color(0xFF303036),modifier=Modifier.size(56.dp)) {
-                            Box(contentAlignment=Alignment.Center){Text(entry.title.removePrefix("@").take(1).uppercase(),style=MaterialTheme.typography.titleLarge)}
+                            Box(contentAlignment=Alignment.Center){if(entry.avatar.isNotBlank())RemoteArtwork(entry.avatar,Modifier.fillMaxSize())else Text(entry.title.removePrefix("@").take(1).uppercase(),style=MaterialTheme.typography.titleLarge)}
                         }
+                        if(entry.online!=null)Box(Modifier.size(8.dp).clip(RoundedCornerShape(4.dp)).background(if(entry.online)Color(0xFF6DC59B)else Color(0xFF55555D)))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) { Text(entry.title); Text(entry.detail, color = Color.Gray) }
                         entry.action?.let { action -> OutlinedButton(onClick = { onAction(entry.id) }) { Text(action) } }
                     }

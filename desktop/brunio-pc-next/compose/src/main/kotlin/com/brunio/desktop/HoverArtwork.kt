@@ -29,7 +29,7 @@ fun clearAnimatedArtwork(){GifBytes.clear()}
 
 /** Java's GIF producer composites disposal frames; the observer is detached on hover exit. */
 @Composable
-fun HoverArtwork(poster:String,animation:String,hovered:Boolean,modifier:Modifier) {
+fun HoverArtwork(poster:String,animation:String,hovered:Boolean,modifier:Modifier,contentScale:ContentScale=ContentScale.Crop) {
     var bitmap by remember(animation){mutableStateOf<ImageBitmap?>(null)}
     LaunchedEffect(hovered,animation) {
         if(!hovered || animation.isBlank())return@LaunchedEffect
@@ -67,7 +67,7 @@ fun HoverArtwork(poster:String,animation:String,hovered:Boolean,modifier:Modifie
         finally{active.set(false);image?.flush();frames.set(null);bitmap=null}
     }
     Box(modifier) {
-        RemoteArtwork(poster,Modifier.fillMaxSize())
-        if(hovered)bitmap?.let{Image(it,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)}
+        RemoteArtwork(poster,Modifier.fillMaxSize(),contentScale=contentScale)
+        if(hovered)bitmap?.let{Image(it,null,Modifier.fillMaxSize(),contentScale=contentScale)}
     }
 }

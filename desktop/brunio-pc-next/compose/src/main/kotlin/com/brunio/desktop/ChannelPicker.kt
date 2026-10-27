@@ -17,7 +17,7 @@ fun ChannelPicker(controller:AppController) {
             LazyVerticalGrid(GridCells.Adaptive(180.dp),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 items(controller.multiChoices.filter{it.title.contains(query,true)},key={it.id}){tile->
                     Surface(onClick={controller.selectChannel(tile)},color=Color(0xFF202026)) {
-                        Column(Modifier.padding(14.dp)){RemoteArtwork(tile.image,Modifier.fillMaxWidth().height(80.dp));Text(tile.title,maxLines=1)}
+                        Column(Modifier.padding(14.dp)){RemoteArtwork(tile.image,Modifier.fillMaxWidth().height(80.dp),contentScale=androidx.compose.ui.layout.ContentScale.Fit);Text(tile.title,maxLines=1)}
                     }
                 }
             }

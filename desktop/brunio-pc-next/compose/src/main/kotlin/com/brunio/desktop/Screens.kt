@@ -54,7 +54,7 @@ data class DesktopScreenState(
 )
 
 @Composable
-fun RemoteArtwork(url: String, modifier: Modifier = Modifier, description: String? = null) {
+fun RemoteArtwork(url: String, modifier: Modifier = Modifier, description: String? = null, contentScale:ContentScale=ContentScale.Crop) {
     val bitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(ArtworkCache.get(url), url) {
         value = ArtworkCache.get(url)
         if (value==null && url.isNotBlank()) value = withContext(Dispatchers.IO) {
@@ -92,7 +92,7 @@ fun RemoteArtwork(url: String, modifier: Modifier = Modifier, description: Strin
         value?.let{ArtworkCache.put(url,it)}
     }
     Box(modifier.background(Color(0xFF1B1B20))) {
-        bitmap?.let { Image(it, description, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+        bitmap?.let { Image(it, description, Modifier.fillMaxSize(), contentScale = contentScale) }
     }
 }
 
@@ -104,7 +104,7 @@ private fun MediaCard(tile: MediaTile, wide: Boolean, onOpen: (String) -> Unit, 
     val bounds=if(fillCell)Modifier.fillMaxWidth()else Modifier.width(if(wide)300.dp else 174.dp)
     Column(bounds.hoverable(interaction).graphicsLayer(scaleX=scale,scaleY=scale).clickable { onOpen(tile.id) }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box {
-            HoverArtwork(tile.image,tile.animation,hovered,Modifier.fillMaxWidth().aspectRatio(if(wide)16f/9f else 2f/3f).clip(RoundedCornerShape(12.dp)).border(1.dp,if(hovered)Color.White.copy(alpha=.6f)else Color.Transparent,RoundedCornerShape(12.dp)))
+            HoverArtwork(tile.image,tile.animation,hovered,Modifier.fillMaxWidth().aspectRatio(if(wide)16f/9f else 2f/3f).clip(RoundedCornerShape(12.dp)).border(1.dp,if(hovered)Color.White.copy(alpha=.6f)else Color.Transparent,RoundedCornerShape(12.dp)),contentScale=if(tile.id.startsWith("live:"))ContentScale.Fit else ContentScale.Crop)
             if(tile.id.startsWith("live:"))TextButton(onClick={onOpen("favorite:"+tile.id)},modifier=Modifier.align(Alignment.TopEnd)){Text(if(tile.favorite)"★" else "☆",color=Color.White)}
             tile.progress?.let { progress -> LinearProgressIndicator(progress = { progress.coerceIn(0f, 1f) },
                 modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp), color = Color.White) }

@@ -55,9 +55,16 @@ class Window(DesktopFeatures,QMainWindow):
         self.pool=QThreadPool(self);self.pool.setMaxThreadCount(6);self.tasks=set();self.network=QNetworkAccessManager(self);self.images={};self.pending_images={}
         self._home_screen=None;self._home_owner=None;self._home_ready=False;self._home_loaded_at=0
         self._genre_art={};self._genre_art_requested=False
+        self._catalog_cache={};self._catalog_lock=__import__('threading').Lock()
         self.image_cache_dir=Path(os.getenv('LOCALAPPDATA') or (Path.home()/'.cache'))/'BruniO-PC'/'artwork'
-        try:self.image_cache_dir.mkdir(parents=True,exist_ok=True)
-        except OSError:self.image_cache_dir=None
+        try:
+            self.image_cache_dir.mkdir(parents=True,exist_ok=True)
+            data=json.loads((self.image_cache_dir/'genre-art.json').read_text(encoding='utf-8'))
+            if time.time()-float(data.get('created',0))<14*86400:
+                self._genre_art={k:v for k,v in data.get('images',{}).items()
+                                 if isinstance(k,str) and isinstance(v,str)
+                                 and v.startswith('https://image.tmdb.org/')}
+        except (OSError,ValueError,TypeError,KeyError):pass
         self.known_members=None
         self.setup_desktop_features();self.play_id=0;self.page_id=0;self.poll_busy=False;self.social_busy=False;self.sync_applying=False;self.guest_intent=None;self.guest_until=0;self.last_event=-1;self.paused_at=0;self.resume_pending=0;self.trakt_started=False
         self.fallback_urls=set();self.source_activity=time.monotonic();self.source_last_pos=0;self.vlc=None;self.player=None;self.library=None;self.segments={};self.imdb='';self.chat_dialog=None
@@ -334,6 +341,47 @@ class Window(DesktopFeatures,QMainWindow):
         if page is not None and isValid(page):
             if self.stack.currentWidget() is not page:
                 self.stack.removeWidget(page);page.deleteLater()
+    def catalog_cached(self,path,kind=None,params=None):
+        """Reuse recent TMDB sections across Home, Browse and streaming pages."""
+        key=(self.client.session.get('userId',''),self.client.token,
+             path,kind,json.dumps(params or {},sort_keys=True,default=str))
+        now=time.monotonic()
+        with self._catalog_lock:
+            result=self._catalog_cache.get(key)
+        if result and now-result[0]<360:return result[1]
+        rows=self.client.catalog(path,kind,params)
+        if rows:
+            with self._catalog_lock:
+                if len(self._catalog_cache)>60:self._catalog_cache.clear()
+                self._catalog_cache[key]=(time.monotonic(),rows)
+        return rows
+
+    def load_genre_art(self,genres):
+        """Select genuine backdrops by TMDB genre, cached for fourteen days."""
+        needed=[(key,gid) for key,gid in genres if key not in self._genre_art]
+        if not needed:return dict(self._genre_art)
+        from concurrent.futures import ThreadPoolExecutor
+        def choose(pair):
+            key,genre=pair
+            if isinstance(genre,int):
+                try:items=self.catalog_cached('/discover/movie','movie',{'with_genres':genre})
+                except Exception:return key,''
+            else:
+                try:items=self.catalog_cached(genre,'movie')
+                except Exception:return key,''
+            return key,next((m['backdrop'] for m in items
+                             if m.get('backdrop')), '')
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            for key,art in pool.map(choose,needed):
+                if art:self._genre_art[key]=art
+        if self.image_cache_dir is not None and self._genre_art:
+            try:
+                path=self.image_cache_dir/'genre-art.json'
+                path.write_text(json.dumps({'created':time.time(),
+                                            'images':self._genre_art}),encoding='utf-8')
+            except OSError:pass
+        return dict(self._genre_art)
+
     def avatar_path(self,value):
         names={'ai:astronaut':'brunio_avatar_astronaut.png','ai:fox':'brunio_avatar_fox.png','ai:robot':'brunio_avatar_robot.png','ai:dragon':'brunio_avatar_dragon.png','special:photo':'brunio_avatar_special.png','special:extra':'brunio_avatar_extra.png','special:extra3':'brunio_avatar_special3.jpg'}
         if value.startswith('special:extra') and value[13:].isdigit() and int(value[13:])>=4:names[value]=f'brunio_avatar_special{value[13:]}.png'
@@ -392,7 +440,7 @@ class Window(DesktopFeatures,QMainWindow):
                    ('Series destacadas','Top series','/tv/top_rated','series')]
             import concurrent.futures
             def section(entry):
-                try:return self.t(entry[0],entry[1]),self.client.catalog(entry[2],entry[3])
+                try:return self.t(entry[0],entry[1]),self.catalog_cached(entry[2],entry[3])
                 except Exception:return self.t(entry[0],entry[1]),[]
             def resume(key):
                 try:return self.client.by_id(key)
@@ -457,12 +505,12 @@ class Window(DesktopFeatures,QMainWindow):
         items={}
         for cloud in list(dict.fromkeys(seeds))[:3]:
             m=self.client.by_id(cloud);kind='tv' if m['type']=='series' else 'movie'
-            for item in self.client.catalog(f"/{kind}/{m['id']}/recommendations",m['type']):items[item['cloudId']]=item
+            for item in self.catalog_cached(f"/{kind}/{m['id']}/recommendations",m['type']):items[item['cloudId']]=item
         return list(items.values())
     def random_movie(self):
         if self.client.party and not self.client.host():self.tell(self.t('El host elige el contenido','The host chooses the title'));return
         def choose():
-            rows=[x for x in self.recommendations() if x['type']=='movie'] or self.client.catalog('/movie/top_rated','movie')
+            rows=[x for x in self.recommendations() if x['type']=='movie'] or self.catalog_cached('/movie/top_rated','movie')
             rows=[x for x in rows if self.ratings.get(x['cloudId'],10)>4 and self.state.get('progress',{}).get(x['cloudId'],{}).get('percent',0)<80]
             if not rows:raise ValueError('No available movies')
             return random.choice(rows)
@@ -564,7 +612,7 @@ class Window(DesktopFeatures,QMainWindow):
             filter_state['people']=[]
             if len(query)<2:
                 if not query:
-                    self.run(lambda:self.client.catalog('/trending/all/week'),lambda rows:receive(rows,serial),quiet=True)
+                    self.run(lambda:self.catalog_cached('/trending/all/week'),lambda rows:receive(rows,serial),quiet=True)
                 return
             self.history[owner]=([query]+[old for old in self.history.get(owner,[]) if normalize(old)!=normalize(query)])[:10]
             self.persist();results_title.setText(self.t('Buscando…','Searching…'))
@@ -581,7 +629,7 @@ class Window(DesktopFeatures,QMainWindow):
         q.textChanged.connect(lambda _:debounce.start())
         q.returnPressed.connect(lambda:(debounce.stop(),submit()))
         q.setFocus()
-        self.run(lambda:self.client.catalog('/trending/all/week'),lambda rows:receive(rows,filter_state['serial']),quiet=True)
+        self.run(lambda:self.catalog_cached('/trending/all/week'),lambda rows:receive(rows,filter_state['serial']),quiet=True)
     def person_card(self,person):
         w,l=column();l.setContentsMargins(0,0,0,0);l.setSpacing(6);w.setFixedWidth(160)
         tile=Poster();tile.setFixedSize(160,204);tile.setAccessibleName(str(person.get('name','')))
@@ -668,13 +716,13 @@ class Window(DesktopFeatures,QMainWindow):
         value,ok=QInputDialog.getItem(self,'BruniO',self.t('Selecciona el año','Choose a year'),years,0,False)
         if ok and value:self.catalog_page(value,'/discover/movie','movie',{'primary_release_year':int(value)})
     def catalog_page(self,title,path,kind,params=None):
-        l,page=self.page(title);self.run(lambda:self.client.catalog(path,kind,params),lambda items:self.grid(l,items) if page==self.page_id else None)
+        l,page=self.page(title);self.run(lambda:self.catalog_cached(path,kind,params),lambda items:self.grid(l,items) if page==self.page_id else None)
     def provider(self,title,pid):
         l,page=self.page(title)
         def load():
             base={'with_watch_providers':pid,'watch_region':'US'}
-            rows=[(self.t('Películas','Movies'),self.client.catalog('/discover/movie','movie',base)),(self.t('Series','Series'),self.client.catalog('/discover/tv','series',base))]
-            for genre,gid in [('Action',28),('Comedy',35),('Horror',27),('Drama',18),('Sci-Fi',878)]:rows.append((genre,self.client.catalog('/discover/movie','movie',{**base,'with_genres':gid})))
+            rows=[(self.t('Películas','Movies'),self.catalog_cached('/discover/movie','movie',base)),(self.t('Series','Series'),self.catalog_cached('/discover/tv','series',base))]
+            for genre,gid in [('Action',28),('Comedy',35),('Horror',27),('Drama',18),('Sci-Fi',878)]:rows.append((genre,self.catalog_cached('/discover/movie','movie',{**base,'with_genres':gid})))
             return rows
         self.run(load,lambda rows:[self.rail(l,name,items) for name,items in rows] if page==self.page_id else None)
     def my_list(self):
@@ -964,7 +1012,7 @@ class Window(DesktopFeatures,QMainWindow):
             if self.client.party and not self.client.host():return
             c=dict(self.current)
             if c['item']['type']=='series' and self.profile_pref('autoplay',self.preferences.get('autoplay',True)):self.next_episode(c)
-            else:self.open(c['item']);self.run(lambda:self.client.catalog(f"/{'tv' if c['item']['type']=='series' else 'movie'}/{c['item']['id']}/recommendations",c['item']['type']),lambda rows:self.show_recommendations(rows))
+            else:self.open(c['item']);self.run(lambda:self.catalog_cached(f"/{'tv' if c['item']['type']=='series' else 'movie'}/{c['item']['id']}/recommendations",c['item']['type']),lambda rows:self.show_recommendations(rows))
     def retry_next_source(self):
         if not self.current or self.current['item']['type']=='live' or self.client.party or not self.profile_pref('retry_links',True):return False
         if len(self.fallback_urls)>=5:return False

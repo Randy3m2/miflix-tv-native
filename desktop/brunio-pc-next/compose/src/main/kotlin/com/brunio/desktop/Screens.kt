@@ -290,8 +290,11 @@ fun ProfilePicker(profiles: List<MediaTile>, onSelect: (String) -> Unit, onManag
             Text(ui("¿Quién está viendo?"), style = MaterialTheme.typography.displaySmall)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(32.dp)) {
                 items(profiles, key = { it.id }) { profile ->
-                    Column(Modifier.width(132.dp).clickable { onSelect(profile.id) }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        RemoteArtwork(profile.image, Modifier.size(132.dp).clip(RoundedCornerShape(66.dp)), profile.title)
+                    val interaction=remember{MutableInteractionSource()}
+                    val hovered by interaction.collectIsHoveredAsState()
+                    val scale by animateFloatAsState(if(hovered)1.045f else 1f)
+                    Column(Modifier.width(132.dp).clickable(interactionSource=interaction,indication=null) { onSelect(profile.id) }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        RemoteArtwork(profile.image, Modifier.size(132.dp).graphicsLayer(scaleX=scale,scaleY=scale).clip(RoundedCornerShape(66.dp)).border(2.dp,if(hovered)Color.White.copy(alpha=.8f)else Color.Transparent,RoundedCornerShape(66.dp)), profile.title)
                         Text(profile.title)
                     }
                 }

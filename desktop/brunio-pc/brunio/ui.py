@@ -1193,8 +1193,8 @@ class Window(DesktopFeatures,QMainWindow):
         description=label(self.t('Descubre canales, deportes y programas en vivo.','Explore live TV, sports and entertainment.'),14)
         description.setObjectName('muted');l.addWidget(description)
         owner=self.client.session.get('userId','local')+':'+self.client.profile
-        toolbar,bar=row();provider=QComboBox();provider.addItem('BruniO TV','tv');provider.addItem('IPTV · M3U','m3u');provider.addItem('Live sports','sports');provider.setMinimumWidth(180);bar.addWidget(provider)
-        category=QComboBox();category.setMinimumWidth(180);bar.addWidget(category);search=QLineEdit();search.setPlaceholderText(self.t('Buscar canal…','Search channels…'));bar.addWidget(search,1)
+        toolbar,bar=row();provider=QComboBox();provider.addItem('BruniO TV','tv');provider.addItem('IPTV · M3U','m3u');provider.addItem('Live sports','sports');provider.setMinimumWidth(145);bar.addWidget(provider)
+        category=QComboBox();category.setMinimumWidth(145);bar.addWidget(category);search=QLineEdit();search.setPlaceholderText(self.t('Buscar canal…','Search channels…'));bar.addWidget(search,1)
         bar.addWidget(button(self.t('Importar M3U','Import M3U'),lambda:import_playlist()));bar.addWidget(button('Stats',self.sports_scores));l.addWidget(toolbar)
         def quick_select(key):
             if key in ('all','favorites'):
@@ -1218,6 +1218,9 @@ class Window(DesktopFeatures,QMainWindow):
                  ('sports','Deportes','Sports'),('movies','Cine','Movies'),
                  ('series','Series','Series'),('news','Noticias','News'),('kids','Infantil','Kids')]
         select_quick=self.filter_pills(l,filters,quick_select)
+        quick_bar=l.itemAt(l.count()-1).widget()
+        l.removeWidget(quick_bar)
+        l.addWidget(EdgeRail(quick_bar,54))
         hint=label('',13);hint.setObjectName('channelCount');l.addWidget(hint)
         holder=QWidget();holder.setObjectName('liveChannels')
         hl=QGridLayout(holder);hl.setContentsMargins(0,0,0,0);hl.setSpacing(13);l.addWidget(holder)

@@ -161,7 +161,7 @@ class Utilities(private val scope: CoroutineScope, private val bridge: BridgeCli
                         try {
                             val numbers=(plan as JSONObject).getJSONArray("episodes")
                             for(index in 0 until numbers.length()) {
-                                if(epoch!=generation || roomEpoch!=partyEpoch)break
+                                if(epoch!=generation)break
                                 try { bridge.call("downloads.start",JSONObject(args.toString()).put("episode",numbers.getInt(index))) }
                                 catch(e:Exception) { if(epoch==generation)error="Algunos episodios no ofrecen un archivo descargable." }
                                 delay(50)

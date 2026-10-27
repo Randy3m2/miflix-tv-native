@@ -24,9 +24,10 @@ import kotlinx.coroutines.delay
 
 /** Explicit development gallery. No sample title or fake playback is presented as real content. */
 fun main() = application {
-    Window(onCloseRequest = ::exitApplication, title = "BruniO PC · Reconstrucción en desarrollo") {
+    val windowState = androidx.compose.ui.window.rememberWindowState()
+    Window(state = windowState, onCloseRequest = ::exitApplication, title = "BruniO PC · Reconstrucción en desarrollo") {
         MaterialTheme(colorScheme = darkColorScheme(background = Color(0xFF080809), surface = Color(0xFF151518), primary = Color.White, onPrimary = Color.Black)) {
-            ConnectedDesktop()
+            ConnectedDesktop { windowState.placement = if(windowState.placement == androidx.compose.ui.window.WindowPlacement.Fullscreen) androidx.compose.ui.window.WindowPlacement.Floating else androidx.compose.ui.window.WindowPlacement.Fullscreen }
         }
     }
 }

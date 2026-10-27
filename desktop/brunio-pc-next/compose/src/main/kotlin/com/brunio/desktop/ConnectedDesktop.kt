@@ -14,14 +14,16 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun ConnectedDesktop() {
+fun ConnectedDesktop(onFullscreen: () -> Unit) {
     val scope = rememberCoroutineScope()
     val bridge = remember { BridgeClient() }
     val controller = remember { AppController(scope, bridge) }
     DisposableEffect(bridge) { onDispose { bridge.close() } }
     LaunchedEffect(controller) { controller.restore() }
     val account = controller.account
+    val playback = controller.playback
     when {
+        playback != null -> PlayerScreen(playback, controller::closePlayer, onFullscreen, { position, duration -> controller.saveProgress(playback, position, duration) }, { controller.nextEpisode(playback) }, { controller.message = it })
         account == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             if (controller.message == null) CircularProgressIndicator(color = Color.White)
             else Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -55,6 +57,7 @@ fun ConnectedDesktop() {
             DesktopNavigation(controller.tab, { controller.select(it) }, controller::showProfiles)
         }
     }
+    controller.settings?.let { SettingsDialog(it, controller::saveSetting, { controller.settings = null }) }
     if (controller.addFriend) {
         var nickname by remember { mutableStateOf("") }
         AlertDialog(onDismissRequest = { controller.addFriend = false }, title = { Text("Agregar amigo") },
@@ -68,7 +71,15 @@ fun ConnectedDesktop() {
             text = { Column(Modifier.widthIn(max = 620.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 RemoteArtwork(item.optString("backdrop"), Modifier.fillMaxWidth().height(220.dp))
                 Text(item.optString("overview"))
-                Text("El motor de reproducción todavía no está conectado a esta interfaz.", color = Color.Gray)
+                if (item.optString("type") == "series") {
+                    var season by remember(item.optString("cloudId")) { mutableStateOf(1) }
+                    val seasons = value.optJSONObject("details")?.optJSONArray("seasons")?.objects().orEmpty().filter { it.optInt("season_number") > 0 }
+                    Row {
+                        seasons.forEach { row -> TextButton(onClick = { season = row.getInt("season_number"); controller.chooseEpisodes(item, season) }) { Text("T${row.getInt("season_number")}") } }
+                    }
+                    Button(onClick = { controller.chooseEpisodes(item, season) }) { Text("Ver episodios") }
+                    controller.episodes?.forEach { ep -> TextButton(onClick = { controller.play(item, season, ep.getInt("episode_number")) }) { Text("E${ep.getInt("episode_number")} · ${ep.optString("name")}") } }
+                } else Button(onClick = { controller.play(item) }) { Text("Reproducir") }
             } }, confirmButton = { TextButton(onClick = { controller.detail = null }) { Text("Cerrar") } })
     }
     controller.message?.takeIf { account != null }?.let { message ->

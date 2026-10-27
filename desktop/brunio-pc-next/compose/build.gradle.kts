@@ -8,6 +8,7 @@ dependencies {
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)
     implementation("org.json:json:20240303")
+    implementation("uk.co.caprica:vlcj:4.8.3")
     testImplementation(kotlin("test"))
 }
 compose.desktop { application { mainClass = "com.brunio.desktop.MainKt" } }

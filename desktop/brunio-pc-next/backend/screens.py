@@ -3,7 +3,7 @@ from pathlib import Path
 from urllib.parse import urlencode, quote
 import datetime as dt
 import re
-from brunio.core import LIVE, valid_url
+from brunio.core import LIVE, valid_url, now_ms
 from brunio.playlist import read_m3u
 
 ASSETS = Path(__file__).resolve().parents[2] / 'brunio-pc' / 'assets'
@@ -19,7 +19,9 @@ class Screens:
                 'friends.list':self.friend_list, 'friends.add':self.friend_add,
                 'friends.accept':self.friend_accept, 'calendar.list':self.calendar_list,
                 'live.list':self.live_list, 'live.sources':self.live_sources,
-                'catalog.sources':self.sources, 'catalog.favorite':self.favorite}
+                'catalog.sources':self.sources, 'catalog.favorite':self.favorite,
+                'catalog.episodes':self.episodes, 'catalog.next':self.next_episode, 'playback.progress':self.progress,
+                'settings.get':self.settings_get, 'settings.set':self.settings_set}
 
     def continued(self):
         progress=self.client.state().get('progress',{})
@@ -119,7 +121,9 @@ class Screens:
         language='es' if self.client.source_audio=='es' else 'en'
         self.client.source_order=selected.get('addon_order_'+language,[])
         rows,imdb=self.client.streams(self.client.by_id(cloud_id),season,episode,preferences.get('limit',0))
-        return {'streams':rows,'imdb':imdb}
+        saved=self.client.state().get('progress',{}).get(cloud_id+(f':s{season}e{episode}' if season else ''),{})
+        resume=int(saved.get('position',0)*1000) if saved.get('percent',0)<90 else 0
+        return {'resume_ms':resume,'streams':rows,'imdb':imdb,'scope':scope,'audio':self.client.source_audio,'sub':selected.get('sub',preferences.get('sub','es'))}
 
     def favorite(self,cloud_id,enabled):
         self.client.by_id(cloud_id) # Validate the content identifier.
@@ -129,3 +133,63 @@ class Screens:
         if not enabled:state['favorites']=[k for k in ids if k!=cloud_id]
         self.client.save_state(state)
         return {'saved':enabled}
+
+    def episodes(self,cloud_id,season):
+        if not isinstance(season,int) or not 0<=season<=1000:raise ValueError('Invalid season')
+        item=self.client.by_id(cloud_id)
+        if item['type']!='series':raise ValueError('Not a series')
+        return self.client.episodes(item,season)
+
+    def progress(self,cloud_id,scope,position_ms,duration_ms,season=0,episode=0):
+        current=str(self.client.session.get('userId','local'))+':'+self.client.profile
+        if scope!=current:raise ValueError('Profile changed')
+        if not re.fullmatch(r'tmdb:(movie|series):[0-9]+',cloud_id):raise ValueError('Invalid content')
+        if not all(isinstance(v,int) and not isinstance(v,bool) for v in (position_ms,duration_ms,season,episode)):raise ValueError('Invalid times')
+        if duration_ms<=0 or position_ms<0 or season<0 or episode<0:raise ValueError('Invalid times')
+        position_ms=min(position_ms,duration_ms)
+        value={'percent':position_ms/duration_ms*100,'position':position_ms/1000,'duration':duration_ms/1000,'updatedAt':now_ms(),'season':season,'episode':episode}
+        state=self.client.state();progress=state.setdefault('progress',{});progress[cloud_id]=value
+        if season:progress[cloud_id+f':s{season}e{episode}']=value
+        self.client.save_state(state)
+        return {'saved':True}
+
+    def settings_get(self):
+        preferences=self.local.get('preferences',{})
+        scope=str(self.client.session.get('userId','local'))+':'+self.client.profile
+        selected=preferences.get('profile_playback',{}).get(scope,{})
+        return {'scope':scope,**{key:selected.get(key,preferences.get(key,default)) for key,default in {'audio':'es','sub':'es','autoplay':True,'retry':True,'limit':0,'language':'es'}.items()}}
+
+    def settings_set(self,key,value,scope):
+        import math
+        if scope!=str(self.client.session.get('userId','local'))+':'+self.client.profile:raise ValueError('Profile changed')
+        if key in ('autoplay','retry'):
+            if not isinstance(value,bool):raise ValueError('Invalid switch')
+        elif key=='limit':
+            if isinstance(value,bool) or not isinstance(value,(int,float)) or not math.isfinite(value) or not 0<=value<=500:raise ValueError('Invalid limit')
+        elif key in ('audio','language'):
+            if value not in ('es','en'):raise ValueError('Invalid language')
+        elif key=='sub':
+            if value not in ('es','en','off'):raise ValueError('Invalid subtitle')
+        else:raise ValueError('Unknown setting')
+        preferences=self.local.setdefault('preferences',{})
+        if key in ('audio','sub'):
+            scope=str(self.client.session.get('userId','local'))+':'+self.client.profile
+            preferences.setdefault('profile_playback',{}).setdefault(scope,{})[key]=value
+        else:preferences[key]=value
+        self.persist()
+        return self.settings_get()
+
+    def next_episode(self,cloud_id,season,episode):
+        item=self.client.by_id(cloud_id)
+        if item['type']!='series':return None
+        if not all(isinstance(v,int) and not isinstance(v,bool) and v>=0 for v in (season,episode)):raise ValueError('Invalid episode')
+        today=dt.date.today().isoformat()
+        def available(rows,after=0):
+            return sorted((r for r in rows if r.get('episode_number',0)>after and r.get('air_date') and r['air_date']<=today),key=lambda r:r['episode_number'])
+        rows=available(self.client.episodes(item,season),episode)
+        if rows:return {'season':season,'episode':rows[0]['episode_number']}
+        seasons=sorted(s['season_number'] for s in self.client.details(item).get('seasons',[]) if s.get('season_number',0)>season)
+        if seasons:
+            rows=available(self.client.episodes(item,seasons[0]))
+            if rows:return {'season':seasons[0],'episode':rows[0]['episode_number']}
+        return None

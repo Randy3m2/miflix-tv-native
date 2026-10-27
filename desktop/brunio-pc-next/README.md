@@ -12,12 +12,16 @@ Las presentaciones de pestañas, selector de perfiles y controles están en Kotl
 
 ## Validación y límites
 
-- 15 pruebas Python pasan con fixtures y catálogo M3U local.
+- 25 pruebas Python pasan con fixtures y catálogo M3U local.
 - Hay pruebas Kotlin definidas para hover y condiciones de botones VOD/series/Live; no ejecutadas.
 - Gradle se descargó, pero este entorno no resuelve el plugin Kotlin. No se consiguió compilar ni ejecutar Compose aquí.
 - No se ha probado contra la cuenta personal ni en Windows. No se afirma paridad completa con TV.
 
-Todavía sin conectar: motor de vídeo y controles de transporte, Watch Party/chat/reacciones, suscripciones deportivas del calendario, descargas, notificaciones, edición de perfiles, formularios de ajustes y actualizador. Las acciones pendientes muestran un aviso explícito. No publicar ni distribuir como versión final.
+Se añadió integración de VLCJ con cuadros de vídeo en Compose, controles de transporte, fuentes, selección de pistas de audio/subtítulos, fullscreen, selección de episodios, retry, reanudación, progreso y solicitud de siguiente episodio. Este código nativo NO se ha compilado ni probado aquí; rendimiento y ciclo de vida siguen pendientes de validación en Windows. En desarrollo requiere VLC x64 instalado o BRUNIO_VLC_HOME; todavía no se incluye su runtime en un instalador.
+
+Los ajustes básicos de audio, subtítulos, límite de archivo para PC, autoplay y retry tienen formularios y servicios conectados. La traducción completa de la interfaz sigue pendiente.
+
+Todavía sin conectar: Watch Party/chat/reacciones, suscripciones deportivas del calendario, descargas, notificaciones, edición de perfiles, ajustes avanzados de complementos y actualizador. Las acciones pendientes muestran un aviso explícito. No publicar ni distribuir como versión final.
 
 ## Desarrollo
 

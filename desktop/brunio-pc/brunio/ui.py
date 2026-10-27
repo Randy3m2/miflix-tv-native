@@ -1328,45 +1328,261 @@ class Window(DesktopFeatures,QMainWindow):
     def settings(self,refresh=True):
         self.select_nav('settings')
         if refresh and self.client.session:
-            l,page=self.page(self.t('Ajustes','Settings'));l.addWidget(label(self.t('Sincronizando configuración de la cuenta…','Syncing account settings…')))
-            self.run(self.client.load_account,lambda _:(self.refresh_profile_icon(),self.settings(refresh=False)) if page==self.page_id else None);return
-        outer,page=self.page(self.t('Ajustes','Settings'));hint=label('BruniO · '+VERSION,14);hint.setObjectName('muted');outer.addWidget(hint)
-        update,ul=row();update.setMaximumWidth(1050);update.setObjectName('updateStrip');ul.setContentsMargins(20,14,20,14);update_info,uv=column();update_info.setObjectName('updateInfo');uv.setContentsMargins(0,0,0,0);uv.setSpacing(2);uv.addWidget(label(self.t('BruniO para Windows','BruniO for Windows'),16));uv.addWidget(label(self.t('Versión instalada · ','Installed version · ')+VERSION,12));ul.addWidget(update_info,1);update_button=button(self.t('↻  Buscar actualización','↻  Check for update'),self.check_updates);update_button.setObjectName('updateButton');update_button.setStyleSheet('QPushButton#updateButton { background:#f4f4f5; color:#111; border:1px solid #f4f4f5; border-radius:20px; padding:10px 18px; font-weight:700; } QPushButton#updateButton:hover { background:#d5d5d8; }');ul.addWidget(update_button);outer.addWidget(update)
-        panel,l=column();panel.setMaximumWidth(1050);panel.setObjectName('settingsCard');l.setContentsMargins(24,24,24,24);outer.addWidget(panel)
+            l,page=self.page('BruniO')
+            l.addWidget(label(self.t('Sincronizando configuración…','Syncing settings…'),16))
+            self.run(self.client.load_account,
+                     lambda _:(self.refresh_profile_icon(),self.settings(refresh=False))
+                     if page==self.page_id else None)
+            return
+
+        outer,page=self.page('BruniO')
+        title=label(self.t('Ajustes','Settings'),30)
+        title.setObjectName('pageTitle');outer.addWidget(title)
+        subtitle=label(self.t('Tu espacio BruniO, hecho a tu medida.',
+                             'Your BruniO, just the way you like it.'),14)
+        subtitle.setObjectName('muted');outer.addWidget(subtitle)
+
+        shell,shell_row=row();shell.setObjectName('settingsShell')
+        shell_row.setSpacing(24);shell_row.setAlignment(Qt.AlignmentFlag.AlignTop)
+        sidebar=QWidget();sidebar.setObjectName('settingsNav')
+        sidebar.setFixedWidth(215)
+        nav=QVBoxLayout(sidebar);nav.setSpacing(7)
+        nav.setContentsMargins(12,17,12,20)
+        content=QWidget();content.setObjectName('settingsContent')
+        body=QVBoxLayout(content);body.setAlignment(Qt.AlignmentFlag.AlignTop)
+        body.setSpacing(0);body.setContentsMargins(0,0,0,0)
+        shell_row.addWidget(sidebar);shell_row.addWidget(content,1)
+        outer.addWidget(shell)
+
+        panels={}
+        def pane(key,heading,detail):
+            w=QWidget();w.setObjectName('settingsPane')
+            v=QVBoxLayout(w);v.setAlignment(Qt.AlignmentFlag.AlignTop)
+            v.setContentsMargins(0,0,0,20);v.setSpacing(17)
+            heading_label=label(heading,24)
+            heading_label.setObjectName('settingsPageHeading')
+            v.addWidget(heading_label)
+            secondary=label(detail,13);secondary.setObjectName('muted');v.addWidget(secondary)
+            body.addWidget(w);w.hide()
+            panels[key]=(w,v)
+            return v
+        def card(parent,title,description=''):
+            w=QWidget();w.setObjectName('settingsCard')
+            v=QVBoxLayout(w);v.setContentsMargins(24,23,24,24);v.setSpacing(13)
+            heading=label(title,18);heading.setObjectName('settingsGroupHeading')
+            v.addWidget(heading)
+            if description:
+                desc=label(description,12);desc.setObjectName('muted');v.addWidget(desc)
+            parent.addWidget(w)
+            return v
+        account=pane('account',self.t('Mi cuenta','My account'),
+                     self.t('Perfiles y seguridad de tu cuenta.','Profiles and account security.'))
+        playback=pane('playback',self.t('Reproducción','Playback'),
+                      self.t('Personaliza tus películas y episodios.','Tune your movies and episodes.'))
+        addons=pane('addons',self.t('Complementos','Add-ons'),
+                    self.t('Fuentes conectadas y prioridad.','Connected sources and priority.'))
+        appearance=pane('appearance',self.t('Apariencia','Appearance'),
+                        self.t('Elige el estilo perfecto para tu pantalla.','Find the best look for your screen.'))
+        updates=pane('updates',self.t('Actualizaciones','Updates'),
+                     self.t('Mantén BruniO PC siempre al día.','Keep BruniO PC up to date.'))
+        advanced=pane('advanced',self.t('Más opciones','More options'),
+                      self.t('Herramientas y almacenamiento.','Tools and storage.'))
+        nav_buttons={}
+        selected={'key':getattr(self,'_settings_section','account')}
+        entries=[
+            ('account','profiles','Cuenta','Account'),
+            ('playback','movies','Reproducción','Playback'),
+            ('addons','collections','Complementos','Add-ons'),
+            ('appearance','settings','Apariencia','Appearance'),
+            ('updates','downloads','Actualizaciones','Updates'),
+            ('advanced','list','Almacenamiento','Storage'),
+        ]
+        def show_section(key):
+            if key not in panels:key='account'
+            selected['key']=key;self._settings_section=key
+            for name,(widget,_) in panels.items():
+                widget.setVisible(name==key)
+            for name,control in nav_buttons.items():
+                control.setProperty('selected',name==key)
+                control.style().unpolish(control);control.style().polish(control)
+            content.adjustSize();shell.adjustSize()
+        for key,glyph,es,en in entries:
+            b=button(self.t(es,en),lambda key=key:show_section(key))
+            b.setObjectName('settingsNavButton')
+            b.setIcon(icon(glyph,'#aea5e3'));b.setIconSize(QSize(18,18))
+            b.setFixedHeight(47);nav.addWidget(b)
+            nav_buttons[key]=b
+        nav.addStretch(1)
+
+        update_card=card(updates,self.t('BruniO para Windows','BruniO for Windows'),
+                         self.t('Las versiones se descargan desde tu repositorio oficial de GitHub.',
+                                'Updates come directly from your official GitHub repository.'))
+        version_label=label(self.t('Versión instalada: ','Installed version: ')+VERSION,15)
+        version_label.setObjectName('versionBadge');update_card.addWidget(version_label)
+        updater=button(self.t('↻   Buscar actualización','↻   Check for updates'),
+                       self.check_updates)
+        updater.setObjectName('primaryAction');updater.setMaximumWidth(265)
+        update_card.addWidget(updater)
+        update_card.addWidget(label(self.t(
+            'La descarga comprueba la versión, el tamaño y SHA-256 antes de abrir el instalador.',
+            'Installer version, size and SHA-256 are verified before launch.'),12))
+
+        looks=card(appearance,self.t('Tema de la aplicación','Application theme'),
+                   self.t('El modo automático sigue la apariencia de Windows.',
+                          'Automatic follows your Windows appearance.'))
+        theme_row,trl=row();trl.setSpacing(12)
+        for key,es,en in [('dark','🌙  Oscuro','🌙  Dark'),
+                          ('light','☀  Claro','☀  Light'),
+                          ('auto','◐  Automático','◐  Auto')]:
+            choice=button(self.t(es,en),lambda key=key:self.change_theme(key))
+            choice.setObjectName('themeOption');choice.setMinimumHeight(54)
+            choice.setProperty('selected',self.preferences.get('theme','dark')==key)
+            trl.addWidget(choice,1)
+        looks.addWidget(theme_row)
+        looks.addWidget(label(self.t('Los cambios se aplican al instante.',
+                                      'Changes apply instantly.'),12))
+        note=card(appearance,self.t('Experiencia visual','Visual experience'))
+        note.addWidget(label(self.t(
+            'Contraste mejorado, navegación tipo glass y carátulas cinematográficas.',
+            'Enhanced contrast, glass navigation, and cinematic artwork.'),13))
+
         if not self.client.session:
-            email=QLineEdit();email.setPlaceholderText('Email');password=QLineEdit();password.setPlaceholderText('Password');password.setEchoMode(QLineEdit.EchoMode.Password);l.addWidget(email);l.addWidget(password)
-            def login():
-                e=email.text().strip();p=password.text();password.clear();self.run(lambda:self.client.login(e,p),lambda _:(self.refresh_profile_icon(),self.profiles()),guard=False)
-            l.addWidget(button(self.t('Iniciar sesión','Sign in'),login));password.returnPressed.connect(login)
-            l.addWidget(button(self.t('Acceder con QR','QR sign-in'),self.qr_login))
-            l.addWidget(label(self.t('Usa la misma cuenta de BruniO TV. Cada persona usa su propia cuenta y complementos.','Use your BruniO TV account. Each person uses their own account and add-ons.')));return
-        l.addWidget(label(self.t('Cuenta y complementos','Account & add-ons'),22));l.addWidget(label(self.client.session.get('email',''),14));token=QLineEdit(self.client.token);token.setEchoMode(QLineEdit.EchoMode.Password);token.setPlaceholderText('TMDB token');l.addWidget(token)
-        addon=QLineEdit();addon.setPlaceholderText('https://…/manifest.json');addon.setEchoMode(QLineEdit.EchoMode.Password);l.addWidget(addon)
-        l.addWidget(label(self.t('Tus complementos','Your add-ons')+' · '+str(len(self.client.manifests))))
-        def setup():
-            manifests=list(self.client.manifests);url=addon.text().strip()
-            if url:
-                if not valid_url(url):self.tell('Invalid manifest URL');return
-                manifests=list(dict.fromkeys(manifests+[url if url.endswith('/manifest.json') else url.rstrip('/')+'/manifest.json']))
-            self.run(lambda token_value=token.text().strip(),new=url:self.client.edit_setup(token=token_value,add=(new if new.endswith('/manifest.json') else new.rstrip('/')+'/manifest.json') if new else None),lambda _:(self.tell(self.t('Configuración compartida con TV guardada','Shared TV account setup saved')),self.settings()))
-        save=button(self.t('Guardar configuración','Save settings'),setup);save.setMaximumWidth(220);l.addWidget(save)
-        for manifest in self.client.manifests:
-            host=__import__('urllib.parse',fromlist=['urlsplit']).urlsplit(manifest).hostname
-            item,il=row();il.addWidget(label(str(host),14),1);remove=button(self.t('Eliminar','Remove'),lambda m=manifest:self.run(lambda:self.client.edit_setup(remove=m),lambda _:self.settings()));remove.setFixedWidth(100);il.addWidget(remove);l.addWidget(item)
-        sports=QLineEdit(self.preferences.get('sports_manifest',''));sports.setPlaceholderText('Live sports manifest URL (optional)');sports.setEchoMode(QLineEdit.EchoMode.Password);l.addWidget(sports)
-        def save_sports():
-            url=sports.text().strip()
-            if url and not valid_url(url):self.tell('Invalid manifest URL');return
-            self.save_pref('sports_manifest',url);self.tell('Live sports setup saved')
-        save=button(self.t('Guardar deportes','Save sports'),save_sports);save.setMaximumWidth(220);l.addWidget(save)
-        order_button=button(self.t('Orden de complementos','Add-on priority'),self.addon_priority);order_button.setMaximumWidth(240);l.addWidget(order_button)
-        l.addWidget(label(self.t('Reproducción','Playback'),22))
-        for name,key,choices in [(self.t('Idioma de la app','App language'),'language',['es','en']),(self.t('Audio preferido','Preferred audio'),'audio',['es','en','pt','fr','de','ja']),(self.t('Subtítulos','Subtitles'),'sub',['es','en','pt','fr','de','off'])]:
-            item,il=row();il.addWidget(label(name),1);combo=QComboBox();combo.setFixedWidth(180);combo.addItems(choices);combo.setCurrentText(self.preferences.get(key,choices[0]) if key=='language' else self.profile_pref(key,self.preferences.get(key,choices[0])));il.addWidget(combo);l.addWidget(item);combo.currentTextChanged.connect(lambda text,key=key:self.change_language(text) if key=='language' else self.save_profile_pref(key,text))
-        limit=QDoubleSpinBox();limit.setRange(0,500);limit.setSuffix(' GB');limit.setValue(self.preferences.get('limit',0));limit.setSpecialValueText('Unlimited');l.addWidget(label(self.t('Límite de tamaño','Size limit')));l.addWidget(limit);limit.valueChanged.connect(lambda value:self.save_pref('limit',value))
-        retry=QCheckBox(self.t('Probar otro enlace si falla','Try next source on failure'));retry.setChecked(self.profile_pref('retry_links',True));retry.toggled.connect(lambda value:self.save_profile_pref('retry_links',value));l.addWidget(retry)
-        autoplay=QCheckBox(self.t('Siguiente episodio automático','Autoplay next episode'));autoplay.setChecked(self.profile_pref('autoplay',self.preferences.get('autoplay',True)));autoplay.toggled.connect(lambda value:self.save_profile_pref('autoplay',value));l.addWidget(autoplay)
-        tools,tl=row();tools.setMaximumWidth(800);tl.addWidget(button(self.t('Limpiar caché','Clear cache'),lambda:(self.images.clear(),self.tell(self.t('Caché limpiado','Cache cleared')))));tl.addWidget(button('Trakt',self.trakt));tl.addWidget(button(self.t('Buscar actualización','Check for updates'),self.check_updates));tl.addWidget(button(self.t('Cerrar sesión','Sign out'),self.sign_out));l.addWidget(tools)
+            login_area=card(account,self.t('Inicia sesión','Sign in'))
+            email=QLineEdit();email.setPlaceholderText('Email')
+            password=QLineEdit();password.setPlaceholderText('Password')
+            password.setEchoMode(QLineEdit.EchoMode.Password)
+            login_area.addWidget(email);login_area.addWidget(password)
+            def sign_in():
+                e=email.text().strip();p=password.text();password.clear()
+                self.run(lambda:self.client.login(e,p),
+                         lambda _:(self.refresh_profile_icon(),self.profiles()),
+                         guard=False)
+            sign_in_button=button(self.t('Iniciar sesión','Sign in'),sign_in)
+            sign_in_button.setObjectName('primaryAction');login_area.addWidget(sign_in_button)
+            login_area.addWidget(button(self.t('Acceder con QR','Sign in using QR'),self.qr_login))
+            password.returnPressed.connect(sign_in)
+            for empty,es,en in [('playback','Inicia sesión para configurar la reproducción.',
+                                       'Sign in to configure playback.'),
+                                ('addons','Inicia sesión para administrar tus fuentes.',
+                                       'Sign in to manage your sources.')]:
+                card(panels[empty][1],self.t(es,en))
+        else:
+            info=card(account,self.t('Cuenta conectada','Connected account'))
+            info.addWidget(label(self.client.session.get('email',''),16))
+            change_profile=button(self.t('Cambiar perfil  ↗','Switch profile  ↗'),self.profiles)
+            change_profile.setObjectName('secondaryAction');change_profile.setMaximumWidth(230)
+            info.addWidget(change_profile)
+            controls=card(account,self.t('Tu cuenta','Your account'))
+            controls.addWidget(button('Trakt',self.trakt))
+            logout=button(self.t('Cerrar sesión','Sign out'),self.sign_out)
+            logout.setObjectName('secondaryAction');controls.addWidget(logout)
+
+            general=card(playback,self.t('Idioma y subtítulos','Language and subtitles'))
+            for es,en,key,choices in [
+                ('Idioma de la app','App language','language',['es','en']),
+                ('Audio preferido','Preferred audio','audio',['es','en','pt','fr','de','ja']),
+                ('Subtítulos','Subtitles','sub',['es','en','pt','fr','de','off'])
+            ]:
+                item,il=row();il.addWidget(label(self.t(es,en)),1)
+                combo=QComboBox();combo.setMinimumWidth(175)
+                combo.addItems(choices)
+                current=(self.preferences.get(key,choices[0]) if key=='language'
+                         else self.profile_pref(key,self.preferences.get(key,choices[0])))
+                combo.setCurrentText(current)
+                combo.currentTextChanged.connect(
+                    lambda value,key=key:self.change_language(value)
+                    if key=='language' else self.save_profile_pref(key,value))
+                il.addWidget(combo);general.addWidget(item)
+            options=card(playback,self.t('Comportamiento del reproductor','Player behavior'))
+            retry=QCheckBox(self.t('Reintentar otro enlace si falla',
+                                    'Try another source when playback fails'))
+            retry.setChecked(self.profile_pref('retry_links',True))
+            retry.toggled.connect(lambda value:self.save_profile_pref('retry_links',value))
+            options.addWidget(retry)
+            autoplay=QCheckBox(self.t('Reproducir el siguiente episodio automáticamente',
+                                       'Automatically play the next episode'))
+            autoplay.setChecked(self.profile_pref('autoplay',
+                                                   self.preferences.get('autoplay',True)))
+            autoplay.toggled.connect(lambda value:self.save_profile_pref('autoplay',value))
+            options.addWidget(autoplay)
+            limit_row,lr=row();lr.addWidget(label(self.t('Límite de tamaño',
+                                                        'Source size limit')),1)
+            limit=QDoubleSpinBox();limit.setRange(0,500);limit.setSuffix(' GB')
+            limit.setValue(self.preferences.get('limit',0))
+            limit.setSpecialValueText(self.t('Sin límite','Unlimited'))
+            limit.valueChanged.connect(lambda value:self.save_pref('limit',value))
+            lr.addWidget(limit);options.addWidget(limit_row)
+
+            sources=card(addons,self.t('Catálogo y credenciales','Catalog and credentials'))
+            token=QLineEdit(self.client.token);token.setEchoMode(QLineEdit.EchoMode.Password)
+            token.setPlaceholderText('TMDB token');sources.addWidget(token)
+            addon=QLineEdit();addon.setPlaceholderText('https://…/manifest.json')
+            addon.setEchoMode(QLineEdit.EchoMode.Password);sources.addWidget(addon)
+            def save_setup():
+                url=addon.text().strip()
+                if url and not valid_url(url):self.tell('Invalid manifest URL');return
+                if url and not url.endswith('/manifest.json'):
+                    url=url.rstrip('/')+'/manifest.json'
+                token_value=token.text().strip()
+                self.run(lambda:self.client.edit_setup(token=token_value,add=url or None),
+                         lambda _:(self.tell(self.t('Configuración guardada',
+                                                       'Settings saved')),self.settings()))
+            save=button(self.t('Guardar configuración','Save configuration'),save_setup)
+            save.setObjectName('primaryAction');save.setMaximumWidth(245)
+            sources.addWidget(save)
+            connected=card(addons,self.t('Tus complementos','Your add-ons')+
+                           '  ·  '+str(len(self.client.manifests)))
+            for manifest in self.client.manifests:
+                host=__import__('urllib.parse',fromlist=['urlsplit']).urlsplit(manifest).hostname or ''
+                item,il=row()
+                text=label(host,14);il.addWidget(text,1)
+                remove=button(self.t('Eliminar','Remove'),
+                              lambda m=manifest:self.run(
+                                  lambda:self.client.edit_setup(remove=m),
+                                  lambda _:self.settings()))
+                remove.setObjectName('secondaryAction');remove.setFixedWidth(104)
+                il.addWidget(remove);connected.addWidget(item)
+            priority=button(self.t('Prioridad de complementos  ↗','Add-on priority  ↗'),
+                            self.addon_priority)
+            priority.setObjectName('secondaryAction');connected.addWidget(priority)
+            sports_area=card(addons,self.t('Deportes en vivo','Live sports'))
+            sports=QLineEdit(self.preferences.get('sports_manifest',''))
+            sports.setPlaceholderText('Live sports manifest URL (optional)')
+            sports.setEchoMode(QLineEdit.EchoMode.Password);sports_area.addWidget(sports)
+            def save_sports():
+                url=sports.text().strip()
+                if url and not valid_url(url):self.tell('Invalid manifest URL');return
+                self.save_pref('sports_manifest',url)
+                self.tell(self.t('Deportes guardados','Sports settings saved'))
+            sports_area.addWidget(button(self.t('Guardar deportes','Save sports'),save_sports))
+
+        storage=card(advanced,self.t('Almacenamiento local','Local storage'))
+        storage.addWidget(label(self.t(
+            'Libera miniaturas y recursos descargados temporalmente sin perder tus listas.',
+            'Clear temporary thumbnails without losing your lists.'),13))
+        clear=button(self.t('Limpiar caché de imágenes','Clear image cache'),
+                     lambda:(self.images.clear(),
+                             self.tell(self.t('Caché limpiado','Image cache cleared'))))
+        clear.setObjectName('secondaryAction');storage.addWidget(clear)
+        storage.addWidget(button(self.t('Ver descargas  ↗','View downloads  ↗'),self.downloads))
+        show_section(selected['key'])
+
+    def change_theme(self,choice):
+        if choice not in ('dark','light','auto'):return
+        self.preferences['theme']=choice;self.persist()
+        self.apply_theme()
+        self._settings_section='appearance'
+        self.settings(refresh=False)
+
+    def apply_theme(self):
+        app=QApplication.instance()
+        if not app:return
+        choice=self.preferences.get('theme','dark')
+        system_dark=app.styleHints().colorScheme()==Qt.ColorScheme.Dark
+        light=(choice=='light') or (choice=='auto' and not system_dark)
+        app.setProperty('lightTheme',light)
+        app.setStyleSheet(STYLE+(LIGHT_STYLE if light else ''))
+
     def qr_login(self):
         from .pairing import Pairing
         import qrcode,io

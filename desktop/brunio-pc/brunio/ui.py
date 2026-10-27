@@ -755,7 +755,7 @@ class Window(DesktopFeatures,QMainWindow):
             tile.setObjectName('collectionTile')
             tile.setFixedHeight(165)
             path=PLATFORM_ASSETS/image_name
-            if path.is_file():tile.setPixmap(QPixmap(str(path)))
+            if path.is_file():tile.setLogoPixmap(QPixmap(str(path)))
             tile.clicked.connect(lambda checked=False,name=name,pid=pid:
                                  self.provider(name,pid))
             tile.setSizePolicy(QSizePolicy.Policy.Expanding,QSizePolicy.Policy.Fixed)

@@ -11,6 +11,8 @@ import org.json.JSONObject
 
 @Composable
 fun SettingsDialog(settings: JSONObject, onSave: (String, Any) -> Unit, onClose: () -> Unit) {
+    var downloadLimit by remember(settings){mutableStateOf(settings.optDouble("download_limit",0.0).toString())}
+    var sourceLimit by remember(settings){mutableStateOf(settings.optInt("source_limit",7).toString())}
     var limit by remember(settings) { mutableStateOf(settings.optDouble("limit", 0.0).toString()) }
     AlertDialog(onDismissRequest = onClose, title = { Text("Reproducción y preferencias") },
         text = { Column(Modifier.widthIn(min = 360.dp).heightIn(max = 600.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -29,5 +31,9 @@ fun SettingsDialog(settings: JSONObject, onSave: (String, Any) -> Unit, onClose:
             }
             OutlinedTextField(limit, { limit = it }, label = { Text("Límite por archivo · GB (0 = sin límite)") }, singleLine = true)
             TextButton(onClick = { limit.toDoubleOrNull()?.takeIf { it.isFinite() && it in 0.0..500.0 }?.let { onSave("limit", it) } }, enabled = limit.toDoubleOrNull()?.let { it.isFinite() && it in 0.0..500.0 } == true) { Text("Guardar límite para PC") }
+            OutlinedTextField(downloadLimit,{downloadLimit=it},label={Text("Límite de descarga · GB (0 = sin límite)")},singleLine=true)
+            TextButton(onClick={downloadLimit.toDoubleOrNull()?.let{onSave("download_limit",it)}},enabled=downloadLimit.toDoubleOrNull()?.let{it.isFinite()&&it in 0.0..500.0}==true){Text("Guardar límite de descarga")}
+            OutlinedTextField(sourceLimit,{sourceLimit=it},label={Text("Fuentes iniciales por complemento")},singleLine=true)
+            TextButton(onClick={sourceLimit.toIntOrNull()?.let{onSave("source_limit",it)}},enabled=sourceLimit.toIntOrNull()?.let{it in 1..500}==true){Text("Guardar límite de resultados")}
         } }, confirmButton = { TextButton(onClick = onClose) { Text("Cerrar") } })
 }

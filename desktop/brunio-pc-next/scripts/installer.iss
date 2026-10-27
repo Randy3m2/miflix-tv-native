@@ -1,7 +1,10 @@
+#ifndef AppVersion
+#define AppVersion "2.0.0-rc1"
+#endif
 [Setup]
 AppId={{2E5AFBD5-987C-4783-A75D-643AE766BA95}
 AppName=BruniO PC
-AppVersion=2.0.0-rc1
+AppVersion={#AppVersion}
 AppPublisher=BruniO
 DefaultDirName={localappdata}\Programs\BruniO
 DefaultGroupName=BruniO
@@ -10,7 +13,7 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
 OutputDir=..\installer
-OutputBaseFilename=BruniO-PC-Setup-2.0.0-rc1
+OutputBaseFilename=BruniO-PC-Setup-{#AppVersion}
 SetupIconFile=..\..\brunio-pc\assets\brunio.ico
 Compression=lzma2
 SolidCompression=yes

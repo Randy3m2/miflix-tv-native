@@ -11,6 +11,7 @@ class Utilities(private val scope: CoroutineScope, private val bridge: BridgeCli
     var addons by mutableStateOf<JSONObject?>(null)
     var profiles by mutableStateOf<JSONObject?>(null)
     var subscriptions by mutableStateOf<JSONObject?>(null)
+    var accountSetup by mutableStateOf<JSONObject?>(null)
     var scores by mutableStateOf<List<JSONObject>>(emptyList())
     var pinned by mutableStateOf<JSONObject?>(null)
     var party by mutableStateOf<JSONObject?>(null)
@@ -34,6 +35,7 @@ class Utilities(private val scope: CoroutineScope, private val bridge: BridgeCli
         dialog=kind;error=null
         when(kind) {
             "addons" -> refreshAddons()
+            "account" -> run("settings.get"){accountSetup=it as JSONObject}
             "profiles" -> run("profiles.list") { profiles=it as JSONObject }
             "subscriptions" -> run("calendar.subscriptions") { subscriptions=it as JSONObject }
             "scores" -> loadScores("NBA")
@@ -51,6 +53,14 @@ class Utilities(private val scope: CoroutineScope, private val bridge: BridgeCli
     fun deleteProfile(id:String,done:(JSONObject)->Unit) {
         val data=profiles?:return
         run("profiles.delete",JSONObject().put("scope",data.getString("scope")).put("id",id)) { profiles=it as JSONObject;done(it) }
+    }
+    fun configureAccount(token:String) {
+        val data=accountSetup?:return
+        run("account.configure",JSONObject().put("scope",data.getString("scope")).put("token",token)){dialog=null}
+    }
+    fun openDownloadsFolder()=run("downloads.folder") { value->
+        try { if(java.awt.Desktop.isDesktopSupported())java.awt.Desktop.getDesktop().open(java.io.File((value as JSONObject).getString("path")))else error="El explorador de archivos no está disponible" }
+        catch(_:Exception){error="No se pudo abrir la carpeta de descargas"}
     }
     fun subscribe(key:String,enabled:Boolean) {
         val data=subscriptions?:return

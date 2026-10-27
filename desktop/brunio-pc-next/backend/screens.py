@@ -114,14 +114,14 @@ class Screens:
         url=manifest.removesuffix('/manifest.json')+f"/stream/{quote(row.get('type','tv'),safe='')}/{quote(channel_id,safe='')}.json"
         return [r for r in self.client.transport(url).get('streams',[]) if valid_url(r.get('url',''))]
 
-    def sources(self,cloud_id,season=0,episode=0):
+    def sources(self,cloud_id,season=0,episode=0,download=False):
         preferences=self.local.get('preferences',{})
         scope=str(self.client.session.get('userId','local'))+':'+self.client.profile
         selected=preferences.get('profile_playback',{}).get(scope,{})
         self.client.source_audio=selected.get('audio',preferences.get('audio','es'))
         language='es' if self.client.source_audio=='es' else 'en'
         self.client.source_order=selected.get('addon_order_'+language,[])
-        rows,imdb=self.client.streams(self.client.by_id(cloud_id),season,episode,preferences.get('limit',0))
+        rows,imdb=self.client.streams(self.client.by_id(cloud_id),season,episode,preferences.get('download_limit' if download else 'limit',0))
         saved=self.client.state().get('progress',{}).get(cloud_id+(f':s{season}e{episode}' if season else ''),{})
         resume=int(saved.get('position',0)*1000) if saved.get('percent',0)<90 else 0
         return {'resume_ms':resume,'streams':rows,'imdb':imdb,'scope':scope,'audio':self.client.source_audio,'sub':selected.get('sub',preferences.get('sub','es'))}
@@ -149,23 +149,31 @@ class Screens:
         if duration_ms<=0 or position_ms<0 or season<0 or episode<0:raise ValueError('Invalid times')
         position_ms=min(position_ms,duration_ms)
         value={'percent':position_ms/duration_ms*100,'position':position_ms/1000,'duration':duration_ms/1000,'updatedAt':now_ms(),'season':season,'episode':episode}
-        state=self.client.state();progress=state.setdefault('progress',{});progress[cloud_id]=value
-        if season:progress[cloud_id+f':s{season}e{episode}']=value
-        self.client.save_state(state)
-        return {'saved':True}
+        pending=self.local.setdefault('pending_progress',{}).setdefault(scope,{})
+        pending[cloud_id]=value
+        if season:pending[cloud_id+f':s{season}e{episode}']=value
+        self.persist()
+        if self.offline:return {'saved':True,'queued':True}
+        try:self.flush_progress()
+        except Exception as error:
+            if not isinstance(error,RuntimeError):self.offline=True
+            return {'saved':True,'queued':True}
+        return {'saved':True,'queued':False}
 
     def settings_get(self):
         preferences=self.local.get('preferences',{})
         scope=str(self.client.session.get('userId','local'))+':'+self.client.profile
         selected=preferences.get('profile_playback',{}).get(scope,{})
-        return {'scope':scope,**{key:selected.get(key,preferences.get(key,default)) for key,default in {'audio':'es','sub':'es','autoplay':True,'retry':True,'limit':0,'language':'es'}.items()}}
+        return {'scope':scope,**{key:selected.get(key,preferences.get(key,default)) for key,default in {'audio':'es','sub':'es','autoplay':True,'retry':True,'limit':0,'language':'es','download_limit':0,'source_limit':7}.items()}}
 
     def settings_set(self,key,value,scope):
         import math
         if scope!=str(self.client.session.get('userId','local'))+':'+self.client.profile:raise ValueError('Profile changed')
         if key in ('autoplay','retry'):
             if not isinstance(value,bool):raise ValueError('Invalid switch')
-        elif key=='limit':
+        elif key=='source_limit':
+            if isinstance(value,bool) or not isinstance(value,int) or not 1<=value<=500:raise ValueError('Invalid source limit')
+        elif key in ('limit','download_limit'):
             if isinstance(value,bool) or not isinstance(value,(int,float)) or not math.isfinite(value) or not 0<=value<=500:raise ValueError('Invalid limit')
         elif key in ('audio','language'):
             if value not in ('es','en'):raise ValueError('Invalid language')
@@ -194,3 +202,14 @@ class Screens:
             rows=available(self.client.episodes(item,seasons[0]))
             if rows:return {'season':seasons[0],'episode':rows[0]['episode_number']}
         return None
+
+    def flush_progress(self):
+        scope=str(self.client.session.get('userId','local'))+':'+self.client.profile
+        pending=self.local.get('pending_progress',{}).get(scope,{})
+        if not pending:return
+        state=self.client.state();progress=state.setdefault('progress',{})
+        for key,value in pending.items():
+            if progress.get(key,{}).get('updatedAt',0)<=value['updatedAt']:progress[key]=value
+        self.client.save_state(state)
+        self.local['pending_progress'].pop(scope,None)
+        self.persist()

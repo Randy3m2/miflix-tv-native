@@ -62,5 +62,5 @@ jobs:
       - uses: actions/upload-artifact@v6
         with:
           name: BruniO-PC-Compose-Preview-${{ github.sha }}
-          path: desktop/brunio-pc-next/installer/BruniO-PC-Setup-2.0.0-rc1.exe
+          path: desktop/brunio-pc-next/installer/*
           if-no-files-found: error

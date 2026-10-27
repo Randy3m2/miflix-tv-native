@@ -2,6 +2,9 @@ $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 Push-Location $projectRoot
 try {
+    $pcVersion = if ($env:GITHUB_RUN_NUMBER) { '2.0.0-rc' + $env:GITHUB_RUN_NUMBER } else { '2.0.0-rc1' }
+    if ($pcVersion -notmatch '^2\.0\.0-rc\d+$') { throw 'Invalid PC build version' }
+    Set-Content -Path 'backend/build_version.py' -Value ('PC_VERSION=' + [char]39 + $pcVersion + [char]39) -Encoding utf8
     $resourceRoot = Join-Path $projectRoot 'runtime-resources/windows'
     if (Test-Path $resourceRoot) { Remove-Item $resourceRoot -Recurse -Force }
     New-Item -ItemType Directory -Force $resourceRoot | Out-Null
@@ -50,8 +53,10 @@ try {
     }
     $compiler = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
     if (-not (Test-Path $compiler)) { choco install innosetup -y --no-progress; if ($LASTEXITCODE -ne 0) { throw 'Inno Setup installation failed' } }
-    & $compiler scripts/installer.iss
+    & $compiler /DAppVersion=$pcVersion scripts/installer.iss
     if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
+    python scripts/prepare_update.py
+    if ($LASTEXITCODE -ne 0) { throw 'Update metadata failed' }
 } finally {
     if ($savedAppData) { $env:LOCALAPPDATA = $savedAppData }
     Pop-Location

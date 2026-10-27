@@ -25,7 +25,7 @@ import org.json.JSONObject
 /** The only media URLs in the UI belong to an explicit playback session. They are never displayed. */
 data class PlaybackSession(val item: JSONObject, val streams: List<JSONObject>, val owner: String = "",
     val season: Int = 0, val episode: Int = 0, val audio: String = "es", val subtitles: String = "es",
-    val startMs: Long = 0, val retry: Boolean = true, val autoplay: Boolean = true, val nextAvailable: Boolean = false)
+    val startMs: Long = 0, val retry: Boolean = true, val autoplay: Boolean = true, val nextAvailable: Boolean = false, val sourceLimit:Int=7)
 
 @Composable
 fun PlayerScreen(session: PlaybackSession, onClose: () -> Unit, onFullscreen: () -> Unit,
@@ -37,6 +37,7 @@ fun PlayerScreen(session: PlaybackSession, onClose: () -> Unit, onFullscreen: ()
     var attempt by remember(session) { mutableStateOf(0) }
     var resume by remember(session) { mutableStateOf(session.startMs) }
     var bitmap by remember(session) { mutableStateOf<ImageBitmap?>(null) }
+    var sourcePage by remember(session){mutableStateOf(1)}
     var menu by remember(session) { mutableStateOf<String?>(null) }
     var controlsVisible by remember(session){mutableStateOf(true)}
     var interaction by remember(session){mutableStateOf(0L)}
@@ -144,8 +145,13 @@ fun PlayerScreen(session: PlaybackSession, onClose: () -> Unit, onFullscreen: ()
     menu?.let { kind ->
         AlertDialog(onDismissRequest = { menu = null }, title = { Text(when(kind) { "sources" -> "Fuentes"; "audio" -> "Audio"; "info" -> "Información técnica"; else -> "Subtítulos" }) },
             text = { LazyColumn(Modifier.heightIn(max = 420.dp)) {
-                if(kind == "sources") items(session.streams.indices.toList()) { index ->
+                if(kind == "sources") {
+                    val counts=mutableMapOf<String,Int>()
+                    val visible=session.streams.indices.filter { index ->val id=session.streams[index].optString("_addon_id");val count=(counts[id]?:0)+1;counts[id]=count;count<=session.sourceLimit*sourcePage}
+                    items(visible) { index ->
                     TextButton(onClick = { resume = ui.position; source = index; attempt++; menu = null }) { Text(session.streams[index].optString("name", "Fuente ${index+1}")+" · "+session.streams[index].optString("title").take(100)) }
+                    }
+                    if(visible.size<session.streams.size)item{TextButton(onClick={sourcePage++}){Text("Mostrar más fuentes")}}
                 } else if(kind == "audio") {
                     items(engine?.player?.audio()?.trackDescriptions().orEmpty()) { track -> TextButton(onClick = { engine?.player?.audio()?.setTrack(track.id()); menu = null }) { Text(track.description()) } }
                 } else if(kind=="subtitles") {

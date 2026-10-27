@@ -149,7 +149,7 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
                         account=bridge.call("session.logout") as JSONObject;revision++;cache.clear();queue.clear();playback=null;profilePicker=false;detail=null;settings=null
                     }
                     id.startsWith("settings:") -> {
-                        val supported = listOf("Autoplay", "Reintentar otra fuente", "Límite de tamaño para PC", "Idioma de audio", "Idioma de subtítulos")
+                        val supported = listOf("Autoplay", "Reintentar otra fuente", "Límite de tamaño para PC", "Idioma de audio", "Idioma de subtítulos", "Límite de resultados", "Límite de tamaño de descarga")
                         if(id.substringAfter(":") in supported) settings = bridge.call("settings.get") as JSONObject
                         else message = "Ese ajuste aún no está migrado a PC."
                     }
@@ -186,7 +186,7 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
                 }.getOrDefault(false) else false
                 if(ticket != revision) return@launch
                 playback = PlaybackSession(item, streams, result.getString("scope"), season, episode,
-                    result.optString("audio", "es"), result.optString("sub", "es"), startMs = position ?: result.optLong("resume_ms"), retry = settings.optBoolean("retry", true), autoplay = settings.optBoolean("autoplay", true), nextAvailable = next)
+                    result.optString("audio", "es"), result.optString("sub", "es"), startMs = position ?: result.optLong("resume_ms"), retry = settings.optBoolean("retry", true), autoplay = settings.optBoolean("autoplay", true), nextAvailable = next, sourceLimit=settings.optInt("source_limit",7))
             }
         } catch(e: Exception) { if(ticket == revision) message = e.message }
     }

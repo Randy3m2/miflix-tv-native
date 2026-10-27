@@ -47,9 +47,9 @@ data class DesktopScreenState(
 
 @Composable
 fun RemoteArtwork(url: String, modifier: Modifier = Modifier, description: String? = null) {
-    val bitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, url) {
-        value = null
-        if (url.isNotBlank()) value = withContext(Dispatchers.IO) {
+    val bitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(ArtworkCache.get(url), url) {
+        value = ArtworkCache.get(url)
+        if (value==null && url.isNotBlank()) value = withContext(Dispatchers.IO) {
             runCatching {
                 val uri = URI(url)
                 val stream = if (url.startsWith("cover:")) {
@@ -84,6 +84,7 @@ fun RemoteArtwork(url: String, modifier: Modifier = Modifier, description: Strin
                 }
             }.getOrNull()
         }
+        value?.let{ArtworkCache.put(url,it)}
     }
     Box(modifier.background(Color(0xFF1B1B20))) {
         bitmap?.let { Image(it, description, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }

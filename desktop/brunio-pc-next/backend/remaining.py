@@ -14,7 +14,7 @@ import datetime as dt
 import json
 import sys
 
-PC_VERSION='2.0.0-rc1'  # Reserved for the Compose client; no release is published here.
+from build_version import PC_VERSION
 
 class Remaining:
     def remaining_operations(self):
@@ -22,14 +22,14 @@ class Remaining:
         self._update_info=None;self._update_path=None;self._update_status='idle';self._update_lock=threading.Lock()
         return {'downloads.list':self.download_list,'downloads.start':self.download_start,
                 'downloads.cancel':self.download_cancel,'downloads.remove':self.download_remove,
-                'downloads.open':self.download_open,'downloads.season':self.download_season,
+                'downloads.open':self.download_open,'downloads.folder':self.download_folder,'downloads.season':self.download_season,
                 'party.create':self.party_create,'party.join':self.party_join,'party.leave':self.party_leave,
                 'party.poll':self.party_poll,'party.send':self.party_send,'party.decide':self.party_decide,'party.tick':self.party_tick,'party.state':self.party_state,
                 'addons.list':self.addons_list,'addons.add':self.addons_add,'addons.remove':self.addons_remove,
                 'addons.order':self.addons_order,'profiles.save':self.profile_save,'profiles.delete':self.profile_delete,
                 'calendar.subscriptions':self.subscriptions,'calendar.subscribe':self.subscribe,'calendar.sports':self.calendar_sports,
                 'scores.list':self.scores,'notifications.list':self.notices,'notifications.scan':self.scan_notice,'notifications.clear':self.clear_notices,'notifications.plan':self.notice_plan,
-                'updates.check':self.update_check,
+                'account.configure':self.configure_account,'updates.check':self.update_check,
                 'updates.prepare':self.update_prepare,'updates.poll':self.update_poll,'updates.install':self.update_install}
 
     def scope_id(self):return str(self.client.session.get('userId','local'))+':'+self.client.profile
@@ -58,7 +58,7 @@ class Remaining:
     def download_start(self,cloud_id,scope,season=0,episode=0):
         self.require_scope(scope)
         item=self.client.by_id(cloud_id)
-        streams=self.sources(cloud_id,season,episode)['streams']
+        streams=self.sources(cloud_id,season,episode,download=True)['streams']
         self.require_scope(scope)
         stream=next((s for s in streams if file_extension(s)),None)
         if stream is None:raise ValueError('No direct downloadable file')
@@ -314,3 +314,11 @@ class Remaining:
         self.require_scope(scope)
         self.local.setdefault('preferences',{}).setdefault('notifications',{})[scope]=[]
         self.persist();return self.notices()
+
+    def download_folder(self):
+        return {'path':str(self.download_store().root.resolve())}
+    def configure_account(self,scope,token):
+        self.require_scope(scope)
+        if not isinstance(token,str) or not re.fullmatch(r'[A-Za-z0-9_.-]{20,8192}',token):raise ValueError('Invalid token')
+        self.client.edit_setup(token=token)
+        return {'configured':True}

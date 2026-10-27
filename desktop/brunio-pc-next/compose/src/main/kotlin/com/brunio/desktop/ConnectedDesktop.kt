@@ -27,6 +27,10 @@ fun ConnectedDesktop(onFullscreen: () -> Unit, onPip: () -> Unit, onPlayerClosed
         when(id) {
             "party:open" -> utilities.open("party")
             "calendar:subscriptions" -> utilities.open("subscriptions")
+            "settings:Conectar cuenta" -> utilities.open("account")
+            "settings:Administrar perfiles" -> utilities.open("profiles")
+            "settings:Carpeta de descargas" -> utilities.openDownloadsFolder()
+            "settings:Limpiar caché de imágenes" -> {ArtworkCache.clear();controller.message="Caché de imágenes limpiada"}
             "settings:Buscar actualización" -> utilities.open("updates")
             "settings:Administrar complementos", "settings:Prioridad de complementos" -> utilities.open("addons")
             else -> controller.action(id)

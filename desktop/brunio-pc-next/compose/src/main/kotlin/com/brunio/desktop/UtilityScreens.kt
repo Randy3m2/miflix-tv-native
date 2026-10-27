@@ -67,7 +67,7 @@ fun UtilityDialog(utilities:Utilities,onProfileChanged:(JSONObject)->Unit) {
     LaunchedEffect(kind,utilities.updates?.optString("status")) {
         if(kind=="updates" && utilities.updates?.optString("status")=="downloading")while(true){delay(2000);utilities.pollUpdate()}
     }
-    AlertDialog(onDismissRequest={utilities.dialog=null},title={Text(when(kind){"party"->"Friends & Party";"addons"->"Complementos";"profiles"->"Perfiles";"subscriptions"->"Suscripciones";"scores"->"Deportes en vivo";else->"Actualizaciones"})},
+    AlertDialog(onDismissRequest={utilities.dialog=null},title={Text(when(kind){"party"->"Friends & Party";"addons"->"Complementos";"profiles"->"Perfiles";"account"->"Configurar catálogo";"subscriptions"->"Suscripciones";"scores"->"Deportes en vivo";else->"Actualizaciones"})},
         text={Column(Modifier.widthIn(min=420.dp,max=640.dp).heightIn(max=620.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             if(utilities.busy)LinearProgressIndicator(Modifier.fillMaxWidth())
             utilities.error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
@@ -102,6 +102,11 @@ fun UtilityDialog(utilities:Utilities,onProfileChanged:(JSONObject)->Unit) {
                     }
                     OutlinedTextField(text,{text=it},label={Text("URL privada del manifest")},visualTransformation=PasswordVisualTransformation(),singleLine=true)
                     TextButton(onClick={utilities.add(text.trim());text=""},enabled=text.isNotBlank()&&!utilities.busy){Text("Agregar complemento")}
+                }
+                "account" -> {
+                    Text("Usa el token de lectura o la API key de TMDB. Se comparte con tu cuenta de TV.",color=Color.Gray)
+                    OutlinedTextField(text,{text=it},label={Text("Token de TMDB")},visualTransformation=PasswordVisualTransformation(),singleLine=true)
+                    Button(onClick={utilities.configureAccount(text.trim());text=""},enabled=text.isNotBlank()&&!utilities.busy){Text("Guardar")}
                 }
                 "subscriptions" -> {
                     val data=utilities.subscriptions;val entries=data?.optJSONObject("entries")

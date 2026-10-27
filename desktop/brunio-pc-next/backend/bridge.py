@@ -21,6 +21,7 @@ class Bridge(Screens, Remaining):
         self.client = client or Client()
         self.vault = vault or Vault()
         self.local = self.vault.load()
+        self.offline=False
         self.client.session = self.local.get('session', {})
         self.client.profile = self.local.get('profile', 'default')
         self.operations = {
@@ -51,14 +52,19 @@ class Bridge(Screens, Remaining):
         if self.client.session:
             try:
                 self.client.load_account()
+                self.offline=False
+                try:self.flush_progress()
+                except Exception:pass
                 self.persist()
             except Exception:
+                self.offline=True
                 self.client.account={'profiles':self.local.get('cached_profiles',[])}
                 return {**self.account_view(),'offline':True}
         return self.account_view()
 
     def login(self, email, password):
         self.client.login(email, password)
+        self.offline=False
         self.persist()
         return self.account_view()
 

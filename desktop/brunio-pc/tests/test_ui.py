@@ -131,6 +131,66 @@ class UITests(unittest.TestCase):
         widget.movie.stop()
         widget.close()
 
+    def test_rc9_full_bleed_streaming_art_only_animates_on_hover(self):
+        from PySide6.QtCore import QEvent
+        from PySide6.QtGui import QMovie,QPixmap,QColor
+        from brunio.visuals import PlatformTile
+        from brunio.ui import PLATFORM_ASSETS
+        tile=PlatformTile('Netflix')
+        self.assertEqual(tile.objectName(),'platformTile')
+        self.assertTrue((PLATFORM_ASSETS/'netflix.gif').is_file())
+        pic=QPixmap(60,40);pic.fill(QColor('#121a2a'))
+        tile.setPixmap(pic);tile.setAnimatedLogo(PLATFORM_ASSETS/'netflix.gif')
+        self.assertFalse(tile.pix.isNull())
+        self.assertEqual(tile.movie.state(),QMovie.MovieState.NotRunning)
+        tile.movie.start()
+        tile.leaveEvent(QEvent(QEvent.Type.Leave))
+        self.assertEqual(tile.movie.state(),QMovie.MovieState.NotRunning)
+        tile.close()
+
+    def test_rc9_explore_has_native_artwork_for_every_provider_and_genre(self):
+        from brunio.visuals import ArtworkTile
+        self.w.image=lambda *args,**kwargs:None
+        self.w.load_genre_art=lambda pairs:{}
+        self.w.collections()
+        current=self.w.stack.currentWidget()
+        providers=current.findChildren(ArtworkTile,'collectionTile')
+        genres=current.findChildren(ArtworkTile,'genreTile')
+        self.assertEqual(len(providers),8)
+        self.assertEqual(len(genres),8)
+        self.assertTrue(all(tile.logo_mode for tile in providers))
+        self.assertTrue(all(not tile.pix.isNull() for tile in providers))
+
+    def test_rc9_home_returns_to_retained_page_without_new_catalog_requests(self):
+        import time
+        layout,ident=self.w.page('BruniO')
+        cached=self.w.stack.currentWidget()
+        self.w._home_screen=cached;self.w._home_ready=True
+        self.w._home_owner='fixture:'+self.w.client.profile
+        self.w._home_loaded_at=time.monotonic()
+        self.w.page('Another section')
+        self.assertIsNot(self.w.stack.currentWidget(),cached)
+        self.w.run=lambda *args,**kwargs:self.fail('Home unexpectedly fetched catalog')
+        self.w.home()
+        self.assertIs(self.w.stack.currentWidget(),cached)
+        self.assertTrue(self.w.nav_buttons['home'].property('selected'))
+
+    def test_rc9_image_cache_loads_existing_local_thumbnail_immediately(self):
+        import hashlib,tempfile
+        from pathlib import Path
+        from PySide6.QtGui import QPixmap,QColor
+        from brunio.visuals import Poster
+        url='https://image.tmdb.org/t/p/w342/fixture-test.jpg'
+        with tempfile.TemporaryDirectory() as root:
+            self.w.image_cache_dir=Path(root)
+            path=Path(root)/(hashlib.sha256(url.encode()).hexdigest()+'.img')
+            pix=QPixmap(25,25);pix.fill(QColor('#556699'))
+            self.assertTrue(pix.save(str(path),'PNG'))
+            target=Poster();target.setFixedSize(150,190)
+            self.w.image(url,target,150,190)
+            self.assertFalse(target.pix.isNull())
+            self.assertEqual(len(self.w.image_queue),0)
+
     def test_tv_live_hash_matches_kotlin_java(self):
         self.assertEqual(java_hash('abc'),96354);self.assertEqual(java_hash(''),0)
     def test_sidebar_selection_and_small_window_margins(self):

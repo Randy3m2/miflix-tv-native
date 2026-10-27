@@ -1,2 +1,2 @@
 """BruniO Windows client; protocol-compatible with BruniO TV."""
-VERSION = '1.0.0-rc8'
+VERSION = '1.0.0-rc9'

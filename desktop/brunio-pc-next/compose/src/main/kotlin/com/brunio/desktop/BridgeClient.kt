@@ -20,9 +20,26 @@ class BridgeClient : Closeable {
     private var sequence = 0L
     @Volatile private var closed = false
 
+    private fun resetProcess() {
+        process?.destroyForcibly()
+        runCatching { input?.close() };runCatching { output?.close() }
+        process=null;input=null;output=null
+    }
+
+    private fun diagnostic(method:String,error:Throwable) {
+        // Never persist exception messages: upstream errors may contain tokens or source URLs.
+        runCatching {
+            val root=Path.of(System.getenv("LOCALAPPDATA") ?: System.getProperty("user.home"),"BruniO")
+            Files.createDirectories(root)
+            Files.writeString(root.resolve("pc-diagnostics.log"),"$method: ${error.javaClass.simpleName} / ${error.cause?.javaClass?.simpleName ?: "none"}\n",
+                java.nio.file.StandardOpenOption.CREATE,java.nio.file.StandardOpenOption.APPEND)
+        }
+    }
+
     private fun start() {
         check(!closed) { "La conexión se cerró" }
-        if (process != null) return
+        if (process?.isAlive == true) return
+        resetProcess()
         val packaged=System.getProperty("compose.application.resources.dir")?.let{Path.of(it,"bridge","BruniO-service.exe")}
         if(packaged!=null && Files.isRegularFile(packaged)) {
             process=ProcessBuilder(packaged.toAbsolutePath().toString()).redirectError(ProcessBuilder.Redirect.DISCARD).start()
@@ -72,14 +89,16 @@ class BridgeClient : Closeable {
         try { future.get(120, TimeUnit.SECONDS) }
         catch (e: Exception) {
             if(e is java.util.concurrent.ExecutionException && e.cause is BridgeFailure)throw e.cause as BridgeFailure
-            if (e is java.util.concurrent.TimeoutException) close()
-            throw IllegalStateException(if (e is java.util.concurrent.TimeoutException) "El servicio local no respondió a tiempo" else "No se pudo completar la operación local", e)
+            diagnostic(method,e)
+            future.cancel(true)
+            resetProcess()
+            throw IllegalStateException(if (e is java.util.concurrent.TimeoutException) "El servicio local no respondió a tiempo. Pulsa Reintentar." else "El servicio local se reinició. Pulsa Reintentar; si vuelve a ocurrir, revisa pc-diagnostics.log en AppData/Local/BruniO.", e)
         }
     }
 
     override fun close() {
         closed = true
-        process?.destroyForcibly()
+        resetProcess()
         executor.shutdownNow()
     }
 }

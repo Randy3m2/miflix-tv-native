@@ -15,7 +15,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -33,8 +32,8 @@ fun DesktopNavigation(selected: DesktopTab, onSelect: (DesktopTab) -> Unit, onPr
     LaunchedEffect(hovered) { state.pointer(hovered, now()) }
     LaunchedEffect(Unit) { while (true) { if (state.tick(now())) expanded = state.expanded; delay(16) } }
     val width by animateDpAsState(if (expanded) 244.dp else 76.dp, tween(180))
-    Box(Modifier.fillMaxHeight().width(width).clipToBounds().background(Color(0xFA111114))
-        .hoverable(interaction).onFocusChanged { state.focus(it.hasFocus, now()) }) {
+    Box(Modifier.fillMaxHeight().width(width).clipToBounds().background(Color(0xFF111114))
+        .hoverable(interaction)) {
         Column(Modifier.fillMaxWidth().fillMaxHeight().padding(12.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui("B"), Modifier.padding(12.dp, 20.dp), style = MaterialTheme.typography.headlineMedium)
             DesktopTab.entries.forEach { route ->

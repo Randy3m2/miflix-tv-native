@@ -1,5 +1,7 @@
 import importlib.util
 import json
+import io
+from unittest.mock import patch
 import unittest
 from pathlib import Path
 from unittest.mock import Mock
@@ -53,6 +55,20 @@ class BridgeTests(unittest.TestCase):
     def test_invalid_payload_is_rejected(self):
         self.assertIn('error', self.bridge.dispatch({'id': 2, 'method': 'catalog.search', 'params': []}))
         self.assertIn('error', self.bridge.dispatch(None))
+
+    def test_malformed_upstream_result_does_not_kill_the_local_service(self):
+        class FakeBridge:
+            def dispatch(self,request):
+                if request['id']==1:return {'id':1,'result':object()}
+                return {'id':request['id'],'result':[{'title':'Recovered'}]}
+            def cancel_transfers(self):pass
+        stdout=io.StringIO()
+        stdin=io.StringIO('{"id":1}\n{"id":2}\n')
+        with patch.object(module,'Bridge',FakeBridge),patch.object(module.sys,'stdin',stdin),patch.object(module.sys,'stdout',stdout):
+            module.main()
+        first,second=[json.loads(line) for line in stdout.getvalue().splitlines()]
+        self.assertEqual(first['code'],'serialization.failed')
+        self.assertEqual(second['result'][0]['title'],'Recovered')
 
 if __name__ == '__main__':
     unittest.main()

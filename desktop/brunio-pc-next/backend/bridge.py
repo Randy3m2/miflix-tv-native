@@ -160,7 +160,12 @@ def main():
             response = bridge.dispatch(request)
         except (ValueError, TypeError):
             response = {'id': None, 'error': 'Invalid request'}
-        sys.stdout.write(json.dumps(response, ensure_ascii=False, separators=(',', ':')) + '\n')
+        try:
+            result=json.dumps(response, ensure_ascii=False, separators=(',', ':'))
+        except (ValueError, TypeError, OverflowError):
+            # A malformed upstream payload must not terminate the private IPC service.
+            result=json.dumps({'id':response.get('id'), 'error':'Operation failed', 'code':'serialization.failed'})
+        sys.stdout.write(result + '\n')
         sys.stdout.flush()
     bridge.cancel_transfers()
 

@@ -63,7 +63,9 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
             try {
                 val loaded = when (next) {
                     DesktopTab.Home -> {
-                        val trending = array("catalog.home").map { tile(it).copy(image = it.optString("backdrop").ifBlank { it.optString("poster") }) }
+                        var heroError:String?=null
+                        val trending = try { array("catalog.home").map { tile(it).copy(image = it.optString("backdrop").ifBlank { it.optString("poster") }) } }
+                            catch (e:Exception) { heroError=e.message; emptyList() }
                         if (ticket == revision) screen = DesktopScreenState(busy = true, hero = trending.firstOrNull(),heroes=trending.take(5))
                         val rows = mutableListOf<ContentRow>()
                         val rowErrors=mutableListOf<String>()
@@ -79,7 +81,8 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
                         append("Para ti · Tus valoraciones", "catalog.shelf", JSONObject().put("key", "recommendations"))
                         append("Películas populares", "catalog.shelf", JSONObject().put("key", "popular_movies"))
                         append("Series populares", "catalog.shelf", JSONObject().put("key", "popular_series"))
-                        DesktopScreenState(hero = trending.firstOrNull(), heroes=trending.take(5),rows = rows,error=if(rowErrors.isEmpty())null else "No se pudieron cargar algunas filas: "+rowErrors.joinToString())
+                        DesktopScreenState(hero = trending.firstOrNull(), heroes=trending.take(5),rows = rows,
+                            error=heroError ?: if(rowErrors.isEmpty())null else "No se pudieron cargar algunas filas: "+rowErrors.joinToString())
                     }
                     DesktopTab.Search -> DesktopScreenState(tiles = array("catalog.home").map(::tile))
                     DesktopTab.Library -> DesktopScreenState(tiles = array("catalog.saved").map(::tile))

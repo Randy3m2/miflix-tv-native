@@ -30,8 +30,8 @@ data class PlaybackSession(val item: JSONObject, val streams: List<JSONObject>, 
 @Composable
 fun PlayerScreen(session: PlaybackSession, onClose: () -> Unit, onFullscreen: () -> Unit,
                  onProgress: (Long, Long) -> Unit, onNext: () -> Unit, onUnavailable: (String) -> Unit,
-                 party: JSONObject? = null, onPartyTick: (Long, Boolean) -> Unit = { _, _ -> }, onRequestPlaying: (Boolean) -> Unit = {}) {
-    val engineResult = remember(session) { runCatching { VlcEngine() } }
+                 party: JSONObject? = null, onPartyTick: (Long, Boolean) -> Unit = { _, _ -> }, onRequestPlaying: (Boolean) -> Unit = {}, showControls:Boolean=true, audible:Boolean=true, renderWidth:Int?=null, hasQueued:Boolean=false) {
+    val engineResult = remember(session,renderWidth) { runCatching { VlcEngine(renderWidth) } }
     val engine = engineResult.getOrNull()
     var source by remember(session) { mutableStateOf(0) }
     var attempt by remember(session) { mutableStateOf(0) }
@@ -41,9 +41,10 @@ fun PlayerScreen(session: PlaybackSession, onClose: () -> Unit, onFullscreen: ()
     var controlsVisible by remember(session){mutableStateOf(true)}
     var interaction by remember(session){mutableStateOf(0L)}
     val focus=remember{FocusRequester()}
-    LaunchedEffect(session){focus.requestFocus()}
+    LaunchedEffect(session,audible){if(audible)focus.requestFocus()}
     var volume by remember { mutableStateOf(1f) }
     val live = session.item.optString("type") == "live"
+    LaunchedEffect(engine,audible,volume){engine?.volume(if(audible)volume else 0f)}
     var ui by remember(session) { mutableStateOf(PlaybackUi(session.item.optString("title"), live = live,
         series = session.item.optString("type") == "series", nextAvailable = session.nextAvailable, season = session.season, episode = session.episode,
         error = if(engine == null) "No se pudo iniciar VLC. En desarrollo, instala VLC x64 o configura BRUNIO_VLC_HOME." else null)) }
@@ -88,6 +89,7 @@ fun PlayerScreen(session: PlaybackSession, onClose: () -> Unit, onFullscreen: ()
         }
         ui = ui.copy(source = stream.optString("name", "Fuente ${source+1}"), error = null, buffering = true)
         engine.play(stream.getString("url"), options)
+        engine.volume(if(audible)volume else 0f)
         var lastProgress = 0L
         var lastParty = 0L
         var started = false
@@ -117,7 +119,7 @@ fun PlayerScreen(session: PlaybackSession, onClose: () -> Unit, onFullscreen: ()
             "close" -> onClose()
             "fullscreen" -> onFullscreen()
             "toggle" -> if(canControl)engine?.toggle() else onRequestPlaying(ui.paused)
-            "sources", "audio", "subtitles" -> menu = id
+            "sources", "audio", "subtitles", "info" -> menu = id
             "next" -> if(canControl)onNext()
             "retry" -> if(source + 1 < session.streams.size) { resume = ui.position; source++ } else menu = "sources"
             else -> onUnavailable(id)
@@ -136,18 +138,28 @@ fun PlayerScreen(session: PlaybackSession, onClose: () -> Unit, onFullscreen: ()
         }
     }) {
         bitmap?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit) }
-        if(controlsVisible) TvPlayerControls(ui.copy(nextAvailable=ui.nextAvailable && canControl), ::action, { engine?.seek(it) }, { volume = it; engine?.volume(it); ui = ui.copy(volume = it) })
+        if(!showControls && ui.error!=null) Text(ui.error?:"",color=Color.White,modifier=Modifier.align(Alignment.Center).padding(16.dp))
+        if(showControls && controlsVisible) TvPlayerControls(ui.copy(nextAvailable=(ui.nextAvailable || hasQueued) && canControl), ::action, { engine?.seek(it) }, { volume = it; engine?.volume(it); ui = ui.copy(volume = it) })
     }
     menu?.let { kind ->
-        AlertDialog(onDismissRequest = { menu = null }, title = { Text(when(kind) { "sources" -> "Fuentes"; "audio" -> "Audio"; else -> "Subtítulos" }) },
+        AlertDialog(onDismissRequest = { menu = null }, title = { Text(when(kind) { "sources" -> "Fuentes"; "audio" -> "Audio"; "info" -> "Información técnica"; else -> "Subtítulos" }) },
             text = { LazyColumn(Modifier.heightIn(max = 420.dp)) {
                 if(kind == "sources") items(session.streams.indices.toList()) { index ->
                     TextButton(onClick = { resume = ui.position; source = index; attempt++; menu = null }) { Text(session.streams[index].optString("name", "Fuente ${index+1}")+" · "+session.streams[index].optString("title").take(100)) }
                 } else if(kind == "audio") {
                     items(engine?.player?.audio()?.trackDescriptions().orEmpty()) { track -> TextButton(onClick = { engine?.player?.audio()?.setTrack(track.id()); menu = null }) { Text(track.description()) } }
-                } else {
+                } else if(kind=="subtitles") {
                     item { TextButton(onClick = { engine?.player?.subpictures()?.setTrack(-1); menu = null }) { Text("Desactivar") } }
                     items(engine?.player?.subpictures()?.trackDescriptions().orEmpty()) { track -> TextButton(onClick = { engine?.player?.subpictures()?.setTrack(track.id()); menu = null }) { Text(track.description()) } }
+                } else item {
+                    Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                        Text(ui.title)
+                        Text("Motor · VLC")
+                        Text("Resolución de salida · ${bitmap?.width?:0} × ${bitmap?.height?:0}")
+                        Text("Posición · "+playbackTime(ui.position)+" / "+playbackTime(ui.duration))
+                        Text("Fuente · "+ui.source)
+                        session.streams.getOrNull(source)?.optJSONObject("behaviorHints")?.optLong("videoSize")?.takeIf{it>0}?.let{Text("Archivo · %.2f GB".format(it/1e9))}
+                    }
                 }
             } }, confirmButton = { TextButton(onClick = { menu = null }) { Text("Cerrar") } })
     }

@@ -6,12 +6,19 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.time.YearMonth
 
+data class QueueEntry(val item:JSONObject,val season:Int=0,val episode:Int=0)
+
 class AppController(private val scope: CoroutineScope, val bridge: BridgeClient) {
     var account by mutableStateOf<JSONObject?>(null); private set
     var profilePicker by mutableStateOf(false); private set
     var tab by mutableStateOf(DesktopTab.Home); private set
     var screen by mutableStateOf(DesktopScreenState()); private set
     var message by mutableStateOf<String?>(null)
+    val queue=mutableStateListOf<QueueEntry>()
+    var queueDialog by mutableStateOf(false)
+    val multiview=mutableStateListOf<PlaybackSession>()
+    var multiPicker by mutableStateOf(false)
+    var multiChoices by mutableStateOf<List<MediaTile>>(emptyList())
     var playback by mutableStateOf<PlaybackSession?>(null)
     var episodes by mutableStateOf<List<JSONObject>?>(null)
     var detail by mutableStateOf<JSONObject?>(null)
@@ -36,11 +43,11 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
         finally { screen = screen.copy(busy = false) }
     }
     fun selectProfile(id: String) = scope.launch {
-        ++revision; cache.clear(); detail = null
+        ++revision; cache.clear();queue.clear();queueDialog=false;detail = null
         try { account = bridge.call("profiles.select", JSONObject().put("profile_id", id)) as JSONObject; profilePicker = false; select(DesktopTab.Home, true) }
         catch (e: Exception) { message = e.message }
     }
-    fun accountChanged(value: JSONObject) { revision++; cache.clear(); playback=null; account=value; profilePicker=true }
+    fun accountChanged(value: JSONObject) { revision++; cache.clear();queue.clear();queueDialog=false; playback=null; account=value; profilePicker=true }
     fun profiles(): List<MediaTile> = (account?.optJSONArray("profiles") ?: JSONArray()).objects().map {
         MediaTile(it.getString("id"), it.optString("name"), it.optString("avatar"))
     }
@@ -87,10 +94,24 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
                     DesktopTab.Calendar -> DesktopScreenState(calendarMonth = month.toString(), entries = array("calendar.list", JSONObject().put("month", month.toString())).map {
                         FeedEntry(it.optString("cloud_id"), it.optString("title", "Evento"), it.optString("starts_at"), if (it.optString("cloud_id").isNotBlank()) "Ver contenido" else null)
                     })
+                    DesktopTab.Notifications -> {
+                        val data=bridge.call("notifications.list") as JSONObject
+                        val rows=data.getJSONArray("items")
+                        DesktopScreenState(entries=(0 until rows.length()).map{FeedEntry(it.toString(),rows.getString(it),"Novedades de tu lista")})
+                    }
                     DesktopTab.Settings -> DesktopScreenState()
                     else -> DesktopScreenState(error = "Esta función todavía no está conectada en la reconstrucción de PC.")
                 }
                 if (ticket == revision) { screen = loaded; rawTiles = loaded.tiles; cache[next] = loaded }
+                if(next==DesktopTab.Calendar && ticket==revision) {
+                    val sports=bridge.call("calendar.sports",JSONObject().put("month",month.toString())) as JSONObject
+                    if(ticket==revision) {
+                        val events=sports.getJSONArray("events").objects().map { FeedEntry(it.optString("cloud_id"),it.optString("title"),it.optString("starts_at")) }
+                        val warnings=sports.getJSONArray("warnings")
+                        screen=screen.copy(entries=loaded.entries+events,error=if(warnings.length()>0)"Algunas ligas no respondieron: "+(0 until warnings.length()).joinToString{warnings.getString(it)}else null)
+                        cache[next]=screen
+                    }
+                }
             } catch (e: Exception) { if (ticket == revision) screen = screen.copy(busy = false, error = e.message) }
         }
     }
@@ -112,6 +133,8 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
     fun action(id: String) {
         if (id == "retry") { select(tab, true); return }
         if (id == "friends:add") { addFriend = true; return }
+        if(id=="notifications:refresh"){refreshNotices();return}
+        if(id=="notifications:clear"){clearNotices();return}
         if (id.startsWith("filter:")) {
             val filter = id.substringAfter(":")
             screen = screen.copy(tiles = rawTiles.filter { filter == "Todos" || it.subtitle == filter ||
@@ -122,6 +145,9 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
         scope.launch {
             try {
                 when {
+                    id=="settings:Cerrar sesión" -> {
+                        account=bridge.call("session.logout") as JSONObject;revision++;cache.clear();queue.clear();playback=null;profilePicker=false;detail=null;settings=null
+                    }
                     id.startsWith("settings:") -> {
                         val supported = listOf("Autoplay", "Reintentar otra fuente", "Límite de tamaño para PC", "Idioma de audio", "Idioma de subtítulos")
                         if(id.substringAfter(":") in supported) settings = bridge.call("settings.get") as JSONObject
@@ -175,7 +201,9 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
         catch (_: Exception) { /* A changed profile must never receive stale playback progress. */ }
     }
     fun nextEpisode(session: PlaybackSession) = scope.launch {
-        if (session.item.optString("type") != "series" || playback !== session) return@launch
+        if(playback !== session)return@launch
+        if(queue.isNotEmpty()){val next=queue.removeAt(0);play(next.item,next.season,next.episode);return@launch}
+        if(session.item.optString("type")!="series")return@launch
         try {
             val result = bridge.call("catalog.next", JSONObject().put("cloud_id", session.item.getString("cloudId")).put("season", session.season).put("episode", session.episode))
             if(playback === session && result is JSONObject) play(session.item, result.getInt("season"), result.getInt("episode"))
@@ -208,6 +236,30 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
             finally { if(remoteLoading==key)remoteLoading=null }
         }
     }
+    fun beginMulti() {
+        val current=playback?:return
+        if(current.item.optString("type")!="live")return
+        closePlayer();multiview.add(current);multiPicker=true;loadMulti("tv")
+    }
+    fun loadMulti(provider:String)=scope.launch {
+        val ticket=revision
+        try {
+            val rows=array("live.list",JSONObject().put("provider",provider)).map { MediaTile("live:$provider:${it.getString("id")}",it.optString("name"),it.optString("logo").ifBlank{it.optString("poster")},it.optString("category")) }
+            if(ticket==revision)multiChoices=rows
+        } catch(e:Exception){message=e.message}
+    }
+    fun addMulti(tile:MediaTile)=scope.launch {
+        if(multiview.size>=4)return@launch
+        val ticket=revision;val parts=tile.id.split(":",limit=3)
+        val cloud="tmdb:live:${parts[2].hashCode()}"
+        if(multiview.any{it.item.optString("cloudId")==cloud})return@launch
+        try {
+            val streams=array("live.sources",JSONObject().put("provider",parts[1]).put("channel_id",parts[2]))
+            if(ticket==revision && streams.isNotEmpty() && multiview.size<4){multiview.add(PlaybackSession(JSONObject().put("type","live").put("title",tile.title).put("cloudId",cloud),streams));multiPicker=false}
+        }catch(e:Exception){message=e.message}
+    }
+    fun exitMulti(){revision++;multiview.clear();multiPicker=false}
+    fun playQueued(index:Int) { val next=queue.getOrNull(index)?:return;queue.removeAt(index);queueDialog=false;play(next.item,next.season,next.episode) }
     fun closePlayer() { revision++;remoteLoading=null;playback = null; cache.remove(DesktopTab.Home) }
     fun saveSetting(key: String, value: Any) = scope.launch {
         val current = settings ?: return@launch
@@ -216,6 +268,22 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
             if(settings?.optString("scope") == current.getString("scope")) settings = result
             cache.clear()
         } catch(e: Exception) { message = e.message }
+    }
+    fun refreshNotices()=scope.launch {
+        val ticket=revision
+        try {
+            val plan=bridge.call("notifications.plan") as JSONObject
+            val ids=plan.getJSONArray("ids")
+            for(index in 0 until ids.length()) {
+                if(ticket!=revision)return@launch
+                bridge.call("notifications.scan",JSONObject().put("scope",plan.getString("scope")).put("cloud_id",ids.getString(index)))
+            }
+            if(ticket==revision)select(DesktopTab.Notifications,true)
+        }catch(e:Exception){if(ticket==revision)message=e.message}
+    }
+    fun clearNotices()=scope.launch {
+        try { val current=bridge.call("notifications.list") as JSONObject;bridge.call("notifications.clear",JSONObject().put("scope",current.getString("scope")));select(DesktopTab.Notifications,true) }
+        catch(e:Exception){message=e.message}
     }
     private suspend fun array(method: String, params: JSONObject = JSONObject()): List<JSONObject> = (bridge.call(method, params) as JSONArray).objects()
     private fun tile(row: JSONObject): MediaTile {

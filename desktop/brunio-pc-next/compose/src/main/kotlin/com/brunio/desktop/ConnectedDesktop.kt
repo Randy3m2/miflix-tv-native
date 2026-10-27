@@ -26,6 +26,7 @@ fun ConnectedDesktop(onFullscreen: () -> Unit, onPip: () -> Unit, onPlayerClosed
     fun action(id: String) {
         when(id) {
             "party:open" -> utilities.open("party")
+            "calendar:subscriptions" -> utilities.open("subscriptions")
             "settings:Buscar actualización" -> utilities.open("updates")
             "settings:Administrar complementos", "settings:Prioridad de complementos" -> utilities.open("addons")
             else -> controller.action(id)
@@ -35,7 +36,8 @@ fun ConnectedDesktop(onFullscreen: () -> Unit, onPip: () -> Unit, onPlayerClosed
     LaunchedEffect(playback) { utilities.playbackActive=playback!=null }
     LaunchedEffect(utilities.party) { utilities.party?.let { controller.applyParty(it) } }
     when {
-        playback != null -> PlayerScreen(playback, { if(utilities.party?.isNull("room")==false)utilities.leave();controller.closePlayer();onPlayerClosed() }, onFullscreen, { position, duration -> controller.saveProgress(playback, position, duration) }, { controller.nextEpisode(playback) }, { if(it=="pip")onPip() else if(it in listOf("party","chat","reactions")) utilities.open("party") else controller.message = "La función $it aún no está integrada." }, party=utilities.party, onPartyTick={position,playing->utilities.tick(playback,position,playing,controller::applyParty)}, onRequestPlaying=utilities::requestPlaying)
+        controller.multiview.isNotEmpty() -> MultiViewScreen(controller,onFullscreen)
+        playback != null -> PlayerScreen(playback, { if(utilities.party?.isNull("room")==false)utilities.leave();controller.closePlayer();onPlayerClosed() }, onFullscreen, { position, duration -> controller.saveProgress(playback, position, duration) }, { controller.nextEpisode(playback) }, { if(it=="pip")onPip() else if(it in listOf("scores","stats"))utilities.open("scores") else if(it=="queue")controller.queueDialog=true else if(it=="episodes")controller.action(playback.item.optString("cloudId")) else if(it=="multiview"){if(utilities.party?.isNull("room")==false)controller.message="Sal de la sala antes de abrir Multiview" else{onPlayerClosed();controller.beginMulti()}} else if(it in listOf("party","chat","reactions")) utilities.open("party") else controller.message = "La función $it aún no está integrada." }, party=utilities.party, onPartyTick={position,playing->utilities.tick(playback,position,playing,controller::applyParty)}, onRequestPlaying=utilities::requestPlaying,hasQueued=controller.queue.isNotEmpty())
         account == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             if (controller.message == null) CircularProgressIndicator(color = Color.White)
             else Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -62,6 +64,7 @@ fun ConnectedDesktop(onFullscreen: () -> Unit, onPip: () -> Unit, onPlayerClosed
                 if (controller.tab == DesktopTab.Calendar) Row(Modifier.fillMaxWidth().padding(horizontal = 36.dp), verticalAlignment = Alignment.CenterVertically) {
                     TextButton(onClick = { controller.changeMonth(-1) }) { Text("‹ Mes anterior") }
                     Text(controller.month.toString(), Modifier.weight(1f))
+                    TextButton(onClick={utilities.open("subscriptions")}){Text("Suscripciones")}
                     TextButton(onClick = { controller.changeMonth(1) }) { Text("Mes siguiente ›") }
                 }
                 if(controller.tab == DesktopTab.Downloads) DownloadsScreen(utilities) { data ->
@@ -71,6 +74,11 @@ fun ConnectedDesktop(onFullscreen: () -> Unit, onPip: () -> Unit, onPlayerClosed
             DesktopNavigation(controller.tab, { controller.select(it) }, controller::showProfiles)
         }
     }
+    if(utilities.pinned!=null && (playback!=null || controller.multiview.isNotEmpty()))PinnedScore(utilities)
+    if(controller.queueDialog) AlertDialog(onDismissRequest={controller.queueDialog=false},title={Text("Cola de reproducción")},text={Column(Modifier.heightIn(max=520.dp).verticalScroll(rememberScrollState())) {
+        if(controller.queue.isEmpty())Text("Añade películas o episodios desde sus detalles.")
+        controller.queue.toList().forEachIndexed { index,entry->Row {Text(entry.item.optString("title")+(if(entry.season>0)" · T${entry.season} E${entry.episode}" else ""),Modifier.weight(1f));TextButton(onClick={controller.playQueued(index)},enabled=utilities.party?.isNull("room")!=false || utilities.party?.optBoolean("host")==true){Text("Reproducir")};TextButton(onClick={controller.queue.removeAt(index)}){Text("Quitar")} }
+    }},confirmButton={TextButton(onClick={controller.queueDialog=false}){Text("Cerrar")}})
     UtilityDialog(utilities,controller::accountChanged)
     controller.settings?.let { SettingsDialog(it, controller::saveSetting, { controller.settings = null }) }
     if (controller.addFriend) {
@@ -94,8 +102,8 @@ fun ConnectedDesktop(onFullscreen: () -> Unit, onPip: () -> Unit, onPlayerClosed
                     }
                     Button(onClick = { controller.chooseEpisodes(item, season) }) { Text("Ver episodios") }
                     OutlinedButton(onClick = { utilities.transfer(item, season, fullSeason = true) }) { Text("Descargar temporada") }
-                    controller.episodes?.forEach { ep -> TextButton(onClick = { controller.play(item, season, ep.getInt("episode_number")) }) { Text("E${ep.getInt("episode_number")} · ${ep.optString("name")}") }; TextButton(onClick = { utilities.transfer(item, season, ep.getInt("episode_number")) }) { Text("Descargar E${ep.getInt("episode_number")}") } }
-                } else Row { Button(onClick = { controller.play(item) }) { Text("Reproducir") }; TextButton(onClick = { utilities.transfer(item) }) { Text("Descargar") } }
+                    controller.episodes?.forEach { ep -> TextButton(onClick = { controller.play(item, season, ep.getInt("episode_number")) }) { Text("E${ep.getInt("episode_number")} · ${ep.optString("name")}") }; TextButton(onClick = { utilities.transfer(item, season, ep.getInt("episode_number")) }) { Text("Descargar E${ep.getInt("episode_number")}") };TextButton(onClick={controller.queue.add(QueueEntry(item,season,ep.getInt("episode_number")))}){Text("Añadir a la cola")} }
+                } else Row { Button(onClick = { controller.play(item) }) { Text("Reproducir") }; TextButton(onClick = { utilities.transfer(item) }) { Text("Descargar") };TextButton(onClick={controller.queue.add(QueueEntry(item))}){Text("Añadir a la cola")} }
             } }, confirmButton = { TextButton(onClick = { controller.detail = null }) { Text("Cerrar") } })
     }
     if(utilities.dialog == null && utilities.error != null) AlertDialog(onDismissRequest={utilities.error=null},title={Text("BruniO")},text={Text(utilities.error?:"")},confirmButton={TextButton(onClick={utilities.error=null}){Text("Cerrar")}})

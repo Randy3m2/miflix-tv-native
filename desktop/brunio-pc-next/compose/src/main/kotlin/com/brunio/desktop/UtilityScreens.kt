@@ -67,7 +67,7 @@ fun UtilityDialog(utilities:Utilities,onProfileChanged:(JSONObject)->Unit) {
     LaunchedEffect(kind,utilities.updates?.optString("status")) {
         if(kind=="updates" && utilities.updates?.optString("status")=="downloading")while(true){delay(2000);utilities.pollUpdate()}
     }
-    AlertDialog(onDismissRequest={utilities.dialog=null},title={Text(when(kind){"party"->"Friends & Party";"addons"->"Complementos";"profiles"->"Perfiles";else->"Actualizaciones"})},
+    AlertDialog(onDismissRequest={utilities.dialog=null},title={Text(when(kind){"party"->"Friends & Party";"addons"->"Complementos";"profiles"->"Perfiles";"subscriptions"->"Suscripciones";"scores"->"Deportes en vivo";else->"Actualizaciones"})},
         text={Column(Modifier.widthIn(min=420.dp,max=640.dp).heightIn(max=620.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             if(utilities.busy)LinearProgressIndicator(Modifier.fillMaxWidth())
             utilities.error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
@@ -102,6 +102,35 @@ fun UtilityDialog(utilities:Utilities,onProfileChanged:(JSONObject)->Unit) {
                     }
                     OutlinedTextField(text,{text=it},label={Text("URL privada del manifest")},visualTransformation=PasswordVisualTransformation(),singleLine=true)
                     TextButton(onClick={utilities.add(text.trim());text=""},enabled=text.isNotBlank()&&!utilities.busy){Text("Agregar complemento")}
+                }
+                "subscriptions" -> {
+                    val data=utilities.subscriptions;val entries=data?.optJSONObject("entries")
+                    listOf("NBA","MLB","LIDOM","F1").forEach { league ->
+                        val key="$league:*"
+                        Row {Text("Todos · $league",Modifier.weight(1f));Switch(checked=entries?.optJSONObject(key)?.optBoolean("enabled")==true,onCheckedChange={utilities.subscribe(key,it)})}
+                    }
+                    Text("Seguir equipos",style=MaterialTheme.typography.titleMedium)
+                    data?.optJSONArray("teams")?.objects()?.forEach { team ->
+                        val key=team.getString("league")+":"+team.getString("id")
+                        Row {Text(team.getString("name"),Modifier.weight(1f));Switch(checked=entries?.optJSONObject(key)?.optBoolean("enabled")==true,onCheckedChange={utilities.subscribe(key,it)})}
+                    }
+                }
+                "scores" -> {
+                    Row {listOf("NBA","MLB","LIDOM","F1").forEach{league->TextButton(onClick={utilities.loadScores(league)}){Text(league)}}}
+                    if(utilities.scores.isEmpty())Text("No hay partidos para mostrar")
+                    utilities.scores.forEach { event ->
+                        Surface(color=Color(0xFF202026),shape=RoundedCornerShape(18.dp)) {
+                            Column(Modifier.fillMaxWidth().padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                                Text(event.optString("title"),style=MaterialTheme.typography.titleMedium)
+                                Row(horizontalArrangement=Arrangement.spacedBy(18.dp)) {
+                                    val logos=event.optJSONArray("logos");val points=event.optJSONArray("scores")
+                                    if(logos!=null)for(i in 0 until logos.length()){RemoteArtwork(logos.optString(i),Modifier.size(40.dp));Text(points?.optString(i)?:"")}
+                                }
+                                Text(event.optString("status"),color=Color.Gray)
+                                TextButton(onClick={utilities.pinned=event;utilities.dialog=null}){Text("PIN Live score")}
+                            }
+                        }
+                    }
                 }
                 "profiles" -> {
                     utilities.profiles?.optJSONArray("profiles")?.objects()?.forEach { profile ->

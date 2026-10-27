@@ -9,6 +9,9 @@ from urllib.request import urlopen
 from brunio.core import addon_id, valid_url
 from brunio.downloads import DownloadStore, file_extension
 from brunio import updater
+from sports import scoreboard,follows
+import datetime as dt
+import json
 
 PC_VERSION='2.0.0-rc1'  # Reserved for the Compose client; no release is published here.
 
@@ -23,6 +26,8 @@ class Remaining:
                 'party.poll':self.party_poll,'party.send':self.party_send,'party.decide':self.party_decide,'party.tick':self.party_tick,'party.state':self.party_state,
                 'addons.list':self.addons_list,'addons.add':self.addons_add,'addons.remove':self.addons_remove,
                 'addons.order':self.addons_order,'profiles.save':self.profile_save,'profiles.delete':self.profile_delete,
+                'calendar.subscriptions':self.subscriptions,'calendar.subscribe':self.subscribe,'calendar.sports':self.calendar_sports,
+                'scores.list':self.scores,'notifications.list':self.notices,'notifications.scan':self.scan_notice,'notifications.clear':self.clear_notices,'notifications.plan':self.notice_plan,
                 'updates.check':self.update_check,
                 'updates.prepare':self.update_prepare,'updates.poll':self.update_poll,'updates.install':self.update_install}
 
@@ -254,3 +259,54 @@ class Remaining:
             if current is None:self.client.detach()
             else:self.client.party=current
         return self.party_view()
+
+    def subscriptions(self):
+        entries=self.client.calendar_subscriptions()
+        teams=json.loads((Path(__file__).resolve().parents[1]/'assets'/'calendar_teams.json').read_text())
+        return {'scope':self.scope_id(),'entries':entries,'teams':teams}
+    def subscribe(self,scope,key,enabled):
+        self.require_scope(scope)
+        if not isinstance(enabled,bool) or not isinstance(key,str) or not re.fullmatch(r'(?:EVENT:)?(?:NBA|MLB|LIDOM|F1):(?:\*|[A-Za-z0-9_-]{1,40})',key):raise ValueError('Invalid subscription')
+        entries=self.client.calendar_subscriptions();old=entries.get(key,{})
+        stamp=max(__import__('time').time_ns()//1_000_000,int(old.get('at',0))+1)
+        self.client.calendar_subscriptions({key:{'enabled':enabled,'at':stamp}})
+        return self.subscriptions()
+    def scores(self,league):
+        if league not in ('NBA','MLB','LIDOM','F1'):raise ValueError('Unknown league')
+        return scoreboard(self.client.transport,league)
+    def calendar_sports(self,month):
+        if not re.fullmatch(r'\d{4}-\d{2}',month):raise ValueError('Invalid month')
+        dt.date.fromisoformat(month+'-01')
+        entries=self.client.calendar_subscriptions();active={k for k,v in entries.items() if isinstance(v,dict) and v.get('enabled')}
+        events=[];warnings=[]
+        for league in ('NBA','MLB','LIDOM','F1'):
+            if not any(k.startswith(league+':') or k.startswith('EVENT:'+league+':') for k in active):continue
+            try:
+                for event in scoreboard(self.client.transport,league,month):
+                    if follows(active,event):events.append({'id':league+':'+event['id'],'title':event['title'],'starts_at':event['starts'],'cloud_id':'','league':league})
+            except Exception:warnings.append(league)
+        return {'events':events,'warnings':warnings}
+    def notices(self):
+        prefs=self.local.get('preferences',{})
+        return {'scope':self.scope_id(),'items':prefs.get('notifications',{}).get(self.scope_id(),[])}
+    def notice_plan(self):
+        return {'scope':self.scope_id(),'ids':self.client.state().get('favorites',[])[:40]}
+    def scan_notice(self,scope,cloud_id):
+        self.require_scope(scope)
+        if cloud_id not in self.client.state().get('favorites',[]):raise ValueError('Not in list')
+        item=self.client.by_id(cloud_id);details=self.client.details(item)
+        episode=details.get('last_episode_to_air') or {}
+        key=str(episode.get('id')) if episode else details.get('release_date','')
+        date=episode.get('air_date','') if episode else details.get('release_date','')
+        prefs=self.local.setdefault('preferences',{});known=prefs.setdefault('known_releases',{}).setdefault(scope,{})
+        notices=prefs.setdefault('notifications',{}).setdefault(scope,[])
+        if date and date<=dt.date.today().isoformat():
+            if cloud_id in known and known[cloud_id]!=key:
+                text=item['title']+' · '+date
+                if text not in notices:notices.insert(0,text)
+            known[cloud_id]=key
+        del notices[100:];self.persist();return self.notices()
+    def clear_notices(self,scope):
+        self.require_scope(scope)
+        self.local.setdefault('preferences',{}).setdefault('notifications',{})[scope]=[]
+        self.persist();return self.notices()

@@ -17,7 +17,7 @@ import uk.co.caprica.vlcj.player.embedded.videosurface.callback.RenderCallback
 import uk.co.caprica.vlcj.player.embedded.videosurface.callback.format.RV32BufferFormat
 
 /** CPU video frames permit Compose controls to overlay video without heavyweight-window clipping. */
-class VlcEngine : Closeable {
+class VlcEngine(private val maxWidth:Int?=null) : Closeable {
     data class Frame(val width: Int, val height: Int, val pixels: IntArray) {
         fun image(): BufferedImage = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB).also {
             it.setRGB(0, 0, width, height, pixels, 0, width)
@@ -34,7 +34,10 @@ class VlcEngine : Closeable {
         factory = MediaPlayerFactory("--no-video-title-show", "--network-caching=1000")
         player = factory.mediaPlayers().newEmbeddedMediaPlayer()
         val format = object : BufferFormatCallback {
-            override fun getBufferFormat(width: Int, height: Int): BufferFormat = RV32BufferFormat(width, height)
+            override fun getBufferFormat(width: Int, height: Int): BufferFormat {
+                val target=if(maxWidth!=null && width>maxWidth)maxWidth else width
+                return RV32BufferFormat(target,(height.toLong()*target/width.coerceAtLeast(1)).toInt().coerceAtLeast(1))
+            }
             override fun allocatedBuffers(buffers: Array<ByteBuffer>) {}
         }
         val renderer = RenderCallback { _, buffers, bufferFormat ->

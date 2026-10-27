@@ -64,13 +64,12 @@ class Bridge(Screens, Remaining):
 
     def logout(self):
         self.cancel_transfers()
-        if self.client.party: self.client.party_leave()
-        self.client.detach()
-        self.client.session = {}
-        self.client.account = {}
-        self.client.profile = 'default'
-        self.persist()
-        return self.account_view()
+        try:
+            if self.client.party:self.client.party_leave()
+        except Exception:pass
+        self.client.detach();self.client.session={};self.client.account={};self.client.profile='default'
+        self.client.token='';self.client.manifests=[];self.local.pop('cached_profiles',None)
+        self.persist();return self.account_view()
 
     def profiles(self):
         if not self.client.session:

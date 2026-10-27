@@ -10,6 +10,9 @@ class Utilities(private val scope: CoroutineScope, private val bridge: BridgeCli
     var downloads by mutableStateOf<JSONObject?>(null)
     var addons by mutableStateOf<JSONObject?>(null)
     var profiles by mutableStateOf<JSONObject?>(null)
+    var subscriptions by mutableStateOf<JSONObject?>(null)
+    var scores by mutableStateOf<List<JSONObject>>(emptyList())
+    var pinned by mutableStateOf<JSONObject?>(null)
     var party by mutableStateOf<JSONObject?>(null)
     var updates by mutableStateOf<JSONObject?>(null)
     var error by mutableStateOf<String?>(null)
@@ -17,7 +20,7 @@ class Utilities(private val scope: CoroutineScope, private val bridge: BridgeCli
     private var generation=0L
     var playbackActive=false
     private var partyJob:Job?=null
-    fun reset() { partyJob?.cancel();partyJob=null;generation++; dialog=null;downloads=null;addons=null;profiles=null;party=null;updates=null;error=null;busy=false }
+    fun reset() { partyJob?.cancel();partyJob=null;generation++; dialog=null;downloads=null;addons=null;profiles=null;subscriptions=null;scores=emptyList();pinned=null;party=null;updates=null;error=null;busy=false }
     fun run(method: String, params: JSONObject=JSONObject(), done:(Any)->Unit={}) {
         val epoch=generation
         scope.launch {
@@ -32,6 +35,8 @@ class Utilities(private val scope: CoroutineScope, private val bridge: BridgeCli
         when(kind) {
             "addons" -> refreshAddons()
             "profiles" -> run("profiles.list") { profiles=it as JSONObject }
+            "subscriptions" -> run("calendar.subscriptions") { subscriptions=it as JSONObject }
+            "scores" -> loadScores("NBA")
             "party" -> pollParty()
             "updates" -> run("updates.check") { updates=it as JSONObject }
         }
@@ -46,6 +51,17 @@ class Utilities(private val scope: CoroutineScope, private val bridge: BridgeCli
     fun deleteProfile(id:String,done:(JSONObject)->Unit) {
         val data=profiles?:return
         run("profiles.delete",JSONObject().put("scope",data.getString("scope")).put("id",id)) { profiles=it as JSONObject;done(it) }
+    }
+    fun subscribe(key:String,enabled:Boolean) {
+        val data=subscriptions?:return
+        run("calendar.subscribe",JSONObject().put("scope",data.getString("scope")).put("key",key).put("enabled",enabled)) { subscriptions=it as JSONObject }
+    }
+    fun loadScores(league:String)=run("scores.list",JSONObject().put("league",league)) { scores=(it as JSONArray).objects() }
+    fun refreshPinned() {
+        val event=pinned?:return
+        run("scores.list",JSONObject().put("league",event.getString("league"))) { value ->
+            (value as JSONArray).objects().firstOrNull{it.optString("id")==event.optString("id")}?.let { if(pinned?.optString("id")==event.optString("id"))pinned=it }
+        }
     }
     fun refreshDownloads() = run("downloads.list") { downloads=it as JSONObject }
     fun refreshAddons() = run("addons.list") { addons=it as JSONObject }

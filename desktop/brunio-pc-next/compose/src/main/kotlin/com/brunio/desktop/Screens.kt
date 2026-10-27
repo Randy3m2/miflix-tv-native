@@ -72,7 +72,14 @@ fun RemoteArtwork(url: String, modifier: Modifier = Modifier, description: Strin
                 stream.use { input ->
                     val bytes = input.readNBytes(12 * 1024 * 1024 + 1)
                     require(bytes.size <= 12 * 1024 * 1024)
-                    SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap()
+                    val svg=bytes.take(1024).toByteArray().toString(Charsets.UTF_8).contains("<svg",ignoreCase=true)
+                    if(svg) {
+                        val data=org.jetbrains.skia.Data.makeFromBytes(bytes)
+                        val dom=org.jetbrains.skia.svg.SVGDOM(data)
+                        val surface=org.jetbrains.skia.Surface.makeRasterN32Premul(256,256)
+                        try {dom.setContainerSize(256f,256f);dom.render(surface.canvas);surface.makeImageSnapshot().toComposeImageBitmap()}
+                        finally {surface.close();dom.close();data.close()}
+                    } else SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap()
                 }
             }.getOrNull()
         }
@@ -181,6 +188,7 @@ private fun FeedScreen(tab: DesktopTab, state: DesktopScreenState, onAction: (St
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(tab.title, style = MaterialTheme.typography.headlineLarge, modifier = Modifier.weight(1f))
             if (tab == DesktopTab.Friends) { OutlinedButton(onClick = { onAction("party:open") }) { Text("Watch Party") }; OutlinedButton(onClick = { onAction("friends:add") }) { Text("Agregar amigo") } }
+            if (tab == DesktopTab.Notifications) {TextButton(onClick={onAction("notifications:refresh")}){Text("Actualizar")};TextButton(onClick={onAction("notifications:clear")}){Text("Borrar")}}
             if (tab == DesktopTab.Calendar) OutlinedButton(onClick = { onAction("calendar:subscriptions") }) { Text("Suscripciones") }
         }
         if (state.entries.isEmpty()) EmptyState(when(tab) {

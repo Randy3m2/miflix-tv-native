@@ -83,7 +83,7 @@ class PlatformTile(QPushButton):
             self.movie.stop();self.movie.deleteLater()
         self.movie=QMovie(str(path),QByteArray(),self)
         self.movie.setCacheMode(QMovie.CacheMode.CacheNone)
-        self.movie.frameChanged.connect(self.update)
+        self.movie.frameChanged.connect(lambda _frame:self.update())
         if self.isVisible():self.movie.start()
     def showEvent(self,event):
         super().showEvent(event)

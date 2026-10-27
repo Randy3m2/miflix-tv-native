@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json, os, random, sys, time, uuid, webbrowser
+import json, os, random, sys, time, uuid, webbrowser, hashlib
 from pathlib import Path
 from urllib.parse import urlencode,quote
 from PySide6.QtCore import Qt,QObject,Signal,QRunnable,QThreadPool,QTimer,QUrl,QSize
@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QApplication,QMainWindow,QWidget,QVBoxLayout,QHBo
 from shiboken6 import isValid
 from .core import Client,StaleWork,SUPABASE_URL,SUPABASE_KEY,LIVE,REPO,iso,now_ms,media,stream_size,stream_quality,normalize,valid_url
 from .vault import Vault
-from .visuals import Art,Poster,ProfileAvatar,EdgeRail,Starfield,PlatformTile,ContinueCard,icon
+from .visuals import Art,Poster,ProfileAvatar,EdgeRail,Starfield,PlatformTile,ArtworkTile,ContinueCard,icon
 from .desktop_features import DesktopFeatures
 
 def java_hash(value):
@@ -52,7 +52,21 @@ class Window(DesktopFeatures,QMainWindow):
         self.client.profile=self.local.get('profile','default');self.preferences=self.local.get('preferences',{'language':'es','audio':'es','sub':'es','limit':0,'autoplay':True,'theme':'dark'})
         self.apply_theme()
         self.state={'favorites':[],'progress':{}};self.history=self.local.get('history',{});self.ratings={};self.selected=None;self.current=None;self.sources=[]
-        self.pool=QThreadPool(self);self.pool.setMaxThreadCount(6);self.tasks=set();self.network=QNetworkAccessManager(self);self.images={};self.known_members=None
+        self.pool=QThreadPool(self);self.pool.setMaxThreadCount(6);self.tasks=set();self.network=QNetworkAccessManager(self);self.images={};self.pending_images={}
+        self.image_queue=[];self.image_running=0
+        self._home_screen=None;self._home_owner=None;self._home_ready=False;self._home_loaded_at=0
+        self._genre_art={};self._genre_art_requested=False
+        self._catalog_cache={};self._catalog_lock=__import__('threading').Lock()
+        self.image_cache_dir=Path(os.getenv('LOCALAPPDATA') or (Path.home()/'.cache'))/'BruniO-PC'/'artwork'
+        try:
+            self.image_cache_dir.mkdir(parents=True,exist_ok=True)
+            data=json.loads((self.image_cache_dir/'genre-art.json').read_text(encoding='utf-8'))
+            if time.time()-float(data.get('created',0))<14*86400:
+                self._genre_art={k:v for k,v in data.get('images',{}).items()
+                                 if isinstance(k,str) and isinstance(v,str)
+                                 and v.startswith('https://image.tmdb.org/')}
+        except (OSError,ValueError,TypeError,KeyError):pass
+        self.known_members=None
         self.setup_desktop_features();self.play_id=0;self.page_id=0;self.poll_busy=False;self.social_busy=False;self.sync_applying=False;self.guest_intent=None;self.guest_until=0;self.last_event=-1;self.paused_at=0;self.resume_pending=0;self.trakt_started=False
         self.fallback_urls=set();self.source_activity=time.monotonic();self.source_last_pos=0;self.vlc=None;self.player=None;self.library=None;self.segments={};self.imdb='';self.chat_dialog=None
         # RC6: desktop-first two-column shell.  The Windows client keeps all
@@ -61,8 +75,8 @@ class Window(DesktopFeatures,QMainWindow):
         self.root_layout=QHBoxLayout(self.root)
         self.root_layout.setContentsMargins(0,0,0,0);self.root_layout.setSpacing(0)
         self.setCentralWidget(self.root)
-        self.sidebar=QWidget();self.sidebar.setObjectName('sidebar');self.sidebar.setFixedWidth(210)
-        self.nav=QVBoxLayout(self.sidebar);self.nav.setContentsMargins(13,28,13,18);self.nav.setSpacing(5)
+        self.sidebar=QWidget();self.sidebar.setObjectName('sidebar');self.sidebar.setFixedWidth(226)
+        self.nav=QVBoxLayout(self.sidebar);self.nav.setContentsMargins(15,28,15,18);self.nav.setSpacing(6)
         brand=QLabel('Bruni<span style="color:#b4a1ff">O</span>')
         brand.setTextFormat(Qt.TextFormat.RichText);brand.setObjectName('brand')
         self.nav.addWidget(brand);self.nav.addSpacing(26)
@@ -86,7 +100,7 @@ class Window(DesktopFeatures,QMainWindow):
         for key,glyph,es,en,fn in routes:
             b=button(self.t(es,en),lambda key=key,fn=fn:(self.select_nav(key),fn()))
             b.setObjectName('navButton');b.setIcon(icon(glyph,'#c5c6df'))
-            b.setIconSize(QSize(18,18));b.setFixedHeight(41)
+            b.setIconSize(QSize(20,20));b.setFixedHeight(44)
             b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.setToolTip(self.t(es,en));b.setAccessibleName(self.t(es,en))
             if key in self.secondary_routes:extra_layout.addWidget(b)
@@ -95,20 +109,20 @@ class Window(DesktopFeatures,QMainWindow):
         self.more_button=button(self.t('Más','More')+'  ⌄',self.toggle_more)
         self.more_button.setObjectName('navButton')
         self.more_button.setIcon(icon('collections','#c5c6df'))
-        self.more_button.setIconSize(QSize(17,17));self.more_button.setFixedHeight(39)
+        self.more_button.setIconSize(QSize(20,20));self.more_button.setFixedHeight(43)
         self.nav.addWidget(self.more_button)
         self.nav.addWidget(self.extra_nav);self.extra_nav.hide()
         self.nav.addStretch(1)
         self.nav.addWidget(QLabel('────────────────'),0,Qt.AlignmentFlag.AlignHCenter)
         settings_button=button(self.t('Ajustes','Settings'),lambda:(self.select_nav('settings'),self.settings()))
         settings_button.setObjectName('navButton');settings_button.setIcon(icon('settings','#b9b8d5'))
-        settings_button.setIconSize(QSize(19,19));settings_button.setFixedHeight(41)
+        settings_button.setIconSize(QSize(20,20));settings_button.setFixedHeight(44)
         self.nav.addWidget(settings_button)
         self.nav_buttons['settings']=settings_button;self.nav_glyphs['settings']='settings'
         self.alert_button=button(self.t('Notificaciones','Notifications'),self.alerts)
         self.alert_button.setObjectName('navButton')
         self.alert_button.setIcon(icon('bell','#b9b8d5'));self.alert_button.setIconSize(QSize(19,19))
-        self.alert_button.setFixedHeight(41)
+        self.alert_button.setFixedHeight(44)
         self.nav.addWidget(self.alert_button)
         self.profile_button=ProfileAvatar();self.profile_button.setObjectName('profileAvatarButton')
         self.profile_button.clicked.connect(lambda:self.profiles())
@@ -133,6 +147,7 @@ class Window(DesktopFeatures,QMainWindow):
         self.status.setObjectName('status');self.status.hide();content_layout.addWidget(self.status)
         self.root_layout.addWidget(self.content,1)
         self.select_nav('home');self.refresh_profile_icon()
+        QTimer.singleShot(9000,self.prune_image_cache)
         self.player_event.connect(self.on_player_event)
         self.tick_timer=QTimer(self);self.tick_timer.timeout.connect(self.tick);self.tick_timer.start(1000)
         self.social_timer=QTimer(self);self.social_timer.timeout.connect(self.social_tick);self.social_timer.start(5000)
@@ -185,27 +200,26 @@ class Window(DesktopFeatures,QMainWindow):
         return select
     def platform_rail(self,parent,page):
         parent.addWidget(self.section_title(self.t('Tus servicios en BruniO','Your services on BruniO')))
-        w,l=row();l.setSpacing(10)
+        w,l=row();l.setSpacing(13)
         platforms=[('Netflix',8,'netflix.png'),('Disney+',337,'disney-plus.png'),
                    ('HBO Max',1899,'hbo-max.png'),('Prime Video',9,'prime-video.png'),
                    ('Apple TV+',350,'apple-tv.png'),('YouTube',None,None),
                    ('Paramount+',531,'paramount-plus.png'),('AMC+',526,'amcplus.png'),
                    ('Hulu',15,'hulu.png'),('Crunchyroll',283,'crunchyroll.png')]
         for name,pid,asset in platforms:
-            tile=PlatformTile(name);tile.setFixedSize(162,91)
+            tile=PlatformTile(name);tile.setFixedSize(218,122)
             tile.setToolTip(name);tile.setAccessibleName(name)
             if pid is not None:tile.clicked.connect(lambda checked=False,name=name,pid=pid:self.provider(name,pid))
             else:tile.clicked.connect(lambda:self.tell(self.t('YouTube no tiene todavía una colección TMDB.','YouTube does not have a TMDB collection yet.')))
             file=PLATFORM_ASSETS/asset if asset else None
             animation=PLATFORM_ASSETS/((asset or '').removesuffix('.png')+'.gif') if asset else None
-            if animation and animation.is_file():
-                tile.setAnimatedLogo(animation)
-            elif file and file.is_file():
-                tile.setPixmap(QPixmap(str(file)))
+            # Static brand art is visible immediately; GIF plays only on hover.
+            if file and file.is_file():tile.setPixmap(QPixmap(str(file)))
+            if animation and animation.is_file():tile.setAnimatedLogo(animation)
             elif name=='AMC+':tile.setPixmap(QPixmap(str(ASSETS/'streaming_amcplus_rp48.png')))
             elif name in ('Hulu','Paramount+'):tile.setPixmap(QPixmap(str(ASSETS/(name.lower().replace('+','-plus')+'.png'))))
             l.addWidget(tile)
-        l.addStretch();parent.addWidget(EdgeRail(w,101))
+        l.addStretch();parent.addWidget(EdgeRail(w,140))
 
     def continue_rail(self,parent,items):
         """Continue Watching uses cinematic backdrops and real resume progress."""
@@ -244,34 +258,141 @@ class Window(DesktopFeatures,QMainWindow):
         if self.multi_page is not None:self.close_multiview()
         self.sidebar.show()
         self.page_id+=1
-        old=self.stack.currentWidget();self.stack.addWidget(w);self.stack.setCurrentWidget(w)
-        if old and old is not getattr(self,'player_page',None):self.stack.removeWidget(old);old.deleteLater()
+        old=self.stack.currentWidget()
+        if self.stack.indexOf(w)<0:self.stack.addWidget(w)
+        self.stack.setCurrentWidget(w)
+        if old and old is not w and old is not getattr(self,'player_page',None):
+            if old is self._home_screen and self._home_ready:
+                # Keep the fully-rendered Home widget alive so returning is instant.
+                pass
+            else:
+                self.stack.removeWidget(old);old.deleteLater()
+                if old is self._home_screen:
+                    self._home_screen=None;self._home_ready=False
     def page(self,title):
-        w,l=column();w.setObjectName('screenContent');l.setAlignment(Qt.AlignmentFlag.AlignTop);l.setContentsMargins(30,28,30,42);l.setSpacing(16)
+        w,l=column();w.setObjectName('screenContent')
+        l.setAlignment(Qt.AlignmentFlag.AlignTop)
+        l.setContentsMargins(30,20,30,34);l.setSpacing(14)
         if title!='BruniO':
             heading=label(title,28);heading.setObjectName('pageTitle');l.addWidget(heading)
-        scroll=QScrollArea();scroll.setWidgetResizable(True);scroll.setFrameShape(QScrollArea.Shape.NoFrame);scroll.setWidget(w);self.show_page(scroll);return l,self.page_id
+        scroll=QScrollArea();scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        scroll.setWidget(w);self.show_page(scroll);return l,self.page_id
     def image(self,url,w,width,height,contain=False):
         if not url:return
-        # A fast-changing cinematic carousel must not display stale network art.
+        # Deduplicate network requests and retain poster artwork across restarts.
         w.setProperty('_brunioImageUrl',url)
-        def apply(data):
-            if isValid(w) and w.property('_brunioImageUrl')==url:
-                pix=QPixmap();pix.loadFromData(data);scaled=pix.scaled(width,height,Qt.AspectRatioMode.KeepAspectRatio if contain else Qt.AspectRatioMode.KeepAspectRatioByExpanding,Qt.TransformationMode.SmoothTransformation)
-                if hasattr(w,'setPixmap'):w.setPixmap(scaled)
-                else:
-                    w.setIcon(QIcon(scaled))
-                    if isinstance(w,QPushButton):w.setText('')
-        if url in self.images:apply(self.images[url]);return
-        req=QNetworkRequest(QUrl(url));req.setTransferTimeout(15000);reply=self.network.get(req)
-        def finish():
-            if reply.error()==reply.NetworkError.NoError:
-                data=bytes(reply.readAll())
-                if len(data)<8*1024*1024:
-                    if len(self.images)>160:self.images.clear()
-                    self.images[url]=data;apply(data)
-            reply.deleteLater()
-        reply.finished.connect(finish)
+        def display(data,widget=w,target_w=width,target_h=height,fit=contain):
+            if not isValid(widget) or widget.property('_brunioImageUrl')!=url:return
+            pix=QPixmap()
+            if not pix.loadFromData(data):return
+            pix=pix.scaled(target_w,target_h,
+                Qt.AspectRatioMode.KeepAspectRatio if fit
+                else Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                Qt.TransformationMode.SmoothTransformation)
+            if hasattr(widget,'setPixmap'):widget.setPixmap(pix)
+            else:
+                widget.setIcon(QIcon(pix))
+                if isinstance(widget,QPushButton):widget.setText('')
+        if url in self.images:
+            display(self.images[url]);return
+        cached=None
+        cache_path=None
+        if self.image_cache_dir is not None:
+            cache_path=self.image_cache_dir/(hashlib.sha256(url.encode('utf-8')).hexdigest()+'.img')
+            try:
+                if cache_path.is_file() and 0<cache_path.stat().st_size<8*1024*1024:
+                    cached=cache_path.read_bytes()
+            except OSError:pass
+        if cached and QPixmap().loadFromData(cached):
+            if len(self.images)>240:self.images.clear()
+            self.images[url]=cached;display(cached);return
+        if url in self.pending_images:
+            self.pending_images[url].append(display);return
+        self.pending_images[url]=[display]
+        self.image_queue.append((url,cache_path))
+        self.pump_image_queue()
+    def pump_image_queue(self):
+        # Prioritize visible first-row art over hundreds of offscreen thumbnails.
+        while self.image_running<6 and self.image_queue:
+            url,cache_path=self.image_queue.pop(0)
+            self.image_running+=1
+            request=QNetworkRequest(QUrl(url));request.setTransferTimeout(12000)
+            reply=self.network.get(request)
+            def finish(url=url,cache_path=cache_path,reply=reply):
+                callbacks=self.pending_images.pop(url,[])
+                try:
+                    if reply.error()==reply.NetworkError.NoError:
+                        data=bytes(reply.readAll())
+                        if 0<len(data)<8*1024*1024 and QPixmap().loadFromData(data):
+                            if len(self.images)>240:self.images.clear()
+                            self.images[url]=data
+                            if cache_path is not None:
+                                try:
+                                    cache_path.write_bytes(data)
+                                except OSError:pass
+                            for callback in callbacks:callback(data)
+                finally:
+                    reply.deleteLater()
+                    self.image_running-=1
+                    self.pump_image_queue()
+            reply.finished.connect(finish)
+    def prune_image_cache(self):
+        folder=self.image_cache_dir
+        if folder is None:return
+        try:
+            images=sorted(folder.glob('*.img'),key=lambda p:p.stat().st_mtime,reverse=True)
+            size=0
+            for index,path in enumerate(images):
+                size+=path.stat().st_size
+                if index>=650 or size>300*1024*1024:path.unlink(missing_ok=True)
+        except OSError:pass
+    def discard_home_cache(self):
+        page=self._home_screen;self._home_screen=None;self._home_ready=False
+        if page is not None and isValid(page):
+            if self.stack.currentWidget() is not page:
+                self.stack.removeWidget(page);page.deleteLater()
+    def catalog_cached(self,path,kind=None,params=None):
+        """Reuse recent TMDB sections across Home, Browse and streaming pages."""
+        key=(self.client.session.get('userId',''),self.client.token,
+             path,kind,json.dumps(params or {},sort_keys=True,default=str))
+        now=time.monotonic()
+        with self._catalog_lock:
+            result=self._catalog_cache.get(key)
+        if result and now-result[0]<360:return result[1]
+        rows=self.client.catalog(path,kind,params)
+        if rows:
+            with self._catalog_lock:
+                if len(self._catalog_cache)>60:self._catalog_cache.clear()
+                self._catalog_cache[key]=(time.monotonic(),rows)
+        return rows
+
+    def load_genre_art(self,genres):
+        """Select genuine backdrops by TMDB genre, cached for fourteen days."""
+        needed=[(key,gid) for key,gid in genres if key not in self._genre_art]
+        if not needed:return dict(self._genre_art)
+        from concurrent.futures import ThreadPoolExecutor
+        def choose(pair):
+            key,genre=pair
+            if isinstance(genre,int):
+                try:items=self.catalog_cached('/discover/movie','movie',{'with_genres':genre})
+                except Exception:return key,''
+            else:
+                try:items=self.catalog_cached(genre,'movie')
+                except Exception:return key,''
+            return key,next((m['backdrop'] for m in items
+                             if m.get('backdrop')), '')
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            for key,art in pool.map(choose,needed):
+                if art:self._genre_art[key]=art
+        if self.image_cache_dir is not None and self._genre_art:
+            try:
+                path=self.image_cache_dir/'genre-art.json'
+                path.write_text(json.dumps({'created':time.time(),
+                                            'images':self._genre_art}),encoding='utf-8')
+            except OSError:pass
+        return dict(self._genre_art)
+
     def avatar_path(self,value):
         names={'ai:astronaut':'brunio_avatar_astronaut.png','ai:fox':'brunio_avatar_fox.png','ai:robot':'brunio_avatar_robot.png','ai:dragon':'brunio_avatar_dragon.png','special:photo':'brunio_avatar_special.png','special:extra':'brunio_avatar_extra.png','special:extra3':'brunio_avatar_special3.jpg'}
         if value.startswith('special:extra') and value[13:].isdigit() and int(value[13:])>=4:names[value]=f'brunio_avatar_special{value[13:]}.png'
@@ -295,7 +416,18 @@ class Window(DesktopFeatures,QMainWindow):
         self.run(load,done)
     def home(self):
         if not self.client.session:self.settings();return
-        self.select_nav('home');l,page=self.page('BruniO');l.setSpacing(15)
+        self.select_nav('home')
+        owner=self.client.session.get('userId','')+':'+self.client.profile
+        if (self._home_screen is not None and isValid(self._home_screen)
+                and self._home_ready and self._home_owner==owner
+                and time.monotonic()-self._home_loaded_at<360):
+            self.show_page(self._home_screen)
+            return
+        self.discard_home_cache()
+        l,page=self.page('BruniO');l.setSpacing(14)
+        self._home_screen=self.stack.currentWidget()
+        self._home_owner=owner
+        self._home_ready=False
         progress=dict(self.state.get('progress',{}))
         ids=[k for k,v in sorted(progress.items(),key=lambda x:x[1].get('updatedAt',0),reverse=True)
              if ':s' not in k and v.get('position',0)>=5 and v.get('percent',0)<90][:12]
@@ -310,6 +442,8 @@ class Window(DesktopFeatures,QMainWindow):
         shelves=QWidget();shelves_layout=QVBoxLayout(shelves)
         shelves_layout.setContentsMargins(0,0,0,0);shelves_layout.setSpacing(2)
         l.addWidget(shelves)
+        # Display bundled streaming artwork before waiting for any API requests.
+        self.platform_rail(platforms_layout,page)
         def load():
             paths=[('Tendencias','Trending','/trending/all/week',None),
                    ('Películas populares','Popular movies','/movie/popular','movie'),
@@ -319,7 +453,7 @@ class Window(DesktopFeatures,QMainWindow):
                    ('Series destacadas','Top series','/tv/top_rated','series')]
             import concurrent.futures
             def section(entry):
-                try:return self.t(entry[0],entry[1]),self.client.catalog(entry[2],entry[3])
+                try:return self.t(entry[0],entry[1]),self.catalog_cached(entry[2],entry[3])
                 except Exception:return self.t(entry[0],entry[1]),[]
             def resume(key):
                 try:return self.client.by_id(key)
@@ -371,10 +505,11 @@ class Window(DesktopFeatures,QMainWindow):
                 empty=label(self.t('Tu próxima historia comienza aquí.','Your next story starts here.'),25)
                 empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 hs.addWidget(empty)
-            self.platform_rail(platforms_layout,page)
             if continued:self.continue_rail(shelves_layout,continued)
             for name,items in rows:
                 if items:self.rail(shelves_layout,name,items)
+            self._home_ready=True
+            self._home_loaded_at=time.monotonic()
             self.run(self.recommendations,lambda items:self.rail(shelves_layout,self.t('Para ti','For you'),items) if page==self.page_id and items else None,quiet=True)
         self.run(load,done)
     def recommendations(self):
@@ -382,12 +517,12 @@ class Window(DesktopFeatures,QMainWindow):
         items={}
         for cloud in list(dict.fromkeys(seeds))[:3]:
             m=self.client.by_id(cloud);kind='tv' if m['type']=='series' else 'movie'
-            for item in self.client.catalog(f"/{kind}/{m['id']}/recommendations",m['type']):items[item['cloudId']]=item
+            for item in self.catalog_cached(f"/{kind}/{m['id']}/recommendations",m['type']):items[item['cloudId']]=item
         return list(items.values())
     def random_movie(self):
         if self.client.party and not self.client.host():self.tell(self.t('El host elige el contenido','The host chooses the title'));return
         def choose():
-            rows=[x for x in self.recommendations() if x['type']=='movie'] or self.client.catalog('/movie/top_rated','movie')
+            rows=[x for x in self.recommendations() if x['type']=='movie'] or self.catalog_cached('/movie/top_rated','movie')
             rows=[x for x in rows if self.ratings.get(x['cloudId'],10)>4 and self.state.get('progress',{}).get(x['cloudId'],{}).get('percent',0)<80]
             if not rows:raise ValueError('No available movies')
             return random.choice(rows)
@@ -438,20 +573,54 @@ class Window(DesktopFeatures,QMainWindow):
                     while nested.count():
                         x=nested.takeAt(0)
                         if x.widget():x.widget().deleteLater()
+        def landing():
+            results_title.setText(self.t('¿Qué quieres ver hoy?','What would you like to watch?'))
+            intro=label(self.t('Descubre películas, series y nuevas historias.',
+                               'Explore movies, series and new stories.'),14)
+            intro.setObjectName('muted')
+            result_l.addWidget(intro)
+            platforms=QGridLayout();platforms.setSpacing(13)
+            featured=[('Netflix','netflix.png',8),('Disney+','disney-plus.png',337),
+                      ('Prime Video','prime-video.png',9),('HBO Max','hbo-max.png',1899)]
+            for i,(name,art,provider_id) in enumerate(featured):
+                tile=PlatformTile(name);tile.setFixedHeight(132)
+                tile.setMinimumWidth(150)
+                path=PLATFORM_ASSETS/art
+                if path.is_file():tile.setPixmap(QPixmap(str(path)))
+                tile.clicked.connect(lambda checked=False,n=name,p=provider_id:self.provider(n,p))
+                platforms.addWidget(tile,i//4,i%4)
+            result_l.addLayout(platforms)
+            result_l.addWidget(self.section_title(self.t('Explora por género','Explore by genre')))
+            picks=QGridLayout();picks.setSpacing(12)
+            for index,(es,en,gid) in enumerate([
+                ('Acción','Action',28),('Comedia','Comedy',35),
+                ('Suspenso','Thriller',53),('Ciencia ficción','Sci-Fi',878)]):
+                t=self.genre_tile(self.t(es,en),gid)
+                t.setFixedHeight(156)
+                picks.addWidget(t,index//4,index%4)
+            result_l.addLayout(picks)
         def render():
             if page!=self.page_id:return
             clear_results()
             kind=filter_state['value'];query=filter_state['query']
+            if not query and kind=='all' and not filter_state['items']:
+                landing();return
             if kind=='genres':
                 results_title.setText(self.t('Explorar por género','Browse by genre'))
                 grid=QGridLayout();grid.setSpacing(12)
                 genres=[('Acción','Action',28),('Comedia','Comedy',35),('Drama','Drama',18),
                         ('Terror','Horror',27),('Ciencia ficción','Sci-Fi',878),
                         ('Suspenso','Thriller',53),('Animación','Animation',16),('Aventura','Adventure',12)]
+                targets=[]
                 for i,(es,en,gid) in enumerate(genres):
-                    b=button(self.t(es,en),lambda es=es,en=en,gid=gid:self.catalog_page(self.t(es,en),'/discover/movie','movie',{'with_genres':gid}))
-                    b.setObjectName('genreTile');b.setMinimumHeight(78);grid.addWidget(b,i//4,i%4)
-                result_l.addLayout(grid);return
+                    tile=self.genre_tile(self.t(es,en),gid,
+                        self.t('Ver colección  ↗','Explore collection  ↗'))
+                    tile.setFixedHeight(164)
+                    grid.addWidget(tile,i//4,i%4)
+                    targets.append(('genre:'+str(gid),gid,tile))
+                result_l.addLayout(grid)
+                self.fill_genre_art(page,targets)
+                return
             if kind in ('actors','directors'):
                 people=[x for x in filter_state['people'] if (x.get('known_for_department') or 'Acting').lower()==('acting' if kind=='actors' else 'directing')]
                 results_title.setText((self.t('Actores','Actors') if kind=='actors' else self.t('Directores','Directors'))+(f' · {query}' if query else ''))
@@ -489,7 +658,7 @@ class Window(DesktopFeatures,QMainWindow):
             filter_state['people']=[]
             if len(query)<2:
                 if not query:
-                    self.run(lambda:self.client.catalog('/trending/all/week'),lambda rows:receive(rows,serial),quiet=True)
+                    self.run(lambda:self.catalog_cached('/trending/all/week'),lambda rows:receive(rows,serial),quiet=True)
                 return
             self.history[owner]=([query]+[old for old in self.history.get(owner,[]) if normalize(old)!=normalize(query)])[:10]
             self.persist();results_title.setText(self.t('Buscando…','Searching…'))
@@ -506,7 +675,10 @@ class Window(DesktopFeatures,QMainWindow):
         q.textChanged.connect(lambda _:debounce.start())
         q.returnPressed.connect(lambda:(debounce.stop(),submit()))
         q.setFocus()
-        self.run(lambda:self.client.catalog('/trending/all/week'),lambda rows:receive(rows,filter_state['serial']),quiet=True)
+        # Show interactive artwork immediately, while remote trending results load.
+        render()
+        self.run(lambda:self.catalog_cached('/trending/all/week'),
+                 lambda rows:receive(rows,filter_state['serial']),quiet=True)
     def person_card(self,person):
         w,l=column();l.setContentsMargins(0,0,0,0);l.setSpacing(6);w.setFixedWidth(160)
         tile=Poster();tile.setFixedSize(160,204);tile.setAccessibleName(str(person.get('name','')))
@@ -531,75 +703,119 @@ class Window(DesktopFeatures,QMainWindow):
                 item=convert(row,kind);seen[item['cloudId']]=item
             return sorted(seen.values(),key=lambda x:x.get('rating',0),reverse=True)[:60]
         self.run(load,lambda rows:self.grid(l,rows) if page==self.page_id else None)
+    def genre_tile(self,name,gid,description=''):
+        tile=ArtworkTile(name,description)
+        tile.setObjectName('genreTile')
+        tile.clicked.connect(lambda checked=False,genre=gid,label=name:
+                             self.catalog_page(label,'/discover/movie','movie',
+                                               {'with_genres':genre}))
+        tile.setMinimumHeight(149)
+        saved=self._genre_art.get('genre:'+str(gid),'')
+        if saved:self.image(saved,tile,470,225)
+        return tile
+    def fill_genre_art(self,page,targets):
+        # Map artwork to the exact genre rather than generic gradients.
+        requests=[(key,gid) for key,gid,tile in targets]
+        for key,gid,tile in targets:
+            url=self._genre_art.get(key,'')
+            if url and isValid(tile):self.image(url,tile,500,270)
+        if all(key in self._genre_art for key,_,_ in targets):return
+        def received(data):
+            if page!=self.page_id:return
+            for key,gid,tile in targets:
+                url=data.get(key,'')
+                if url and isValid(tile):self.image(url,tile,500,270)
+        self.run(lambda:self.load_genre_art(requests),received,quiet=True)
     def collections(self):
         self.select_nav('collections')
         l,page=self.page('BruniO')
-        head,hl=row();hl.setSpacing(12)
-        titles,tl=column();tl.setContentsMargins(0,0,0,0);tl.setSpacing(4)
-        title=label(self.t('Explorar','Explore'),30);title.setObjectName('pageTitle');tl.addWidget(title)
-        subtitle=label(self.t('Un universo de historias, a tu manera.','Discover a world of stories.'),13)
-        subtitle.setObjectName('muted');tl.addWidget(subtitle)
-        hl.addWidget(titles,1);l.addWidget(head)
+        header,hl=row();hl.setSpacing(10)
+        headlines,headline_col=column()
+        headline_col.setContentsMargins(0,0,0,0);headline_col.setSpacing(2)
+        title=label(self.t('Explorar','Explore'),30);title.setObjectName('pageTitle')
+        headline_col.addWidget(title)
+        subtitle=label(self.t('Encuentra una nueva obsesión.','Find your next obsession.'),14)
+        subtitle.setObjectName('muted');headline_col.addWidget(subtitle)
+        hl.addWidget(headlines,1);l.addWidget(header)
         l.addWidget(self.section_title(self.t('Tus plataformas favoritas','Your favorite platforms')))
-        providers=[('Netflix',8,'N','Series y películas','Shows & movies'),
-                   ('Disney+',337,'✦','Magia para todos','For every age'),
-                   ('Prime Video',9,'▶','Historias sin límites','Infinite stories'),
-                   ('Apple TV+',350,'◉','Originales premiados','Award-winning originals'),
-                   ('HBO Max',1899,'◆','Grandes producciones','Premium entertainment'),
-                   ('Paramount+',531,'★','Cine y series','Movies and series')]
-        grid=QGridLayout();grid.setSpacing(13);grid.setContentsMargins(0,0,0,0)
-        for i,(name,pid,symbol,es,en) in enumerate(providers):
-            tile=button(symbol+'    '+name+'\n'+self.t(es,en)+'     ↗',
-                        lambda name=name,pid=pid:self.provider(name,pid))
-            tile.setObjectName('collectionTile');tile.setMinimumHeight(114)
+        services=[
+            ('Netflix',8,'netflix.png','Series y películas','Movies and series'),
+            ('Disney+',337,'disney-plus.png','Magia para todos','Discover magic'),
+            ('Prime Video',9,'prime-video.png','Películas y originales','Films and originals'),
+            ('Apple TV+',350,'apple-tv.png','Originales premiados','Award-winning originals'),
+            ('HBO Max',1899,'hbo-max.png','Grandes producciones','Premium storytelling'),
+            ('Paramount+',531,'paramount-plus.png','Cine y televisión','Films and shows'),
+            ('Hulu',15,'hulu.png','Series que enamoran','Must-see series'),
+            ('Crunchyroll',283,'crunchyroll.png','El mundo del anime','Anime universe'),
+        ]
+        provider_grid=QGridLayout();provider_grid.setSpacing(13)
+        provider_grid.setContentsMargins(0,0,0,0)
+        for i,(name,pid,image_name,es,en) in enumerate(services):
+            tile=ArtworkTile(name,self.t(es,en))
+            tile.setObjectName('collectionTile')
+            tile.setFixedHeight(165)
+            path=PLATFORM_ASSETS/image_name
+            if path.is_file():tile.setLogoPixmap(QPixmap(str(path)))
+            tile.clicked.connect(lambda checked=False,name=name,pid=pid:
+                                 self.provider(name,pid))
             tile.setSizePolicy(QSizePolicy.Policy.Expanding,QSizePolicy.Policy.Fixed)
-            tile.setToolTip(name);grid.addWidget(tile,i//3,i%3)
-        l.addLayout(grid)
+            provider_grid.addWidget(tile,i//4,i%4)
+        l.addLayout(provider_grid)
         l.addWidget(self.section_title(self.t('Descubre por género','Browse by genre'),
-                                      self.t('Encuentra justo lo que te apetece ver.','Find something for every mood.')))
-        genres=[('Acción','Action',28,'⚡'),('Comedia','Comedy',35,'☺'),
-                ('Drama','Drama',18,'◈'),('Terror','Horror',27,'☾'),
-                ('Ciencia ficción','Sci-Fi',878,'✧'),('Suspenso','Thriller',53,'◇'),
-                ('Animación','Animation',16,'✿'),('Aventura','Adventure',12,'➤')]
-        g=QGridLayout();g.setSpacing(12);g.setContentsMargins(0,0,0,0)
-        for i,(es,en,gid,symbol) in enumerate(genres):
+                         self.t('Colecciones visuales para cada momento.',
+                                'Explore collections for every mood.')))
+        genres=[('Acción','Action',28),('Comedia','Comedy',35),
+                ('Drama','Drama',18),('Terror','Horror',27),
+                ('Ciencia ficción','Sci-Fi',878),('Suspenso','Thriller',53),
+                ('Animación','Animation',16),('Aventura','Adventure',12)]
+        art_targets=[]
+        genre_grid=QGridLayout();genre_grid.setSpacing(13)
+        genre_grid.setContentsMargins(0,0,0,0)
+        for i,(es,en,gid) in enumerate(genres):
             name=self.t(es,en)
-            tile=button(symbol+'    '+name+'     ↗',
-                lambda gid=gid,name=name:self.catalog_page(name,'/discover/movie','movie',{'with_genres':gid}))
-            tile.setObjectName('genreTile');tile.setMinimumHeight(86)
-            tile.setSizePolicy(QSizePolicy.Policy.Expanding,QSizePolicy.Policy.Fixed)
-            g.addWidget(tile,i//4,i%4)
-        l.addLayout(g)
-        l.addWidget(self.section_title(self.t('Colecciones especiales','Curated collections')))
-        special,sl=row();sl.setSpacing(12)
-        upcoming=button('✧   '+self.t('Próximamente','Coming soon')+'    ↗',
-            lambda:self.catalog_page(self.t('Próximamente','Coming soon'),'/discover/movie','movie',
-                                     {'primary_release_date.gte':time.strftime('%Y-%m-%d')}))
-        upcoming.setObjectName('collectionWide');upcoming.setMinimumHeight(78);sl.addWidget(upcoming,1)
-        recent=button('★   '+self.t('Más valoradas','Top rated')+'    ↗',
-            lambda:self.catalog_page(self.t('Más valoradas','Top rated'),'/movie/top_rated','movie'))
-        recent.setObjectName('collectionWide');recent.setMinimumHeight(78);sl.addWidget(recent,1)
+            tile=self.genre_tile(name,gid,
+                 self.t('Ver colección  ↗','Browse collection  ↗'))
+            genre_grid.addWidget(tile,i//4,i%4)
+            art_targets.append(('genre:'+str(gid),gid,tile))
+        l.addLayout(genre_grid)
+        l.addWidget(self.section_title(self.t('Colecciones destacadas','Featured collections')))
+        special,sl=row();sl.setSpacing(13)
+        for title_es,title_en,path,extra in [
+            ('Próximamente','Coming soon','/movie/upcoming',
+             self.t('Lo mejor está por llegar','See what is next')),
+            ('Mejor valoradas','Top rated','/movie/top_rated',
+             self.t('Lo más aclamado','Critically acclaimed'))]:
+            tile=ArtworkTile(self.t(title_es,title_en),extra)
+            tile.setObjectName('collectionWide');tile.setFixedHeight(152)
+            tile.clicked.connect(lambda checked=False,title=self.t(title_es,title_en),
+                         path=path:self.catalog_page(title,path,'movie'))
+            sl.addWidget(tile,1)
+            art_targets.append(('special:'+path,path,tile))
         l.addWidget(special)
+        self.fill_genre_art(page,art_targets)
         l.addWidget(self.section_title(self.t('Viaja en el tiempo','Explore by year')))
         years,yl=row();yl.setSpacing(9)
         for year in range(time.localtime().tm_year,2015,-1):
-            chip=button(str(year),lambda year=year:self.catalog_page(str(year),'/discover/movie','movie',{'primary_release_year':year}))
+            chip=button(str(year),lambda year=year:self.catalog_page(
+                str(year),'/discover/movie','movie',{'primary_release_year':year}))
             chip.setObjectName('yearPill');chip.setFixedSize(92,40);yl.addWidget(chip)
         yl.addStretch();l.addWidget(EdgeRail(years,58))
-        older=button(self.t('Explorar años anteriores  ↗','Explore older years  ↗'),lambda:self.years_picker())
-        older.setObjectName('secondaryAction');older.setMaximumWidth(260);l.addWidget(older)
+        older=button(self.t('Explorar años anteriores  ↗','Explore older years  ↗'),
+                    self.years_picker)
+        older.setObjectName('secondaryAction');older.setMaximumWidth(260)
+        l.addWidget(older)
     def years_picker(self):
         years=[str(y) for y in range(time.localtime().tm_year,1899,-1)]
         value,ok=QInputDialog.getItem(self,'BruniO',self.t('Selecciona el año','Choose a year'),years,0,False)
         if ok and value:self.catalog_page(value,'/discover/movie','movie',{'primary_release_year':int(value)})
     def catalog_page(self,title,path,kind,params=None):
-        l,page=self.page(title);self.run(lambda:self.client.catalog(path,kind,params),lambda items:self.grid(l,items) if page==self.page_id else None)
+        l,page=self.page(title);self.run(lambda:self.catalog_cached(path,kind,params),lambda items:self.grid(l,items) if page==self.page_id else None)
     def provider(self,title,pid):
         l,page=self.page(title)
         def load():
             base={'with_watch_providers':pid,'watch_region':'US'}
-            rows=[(self.t('Películas','Movies'),self.client.catalog('/discover/movie','movie',base)),(self.t('Series','Series'),self.client.catalog('/discover/tv','series',base))]
-            for genre,gid in [('Action',28),('Comedy',35),('Horror',27),('Drama',18),('Sci-Fi',878)]:rows.append((genre,self.client.catalog('/discover/movie','movie',{**base,'with_genres':gid})))
+            rows=[(self.t('Películas','Movies'),self.catalog_cached('/discover/movie','movie',base)),(self.t('Series','Series'),self.catalog_cached('/discover/tv','series',base))]
+            for genre,gid in [('Action',28),('Comedy',35),('Horror',27),('Drama',18),('Sci-Fi',878)]:rows.append((genre,self.catalog_cached('/discover/movie','movie',{**base,'with_genres':gid})))
             return rows
         self.run(load,lambda rows:[self.rail(l,name,items) for name,items in rows] if page==self.page_id else None)
     def my_list(self):
@@ -889,7 +1105,7 @@ class Window(DesktopFeatures,QMainWindow):
             if self.client.party and not self.client.host():return
             c=dict(self.current)
             if c['item']['type']=='series' and self.profile_pref('autoplay',self.preferences.get('autoplay',True)):self.next_episode(c)
-            else:self.open(c['item']);self.run(lambda:self.client.catalog(f"/{'tv' if c['item']['type']=='series' else 'movie'}/{c['item']['id']}/recommendations",c['item']['type']),lambda rows:self.show_recommendations(rows))
+            else:self.open(c['item']);self.run(lambda:self.catalog_cached(f"/{'tv' if c['item']['type']=='series' else 'movie'}/{c['item']['id']}/recommendations",c['item']['type']),lambda rows:self.show_recommendations(rows))
     def retry_next_source(self):
         if not self.current or self.current['item']['type']=='live' or self.client.party or not self.profile_pref('retry_links',True):return False
         if len(self.fallback_urls)>=5:return False
@@ -1811,7 +2027,7 @@ QLabel#searchResultTitle { color:#26314a; }
 QWidget#player { background:#03050c; }
 '''
 CINEMATIC_STYLE='''
-QPushButton#navButton { border-radius:12px; padding:8px 13px; font-size:13px; font-weight:600; }
+QPushButton#navButton { border-radius:12px; padding:9px 13px; font-size:15px; font-weight:600; }
 QPushButton#navButton:hover { background:#212c47; border-color:#414467; }
 QPushButton#navButton[selected="true"] {
     background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #5f528f,stop:1 #302a50);
@@ -1886,6 +2102,8 @@ QWidget#searchBar { border-radius:29px; border:1px solid #aa97ee; background:#18
 QLineEdit#searchInput { font-size:18px; }
 QPushButton#filterPill { padding:8px 16px; font-size:12px; }
 QPushButton#filterPill[selected="true"] { background:#c1b0ff; border-color:#d5c9ff; }
+QPushButton#platformTile { border:0; background:transparent; padding:0; }
+QPushButton#artworkTile { border:0; background:transparent; padding:0; }
 '''
 def main(smoke=False,smoke_vlc=False):
     app=QApplication(sys.argv);app.setStyleSheet(STYLE);window=Window(smoke);window.show()

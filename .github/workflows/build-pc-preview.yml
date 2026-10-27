@@ -2,7 +2,7 @@ name: Build BruniO PC Preview (no release)
 on:
   push:
     branches:
-      - fix/pc-rc8-self-update
+      - feature/pc-rc9-visual-performance
     paths:
       - 'desktop/brunio-pc/**'
       - '.github/workflows/build-pc-preview.yml'
@@ -41,8 +41,8 @@ jobs:
         run: ./scripts/build_windows.ps1
       - uses: actions/upload-artifact@v4
         with:
-          name: BruniO-PC-RC8-preview-installer
+          name: BruniO-PC-RC9-preview-installer
           path: |
-            desktop/brunio-pc/installer/BruniO-PC-Setup-1.0.0-rc8.exe
+            desktop/brunio-pc/installer/BruniO-PC-Setup-1.0.0-rc9.exe
             desktop/brunio-pc/installer/pc-update.json
           retention-days: 7

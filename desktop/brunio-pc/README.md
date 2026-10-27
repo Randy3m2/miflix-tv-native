@@ -1,3 +1,18 @@
+## RC9 — More immersive PC artwork and faster navigation
+
+- Larger full-cover streaming tiles using bundled brand artwork. GIFs run on hover only, with still PNG by default.
+- Larger left navigation labels and controls.
+- Browse/Explore now uses platform images and genre-specific backdrops from TMDB instead of text-only category boxes.
+- Search starts with visual, clickable suggestions while network results arrive.
+- Home retains its rendered content for fast return navigation, reuses recent catalog results, and renders local logos before the network call.
+- Image requests share up to six concurrent downloads and posters are cached persistently under LocalAppData/BruniO-PC/artwork (bounded to 300 MB, max 650 cached images).
+- This builds on RC8, including Dark / Light / Auto and fixed in-app PC update metadata.
+- Windows preview workflow does not publish the release and leaves Android TV/Mobile untouched.
+
+Run the **Build BruniO PC Preview (no release)** workflow on `feature/pc-rc9-visual-performance` to test before merging.
+
+---
+
 ## RC8 — Corrección del actualizador integrado (Windows)
 
 Corrige el error «Unexpected PC update metadata» al detectar versiones. GitHub publica la URL del asset con la capitalización canónica del propietario (`Randy3m2`), mientras que `REPO` usa `randy3m2`. RC8 valida la ruta, el repositorio, el canal y el nombre de asset de forma estricta, tolerando únicamente la diferencia de mayúsculas/minúsculas del propietario y repositorio. Usa la URL real devuelta por GitHub en lugar de construir otra URL.
@@ -16,7 +31,7 @@ Se conserva la lógica de reproducción, favoritos, add-ons y perfiles. RC7 nece
 
 ---
 
-# BruniO PC · Windows x64 · 1.0.0-rc8
+# BruniO PC · Windows x64 · 1.0.0-rc9
 
 ## RC6 · Primer screenshot: rediseño de cinco pantallas
 
@@ -33,10 +48,10 @@ Proyecto de la app de escritorio. Este paquete contiene código fuente y el work
 
 1. Descomprime el ZIP conservando las carpetas. En el repositorio `Randy3m2/miflix-tv-native`, reemplaza `desktop/brunio-pc` con la carpeta incluida y actualiza `.github/workflows/build-pc.yml`. Conserva todos los demás archivos y workflows del repositorio.
 2. En GitHub abre **Actions → Build BruniO PC Windows → Run workflow** en la rama que contiene esos archivos.
-3. Al terminar, descarga el artifact **BruniO-PC-Windows-RC6** o el instalador de la release `pc-v1.0.0-rc8`.
-4. Ejecuta `BruniO-PC-Setup-1.0.0-rc8.exe` en Windows 10/11 x64. No necesitas instalar Python o VLC por separado. El instalador no lleva firma comercial y Windows podría mostrar una advertencia.
+3. Al terminar, descarga el artifact **BruniO-PC-Windows-RC6** o el instalador de la release `pc-v1.0.0-rc9`.
+4. Ejecuta `BruniO-PC-Setup-1.0.0-rc9.exe` en Windows 10/11 x64. No necesitas instalar Python o VLC por separado. El instalador no lleva firma comercial y Windows podría mostrar una advertencia.
 
-El workflow verifica las pruebas, descarga y verifica VLC, construye el instalador y publica los canales de PC `pc-v1.0.0-rc8` y `pc-latest`. No modifica las releases de Android. Si la ejecución falla, revisa el log de Actions: no hay instalador listo hasta que el workflow termine correctamente.
+El workflow verifica las pruebas, descarga y verifica VLC, construye el instalador y publica los canales de PC `pc-v1.0.0-rc9` y `pc-latest`. No modifica las releases de Android. Si la ejecución falla, revisa el log de Actions: no hay instalador listo hasta que el workflow termine correctamente.
 
 ## Uso y alcance
 

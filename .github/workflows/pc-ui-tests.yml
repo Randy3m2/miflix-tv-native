@@ -6,7 +6,7 @@ on:
       - '.github/workflows/pc-ui-tests.yml'
   push:
     branches:
-      - 'fix/pc-rc8-self-update'
+      - 'feature/pc-rc9-visual-performance'
     paths:
       - 'desktop/brunio-pc/**'
       - '.github/workflows/pc-ui-tests.yml'

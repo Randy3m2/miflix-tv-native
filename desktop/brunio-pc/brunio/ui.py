@@ -60,12 +60,12 @@ class Window(DesktopFeatures,QMainWindow):
         self.root_layout=QHBoxLayout(self.root)
         self.root_layout.setContentsMargins(0,0,0,0);self.root_layout.setSpacing(0)
         self.setCentralWidget(self.root)
-        self.sidebar=QWidget();self.sidebar.setObjectName('sidebar');self.sidebar.setFixedWidth(205)
-        self.nav=QVBoxLayout(self.sidebar);self.nav.setContentsMargins(12,24,12,20);self.nav.setSpacing(5)
+        self.sidebar=QWidget();self.sidebar.setObjectName('sidebar');self.sidebar.setFixedWidth(210)
+        self.nav=QVBoxLayout(self.sidebar);self.nav.setContentsMargins(13,28,13,18);self.nav.setSpacing(5)
         brand=QLabel('Bruni<span style="color:#b4a1ff">O</span>')
         brand.setTextFormat(Qt.TextFormat.RichText);brand.setObjectName('brand')
-        self.nav.addWidget(brand);self.nav.addSpacing(30)
-        self.nav_buttons={}
+        self.nav.addWidget(brand);self.nav.addSpacing(26)
+        self.nav_buttons={};self.nav_glyphs={}
         routes=[('home','home','Inicio','Home',self.home),
                 ('search','search','Búsqueda','Search',self.search),
                 ('list','list','Mi Lista','My List',self.my_list),
@@ -78,44 +78,49 @@ class Window(DesktopFeatures,QMainWindow):
                 ('downloads','downloads','Descargas','Downloads',self.downloads)]
         self.nav_labels={key:(es,en) for key,_,es,en,_ in routes}
         # Six primary destinations match the reference; all other destinations stay available.
-        self.secondary_routes={'live','friends','calendar','downloads'}
+        self.secondary_routes={'friends','calendar','downloads'}
         self.extra_nav=QWidget();self.extra_nav.setObjectName('navExtras')
         extra_layout=QVBoxLayout(self.extra_nav)
         extra_layout.setContentsMargins(8,0,0,0);extra_layout.setSpacing(3)
         for key,glyph,es,en,fn in routes:
             b=button(self.t(es,en),lambda key=key,fn=fn:(self.select_nav(key),fn()))
             b.setObjectName('navButton');b.setIcon(icon(glyph,'#c5c6df'))
-            b.setIconSize(QSize(17,17));b.setFixedHeight(35)
+            b.setIconSize(QSize(18,18));b.setFixedHeight(41)
             b.setCursor(Qt.CursorShape.PointingHandCursor)
             b.setToolTip(self.t(es,en));b.setAccessibleName(self.t(es,en))
             if key in self.secondary_routes:extra_layout.addWidget(b)
             else:self.nav.addWidget(b)
-            self.nav_buttons[key]=b
+            self.nav_buttons[key]=b;self.nav_glyphs[key]=glyph
         self.more_button=button(self.t('Más','More')+'  ⌄',self.toggle_more)
         self.more_button.setObjectName('navButton')
         self.more_button.setIcon(icon('collections','#c5c6df'))
-        self.more_button.setIconSize(QSize(17,17));self.more_button.setFixedHeight(35)
+        self.more_button.setIconSize(QSize(17,17));self.more_button.setFixedHeight(39)
         self.nav.addWidget(self.more_button)
         self.nav.addWidget(self.extra_nav);self.extra_nav.hide()
         self.nav.addStretch(1)
-        bottom,foot=row();foot.setSpacing(10)
-        settings_button=button('',lambda:(self.select_nav('settings'),self.settings()))
-        settings_button.setObjectName('roundButton');settings_button.setIcon(icon('settings'))
-        settings_button.setIconSize(QSize(19,19));settings_button.setFixedSize(40,40)
-        settings_button.setToolTip(self.t('Ajustes','Settings'))
-        foot.addWidget(settings_button);self.nav_buttons['settings']=settings_button
-        self.alert_button=button('',self.alerts);self.alert_button.setObjectName('roundButton')
-        self.alert_button.setIcon(icon('bell'));self.alert_button.setIconSize(QSize(19,19))
-        self.alert_button.setFixedSize(40,40)
-        self.alert_button.setToolTip(self.t('Notificaciones','Notifications'))
-        foot.addWidget(self.alert_button);foot.addStretch(1)
-        self.nav.addWidget(bottom)
-        self.profile_button=button('',self.profiles);self.profile_button.setObjectName('profile')
-        self.profile_button.setFixedSize(44,44);self.profile_button.setIconSize(QSize(40,40))
-        profile_row,pr=row();pr.setSpacing(10);pr.addWidget(self.profile_button)
-        profile_name=label(self.t('Cambiar perfil','Switch profile'),12)
-        profile_name.setObjectName('profileFootnote');pr.addWidget(profile_name,1)
-        self.nav.addWidget(profile_row)
+        self.nav.addWidget(QLabel('────────────────'),0,Qt.AlignmentFlag.AlignHCenter)
+        settings_button=button(self.t('Ajustes','Settings'),lambda:(self.select_nav('settings'),self.settings()))
+        settings_button.setObjectName('navButton');settings_button.setIcon(icon('settings','#b9b8d5'))
+        settings_button.setIconSize(QSize(19,19));settings_button.setFixedHeight(41)
+        self.nav.addWidget(settings_button)
+        self.nav_buttons['settings']=settings_button;self.nav_glyphs['settings']='settings'
+        self.alert_button=button(self.t('Notificaciones','Notifications'),self.alerts)
+        self.alert_button.setObjectName('navButton')
+        self.alert_button.setIcon(icon('bell','#b9b8d5'));self.alert_button.setIconSize(QSize(19,19))
+        self.alert_button.setFixedHeight(41)
+        self.nav.addWidget(self.alert_button)
+        self.profile_button=button('',self.profiles);self.profile_button.setObjectName('profileAvatarButton')
+        self.profile_button.setFixedSize(46,46);self.profile_button.setIconSize(QSize(39,39))
+        self.profile_button.setToolTip(self.t('Cambiar perfil','Switch profile'))
+        profile_row,pr=row();profile_row.setObjectName('profileFooter');pr.setContentsMargins(7,8,7,8);pr.setSpacing(10)
+        pr.addWidget(self.profile_button)
+        self.profile_name_label=QLabel(self.t('Mi perfil','My profile'))
+        self.profile_name_label.setObjectName('profileDisplayName')
+        subtitle=QLabel(self.t('Cambiar perfil  ›','Switch profile  ›'))
+        subtitle.setObjectName('profileFootnote')
+        text_group,tx=column();tx.setContentsMargins(0,0,0,0);tx.setSpacing(2)
+        tx.addWidget(self.profile_name_label);tx.addWidget(subtitle)
+        pr.addWidget(text_group,1);self.nav.addWidget(profile_row)
         self.root_layout.addWidget(self.sidebar)
         self.content=QWidget();self.content.setObjectName('contentShell')
         content_layout=QVBoxLayout(self.content);content_layout.setContentsMargins(0,0,0,0)
@@ -141,10 +146,17 @@ class Window(DesktopFeatures,QMainWindow):
     def select_nav(self,key):
         if key in self.secondary_routes and self.extra_nav.isHidden():self.toggle_more()
         for name,b in self.nav_buttons.items():
-            b.setProperty('selected',name==key);b.style().unpolish(b);b.style().polish(b)
+            active=name==key
+            b.setProperty('selected',active)
+            if name in self.nav_glyphs:
+                b.setIcon(icon(self.nav_glyphs[name],'#f4efff' if active else '#989fbb'))
+            b.style().unpolish(b);b.style().polish(b)
     def refresh_profile_icon(self):
         profile=next((p for p in self.client.account.get('profiles',[]) if p.get('id')==self.client.profile),{})
-        value=profile.get('avatarValue') or 'ai:astronaut';self.profile_button.setToolTip(profile.get('name',self.t('Perfiles','Profiles')))
+        value=profile.get('avatarValue') or 'ai:astronaut'
+        display=profile.get('name') or self.t('Mi perfil','My profile')
+        self.profile_button.setToolTip(display)
+        self.profile_name_label.setText(display)
         if value.startswith('http'):
             self.image(value,self.profile_button,38,38)
         else:self.profile_button.setIcon(QIcon(str(self.avatar_path(value))))

@@ -61,7 +61,7 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
                 val loaded = when (next) {
                     DesktopTab.Home -> {
                         val trending = array("catalog.home").map { tile(it).copy(image = it.optString("backdrop").ifBlank { it.optString("poster") }) }
-                        if (ticket == revision) screen = DesktopScreenState(busy = true, hero = trending.firstOrNull())
+                        if (ticket == revision) screen = DesktopScreenState(busy = true, hero = trending.firstOrNull(),heroes=trending.take(5))
                         val rows = mutableListOf<ContentRow>()
                         suspend fun append(title: String, method: String, params: JSONObject = JSONObject(), wide: Boolean = false) {
                             val cards = array(method, params).map { row -> tile(row).let { if(wide) it.copy(image = row.optString("backdrop").ifBlank { row.optString("poster") }) else it } }
@@ -74,7 +74,7 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
                         append("Para ti · Tus valoraciones", "catalog.shelf", JSONObject().put("key", "recommendations"))
                         append("Películas populares", "catalog.shelf", JSONObject().put("key", "popular_movies"))
                         append("Series populares", "catalog.shelf", JSONObject().put("key", "popular_series"))
-                        DesktopScreenState(hero = trending.firstOrNull(), rows = rows)
+                        DesktopScreenState(hero = trending.firstOrNull(), heroes=trending.take(5),rows = rows)
                     }
                     DesktopTab.Search -> DesktopScreenState(tiles = array("catalog.home").map(::tile))
                     DesktopTab.Library -> DesktopScreenState(tiles = array("catalog.saved").map(::tile))
@@ -288,7 +288,7 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
     private suspend fun array(method: String, params: JSONObject = JSONObject()): List<JSONObject> = (bridge.call(method, params) as JSONArray).objects()
     private fun tile(row: JSONObject): MediaTile {
         val progress = row.optJSONObject("progress")?.optDouble("percent", 0.0)?.div(100)?.toFloat()
-        return MediaTile(row.optString("cloudId", row.optString("id")), row.optString("title"), row.optString("poster").ifBlank { row.optString("backdrop") }, row.optString("overview").ifBlank { row.optString("year") }, progress)
+        return MediaTile(row.optString("cloudId", row.optString("id")), row.optString("title"), row.optString("poster").ifBlank { row.optString("backdrop") }, row.optString("overview").ifBlank { row.optString("year") }, progress,row.optString("animation"))
     }
 }
 internal fun JSONArray.objects(): List<JSONObject> = (0 until length()).map { getJSONObject(it) }

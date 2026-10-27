@@ -47,10 +47,29 @@ class Screens:
 
     def providers(self):
         files=['netflix.png','disney-plus.png','prime-video.png','apple-tv.png','hbo-max.png','paramount-plus.png','streaming_amcplus_rp48.png','hulu.png','crunchyroll.png']
-        return [{'id':f'provider:{pid}','title':name,'poster':'asset:'+file} for (name,pid),file in zip(PLATFORMS,files)]
+        rows=[]
+        for (name,pid),file in zip(PLATFORMS,files):
+            stem=file.removesuffix('.png')
+            animation=''
+            if pid!=526:
+                animation=('https://raw.githubusercontent.com/Randy3m2/miflix-tv-native/main/app/src/main/assets/streaming_rp48/'+stem+'.gif') if pid in (15,531) else 'https://cdn.jsdelivr.net/gh/luckynumb3rs/stremio-perfect-setup/collections/streaming/focused/'+stem+'.gif'
+            rows.append({'id':f'provider:{pid}','title':name,'poster':'asset:'+file,'animation':animation})
+        return rows
 
     def genres(self):
-        return [{'id':f'genre:{gid}','title':name} for name,gid in GENRES]
+        from concurrent.futures import ThreadPoolExecutor
+        cache=getattr(self,'_genre_cache',{})
+        def cover(pair):
+            name,gid=pair;key=(self.client.language,gid)
+            if key not in cache:
+                try:
+                    rows=self.client.catalog('/discover/movie','movie',{'with_genres':gid,'vote_count.gte':150,'sort_by':'popularity.desc'})
+                    cache[key]=next((r.get('backdrop') or r.get('poster') for r in rows if r.get('backdrop') or r.get('poster')),'asset:brunio_splash.png')
+                except Exception:return {'id':f'genre:{gid}','title':name,'poster':'asset:brunio_splash.png'}
+            return {'id':f'genre:{gid}','title':name,'poster':cache[key]}
+        with ThreadPoolExecutor(max_workers=4) as pool:rows=list(pool.map(cover,GENRES))
+        self._genre_cache=cache
+        return rows
 
     def discover(self, provider=0, genre=0, page=1):
         if not isinstance(page,int) or not 1<=page<=500:raise ValueError('Invalid page')

@@ -1,5 +1,12 @@
 package com.brunio.desktop
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -35,13 +42,13 @@ enum class DesktopTab(val title: String, val glyph: String) {
     Calendar("Calendario", "calendar"), Downloads("Descargas", "download"),
     Notifications("Notificaciones", "notifications"), Settings("Ajustes", "settings")
 }
-data class MediaTile(val id: String, val title: String, val image: String = "", val subtitle: String = "", val progress: Float? = null)
+data class MediaTile(val id: String, val title: String, val image: String = "", val subtitle: String = "", val progress: Float? = null, val animation:String="")
 data class ContentRow(val title: String, val tiles: List<MediaTile>, val wide: Boolean = false)
 data class FeedEntry(val id: String, val title: String, val detail: String, val action: String? = null)
 data class DesktopScreenState(
     val busy: Boolean = false, val error: String? = null,
     val calendarMonth: String = java.time.YearMonth.now().toString(),
-    val hero: MediaTile? = null, val rows: List<ContentRow> = emptyList(),
+    val hero: MediaTile? = null, val heroes:List<MediaTile> = emptyList(), val rows: List<ContentRow> = emptyList(),
     val tiles: List<MediaTile> = emptyList(), val entries: List<FeedEntry> = emptyList(),
 )
 
@@ -93,9 +100,12 @@ fun RemoteArtwork(url: String, modifier: Modifier = Modifier, description: Strin
 
 @Composable
 private fun MediaCard(tile: MediaTile, wide: Boolean, onOpen: (String) -> Unit) {
-    Column(Modifier.width(if (wide) 300.dp else 174.dp).clickable { onOpen(tile.id) }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val interaction=remember{MutableInteractionSource()}
+    val hovered by interaction.collectIsHoveredAsState()
+    val scale by animateFloatAsState(if(hovered)1.025f else 1f)
+    Column(Modifier.width(if (wide) 300.dp else 174.dp).hoverable(interaction).graphicsLayer(scaleX=scale,scaleY=scale).clickable { onOpen(tile.id) }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box {
-            RemoteArtwork(tile.image, Modifier.fillMaxWidth().height(if (wide) 169.dp else 252.dp).clip(RoundedCornerShape(12.dp)), tile.title)
+            HoverArtwork(tile.image,tile.animation,hovered,Modifier.fillMaxWidth().height(if(wide)169.dp else 252.dp).clip(RoundedCornerShape(12.dp)).border(1.dp,if(hovered)Color.White.copy(alpha=.6f)else Color.Transparent,RoundedCornerShape(12.dp)))
             tile.progress?.let { progress -> LinearProgressIndicator(progress = { progress.coerceIn(0f, 1f) },
                 modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp), color = Color.White) }
         }
@@ -126,24 +136,39 @@ fun DesktopScreen(tab: DesktopTab, state: DesktopScreenState, onAction: (String)
 
 @Composable
 private fun HomeScreen(state: DesktopScreenState, onAction: (String) -> Unit) {
+    val candidates=state.heroes.ifEmpty{listOfNotNull(state.hero)}
+    var index by remember(candidates.map{it.id}){mutableStateOf(0)}
+    val interaction=remember{MutableInteractionSource()}
+    val hovered by interaction.collectIsHoveredAsState()
+    LaunchedEffect(candidates,hovered){if(!hovered && candidates.size>1)while(true){delay(8000);index=(index+1)%candidates.size}}
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(28.dp), contentPadding = PaddingValues(bottom = 36.dp)) {
         item {
-            val hero = state.hero
-            if (hero != null) Box(Modifier.fillMaxWidth().height(510.dp)) {
+            val hero = candidates.getOrNull(index)
+            if (hero != null) Box(Modifier.fillMaxWidth().height(510.dp).hoverable(interaction)) {
                 RemoteArtwork(hero.image, Modifier.fillMaxSize())
                 Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xF5080809), Color.Transparent))))
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xFF080809)))))
                 Column(Modifier.align(Alignment.BottomStart).padding(36.dp).widthIn(max = 600.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                     Text(hero.title, style = MaterialTheme.typography.displayMedium, color = Color.White)
                     Text(hero.subtitle, maxLines = 3, color = Color(0xFFC7C7CF))
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp),verticalAlignment=Alignment.CenterVertically) {
                     Button(onClick = { onAction(hero.id) }, colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black), shape = RoundedCornerShape(28.dp)) { Text("Ver detalles", Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) }
+                    Spacer(Modifier.weight(1f))
+                    if(candidates.size>1)Surface(shape=RoundedCornerShape(28.dp),color=Color(0x99303036)) {
+                        Row(verticalAlignment=Alignment.CenterVertically) {
+                            TextButton(onClick={index=(index-1+candidates.size)%candidates.size}){Text("‹")}
+                            Text("${index+1} / ${candidates.size}",style=MaterialTheme.typography.labelMedium)
+                            TextButton(onClick={index=(index+1)%candidates.size}){Text("›")}
+                        }
+                    }
+                    }
                 }
             } else EmptyState("Tu cine, en un solo lugar", "El contenido aparecerá cuando se cargue tu catálogo.")
         }
         items(state.rows) { row ->
             Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
                 Text(row.title, fontSize = 23.sp, color = Color.White, modifier = Modifier.padding(horizontal = 36.dp))
-                LazyRow(contentPadding = PaddingValues(horizontal = 36.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                LazyRow(contentPadding = PaddingValues(horizontal = 36.dp,vertical=8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     items(row.tiles, key = { it.id }) { tile -> MediaCard(tile, row.wide, onAction) }
                 }
             }

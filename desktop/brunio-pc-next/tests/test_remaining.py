@@ -70,4 +70,21 @@ class RemainingTests(unittest.TestCase):
         self.client.episodes.return_value=[{'episode_number':1,'air_date':'2020-01-01'},{'episode_number':2,'air_date':'2099-01-01'}]
         result=self.call('downloads.season',cloud_id='tmdb:series:1',scope='user:kids',season=1)['result']
         self.assertEqual(result['episodes'],[1])
+    def test_profile_rename_preserves_unrelated_tv_fields(self):
+        self.client.account={'profiles':[{'id':'kids','name':'Kids','avatarValue':'special:extra5','primary':False,'custom':True},{'id':'main','name':'Main','primary':True}]}
+        self.client.profiles.side_effect=lambda rows:self.client.account.update(profiles=rows)
+        result=self.call('profiles.save',scope='user:kids',name='Nuevo',id='kids')
+        self.assertIn('result',result)
+        row=self.client.profiles.call_args.args[0][0]
+        self.assertEqual(row['avatarValue'],'special:extra5');self.assertTrue(row['custom']);self.assertEqual(row['name'],'Nuevo')
+    def test_primary_profile_cannot_be_deleted(self):
+        self.client.account={'profiles':[{'id':'kids','primary':True},{'id':'other'}]}
+        self.assertIn('error',self.call('profiles.delete',scope='user:kids',id='kids'))
+        self.client.rpc.assert_not_called()
+    def test_profile_edit_checks_owner_before_writing(self):
+        self.assertIn('error',self.call('profiles.save',scope='someone:else',name='Changed',id='kids'))
+        self.client.profiles.assert_not_called()
+    def test_profile_avatar_uses_existing_tv_asset_mapping(self):
+        self.assertEqual(self.bridge.profile_avatar('special:extra5'),'asset:brunio_avatar_special5.png')
+        self.assertEqual(self.bridge.profile_avatar('ai:fox'),'asset:brunio_avatar_fox.png')
 if __name__=='__main__':unittest.main()

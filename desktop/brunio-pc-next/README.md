@@ -12,18 +12,18 @@ Las presentaciones de pestañas, selector de perfiles y controles están en Kotl
 
 ## Validación y límites
 
-- 37 pruebas Python pasan con fixtures y catálogo M3U local.
-- Hay pruebas Kotlin definidas para hover y condiciones de botones VOD/series/Live; no ejecutadas.
-- Gradle se descargó, pero este entorno no resuelve el plugin Kotlin. No se consiguió compilar ni ejecutar Compose aquí.
+- 41 pruebas Python pasan con fixtures y catálogo M3U local.
+- La comprobación de Windows del commit `0ca8636` pasó: pruebas Python, compilación Kotlin/Compose y pruebas Kotlin de navegación/condiciones del reproductor. Los cambios posteriores de edición de perfiles requieren otra ejecución.
+- La resolución local de dependencias Gradle sigue fallando; la compilación se comprobó mediante GitHub Actions en Windows, no mediante una ejecución visual de la aplicación.
 - No se ha probado contra la cuenta personal ni en Windows. No se afirma paridad completa con TV.
 
-Se añadió integración de VLCJ con cuadros de vídeo en Compose, controles de transporte, fuentes, selección de pistas de audio/subtítulos, fullscreen, selección de episodios, retry, reanudación, progreso y solicitud de siguiente episodio. Este código nativo NO se ha compilado ni probado aquí; rendimiento y ciclo de vida siguen pendientes de validación en Windows. En desarrollo requiere VLC x64 instalado o BRUNIO_VLC_HOME; todavía no se incluye su runtime en un instalador.
+Se añadió integración de VLCJ con cuadros de vídeo en Compose, controles de transporte, fuentes, selección de pistas de audio/subtítulos, fullscreen, selección de episodios, retry, reanudación, progreso y solicitud de siguiente episodio. El código nativo compiló en Windows, pero reproducción real, rendimiento y ciclo de vida siguen pendientes de validación. En desarrollo requiere VLC x64 instalado o BRUNIO_VLC_HOME; todavía no se incluye su runtime en un instalador.
 
 Los ajustes básicos de audio, subtítulos, límite de archivo para PC, autoplay y retry tienen formularios y servicios conectados. La traducción completa de la interfaz sigue pendiente.
 
 Se añadieron servicios y vistas para cola de descargas, temporadas, biblioteca agrupada, cancelación, eliminación y reproducción offline; chat/reacciones de Party y solicitudes de acceso; administración y prioridad de complementos; y comprobación, descarga verificada y apertura del instalador. Las transferencias mantienen las URLs sólo en memoria. La biblioteca de desarrollo está en `BruniO/PCNext/Downloads`; no migra ni modifica las descargas del cliente anterior. El código de actualización reserva la versión `2.0.0-rc1` y rechaza como actualización las versiones anteriores de PC. No se ha publicado esa versión.
 
-Todavía pendientes de implementación: sincronización del vídeo de Watch Party, suscripciones deportivas del calendario, PiP y multiview, notificaciones, edición de perfiles y otros ajustes avanzados. También faltan empaquetado autónomo del servicio Python/VLC, pruebas completas y revisión visual en Windows. Las acciones pendientes muestran un aviso explícito. No publicar ni distribuir como versión final.
+Todavía pendientes de implementación: sincronización del vídeo de Watch Party, suscripciones deportivas del calendario, PiP y multiview, notificaciones y otros ajustes avanzados. Se añadieron formularios y servicios para crear, renombrar, cambiar avatares básicos y eliminar perfiles mediante las reglas/RPC de TV; falta validar su uso real. También faltan empaquetado autónomo del servicio Python/VLC, pruebas completas y revisión visual en Windows. Las acciones pendientes muestran un aviso explícito. No publicar ni distribuir como versión final.
 
 ## Desarrollo
 

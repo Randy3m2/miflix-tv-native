@@ -22,7 +22,8 @@ class Remaining:
                 'party.create':self.party_create,'party.join':self.party_join,'party.leave':self.party_leave,
                 'party.poll':self.party_poll,'party.send':self.party_send,'party.decide':self.party_decide,
                 'addons.list':self.addons_list,'addons.add':self.addons_add,'addons.remove':self.addons_remove,
-                'addons.order':self.addons_order,'updates.check':self.update_check,
+                'addons.order':self.addons_order,'profiles.save':self.profile_save,'profiles.delete':self.profile_delete,
+                'updates.check':self.update_check,
                 'updates.prepare':self.update_prepare,'updates.poll':self.update_poll,'updates.install':self.update_install}
 
     def scope_id(self):return str(self.client.session.get('userId','local'))+':'+self.client.profile
@@ -185,3 +186,34 @@ class Remaining:
             for chunk in iter(lambda:handle.read(1024*1024),b''):digest.update(chunk);size+=len(chunk)
         if size!=self._update_info['sizeBytes'] or digest.hexdigest()!=self._update_info['sha256']:raise ValueError('Installer changed')
         os.startfile(str(self._update_path));return {'launched':True}
+
+    def profile_avatar(self,value):
+        if isinstance(value,str) and value.startswith('https://') and valid_url(value):return value
+        names={'ai:astronaut':'brunio_avatar_astronaut.png','ai:fox':'brunio_avatar_fox.png','ai:robot':'brunio_avatar_robot.png','ai:dragon':'brunio_avatar_dragon.png','special:photo':'brunio_avatar_special.png','special:extra':'brunio_avatar_extra.png','special:extra3':'brunio_avatar_special3.jpg'}
+        if isinstance(value,str) and re.fullmatch(r'special:extra(?:[4-9]|1[0-5])',value):names[value]='brunio_avatar_special'+value[13:]+'.png'
+        return 'asset:'+names.get(value,'brunio_avatar_astronaut.png')
+    def profile_save(self,scope,name,id=None,avatar=None):
+        self.require_scope(scope)
+        if not isinstance(name,str) or not 1<=len(name.strip())<=24:raise ValueError('Invalid name')
+        if avatar is not None and avatar not in ('ai:astronaut','ai:fox','ai:robot','ai:dragon'):raise ValueError('Invalid avatar')
+        self.client.load_account();rows=[dict(p) for p in self.client.account['profiles']]
+        if id is None:
+            id=str(__import__('uuid').uuid4());rows.append({'id':id,'name':name.strip(),'avatarValue':avatar or 'ai:astronaut','primary':False})
+        else:
+            row=next((p for p in rows if p['id']==id),None)
+            if row is None:raise ValueError('Unknown profile')
+            row['name']=name.strip()
+            if avatar is not None:row['avatarValue']=avatar
+        self.client.profiles(rows)
+        return self.account_view()
+    def profile_delete(self,scope,id):
+        self.require_scope(scope);self.client.load_account()
+        rows=self.client.account['profiles'];target=next((p for p in rows if p['id']==id),None)
+        if not target or target.get('primary') or len(rows)<2:raise ValueError('Cannot remove profile')
+        self.cancel_transfers()
+        if self.client.party:self.client.party_leave()
+        rows=self.client.rpc('miflix_delete_profile',{'target_profile':id})
+        if not isinstance(rows,list) or not rows:raise ValueError('Profile deletion failed')
+        self.client.account['profiles']=rows
+        if self.client.profile==id:self.client.detach();self.client.profile=rows[0]['id']
+        self.persist();return self.account_view()

@@ -54,7 +54,7 @@ fun ConnectedDesktop(onFullscreen: () -> Unit) {
                 }
             }
         }
-        controller.profilePicker -> ProfilePicker(controller.profiles(), { controller.selectProfile(it) }, { controller.message = "La edición de perfiles aún no está migrada." })
+        controller.profilePicker -> ProfilePicker(controller.profiles(), { controller.selectProfile(it) }, { utilities.open("profiles") })
         else -> Box(Modifier.fillMaxSize().background(Color(0xFF080809))) {
             Column(Modifier.fillMaxSize().padding(start = 76.dp)) {
                 if (controller.tab == DesktopTab.Calendar) Row(Modifier.fillMaxWidth().padding(horizontal = 36.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -69,7 +69,7 @@ fun ConnectedDesktop(onFullscreen: () -> Unit) {
             DesktopNavigation(controller.tab, { controller.select(it) }, controller::showProfiles)
         }
     }
-    UtilityDialog(utilities)
+    UtilityDialog(utilities,controller::accountChanged)
     controller.settings?.let { SettingsDialog(it, controller::saveSetting, { controller.settings = null }) }
     if (controller.addFriend) {
         var nickname by remember { mutableStateOf("") }

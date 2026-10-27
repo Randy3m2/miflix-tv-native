@@ -39,6 +39,7 @@ class AppController(private val scope: CoroutineScope, val bridge: BridgeClient)
         try { account = bridge.call("profiles.select", JSONObject().put("profile_id", id)) as JSONObject; profilePicker = false; select(DesktopTab.Home, true) }
         catch (e: Exception) { message = e.message }
     }
+    fun accountChanged(value: JSONObject) { revision++; cache.clear(); playback=null; account=value; profilePicker=true }
     fun profiles(): List<MediaTile> = (account?.optJSONArray("profiles") ?: JSONArray()).objects().map {
         MediaTile(it.getString("id"), it.optString("name"), it.optString("avatar"))
     }

@@ -9,12 +9,13 @@ class Utilities(private val scope: CoroutineScope, private val bridge: BridgeCli
     var dialog by mutableStateOf<String?>(null)
     var downloads by mutableStateOf<JSONObject?>(null)
     var addons by mutableStateOf<JSONObject?>(null)
+    var profiles by mutableStateOf<JSONObject?>(null)
     var party by mutableStateOf<JSONObject?>(null)
     var updates by mutableStateOf<JSONObject?>(null)
     var error by mutableStateOf<String?>(null)
     var busy by mutableStateOf(false)
     private var generation=0L
-    fun reset() { generation++; dialog=null;downloads=null;addons=null;party=null;updates=null;error=null;busy=false }
+    fun reset() { generation++; dialog=null;downloads=null;addons=null;profiles=null;party=null;updates=null;error=null;busy=false }
     fun run(method: String, params: JSONObject=JSONObject(), done:(Any)->Unit={}) {
         val epoch=generation
         scope.launch {
@@ -28,9 +29,21 @@ class Utilities(private val scope: CoroutineScope, private val bridge: BridgeCli
         dialog=kind;error=null
         when(kind) {
             "addons" -> refreshAddons()
+            "profiles" -> run("profiles.list") { profiles=it as JSONObject }
             "party" -> pollParty()
             "updates" -> run("updates.check") { updates=it as JSONObject }
         }
+    }
+    fun saveProfile(name:String,id:String?,avatar:String?,done:(JSONObject)->Unit) {
+        val data=profiles?:return
+        val args=JSONObject().put("scope",data.getString("scope")).put("name",name)
+        if(id!=null)args.put("id",id)
+        if(avatar!=null)args.put("avatar",avatar)
+        run("profiles.save",args) { profiles=it as JSONObject;done(it) }
+    }
+    fun deleteProfile(id:String,done:(JSONObject)->Unit) {
+        val data=profiles?:return
+        run("profiles.delete",JSONObject().put("scope",data.getString("scope")).put("id",id)) { profiles=it as JSONObject;done(it) }
     }
     fun refreshDownloads() = run("downloads.list") { downloads=it as JSONObject }
     fun refreshAddons() = run("addons.list") { addons=it as JSONObject }

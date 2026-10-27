@@ -57,14 +57,17 @@ fun DownloadsScreen(utilities:Utilities,onPlay:(JSONObject)->Unit) {
 }
 
 @Composable
-fun UtilityDialog(utilities:Utilities) {
+fun UtilityDialog(utilities:Utilities,onProfileChanged:(JSONObject)->Unit) {
     val kind=utilities.dialog?:return
     var text by remember(kind){mutableStateOf("")}
+    var profileId by remember(kind){mutableStateOf<String?>(null)}
+    var avatar by remember(kind){mutableStateOf<String?>(null)}
+    var deleteId by remember(kind){mutableStateOf<String?>(null)}
     LaunchedEffect(kind) { if(kind=="party")while(true){utilities.pollParty();delay(2500)} }
     LaunchedEffect(kind,utilities.updates?.optString("status")) {
         if(kind=="updates" && utilities.updates?.optString("status")=="downloading")while(true){delay(2000);utilities.pollUpdate()}
     }
-    AlertDialog(onDismissRequest={utilities.dialog=null},title={Text(when(kind){"party"->"Friends & Party";"addons"->"Complementos";else->"Actualizaciones"})},
+    AlertDialog(onDismissRequest={utilities.dialog=null},title={Text(when(kind){"party"->"Friends & Party";"addons"->"Complementos";"profiles"->"Perfiles";else->"Actualizaciones"})},
         text={Column(Modifier.widthIn(min=420.dp,max=640.dp).heightIn(max=620.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             if(utilities.busy)LinearProgressIndicator(Modifier.fillMaxWidth())
             utilities.error?.let{Text(it,color=MaterialTheme.colorScheme.error)}
@@ -100,6 +103,14 @@ fun UtilityDialog(utilities:Utilities) {
                     OutlinedTextField(text,{text=it},label={Text("URL privada del manifest")},visualTransformation=PasswordVisualTransformation(),singleLine=true)
                     TextButton(onClick={utilities.add(text.trim());text=""},enabled=text.isNotBlank()&&!utilities.busy){Text("Agregar complemento")}
                 }
+                "profiles" -> {
+                    utilities.profiles?.optJSONArray("profiles")?.objects()?.forEach { profile ->
+                        Row { Text(profile.optString("name"),Modifier.weight(1f));TextButton(onClick={profileId=profile.getString("id");text=profile.getString("name");avatar=null}){Text("Editar")};if(!profile.optBoolean("primary"))TextButton(onClick={deleteId=profile.getString("id")}){Text("Eliminar")} }
+                    }
+                    OutlinedTextField(text,{text=it.take(24)},label={Text(if(profileId==null)"Nuevo perfil" else "Nombre del perfil")})
+                    Row { listOf("astronaut","fox","robot","dragon").forEach { key->FilterChip(selected=avatar=="ai:$key",onClick={avatar="ai:$key"},label={Text(key)}) } }
+                    Row { Button(onClick={utilities.saveProfile(text.trim(),profileId,avatar,onProfileChanged);text="";profileId=null},enabled=text.isNotBlank()&&!utilities.busy){Text("Guardar")};TextButton(onClick={text="";profileId=null;avatar=null}){Text("Nuevo perfil")} }
+                }
                 "updates" -> {
                     val update=utilities.updates
                     Text("Versión de desarrollo · ${update?.optString("current","2.0.0-rc1")}")
@@ -114,4 +125,7 @@ fun UtilityDialog(utilities:Utilities) {
                 }
             }
         }},confirmButton={TextButton(onClick={utilities.dialog=null}){Text("Cerrar")}})
+    deleteId?.let { id -> AlertDialog(onDismissRequest={deleteId=null},title={Text("Eliminar perfil")},text={Text("Se eliminará este perfil y sus datos según las reglas de tu cuenta de TV.")},confirmButton={TextButton(onClick={utilities.deleteProfile(id,onProfileChanged);deleteId=null}){Text("Eliminar")}},dismissButton={TextButton(onClick={deleteId=null}){Text("Cancelar")}}) }
+
 }
+

@@ -42,9 +42,9 @@ class Bridge(Screens, Remaining):
 
     def account_view(self):
         # Never return account.privateSetup, sessions, tokens or addon URLs.
-        return {'signedIn': bool(self.client.session), 'profile': self.client.profile,
+        return {'signedIn': bool(self.client.session), 'profile': self.client.profile, 'scope':self.scope_id(),
                 'profiles': [{'id': p.get('id', ''), 'name': p.get('name', ''),
-                              'avatar': p.get('avatar', ''), 'primary': bool(p.get('primary'))}
+                              'avatar': self.profile_avatar(p.get('avatarValue',p.get('avatar','ai:astronaut'))), 'primary': bool(p.get('primary'))}
                              for p in self.client.account.get('profiles', [])]}
 
     def restore(self):

@@ -22,8 +22,8 @@ android {
         applicationId 'com.miflix.native2'
         minSdk 23
         targetSdk 36
-        versionCode 22238
-        versionName '2.0.0-rp134'
+        versionCode 22239
+        versionName '2.0.0-rp135'
 
         buildConfigField 'String', 'SUPABASE_URL', '"https://iwvhigqxsvvgyzdygiqa.supabase.co"'
         buildConfigField 'String', 'SUPABASE_KEY', '"sb_publishable_TdzEQXtDadVMKhSLVe0ihw_EAQ4iNsd"'
@@ -36,6 +36,7 @@ android {
     }
 
     compileOptions {
+        coreLibraryDesugaringEnabled true
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
@@ -67,6 +68,7 @@ gradle.taskGraph.whenReady { graph ->
 }
 
 dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
     implementation 'androidx.core:core:1.17.0'
     // Keep the native TV alpha on the API 36 / AGP 8.13 line.
     // Compose 1.12+ and Coil 3.6+ require compileSdk 37 / AGP 9.1+.

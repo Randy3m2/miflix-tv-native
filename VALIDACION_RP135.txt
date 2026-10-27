@@ -1,0 +1,21 @@
+RP135 · TV · 22239
+
+Base revisada: GitHub main 438c4a9 (RP134). APK público examinado: RP132 / 22236.
+
+VALIDACIÓN LOCAL
+- :app:testReleaseUnitTest: PASS. 444 pruebas, 0 fallos.
+- Kotlin y Java de release: PASS.
+- :app:assembleDebug: PASS, APK de depuración ensamblado.
+- git diff --check: PASS.
+- Diagnóstico: pruebas de exclusión de mensajes privados, cadena de causas cíclica, límite de tamaño y metadatos Unicode: PASS.
+- Auditoría del bytecode DEX: PASS. Las clases deportivas comprobadas utilizan la implementación compatible y el APK incluye j$.time.LocalDate.
+
+SportsBrowseMemoryRP121;: APK RP132 2 referencias java.time; APK RP135 2 referencias j$.time, sin llamadas java.time en esta clase.
+SportsBrowsePolicyRP121;: APK RP132 17 referencias java.time; APK RP135 17 referencias j$.time, sin llamadas java.time en esta clase.
+SportsMetaPolicyRP121;: APK RP132 7 referencias java.time; APK RP135 7 referencias j$.time, sin llamadas java.time en esta clase.
+
+LÍMITES
+No se ejecutó la app en el Firestick afectado ni se obtuvo su registro. Es una corrección de una incompatibilidad demostrada, no una confirmación del motivo de todos los cierres.
+No se generó aquí un APK de producción firmado. El usuario debe ejecutar el workflow TV con su firma permanente para actualizar sin reinstalar.
+No se modificó GitHub, no se publicó una release y no se aplicó SQL.
+El diagnóstico es local y solo cubre errores Java no controlados; un cierre nativo o una terminación directa del sistema puede no producir reporte.

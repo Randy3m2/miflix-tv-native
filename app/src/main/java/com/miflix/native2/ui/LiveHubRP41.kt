@@ -65,7 +65,7 @@ internal fun LiveHubRP41(state:AppState) {
     var revision by remember {mutableIntStateOf(0)}
     val first=remember {FocusRequester()}
     val contentFocusRP44=remember {FocusRequester()}
-    fun changeSectionRP46(value:String) {LiveHubMemoryRP46.section(owner,value);section=value}
+    fun changeSectionRP46(value:String) {CrashReportRP135.stage("live/"+value);LiveHubMemoryRP46.section(owner,value);section=value}
     LaunchedEffect(state.normalLiveEntryRP85) {
         if(state.normalLiveEntryRP85) {changeSectionRP46("hub");state.normalLiveEntryRP85=false}
     }

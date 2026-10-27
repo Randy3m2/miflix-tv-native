@@ -63,7 +63,7 @@ internal fun EasyNavigationRP79(state:AppState,onMoveDown:()->Unit={}) {
             state.easyMlbRP80=false;state.liveAutoEntryRP83=true;state.screen=Screen.LIVE_TV
         }
         FocusButton("MLB",primary=state.screen==Screen.LIVE_TV && state.easyMlbRP80,horizontalPadding=16.dp) {
-            state.easyMlbRP80=true;state.screen=Screen.LIVE_TV
+            com.miflix.native2.data.CrashReportRP135.stage("live/baseball/easy");state.easyMlbRP80=true;state.screen=Screen.LIVE_TV
         }
     }
     if(exit) androidx.compose.ui.window.Dialog(onDismissRequest={exit=false}) {

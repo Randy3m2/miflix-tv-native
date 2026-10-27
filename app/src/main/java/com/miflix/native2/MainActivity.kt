@@ -16,6 +16,7 @@ class MainActivity : ComponentActivity() {
     private var partyCodeRP43 by mutableStateOf<String?>(null)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.miflix.native2.data.CrashReportRP135.install(applicationContext)
         // Covers an old launcher task left over from versions before singleTask.
         if(!isTaskRoot && intent?.action==Intent.ACTION_MAIN &&
             (intent?.hasCategory(Intent.CATEGORY_LAUNCHER)==true || intent?.hasCategory("android.intent.category.LEANBACK_LAUNCHER")==true)) {
@@ -32,6 +33,7 @@ class MainActivity : ComponentActivity() {
         }
         partyCodeRP43 = intent?.data?.takeIf { it.scheme == "miflix" && it.host == "watch-party" }?.getQueryParameter("code")
         setContent { MiFlixNativeApp(partyCodeRP43) }
+        window.decorView.post {com.miflix.native2.data.CrashReportRP135.showPrevious(this)}
     }
 
     override fun onStart() {

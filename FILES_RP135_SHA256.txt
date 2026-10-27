@@ -1,0 +1,10 @@
+032fb2e319aaf4da884ddabbae81e833018438dcb68ae7ceca49be187b72fdda  LEEME_RP135_FIRE_TV.md
+219c4b2cdbcb453d76542603d93d051b91945970e15fe411dfa0b1dde4710991  VALIDACION_RP135.txt
+85933acdf20a19be85b37c501837672976de4f79df91205e5386b39bf82d6a85  app/build.gradle
+9686775ebad0c7e58a87f12289ddba059108afba00c473e83901b3baca545e73  app/src/main/java/com/miflix/native2/MainActivity.kt
+cb0c0845b5f5cc7a1843d00fca6e391a766f497c0d4308bc17d5f1e430ee00a3  app/src/main/java/com/miflix/native2/data/CrashReportRP135.java
+7b02a539f0bff9c25237cdaec8a7bf7749159d205989509f816f87dd88fbe80f  app/src/main/java/com/miflix/native2/data/CrashSummaryRP135.java
+be52607b7292b6df90442443c1fb7c703c39ea324b98a07960ccc33ec29c87b6  app/src/main/java/com/miflix/native2/ui/EasyModeRP79.kt
+2ac5226ec5fd09e12f03d164afe52c1dc925673533e7b15b632eb32dfd6ff4af  app/src/main/java/com/miflix/native2/ui/LiveHubRP41.kt
+a8195bff5417a70ed150a2862c83bc12b6cbb7a8632d72bd9db795dc71be6fe4  app/src/main/java/com/miflix/native2/ui/UpdateNotes.kt
+427cdf335c5fed7e33221bde81ac8f72fc3b72c570fadef513180607f92dae3d  app/src/test/java/com/miflix/native2/data/CrashSummaryRP135Test.java

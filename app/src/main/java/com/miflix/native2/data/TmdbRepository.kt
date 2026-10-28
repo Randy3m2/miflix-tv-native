@@ -20,7 +20,8 @@ import org.json.JSONObject
 import java.net.URLEncoder
 import java.util.Locale
 
-class TmdbRepository(var token: String) {
+class TmdbRepository internal constructor(var token:String,private val fetchRP141:suspend (String,Map<String,String>)->String) {
+    constructor(token:String):this(token,{url,headers->Http.text(url,headers=headers)})
     var language: String = "en-US"
     private val base = "https://api.themoviedb.org/3"
 
@@ -44,13 +45,14 @@ class TmdbRepository(var token: String) {
                 (0 until known.length()).map { known.getJSONObject(it).let { k -> k.optString("title").ifBlank { k.optString("name") } } }.filter { it.isNotBlank() }.take(3).joinToString(" · "))
         }
     }
-    suspend fun actorCredits(personId: Int): List<MediaSummary> {
-        require(personId > 0)
-        val a = get("/person/$personId/combined_credits").optJSONArray("cast") ?: return emptyList()
-        return (0 until a.length()).map { a.getJSONObject(it) }
-            .filter { !it.optBoolean("adult") && it.optString("media_type") in listOf("movie", "tv") }
-            .map { mapItem(it, if(it.optString("media_type")=="tv") "series" else "movie") }
-            .distinctBy { it.cloudId }.sortedByDescending { it.popularity }
+    suspend fun actorCredits(personId:Int):List<MediaSummary> = personCreditsRP141(personId,"actor")
+    internal suspend fun personCreditsRP141(personId:Int,role:String="actor"):List<MediaSummary> {
+        require(personId>0)
+        val locale=language
+        val body=get("/person/$personId/combined_credits",mapOf("language" to locale))
+        return PersonFilmographyRP141.rows(body,personId,role)
+            .map {mapItem(it,if(it.optString("media_type")=="tv") "series" else "movie")}
+            .distinctBy {it.cloudId}.sortedByDescending {it.popularity}
     }
 
     suspend fun filterGenres(type: String): List<CatalogGenre> {
@@ -189,7 +191,7 @@ class TmdbRepository(var token: String) {
             URLEncoder.encode(k, "UTF-8") + "=" + URLEncoder.encode(v, "UTF-8")
         }
         val headers = if (credential.startsWith("eyJ")) mapOf("Authorization" to "Bearer $credential") else emptyMap()
-        return JSONObject(Http.text("$base$path?$query", headers = headers))
+        return JSONObject(fetchRP141("$base$path?$query",headers))
     }
 
     // Theme keywords describe the subject, unlike title searches for "Christmas".

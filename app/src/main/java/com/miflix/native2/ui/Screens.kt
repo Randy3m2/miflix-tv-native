@@ -2826,10 +2826,13 @@ private fun SeasonSelector(state: AppState, count: Int) {
 
 @Composable
 private fun ActorCreditsDialog(person: CastMember, state: AppState, close: () -> Unit) {
-    var credits by remember(person.id) { mutableStateOf<List<MediaSummary>?>(null) }
-    var failure by remember(person.id) { mutableStateOf<String?>(null) }
-    LaunchedEffect(person.id) {
-        try { credits=if(person.creditRole=="director") state.tmdb.directedMovies(listOf(com.miflix.native2.data.DirectorPerson(person.id,person.name,person.profile))) else state.tmdb.actorCredits(person.id) }
+    var credits by remember(person.id,person.creditRole,state.interfaceLanguage,state.kidsMode) { mutableStateOf<List<MediaSummary>?>(null) }
+    var failure by remember(person.id,person.creditRole,state.interfaceLanguage,state.kidsMode) { mutableStateOf<String?>(null) }
+    LaunchedEffect(person.id,person.creditRole,state.interfaceLanguage,state.kidsMode) {
+        try {
+            val loaded=state.tmdb.personCreditsRP141(person.id,person.creditRole)
+            credits=if(state.kidsMode) state.tmdb.kidsFilter(loaded.take(40)) else loaded
+        }
         catch(e: kotlinx.coroutines.CancellationException) { throw e }
         catch(e: Exception) { failure=e.message ?: tr("Error al cargar", "Unable to load") }
     }

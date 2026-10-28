@@ -235,8 +235,11 @@ internal object UpdateNotes {
         "Tráiler con aviso cuando no está disponible; Watch Party abre la sala al crearla." to "Trailer feedback when unavailable; Watch Party opens the room after creation."
     )
     private val mobileReleaseRP135=com.miflix.native2.BuildConfig.APPLICATION_ID.startsWith("com.brunio.mobile")
-    val changes=if(mobileReleaseRP135) mobileRP140Changes else rp138Changes
-    val previousChanges=(if(mobileReleaseRP135) mobileRP139Changes+rp134Changes else rp137Changes+rp136Changes+rp135Changes+rp134Changes)+rp133Changes+rp132Changes+rp131Changes+rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
+    val rp141Changes=listOf(
+        "RP141: Filmografía del reparto corregida en móvil y TV: consulta por identificador, sin mezclar búsquedas anteriores, entrevistas ni apariciones como él mismo." to "RP141: Cast filmography fixed on mobile and TV: exact person ID, without previous search results, talk shows or self appearances."
+    )
+    val changes=rp141Changes
+    val previousChanges=(if(mobileReleaseRP135) mobileRP140Changes+mobileRP139Changes+rp134Changes else rp138Changes+rp137Changes+rp136Changes+rp135Changes+rp134Changes)+rp133Changes+rp132Changes+rp131Changes+rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
         "Menú de amigos: Watch, View Details, Recommendations y Close; detalles abre la ficha sin iniciar reproducción." to "Friend menu: Watch, View Details, Recommendations and Close; details opens the title without starting playback.",
         "Enlaces de Comet y Torrentio con texto ordenado e insignias de Dolby/HDR según sus metadatos." to "Clean Comet and Torrentio link metadata with small Dolby/HDR badges when reported by the source.",
         "Envío local a TV por Wi-Fi, con enlace y código de conexión; sin reproducción web." to "Send titles to TV over local Wi-Fi with a connection link and code; no web playback.",

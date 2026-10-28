@@ -1,0 +1,13 @@
+BruniO RP141 · TV y Mobile M5
+TV 2.0.0-rp141 / 22245
+Mobile 1.0.4-m5-rp141 / 22245
+
+:mobile:testReleaseUnitTest :app:testReleaseUnitTest — BUILD SUCCESSFUL in 3m 17s.
+Móvil: 479 pruebas, 0 fallos, 0 errores.
+TV: 479 pruebas, 0 fallos, 0 errores.
+Incluye compilación Kotlin y Java Release de ambos módulos.
+Siete pruebas de regresión nuevas: dos actores distintos y rutas exactas, filtro Self/archivo/talk shows, película/serie con mismo ID, dirección separada de actuación/producción, rechazo de respuesta de otra persona, idioma por solicitud y entradas inválidas/adultas.
+git diff --check: sin errores.
+
+No se generan APK de producción firmados ni se publica la web desde esta sesión. Los APK estables se generan con los workflows existentes y las firmas habituales.
+Pendiente de TV/teléfono real: navegación del panel, varias selecciones de actores y títulos consecutivos, reintento móvil y perfiles/idiomas.

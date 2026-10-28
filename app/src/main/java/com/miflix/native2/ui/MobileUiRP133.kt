@@ -126,9 +126,9 @@ internal fun MobileSheetRP133(title:String,close:()->Unit,content:@Composable Co
 }
 
 @Composable
-internal fun MobilePosterRP133(state:AppState,item:MediaSummary,modifier:Modifier=Modifier,landscape:Boolean=false,rank:Int?=null) {
+internal fun MobilePosterRP133(state:AppState,item:MediaSummary,modifier:Modifier=Modifier,landscape:Boolean=false,rank:Int?=null,beforeOpenRP141:()->Unit={}) {
     Column(modifier.width(if(landscape) 210.dp else 115.dp).combinedClickable(
-        onClick={state.launch {state.open(item)}},onLongClick={state.titleActions(item,landscape)})) {
+        onClick={beforeOpenRP141();state.launch {state.open(item)}},onLongClick={state.titleActions(item,landscape)})) {
         Box(Modifier.fillMaxWidth().aspectRatio(if(landscape) 16f/9f else 2f/3f).clip(RoundedCornerShape(12.dp)).background(MobilePanelRP133)) {
             LoadingArtworkRP58(if(landscape) item.backdrop ?: item.poster else item.poster,item.title,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
             val progress=state.progress[item.cloudId]?.percent ?: 0.0

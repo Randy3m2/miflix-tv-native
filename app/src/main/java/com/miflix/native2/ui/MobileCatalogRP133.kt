@@ -183,6 +183,8 @@ internal fun MobileDetailsRP133(state:AppState) {
     var friends by remember(item.cloudId) {mutableStateOf<List<com.miflix.native2.data.SocialPerson>>(emptyList())}
     var friendsOpen by remember {mutableStateOf(false)}
     var episodeMenu by remember {mutableStateOf<EpisodeSummary?>(null)}
+    var castPersonRP141 by remember(item.cloudId) {mutableStateOf<CastMember?>(null)}
+    castPersonRP141?.let {person->MobileFilmographyRP141(state,person) {castPersonRP141=null}}
     LaunchedEffect(item.cloudId,state.watchedFriendsOwnerRP93) {friends=runCatching {state.friendsWhoWatchedRP93(item.cloudId)}.getOrDefault(emptyList())}
     val warmup=state.detailsWarmupKeyRP90(item)
     LaunchedEffect(warmup) {if(warmup!=null) state.prefetchDetailsRP90(item,warmup)}
@@ -250,7 +252,7 @@ internal fun MobileDetailsRP133(state:AppState) {
         if(!detail?.cast.isNullOrEmpty()) item("cast") {Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
             Text(tr("Reparto","Cast"),color=Color.White,fontSize=19.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(horizontal=16.dp))
             LazyRow(contentPadding=PaddingValues(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                items(detail?.cast.orEmpty(),key={it.name+it.id}) {person->Column(Modifier.width(92.dp).clickable {state.screen=Screen.SEARCH;state.searchQuery=person.name}) {
+                items(detail?.cast.orEmpty(),key={it.name+it.id}) {person->Column(Modifier.width(92.dp).clickable(enabled=person.id>0) {castPersonRP141=person}) {
                     AsyncImage(person.profile,person.name,Modifier.size(80.dp).clip(RoundedCornerShape(40.dp)).background(MobilePanelRP133),contentScale=ContentScale.Crop)
                     Text(person.name,color=Color.White,fontSize=12.sp,maxLines=2,modifier=Modifier.padding(top=6.dp))
                 }}

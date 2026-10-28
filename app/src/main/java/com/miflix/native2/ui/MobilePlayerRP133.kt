@@ -39,9 +39,14 @@ internal fun MobilePlayerControlsRP133(request:PlayerRequest,paused:Boolean,posi
     seekable:Boolean,nextAvailable:Boolean,easy:Boolean,player:ExoPlayer?,onInteraction:()->Unit,onPlay:()->Unit,
     onClose:()->Unit,onSeek:(Long)->Unit,onMenu:(String)->Unit,onLinks:()->Unit,onEpisodes:()->Unit,
     onNext:()->Unit,onParty:()->Unit,onChat:()->Unit,onReactions:()->Unit,onMultiView:()->Unit,
-    onStats:()->Unit,onInfo:()->Unit,onPip:()->Unit,onResize:()->Unit) {
+    onStats:()->Unit,onInfo:()->Unit,onPip:()->Unit,onResize:()->Unit,onOverlayChangedRP139:(Boolean)->Unit={}) {
     val context=LocalContext.current
-    var more by remember {mutableStateOf(false)}
+    var more by remember(request.playbackId) {mutableStateOf(false)}
+    val latestOverlayRP139 by rememberUpdatedState(onOverlayChangedRP139)
+    DisposableEffect(request.playbackId,more) {
+        val notify=latestOverlayRP139;notify(more)
+        onDispose {notify(false)}
+    }
     var muted by remember(player) {mutableStateOf(player?.volume==0f)}
     LaunchedEffect(more) {while(more) {onInteraction();delay(1000)}}
     fun action(block:()->Unit) {onInteraction();block()}

@@ -53,12 +53,12 @@ internal fun CompactPlayerControls(
     onResize: () -> Unit, onMenu: (String) -> Unit, onLinks: () -> Unit, onSeek: (Long) -> Unit,
     seekable: Boolean, party: Boolean, onParty: () -> Unit, onChat: () -> Unit, onReactions: () -> Unit, onQuickReactions: () -> Unit, onClose: () -> Unit, onMaximize: () -> Unit,
     nextAvailable: Boolean, onNext: () -> Unit, onEpisodes: () -> Unit, onQueue: () -> Unit, onInfo: () -> Unit, onPip: () -> Unit, onMultiView: () -> Unit, onMoment: () -> Unit,
-    previousChannelVisible:Boolean=false,previousChannelAvailable:Boolean=false,previousChannelName:String="",onPreviousChannel:()->Unit={},onScores:()->Unit={},onStatsRP95:()->Unit={},channelFavoriteRP36: @Composable ()->Unit={},badgePlayerRP26:androidx.media3.exoplayer.ExoPlayer?=null,easyModeRP79:Boolean=false
+    previousChannelVisible:Boolean=false,previousChannelAvailable:Boolean=false,previousChannelName:String="",onPreviousChannel:()->Unit={},onScores:()->Unit={},onStatsRP95:()->Unit={},channelFavoriteRP36: @Composable ()->Unit={},badgePlayerRP26:androidx.media3.exoplayer.ExoPlayer?=null,easyModeRP79:Boolean=false,onMobileOverlayRP139:(Boolean)->Unit={}
 ) {
     if(LocalMobileBrunioRP133.current) {
         MobilePlayerControlsRP133(request,paused,position,duration,seekable,nextAvailable,easyModeRP79,badgePlayerRP26,
             onInteraction,onPlay,onClose,onSeek,onMenu,onLinks,
-            {if(request.live) onMenu("channels") else onEpisodes()},onNext,onParty,onChat,onReactions,onMultiView,onStatsRP95,onInfo,onPip,onResize)
+            {if(request.live) onMenu(if(request.liveProvider=="sports") "games" else "channels") else onEpisodes()},onNext,onParty,onChat,onReactions,onMultiView,onStatsRP95,onInfo,onPip,onResize,onMobileOverlayRP139)
         return
     }
     if(easyModeRP79) {

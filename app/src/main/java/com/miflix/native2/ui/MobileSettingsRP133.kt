@@ -59,7 +59,7 @@ internal fun MobileSettingsRP133(state:AppState) {
     if(sheet in listOf("interface","audio","secondary","subtitles","size","text")) MobileSheetRP133(when(sheet) {"size"->tr("Límite por archivo","File size limit");"text"->tr("Tamaño del texto","Text size");else->tr("Idioma","Language")},{sheet=null}) {
         val choices=when(sheet) {
             "interface"->listOf("es" to "Español","en" to "English")
-            "secondary"->listOf("" to tr("Desactivado","Off"))+langs
+            "secondary"->listOf("" to tr("Desactivado","Off"))+langs.filter {it.first!=state.audioLanguage}
             "subtitles"->listOf("off" to tr("Desactivados","Off"))+langs
             "size"->listOf("0" to tr("Sin límite","Unlimited"),"1" to "1 GB","2" to "2 GB","4" to "4 GB","8" to "8 GB","15" to "15 GB","30" to "30 GB")
             "text"->listOf("1" to tr("Normal","Normal"),"1.15" to tr("Grande","Large"),"1.25" to tr("Muy grande","Extra large"))
@@ -103,7 +103,7 @@ internal fun MobileSettingsRP133(state:AppState) {
         }}
         item {MobileSettingsCardRP133(tr("Reproducción","Playback")) {
             MobileSettingRowRP133(tr("Audio principal","Primary audio"),language(state.audioLanguage)) {sheet="audio"}
-            MobileSettingRowRP133(tr("Audio secundario","Secondary audio"),language(state.secondaryAudioLanguageRP62)) {sheet="secondary"}
+            MobileSettingRowRP133(tr("Audio secundario","Secondary audio"),if(state.secondaryAudioLanguageRP62.isBlank()) tr("Desactivado","Off") else language(state.secondaryAudioLanguageRP62)) {sheet="secondary"}
             MobileSettingRowRP133(tr("Subtítulos","Subtitles"),if(state.subtitleLanguage=="off") tr("Desactivados","Off") else language(state.subtitleLanguage)) {sheet="subtitles"}
             MobileSettingRowRP133(tr("Límite de reproducción del celular","Phone playback size limit"),if(state.streamSizeLimitGb==0.0) tr("Sin límite","Unlimited") else "${state.streamSizeLimitGb} GB") {sheet="size"}
             MobileSettingRowRP133(tr("Precarga en detalles","Preload in details"),if(state.sourcePrefetchEnabledRP90) "ON" else "OFF") {state.saveSourcePrefetchRP90(!state.sourcePrefetchEnabledRP90)}
@@ -195,13 +195,28 @@ internal fun MobileProfilesRP133(state:AppState) {
     var name by remember {mutableStateOf("")}
     var avatar by remember {mutableStateOf("ai:astronaut")}
     if(creating || editing!=null) MobileSheetRP133(if(creating) tr("Crear perfil","Create profile") else tr("Editar perfil","Edit profile"),{creating=false;editing=null}) {
-        MobileFieldRP133(name,{name=it.take(24)},tr("Nombre del perfil","Profile name"))
-        ProfileAvatar(Profile("preview",name,avatar),Modifier.size(90.dp))
-        LazyVerticalGrid(GridCells.Adaptive(64.dp),Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-            gridItems(ProfileAvatars,key={it.key}) {option->Box(Modifier.mobileGlassRP133(avatar==option.key).clickable {avatar=option.key}.padding(4.dp)) {ProfileAvatar(Profile("preview",option.label,option.key),Modifier.size(62.dp))}}
+        var group by remember(creating,editing?.id) {mutableStateOf(avatar.takeIf {it.startsWith("pack:")}?.split(":")?.getOrNull(1) ?: "brunio")}
+        val pack=CharacterAvatarPacks.firstOrNull {it.id==group}
+        LazyVerticalGrid(GridCells.Adaptive(68.dp),Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(bottom=24.dp),horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            item(span={GridItemSpan(maxLineSpan)}) {MobileFieldRP133(name,{name=it.take(24)},tr("Nombre del perfil","Profile name"))}
+            item(span={GridItemSpan(maxLineSpan)}) {Box(Modifier.fillMaxWidth(),contentAlignment=Alignment.Center) {ProfileAvatar(Profile("preview",name,avatar),Modifier.size(90.dp))}}
+            item(span={GridItemSpan(maxLineSpan)}) {
+                LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    item {MobileButtonRP133("BruniO",selected=group=="brunio") {group="brunio"}}
+                    items(CharacterAvatarPacks,key={it.id}) {choice->MobileButtonRP133(choice.title,selected=group==choice.id) {group=choice.id}}
+                }
+            }
+            if(pack==null) gridItems(ProfileAvatars,key={it.key}) {option->
+                Box(Modifier.mobileGlassRP133(avatar==option.key).clickable {avatar=option.key}.padding(4.dp),contentAlignment=Alignment.Center) {ProfileAvatar(Profile("preview",option.label,option.key),Modifier.size(56.dp))}
+            } else gridItems(CharacterAvatars.filter {it.pack.id==pack.id},key={it.key}) {option->
+                Column(Modifier.mobileGlassRP133(avatar==option.key).clickable {avatar=option.key}.padding(4.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                    ProfileAvatar(Profile("preview",option.label,option.key),Modifier.size(56.dp))
+                    Text(option.label,color=Color.White,fontSize=10.sp,maxLines=2)
+                }
+            }
+            item(span={GridItemSpan(maxLineSpan)}) {MobileButtonRP133(tr("Guardar","Save"),"check",Modifier.fillMaxWidth(),selected=true,enabled=name.isNotBlank()) {val profile=editing;creating=false;editing=null;state.launch {if(profile==null) state.createProfile(name,avatar) else {state.renameProfile(profile,name);state.setProfileAvatar(profile,avatar)}}}}
+            editing?.takeUnless {it.primary || it.isKids}?.let {profile->item(span={GridItemSpan(maxLineSpan)}) {MobileButtonRP133(tr("Eliminar perfil","Delete profile"),"close",Modifier.fillMaxWidth()) {editing=null;deleting=profile}}}
         }
-        MobileButtonRP133(tr("Guardar","Save"),"check",Modifier.fillMaxWidth(),selected=true,enabled=name.isNotBlank()) {val profile=editing;creating=false;editing=null;state.launch {if(profile==null) state.createProfile(name,avatar) else {state.renameProfile(profile,name);state.setProfileAvatar(profile,avatar)}}}
-        editing?.takeUnless {it.primary || it.isKids}?.let {profile->MobileButtonRP133(tr("Eliminar perfil","Delete profile"),"close",Modifier.fillMaxWidth()) {editing=null;deleting=profile}}
     }
     Box(Modifier.fillMaxSize()) {
         ProfileArtworkBackdropRP63(state)

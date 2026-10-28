@@ -1464,6 +1464,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var maximized by remember { mutableStateOf(true) }
     var speed by remember(request.playbackId) { mutableStateOf(1f) }
     var playbackError by remember(request.playbackId) { mutableStateOf<String?>(null) }
+    var mobileMenuOpenRP139 by remember(request.playbackId) {mutableStateOf(false)}
     var sportsRecoveringRP137 by remember(request.playbackId) {mutableStateOf(false)}
     var sportsRetryPendingRP137 by remember(request.playbackId) {mutableStateOf(false)}
     var sportsExhaustedRP137 by remember(request.playbackId) {mutableStateOf(false)}
@@ -1705,13 +1706,13 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }
     }
     fun recoverSportsRP137() {
-        if(sportsRecoveringRP137 || sportsExhaustedRP137 || request.liveProvider!="sports" || !request.live || request.sportsRecordingRP72 ||
+        if(sportsRecoveringRP137 || sportsExhaustedRP137 || mobileMenuOpenRP139 || request.liveProvider!="sports" || !request.live || request.sportsRecordingRP72 ||
             !state.appForeground || !player.playWhenReady || mini || state.isPlaybackParked(request) || playerMenu!=null || state.sourceSelection!=null || state.playerRequest?.playbackId!=request.playbackId || state.partyRole==PartyRole.GUEST) return
         sportsRecoveringRP137=true;playbackError=null
         channelMenuScopeRP34.launch {
             try {
-                val recovered=state.recoverSportsSourceRP137(request) {playerMenu==null && state.sourceSelection==null && player.playWhenReady && !mini && !state.isPlaybackParked(request) && !player.isPlaying}
-                if(!recovered && state.playerRequest?.playbackId==request.playbackId && state.appForeground && playerMenu==null && state.sourceSelection==null && player.playWhenReady && !mini && !player.isPlaying) {
+                val recovered=state.recoverSportsSourceRP137(request) {!mobileMenuOpenRP139 && playerMenu==null && state.sourceSelection==null && player.playWhenReady && !mini && !state.isPlaybackParked(request) && !player.isPlaying}
+                if(!recovered && state.playerRequest?.playbackId==request.playbackId && state.appForeground && !mobileMenuOpenRP139 && playerMenu==null && state.sourceSelection==null && player.playWhenReady && !mini && !player.isPlaying) {
                     sportsExhaustedRP137=true
                     player.stop()
                     playbackError=tr("No hay enlaces disponibles para este juego.","No links available for this game.")
@@ -1726,7 +1727,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         while(state.playerRequest?.playbackId==request.playbackId) {
             delay(500)
             val eligible=state.appForeground && !mini && !state.isPlaybackParked(request) && player.playWhenReady &&
-                playerMenu==null && state.sourceSelection==null && !sportsRecoveringRP137 && !sportsRetryPendingRP137 &&
+                playerMenu==null && !mobileMenuOpenRP139 && state.sourceSelection==null && !sportsRecoveringRP137 && !sportsRetryPendingRP137 &&
                 !sportsExhaustedRP137 && state.partyRole!=PartyRole.GUEST
             val now=android.os.SystemClock.elapsedRealtime()
             if(eligible && player.playerError!=null) recoverSportsRP137()
@@ -2162,7 +2163,12 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 .background(Color(0xEE171717),RoundedCornerShape(14.dp)).padding(18.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                 Text(if(sportsExhaustedRP137) tr("No hay enlaces disponibles para este juego","No links available for this game") else tr("No se pudo reproducir este canal","This channel could not be played"),color=Color.White,fontSize=18.sp)
                 Text(request.item.title,color=Muted,fontSize=14.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                Text(if(request.liveProvider=="sports") tr("↑ / ↓ Cambiar juego · OK Ver juegos · ← / → Controles","↑ / ↓ Change game · OK Games · ← / → Controls") else tr("↑ / ↓ Cambiar canal · OK Ver canales","↑ / ↓ Change channel · OK Channel list"),color=Color.White,fontSize=12.sp)
+                if(LocalMobileBrunioRP133.current) {
+                    Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                        MobileButtonRP133(if(request.liveProvider=="sports") tr("Otro juego","Another game") else tr("Otro canal","Another channel"),"grid",Modifier.fillMaxWidth()) {playerMenu=if(request.liveProvider=="sports") "games" else "channels"}
+                        if(request.liveProvider=="sports") MobileButtonRP133(tr("Cambiar fuente","Change source"),"link",Modifier.fillMaxWidth()) {playerMenu="sports_links"}
+                    }
+                } else Text(if(request.liveProvider=="sports") tr("↑ / ↓ Cambiar juego · OK Ver juegos · ← / → Controles","↑ / ↓ Change game · OK Games · ← / → Controls") else tr("↑ / ↓ Cambiar canal · OK Ver canales","↑ / ↓ Change channel · OK Channel list"),color=Color.White,fontSize=12.sp)
             }
         } else if(playbackError!=null) {
             val errorMessage=playbackError
@@ -2251,7 +2257,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }
         if(!statsOpenRP95 && (firstFrame || hadPlaybackError) && controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !showEpisodes && !showPartyActions && (!ended || sportsExhaustedRP137)) {
             CompactPlayerControls(request, paused, positionMs, durationMs, speed, maximized, playFocus,
-                badgePlayerRP26=player,easyModeRP79=state.easyModeRP79,
+                badgePlayerRP26=player,easyModeRP79=state.easyModeRP79,onMobileOverlayRP139={mobileMenuOpenRP139=it},
                 previousChannelVisible=request.live && !request.sportsRecordingRP72 && state.previousLiveChannelEnabled,
                 previousChannelAvailable=state.previousLiveChannel(request)!=null && state.partyRole!=PartyRole.GUEST,
                 previousChannelName=state.previousLiveChannel(request)?.item?.title.orEmpty(),

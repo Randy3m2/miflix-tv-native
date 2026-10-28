@@ -36,7 +36,7 @@ internal fun MobileLiveRP133(state:AppState,select:((PlayerRequest)->Unit)?=null
 
     Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         LazyRow(contentPadding=PaddingValues(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            items(listOf("TV","NBA","MLB","F1","LIDOM","Others")) {key->MobileButtonRP133(if(key=="TV") "Live TV" else key,selected=league==key) {league=key}}
+            items(listOf("TV","NBA","MLB","F1","LIDOM","Others")) {key->MobileButtonRP133(if(key=="TV") "Live TV" else if(key=="F1") "F1 · MotoGP" else key,selected=league==key) {league=key}}
         }
         if(league=="TV") MobileChannelsRP133(state,select)
         else MobileSportsRP133(state,league,select)
@@ -177,23 +177,41 @@ private fun MobileSportGamesRP133(state:AppState,league:String,select:((PlayerRe
     links?.let {(channel,streams)->MobileSheetRP133(channel.name,{links=null}) {
         LazyColumn(verticalArrangement=Arrangement.spacedBy(10.dp)) {itemsIndexed(streams) {_,stream->MobileButtonRP133(stream.name+" · "+stream.title,"play",Modifier.fillMaxWidth()) {links=null;play(channel,stream,emptyList())}}}
     }}
-    Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+    var recordingFilter by rememberSaveable(league,category?.id,category?.genre) {mutableStateOf("all")}
+    val recording=remember(league,category,games) {MobileLatestRP139.recordingMode(league,category,games)}
+    val recordingKeys=remember(games,category) {games.associate {it.id to MobileLatestRP139.recordingGroup(it,category)}}
+    val recordingGroups=remember(recordingKeys) {recordingKeys.values.distinct()}
+    val shown=remember(games,recording,recordingFilter,recordingKeys) {if(recording && recordingFilter!="all") games.filter {recordingKeys[it.id]==recordingFilter} else games}
+    LazyVerticalGrid(GridCells.Adaptive(160.dp),Modifier.fillMaxSize(),contentPadding=PaddingValues(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+        item(span={GridItemSpan(maxLineSpan)},key="sport-controls") {
+        Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
         if(categories.size>1) LazyRow(contentPadding=PaddingValues(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {items(categories,key={it.id+it.genre}) {cat->MobileButtonRP133(cat.genre ?: cat.name,selected=cat==category) {skip=0;games=emptyList();category=cat}}}
         if(busy) Text(tr("Cargando eventos…","Loading events…"),color=MobileTintRP133,modifier=Modifier.padding(horizontal=16.dp))
         if(message.isNotBlank()) Text(message,color=Muted,modifier=Modifier.padding(horizontal=16.dp))
-        LazyVerticalGrid(GridCells.Adaptive(160.dp),Modifier.weight(1f),contentPadding=PaddingValues(16.dp),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-            gridItems(games,key={it.id}) {game->Column(Modifier.mobileGlassRP133().combinedClickable(onClick={state.launch {
+        if(recording) {
+            Text(tr("Grabaciones por deporte","Recordings by sport"),color=Muted,fontSize=13.sp)
+            LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                items(listOf("all")+recordingGroups,key={it}) {sport->MobileButtonRP133(when(sport) {
+                    "all"->tr("Todos","All");"basketball"->"NBA";"baseball"->tr("Béisbol","Baseball");"football"->"NFL";"soccer"->tr("Fútbol","Soccer");"f1"->"F1 / MotoGP";"combat"->tr("Combate","Combat");"tennis"->tr("Tenis","Tennis");"hockey"->"Hockey";else->tr("Otros","Other")
+                },selected=recordingFilter==sport) {recordingFilter=sport}}
+            }
+        }
+        }
+        }
+            gridItems(shown,key={it.id}) {game->Column(Modifier.mobileGlassRP133().combinedClickable(onClick={state.launch {
                 if(!resolving) {resolving=true;try {
                     val streams=repo.streams(manifest,game);require(streams.isNotEmpty()) {tr("Sin fuentes disponibles","No sources available")};play(game,streams.first(),streams)
                 } finally {resolving=false}}
             }},onLongClick={state.launch {links=game to repo.streams(manifest,game)}})) {
-                AsyncImage(game.poster,game.name,Modifier.fillMaxWidth().aspectRatio(16f/9f).clip(RoundedCornerShape(topStart=16.dp,topEnd=16.dp)),contentScale=ContentScale.Crop)
+                Box(Modifier.fillMaxWidth().aspectRatio(16f/9f)) {
+                    AsyncImage(game.poster,game.name,Modifier.fillMaxSize().clip(RoundedCornerShape(topStart=16.dp,topEnd=16.dp)),contentScale=ContentScale.Crop)
+                    if(MotoGpCalendarRP138.matches(game.name+" "+category?.name.orEmpty()+" "+category?.genre.orEmpty())) EventLogoRP120(CalendarSourcesRP120.logo("MOTOGP"),"MotoGP",Modifier.align(Alignment.TopStart).padding(6.dp).size(32.dp))
+                }
                 Text(game.name,color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold,maxLines=3,modifier=Modifier.padding(10.dp))
                 Text(SportsBrowsePolicyRP121.startLabel(game.startsAtRP121),color=Muted,fontSize=11.sp,modifier=Modifier.padding(horizontal=10.dp,vertical=6.dp))
             }}
             if(more && !busy) item(span={GridItemSpan(maxLineSpan)}) {MobileButtonRP133(tr("Cargar más juegos","Load more games"),"plus",Modifier.fillMaxWidth()) {skip=nextSkip}}
-            if(!busy && games.isEmpty()) item(span={GridItemSpan(maxLineSpan)}) {Text(tr("La fuente aún no ha publicado eventos.","No events published by this source yet."),color=Muted)}
-        }
+            if(!busy && shown.isEmpty()) item(span={GridItemSpan(maxLineSpan)}) {Text(tr("La fuente aún no ha publicado eventos.","No events published by this source yet."),color=Muted)}
     }
 }
 

@@ -23,8 +23,8 @@ android {
         manifestPlaceholders = [mobileAppLabel: 'BruniO Mobile']
         minSdk 26
         targetSdk 36
-        versionCode 22238
-        versionName '1.0.1-m2-rp134'
+        versionCode 22243
+        versionName '1.0.2-m3-rp139'
 
         buildConfigField 'String', 'SUPABASE_URL', '"https://iwvhigqxsvvgyzdygiqa.supabase.co"'
         buildConfigField 'String', 'SUPABASE_KEY', '"sb_publishable_TdzEQXtDadVMKhSLVe0ihw_EAQ4iNsd"'
@@ -41,6 +41,7 @@ android {
     }
 
     compileOptions {
+        coreLibraryDesugaringEnabled true
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
@@ -73,6 +74,7 @@ gradle.taskGraph.whenReady { graph ->
 }
 
 dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
     implementation 'androidx.core:core:1.17.0'
     // Keep the native TV alpha on the API 36 / AGP 8.13 line.
     // Compose 1.12+ and Coil 3.6+ require compileSdk 37 / AGP 9.1+.

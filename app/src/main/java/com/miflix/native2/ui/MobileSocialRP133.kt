@@ -115,13 +115,19 @@ internal fun MobileSubscriptionsRP133(state:AppState,initialLeague:String,close:
     val subs=remember(revision,owner) {CalendarStoreRP120.subscriptions(context,owner)}
     val permission=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     LaunchedEffect(Unit) {teams=withContext(Dispatchers.IO) {CalendarSourcesRP120.teams(context)}}
+    var feed by remember(owner) {mutableStateOf(CalendarStoreRP120.feed(context,owner))}
+    var status by remember {mutableStateOf("")}
     MobileSheetRP133(tr("Tus equipos y ligas","Your teams and leagues"),close) {
-        LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {items(listOf("NBA","MLB","F1","LIDOM")) {id->MobileButtonRP133(id,selected=league==id) {league=id}}}
-        MobileButtonRP133((if("$league:*" in subs) "✓ " else "+ ")+tr("Seguir liga completa","Follow entire league"),modifier=Modifier.fillMaxWidth(),selected="$league:*" in subs) {
-            if(android.os.Build.VERSION.SDK_INT>=33) permission.launch("android.permission.POST_NOTIFICATIONS")
-            CalendarStoreRP120.toggle(context,owner,"$league:*")
-        }
-        LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            item {LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {items(CalendarSourcesRP120.leagues,key={it}) {id->MobileButtonRP133(MobileLatestRP139.leagueName(id,state.interfaceLanguage=="es"),selected=league==id) {league=id}}}}
+            item {Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                EventLogoRP120(CalendarSourcesRP120.logo(league),league,Modifier.size(48.dp))
+                Text(MobileLatestRP139.leagueName(league,state.interfaceLanguage=="es"),color=Color.White,fontSize=20.sp,fontWeight=FontWeight.Bold)
+            }}
+            item {MobileButtonRP133((if("$league:*" in subs) "✓ " else "+ ")+tr("Seguir ","Follow ")+MobileLatestRP139.leagueName(league,state.interfaceLanguage=="es"),modifier=Modifier.fillMaxWidth(),selected="$league:*" in subs) {
+                if(android.os.Build.VERSION.SDK_INT>=33) permission.launch("android.permission.POST_NOTIFICATIONS")
+                CalendarStoreRP120.toggle(context,owner,"$league:*")
+            }}
             items(teams.filter {it.league==league},key={it.id}) {team->
                 Row(Modifier.fillMaxWidth().mobileGlassRP133("${team.league}:${team.id}" in subs).clickable {
                     if(android.os.Build.VERSION.SDK_INT>=33) permission.launch("android.permission.POST_NOTIFICATIONS")
@@ -132,8 +138,18 @@ internal fun MobileSubscriptionsRP133(state:AppState,initialLeague:String,close:
                     MobileIconRP133(if("${team.league}:${team.id}" in subs) "check" else "plus")
                 }
             }
+            if(league in listOf("BOXING","GRAMMYS","OSCARS","MISS_UNIVERSE")) {
+                item {Text(tr("Fechas confirmadas y eventos de tu fuente JSON opcional.","Confirmed dates and events from your optional JSON feed."),color=Muted,fontSize=13.sp)}
+                item {MobileFieldRP133(feed,{feed=it},tr("Fuente de eventos HTTPS (opcional)","Events HTTPS feed (optional)"),keyboard=androidx.compose.ui.text.input.KeyboardType.Uri)}
+                item {MobileButtonRP133(tr("Guardar fuente de eventos","Save events feed"),"check",Modifier.fillMaxWidth()) {
+                    if(MobileLatestRP139.validFeed(feed)) {CalendarStoreRP120.setFeed(context,owner,feed.trim());status=tr("Fuente guardada","Feed saved")}
+                    else status=tr("Usa un enlace HTTPS válido","Use a valid HTTPS link")
+                }}
+            }
+            if(status.isNotBlank()) item {Text(status,color=Muted,fontSize=13.sp)}
         }
     }
+
 }
 
 @Composable
@@ -153,6 +169,7 @@ private fun MobileCalendarRP133(state:AppState) {
         withContext(Dispatchers.IO) {CalendarStoreRP120.activate(context,owner,state.activeProfile.name);CalendarStoreRP120.refresh(context,owner,month=YearMonth.parse(month))}
     }
     if(subscriptions) MobileSubscriptionsRP133(state,"NBA") {subscriptions=false}
+    val logosByDayRP139=remember(events) {MobileLatestRP139.logosByDay(events)}
     val ym=YearMonth.parse(month);val start=ym.atDay(1).dayOfWeek.value-1
     LazyColumn(contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item {Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -170,7 +187,11 @@ private fun MobileCalendarRP133(state:AppState) {
                         if(date.isNotEmpty()) Column(horizontalAlignment=Alignment.CenterHorizontally) {
                             Text(number.toString(),color=Color.White,fontSize=13.sp)
                             if(state.calendarEvents.any {eventLocal(it.starts).startsWith(date)}) Text("●",color=MobileTintRP133,fontSize=10.sp)
-                            events.firstOrNull {it.day()==date}?.let {event->EventLogoRP120(event.logos.firstOrNull() ?: CalendarSourcesRP120.logo(event.league),event.league,Modifier.size(20.dp))}
+                            val logos=logosByDayRP139[date].orEmpty()
+                            Row(horizontalArrangement=Arrangement.spacedBy(2.dp),verticalAlignment=Alignment.CenterVertically) {
+                                logos.take(2).forEach {logo->EventLogoRP120(logo,"",Modifier.size(13.dp))}
+                                if(logos.size>2) Text("+"+(logos.size-2),color=Muted,fontSize=8.sp)
+                            }
                         }
                     }
                 }

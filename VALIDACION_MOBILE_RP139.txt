@@ -1,0 +1,16 @@
+BruniO Mobile M3 / RP139
+Versión 1.0.2-m3-rp139, versionCode 22243
+
+Base requerida: repositorio TV RP138 actualizado.
+Aplicación estable: com.brunio.mobile, Android 8.0+ (minSdk 26).
+
+Validación final: :mobile:testReleaseUnitTest — BUILD SUCCESSFUL (3m 8s).
+466 pruebas; 0 fallos; 0 errores. Incluye compilación Kotlin/Java Release.
+git diff --check: sin errores.
+
+El APK de producción firmado se genera mediante GitHub Actions: Build BruniO Mobile APK.
+No se generó ni publicó un APK de producción firmado en esta sesión.
+El intento adicional de assembleDebug se interrumpió tras advertencias repetidas de D8 al reescribir metadatos Kotlin. No se incluye ese APK.
+
+Pendiente: prueba táctil en teléfono real y compilación release firmada de CI.
+No hay cambios SQL ni secretos nuevos. No desinstalar para actualizar.

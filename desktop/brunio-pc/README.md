@@ -1,4 +1,12 @@
-# BruniO PC · Windows x64 · 1.0.0-rc6
+## RC7 — Cinematic Fidelity · Windows PC
+
+El diseño del primer screenshot se ha aproximado mediante una portada más luminosa a la derecha, títulos cinematográficos, barra lateral con rutas secundarias agrupadas, logos empaquetados desde `web/assets/platforms`, y tarjetas horizontales de «Continuar viendo» con progreso real. Búsqueda con campo central y halo violeta; detalle con portada ampliada.
+
+Se conserva la lógica de reproducción, favoritos, add-ons y perfiles. RC7 necesita compilarse y validarse visualmente en Windows antes de considerarla una versión estable. Para compilar, ejecuta Build BruniO PC Windows en la rama que contiene los cambios. No afecta Android TV ni Android Mobile.
+
+---
+
+# BruniO PC · Windows x64 · 1.0.0-rc7
 
 ## RC6 · Primer screenshot: rediseño de cinco pantallas
 
@@ -15,10 +23,10 @@ Proyecto de la app de escritorio. Este paquete contiene código fuente y el work
 
 1. Descomprime el ZIP conservando las carpetas. En el repositorio `Randy3m2/miflix-tv-native`, reemplaza `desktop/brunio-pc` con la carpeta incluida y actualiza `.github/workflows/build-pc.yml`. Conserva todos los demás archivos y workflows del repositorio.
 2. En GitHub abre **Actions → Build BruniO PC Windows → Run workflow** en la rama que contiene esos archivos.
-3. Al terminar, descarga el artifact **BruniO-PC-Windows-RC6** o el instalador de la release `pc-v1.0.0-rc6`.
-4. Ejecuta `BruniO-PC-Setup-1.0.0-rc6.exe` en Windows 10/11 x64. No necesitas instalar Python o VLC por separado. El instalador no lleva firma comercial y Windows podría mostrar una advertencia.
+3. Al terminar, descarga el artifact **BruniO-PC-Windows-RC6** o el instalador de la release `pc-v1.0.0-rc7`.
+4. Ejecuta `BruniO-PC-Setup-1.0.0-rc7.exe` en Windows 10/11 x64. No necesitas instalar Python o VLC por separado. El instalador no lleva firma comercial y Windows podría mostrar una advertencia.
 
-El workflow verifica las pruebas, descarga y verifica VLC, construye el instalador y publica los canales de PC `pc-v1.0.0-rc6` y `pc-latest`. No modifica las releases de Android. Si la ejecución falla, revisa el log de Actions: no hay instalador listo hasta que el workflow termine correctamente.
+El workflow verifica las pruebas, descarga y verifica VLC, construye el instalador y publica los canales de PC `pc-v1.0.0-rc7` y `pc-latest`. No modifica las releases de Android. Si la ejecución falla, revisa el log de Actions: no hay instalador listo hasta que el workflow termine correctamente.
 
 ## Uso y alcance
 

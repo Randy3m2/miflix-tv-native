@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-$version = '1.0.0-rc6'
+$version = '1.0.0-rc7'
 $zipUrl = 'https://downloads.videolan.org/videolan/vlc/3.0.23/win64/vlc-3.0.23-win64.zip'
 New-Item -ItemType Directory -Force vendor | Out-Null
 Invoke-WebRequest $zipUrl -OutFile vendor/vlc.zip
@@ -9,7 +9,7 @@ if ($expected -notmatch '^[a-f0-9]{64}$' -or (Get-FileHash vendor/vlc.zip -Algor
 Expand-Archive vendor/vlc.zip -DestinationPath vendor -Force
 python scripts/smoke_vlc.py
 if ($LASTEXITCODE -ne 0) { throw 'VLC smoke test failed' }
-python -m PyInstaller --noconfirm --clean --windowed --onedir --name BruniO-PC --icon assets/brunio.ico --add-data 'assets;assets' --add-data 'LICENSE.txt;.' --add-data 'THIRD_PARTY_NOTICES.md;.' --add-data 'vendor/vlc-3.0.23;vlc' --hidden-import vlc main.py
+python -m PyInstaller --noconfirm --clean --windowed --onedir --name BruniO-PC --icon assets/brunio.ico --add-data 'assets;assets' --add-data '../../web/assets/platforms;assets/platforms' --add-data 'LICENSE.txt;.' --add-data 'THIRD_PARTY_NOTICES.md;.' --add-data 'vendor/vlc-3.0.23;vlc' --hidden-import vlc main.py
 if ($LASTEXITCODE -ne 0) { throw 'PyInstaller failed' }
 $smoke = Start-Process -FilePath dist/BruniO-PC/BruniO-PC.exe -ArgumentList '--smoke-vlc' -PassThru -Wait
 if ($smoke.ExitCode -ne 0) { throw 'Packaged launch smoke test failed' }

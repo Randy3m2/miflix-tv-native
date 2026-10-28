@@ -1911,30 +1911,67 @@ class AppState(context: Context) {
         if(!req.live || playerRequest?.playbackId!=req.playbackId || partyRole==PartyRole.GUEST || kidsMode) return
         val previous=previousLiveChannel(req) ?: return
         // Reuse the last successful request, but start a new live playback at its live edge.
-        openLivePlayer(previous.copy(playbackId=UUID.randomUUID().toString(),resumeMs=0L,sourceFallbackPlaying=null))
+        openLivePlayer(previous.copy(playbackId=UUID.randomUUID().toString(),resumeMs=0L,sourceFallbackPlaying=null,sportsFailedRP137=emptySet(),sportsRefreshedRP137=false))
     }
     internal fun sportsRequestRP71(req:PlayerRequest,rows:List<StreamChoice>):PlayerRequest {
-        val choices=rows.distinctBy {it.url}.take(5)
+        val choices=rows.distinctBy {it.url}.take(com.miflix.native2.data.SportsRecoveryRP137.MAX_LINKS)
         require(choices.isNotEmpty()) {tr("No hay enlaces disponibles","No links available")}
-        return req.copy(stream=choices.first(),sportsLinksRP71=choices,sportsAttemptRP71=0,sportsOwnerRP71="${session?.userId ?: "local"}:${activeProfile.id}")
+        return req.copy(stream=choices.first(),sportsLinksRP71=choices,sportsAttemptRP71=0,sportsOwnerRP71="${session?.userId ?: "local"}:${activeProfile.id}",sportsFailedRP137=emptySet(),sportsRefreshedRP137=false)
     }
-    internal fun nextSportsSourceRP71(req:PlayerRequest):Boolean {
-        val current=playerRequest ?: return false
-        if(current.playbackId!=req.playbackId || !current.live || current.liveProvider!="sports" || screen!=Screen.PLAYER || !appForeground || kidsMode || partyRole==PartyRole.GUEST ||
-            current.sportsOwnerRP71!="${session?.userId ?: "local"}:${activeProfile.id}") return false
-        val index=com.miflix.native2.data.SportsPolicyRP71.nextAttempt(current.sportsAttemptRP71,current.sportsLinksRP71.size)
-        if(index<0) return false
-        openLivePlayer(current.copy(stream=current.sportsLinksRP71[index],sportsAttemptRP71=index,playbackId=UUID.randomUUID().toString(),resumeMs=0L))
-        return true
+    private val sportsRecoveriesRP137=mutableSetOf<String>()
+    private fun sportsRecoveryCurrentRP137(req:PlayerRequest):PlayerRequest? {
+        val current=playerRequest ?: return null
+        return current.takeIf {it.playbackId==req.playbackId && it.live && !it.sportsRecordingRP72 && it.liveProvider=="sports" &&
+            screen==Screen.PLAYER && appForeground && !kidsMode && partyRole!=PartyRole.GUEST &&
+            it.sportsOwnerRP71=="${session?.userId ?: "local"}:${activeProfile.id}"}
     }
-    internal fun sportsStartedRP71(req:PlayerRequest) {
-        val current=playerRequest ?: return
-        if(current.playbackId==req.playbackId && current.sportsLinksRP71.isNotEmpty()) playerRequest=current.copy(sportsLinksRP71=emptyList(),sportsOwnerRP71="")
+    /** Main-thread ownership checks bracket the IO; stale resolutions cannot switch games. */
+    internal suspend fun recoverSportsSourceRP137(req:PlayerRequest,allowed:()->Boolean={true}):Boolean {
+        if(!allowed()) return false
+        var current=sportsRecoveryCurrentRP137(req) ?: return false
+        if(!sportsRecoveriesRP137.add(req.playbackId)) return true
+        try {
+            var failed=current.sportsFailedRP137+current.stream.url
+            var rows=current.sportsLinksRP71.ifEmpty {listOf(current.stream)}
+            var index=SportsRecoveryRP137.next(rows.map {it.url},rows.indexOfFirst {it.url==current.stream.url},failed)
+            var refreshed=current.sportsRefreshedRP137
+            if(index<0 && !refreshed) {
+                refreshed=true
+                // The in-flight set prevents duplicate resolvers; commit the budget only if still active.
+                val manifest=calendarLiveManifest("sports")
+                rows=try {
+                    kotlinx.coroutines.withContext(Dispatchers.IO) {
+                        LiveRepository().streams(manifest,LiveChannel(current.liveChannelId,current.liveType,current.item.title,current.item.backdrop,current.item.overview),forceRefreshRP137=true)
+                    }.distinctBy {it.url}.take(SportsRecoveryRP137.MAX_LINKS)
+                } catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                current=sportsRecoveryCurrentRP137(req) ?: return false
+                if(calendarLiveManifest("sports")!=manifest) return false
+                // A fresh batch may renew authorization headers even when a URL is unchanged.
+                failed=emptySet()
+                index=SportsRecoveryRP137.next(rows.map {it.url},-1,failed)
+            }
+            current=sportsRecoveryCurrentRP137(req) ?: return false
+            if(!allowed()) return false
+            if(index<0) {playerRequest=current.copy(sportsFailedRP137=failed,sportsRefreshedRP137=refreshed);return false}
+            if(rows[index].url==current.stream.url) {delay(450);current=sportsRecoveryCurrentRP137(req) ?: return false}
+            if(!allowed()) return false
+            openLivePlayer(current.copy(stream=rows[index],sportsLinksRP71=rows,sportsAttemptRP71=index,sportsFailedRP137=failed,
+                sportsRefreshedRP137=refreshed,playbackId=UUID.randomUUID().toString(),resumeMs=0L,liveMime=""))
+            return true
+        } finally {sportsRecoveriesRP137.remove(req.playbackId)}
+    }
+    internal fun sportsHealthyRP137(req:PlayerRequest) {
+        val current=sportsRecoveryCurrentRP137(req) ?: return
+        if(current.sportsFailedRP137.isNotEmpty() || current.sportsRefreshedRP137)
+            playerRequest=current.copy(sportsFailedRP137=emptySet(),sportsRefreshedRP137=false)
     }
     fun openLivePlayer(req: PlayerRequest) {
         require(!kidsMode) {tr("TV en vivo no está disponible en Kids.","Live TV is not available in Kids.") }
         if(!rapidPlaybackRP87.accept("${localExtrasScope()}:live:${req.liveProvider}:${req.liveChannelId}:${req.stream.url}",android.os.SystemClock.uptimeMillis())) return
-        val canonicalRP97=if(req.liveChannelId.startsWith(com.miflix.native2.data.FinalPlaylistRP97.PREFIX)) req.copy(liveProvider=CustomChannelsRP45.provider) else req
+        val scopedSportsRP137=if(req.live && req.liveProvider=="sports" && !req.sportsRecordingRP72 && req.sportsOwnerRP71.isBlank())
+            req.copy(sportsOwnerRP71="${session?.userId ?: "local"}:${activeProfile.id}",sportsLinksRP71=req.sportsLinksRP71.ifEmpty {listOf(req.stream)}) else req
+        val canonicalRP97=if(req.liveChannelId.startsWith(com.miflix.native2.data.FinalPlaylistRP97.PREFIX)) req.copy(liveProvider=CustomChannelsRP45.provider) else scopedSportsRP137
         val playback=if(req.liveProvider=="sports" && com.miflix.native2.data.SportsRecordingPolicyRP72.recording(req.liveChannelId,req.item.title,req.item.overview)) req.copy(sportsRecordingRP72=true) else canonicalRP97
         invalidatePlaybackWork()
         if(req.liveProvider.isNotBlank() && req.liveProvider!="lidom" && liveProviderTab!=req.liveProvider) { liveProviderTab=req.liveProvider;liveCategoryId=null }
@@ -4192,7 +4229,9 @@ data class PlayerRequest(
     val sportsLinksRP71: List<StreamChoice> = emptyList(),
     val sportsAttemptRP71: Int = 0,
     val sportsOwnerRP71: String = "",
-    val sportsRecordingRP72: Boolean = false
+    val sportsRecordingRP72: Boolean = false,
+    val sportsFailedRP137: Set<String> = emptySet(),
+    val sportsRefreshedRP137: Boolean = false
 )
 
 data class SourceSelection(

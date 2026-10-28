@@ -1,0 +1,13 @@
+BruniO TV RP137 / 22241
+
+Gradle 8.13 :app:testReleaseUnitTest -Pkotlin.incremental=false --no-build-cache --max-workers=1
+BUILD SUCCESSFUL
+Kotlin Release y Java Release compilados.
+454 pruebas ejecutadas, 0 fallos, 0 errores.
+
+7 pruebas nuevas: selección ordenada y sin ciclos, límite de tanda, URL firmada renovada, atasco después de dos horas, pausa/menús/segundo plano, rearme tras 30 segundos saludables y consulta HTTP real a servidor local (mismo ID de juego, no-cache y headers nuevos de autorización).
+Git diff --check: correcto.
+
+Paquete acumulativo sobre RP135/RP136, con teclado QR RP136 incluido. 12 archivos de código/configuración y 3 documentos. No requiere SQL. No incluye un APK firmado.
+
+Alcance: reproductor principal de juegos del add-on de deportes, normal y fácil. No modifica SplitScreen, VOD, grabaciones ni canales de listas M3U. Validación con fuentes simuladas; falta prueba física de una caída real durante un juego.

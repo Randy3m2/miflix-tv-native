@@ -1468,6 +1468,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var maximized by remember { mutableStateOf(true) }
     var speed by remember(request.playbackId) { mutableStateOf(1f) }
     var playbackError by remember(request.playbackId) { mutableStateOf<String?>(null) }
+    var sportsRecoveringRP137 by remember(request.playbackId) {mutableStateOf(false)}
+    var sportsRetryPendingRP137 by remember(request.playbackId) {mutableStateOf(false)}
+    var sportsExhaustedRP137 by remember(request.playbackId) {mutableStateOf(false)}
     val sportsRetryRP108=remember(request.playbackId) {com.miflix.native2.data.SportsRetryRP108()}
     var advancingSource by remember(request.playbackId) {mutableStateOf(false)}
     var externalSubtitles by remember(request.playbackId) { mutableStateOf<List<SubtitleChoice>>(emptyList()) }
@@ -1705,17 +1708,34 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
         }
     }
+    fun recoverSportsRP137() {
+        if(sportsRecoveringRP137 || sportsExhaustedRP137 || request.liveProvider!="sports" || !request.live || request.sportsRecordingRP72 ||
+            !state.appForeground || !player.playWhenReady || mini || state.isPlaybackParked(request) || playerMenu!=null || state.sourceSelection!=null || state.playerRequest?.playbackId!=request.playbackId || state.partyRole==PartyRole.GUEST) return
+        sportsRecoveringRP137=true;playbackError=null
+        channelMenuScopeRP34.launch {
+            try {
+                val recovered=state.recoverSportsSourceRP137(request) {playerMenu==null && state.sourceSelection==null && player.playWhenReady && !mini && !state.isPlaybackParked(request) && !player.isPlaying}
+                if(!recovered && state.playerRequest?.playbackId==request.playbackId && state.appForeground && playerMenu==null && state.sourceSelection==null && player.playWhenReady && !mini && !player.isPlaying) {
+                    sportsExhaustedRP137=true
+                    player.stop()
+                    playbackError=tr("No hay enlaces disponibles para este juego.","No links available for this game.")
+                    controlsVisible=true;pauseSynopsis=false;pauseInfoDismissed=true
+                }
+            } finally {sportsRecoveringRP137=false}
+        }
+    }
     LaunchedEffect(player,request.playbackId) {
-        if(request.liveProvider!="sports" || request.sportsLinksRP71.isEmpty()) return@LaunchedEffect
-        var activeWait=0L
-        while(!firstFrame && playbackError==null && state.playerRequest?.playbackId==request.playbackId && state.playerRequest?.sportsLinksRP71?.isNotEmpty()==true) {
+        if(request.liveProvider!="sports" || !request.live || request.sportsRecordingRP72) return@LaunchedEffect
+        val watchdog= com.miflix.native2.data.SportsRecoveryRP137()
+        while(state.playerRequest?.playbackId==request.playbackId) {
             delay(500)
-            if(state.appForeground && player.playWhenReady && playerMenu==null) activeWait+=500
-            if(activeWait>=20_000) {
-                if(!state.nextSportsSourceRP71(request) && state.playerRequest?.playbackId==request.playbackId)
-                    playbackError=tr("No iniciaron los primeros enlaces. Usa Cambiar fuente para elegir otro.","The first sources did not start. Use Change source to choose another.")
-                break
-            }
+            val eligible=state.appForeground && !mini && !state.isPlaybackParked(request) && player.playWhenReady &&
+                playerMenu==null && state.sourceSelection==null && !sportsRecoveringRP137 && !sportsRetryPendingRP137 &&
+                !sportsExhaustedRP137 && state.partyRole!=PartyRole.GUEST
+            val now=android.os.SystemClock.elapsedRealtime()
+            if(eligible && player.playerError!=null) recoverSportsRP137()
+            else if(watchdog.stalled(now,player.currentPosition,player.playbackState==Player.STATE_BUFFERING || player.playbackState==Player.STATE_IDLE || player.playbackState==Player.STATE_ENDED,eligible)) recoverSportsRP137()
+            if(watchdog.healthy(now,player.isPlaying,eligible)) state.sportsHealthyRP137(request)
         }
     }
     DisposableEffect(player, playbackView) {
@@ -1731,9 +1751,12 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         val listener = object : Player.Listener {
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                 if(state.playerRequest?.playbackId!=request.playbackId) return
+                if(sportsRecoveringRP137 || sportsExhaustedRP137 || sportsRetryPendingRP137) return
                 if(sportsRetryRP108.take(request.live,request.sportsRecordingRP72,request.liveProvider)) {
+                    sportsRetryPendingRP137=true
                     val wasPlaying=player.playWhenReady
                     channelMenuScopeRP34.launch {
+                        try {
                         delay(250)
                         if(state.playerRequest?.playbackId==request.playbackId) {
                             if(state.appForeground) {
@@ -1744,10 +1767,11 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                                 } catch(e:Exception) {playbackError=playerFailureDetails(error)}
                             } else playbackError=playerFailureDetails(error)
                         }
+                        } finally {sportsRetryPendingRP137=false}
                     }
                     return
                 }
-                if(request.liveProvider=="sports" && state.nextSportsSourceRP71(request)) return
+                if(request.liveProvider=="sports" && request.live && !request.sportsRecordingRP72 && state.partyRole!=PartyRole.GUEST) {recoverSportsRP137();return}
                 // Some IPTV endpoints have no extension and return generic content types.
                 // Retry HLS once only when automatic container detection failed, never on HTTP/auth errors.
                 if(request.liveProvider!="sports" && request.live && request.liveMime!="application/dash+xml" && !triedLiveHls && error.errorCode==androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED) {
@@ -1838,7 +1862,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 updateScreenAwake()
             }
 
-            override fun onRenderedFirstFrame() {if(state.playerRequest?.playbackId!=request.playbackId) return;state.sportsStartedRP71(request);if(!firstFrame && (!strictSpanishRP83 || spanishVerifiedRP83)) state.rememberSuccessfulPlaybackRP16(request);state.recordSuccessfulLiveChannel(request);if(!firstFrame) LiveHubPlaybackRP41.remember(context,state,request);state.socialPlaybackStarted(request,player.currentPosition,player.duration);if(!firstFrame) state.markLidomSourceWorking(request);firstFrame=true;state.finishPlaybackLoading(request.playbackId)}
+            override fun onRenderedFirstFrame() {if(state.playerRequest?.playbackId!=request.playbackId) return;if(!firstFrame && (!strictSpanishRP83 || spanishVerifiedRP83)) state.rememberSuccessfulPlaybackRP16(request);state.recordSuccessfulLiveChannel(request);if(!firstFrame) LiveHubPlaybackRP41.remember(context,state,request);state.socialPlaybackStarted(request,player.currentPosition,player.duration);if(!firstFrame) state.markLidomSourceWorking(request);firstFrame=true;state.finishPlaybackLoading(request.playbackId)}
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if(state.playerRequest?.playbackId!=request.playbackId) return
                 if(playbackState==Player.STATE_READY) state.socialPlaybackReady(request,player.currentPosition,player.duration)
@@ -2115,6 +2139,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 else if(statsOpenRP95 && !mini) Modifier.fillMaxHeight().fillMaxWidth(.64f).align(Alignment.CenterStart)
                 else if(maximized) Modifier.fillMaxSize() else Modifier.fillMaxSize().padding(horizontal=40.dp,vertical=24.dp)
         ) }
+        if(sportsRecoveringRP137) Text(tr("Probando otro enlace…","Trying another link…"),color=Color.White,modifier=Modifier.align(Alignment.TopStart).padding(24.dp).background(Color(0xDD171717),RoundedCornerShape(14.dp)).padding(16.dp))
         if(!firstFrame && !hadPlaybackError && playbackError==null && state.playbackLoading==null) PlaybackArtwork(state,request)
         if(!state.easyModeRP79) ContentWarningOverlayRP31(state,request,firstFrame,visible=!mini && state.appForeground && playerMenu==null && !showEpisodes && !showPartyActions,
             modifier=Modifier.align(Alignment.TopStart).padding(start=28.dp,top=24.dp))
@@ -2130,18 +2155,18 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 FocusButton(tr("Cerrar","Close"),horizontalPadding=14.dp) { parkCurrentPlayback();state.miniPlayer=false;state.playerRequest=null }
             }
         } else if(firstFrame || hadPlaybackError || playbackError!=null) {
-        if(playbackError!=null && request.live && !request.sportsRecordingRP72) {
+        if((playbackError!=null || sportsExhaustedRP137) && request.live && !request.sportsRecordingRP72) {
             val errorMessage=playbackError
             LaunchedEffect(errorMessage) {
                 delay(5000)
-                if(playbackError==errorMessage) playbackError=null
+                if(!sportsExhaustedRP137 && playbackError==errorMessage) playbackError=null
             }
             // Inline notice: no Dialog/window, no focus target, no key interception.
             Column(Modifier.align(Alignment.TopStart).padding(24.dp).widthIn(max=470.dp)
                 .background(Color(0xEE171717),RoundedCornerShape(14.dp)).padding(18.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                Text(tr("No se pudo reproducir este canal","This channel could not be played"),color=Color.White,fontSize=18.sp)
+                Text(if(sportsExhaustedRP137) tr("No hay enlaces disponibles para este juego","No links available for this game") else tr("No se pudo reproducir este canal","This channel could not be played"),color=Color.White,fontSize=18.sp)
                 Text(request.item.title,color=Muted,fontSize=14.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                Text(tr("↑ / ↓ Cambiar canal · OK Ver canales","↑ / ↓ Change channel · OK Channel list"),color=Color.White,fontSize=12.sp)
+                Text(if(request.liveProvider=="sports") tr("↑ / ↓ Cambiar juego · OK Ver juegos · ← / → Controles","↑ / ↓ Change game · OK Games · ← / → Controls") else tr("↑ / ↓ Cambiar canal · OK Ver canales","↑ / ↓ Change channel · OK Channel list"),color=Color.White,fontSize=12.sp)
             }
         } else if(playbackError!=null) {
             val errorMessage=playbackError
@@ -2204,9 +2229,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 FocusButton("OK",modifier=Modifier.focusRequester(first)) { playerMenu=null;controlInteraction++ }
             }
         }
-        if(playerMenu=="sports_links") {LaunchedEffect(request.playbackId) {state.sportsStartedRP71(request)}}
         if(playerMenu=="sports_links") LiveSportsLinksRP44(state,LiveChannel(request.liveChannelId,request.liveType,request.item.title,request.item.backdrop,request.item.overview),{playerMenu=null},manifestOverrideRP49=if(request.liveProvider==com.miflix.native2.data.NuvioTestConfigRP49.PROVIDER) state.calendarLiveManifest(request.liveProvider) else null) {stream ->
-            playerMenu=null;state.openLivePlayer(request.copy(stream=stream,resumeMs=if(request.sportsRecordingRP72) player.currentPosition.coerceAtLeast(0L) else 0L,playbackId=java.util.UUID.randomUUID().toString(),sportsLinksRP71=emptyList(),sportsOwnerRP71=""))
+            playerMenu=null
+            val manual=request.copy(stream=stream,resumeMs=if(request.sportsRecordingRP72) player.currentPosition.coerceAtLeast(0L) else 0L,playbackId=java.util.UUID.randomUUID().toString())
+            state.openLivePlayer(if(request.liveProvider=="sports" && request.live && !request.sportsRecordingRP72) state.sportsRequestRP71(manual,listOf(stream)+request.sportsLinksRP71) else manual)
         }
         sportsTargetRP44?.let {entry ->LiveSportsLinksRP44(state,entry.value,{sportsTargetRP44=null},manifestOverrideRP49=if(entry.provider==com.miflix.native2.data.NuvioTestConfigRP49.PROVIDER) state.calendarLiveManifest(entry.provider) else null) {stream ->
             val c=entry.value;sportsTargetRP44=null
@@ -2227,7 +2253,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 FocusButton(tr("Continuar","Continue")) { state.launch { state.leaveWatchParty();state.beginMultiView(request) } }
             }
         }
-        if(!statsOpenRP95 && (firstFrame || hadPlaybackError) && controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !showEpisodes && !showPartyActions && !ended) {
+        if(!statsOpenRP95 && (firstFrame || hadPlaybackError) && controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !showEpisodes && !showPartyActions && (!ended || sportsExhaustedRP137)) {
             CompactPlayerControls(request, paused, positionMs, durationMs, speed, maximized, playFocus,
                 badgePlayerRP26=player,easyModeRP79=state.easyModeRP79,
                 previousChannelVisible=request.live && !request.sportsRecordingRP72 && state.previousLiveChannelEnabled,

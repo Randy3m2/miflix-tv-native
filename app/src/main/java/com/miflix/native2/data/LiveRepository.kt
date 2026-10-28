@@ -58,10 +58,10 @@ class LiveRepository {
         }
     }
 
-    suspend fun streams(manifest: String, channel: LiveChannel): List<StreamChoice> {
+    suspend fun streams(manifest: String, channel: LiveChannel,forceRefreshRP137:Boolean=false): List<StreamChoice> {
         if(manifest==FinalCatalogRP97.MANIFEST) return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {FinalCatalogRP97.streams(channel)}
         if(IptvRepository.isPlaylist(manifest)) return IptvRepository.streams(channel,manifest)
-        val j = JSONObject(Http.text(LiveManifestUrlRP49.resource(manifest,"stream/${enc(channel.type)}/${enc(channel.id)}.json"), timeoutMs = 25000))
+        val j = JSONObject(Http.text(LiveManifestUrlRP49.resource(manifest,"stream/${enc(channel.type)}/${enc(channel.id)}.json"), headers=if(forceRefreshRP137) mapOf("Cache-Control" to "no-cache","Pragma" to "no-cache") else emptyMap(), timeoutMs = if(forceRefreshRP137) 12000 else 25000))
         val rows = j.optJSONArray("streams") ?: return emptyList()
         val orderSports=SportsPolicyRP71.ordersSports(manifest)
         val streams=(0 until rows.length()).mapNotNull { i ->

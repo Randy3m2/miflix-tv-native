@@ -208,6 +208,7 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
     val easySearchRP80=LocalEasySearchRP80.current
     val owner=state.searchHistoryOwner()
     var query by rememberSaveable(owner) {mutableStateOf(state.searchQuery)}
+    var phoneKeyboardRP136 by remember(owner) {mutableStateOf(false)}
     var cursor by rememberSaveable(owner) {mutableIntStateOf(query.length)}
     var results by remember {mutableStateOf<List<MediaSummary>>(emptyList())}
     var searching by remember {mutableStateOf(false)}
@@ -298,7 +299,11 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
                 LazyColumn(Modifier.width(if(easySearchRP80) 270.dp else 252.dp).fillMaxHeight(),verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=20.dp)) {
                     item {
                         Column(verticalArrangement=Arrangement.spacedBy(7.dp)) {
-                            SearchKey(tr("Voz","Voice"),Modifier.fillMaxWidth(),microphone=true) {dictate()}
+                            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                                SearchKey(tr("Voz","Voice"),Modifier.weight(1f),microphone=true) {dictate()}
+                                SearchKey("QR",Modifier.weight(1f)) {phoneKeyboardRP136=!phoneKeyboardRP136}
+                            }
+                            SearchPhoneKeyboardRP136(state,phoneKeyboardRP136,{replace(it)})
                             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                                 SearchKey(tr("Espacio","Space"),Modifier.weight(1f),keyIcon="space") {insert(" ")}
                                 SearchKey(tr("Borrar letra","Delete letter"),Modifier.weight(1f),keyIcon="backspace") {apply(SearchTextEditor.backspace(query,cursor))}

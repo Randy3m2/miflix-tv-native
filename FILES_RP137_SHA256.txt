@@ -1,0 +1,14 @@
+f47b55f87d4ec52ce08a8e67df3edb376db730735ee615effae4d3359d24db18  LEEME_RP137.md
+fb6c5034793e48d069cc31552d423e1ad6c53e1e5a7c4ac5021ee7575ed7b151  VALIDACION_RP137.txt
+2df0aa97f02b6ed1c9a9d0da130e6413cca42c5be42eba03427d411c4ce3d710  app/build.gradle
+f77993eada17d9d6dce660f23c53bbc7db2fe00a6425774e69e5152672aeb007  app/src/main/java/com/miflix/native2/data/LiveRepository.kt
+7f51b57641774c11df870c7be83479c18260f929a42507a82d6caedb218ac142  app/src/main/java/com/miflix/native2/data/SearchKeyboardServerRP136.java
+968d851da41ebc8a0242e54216db0479735d5439d596821833735f0f79492692  app/src/main/java/com/miflix/native2/data/SportsRecoveryRP137.java
+76bda2c1f863a253885e58f91077bf4244daf6389f0b19517956108b44dae4f7  app/src/main/java/com/miflix/native2/ui/AppState.kt
+6d85397e5819762a6090f982a1c44c7a578de726050bb654a9774fe379aa403d  app/src/main/java/com/miflix/native2/ui/CinematicBrowsing.kt
+59efc3d47b36504645831194a7ad41daf41b92b2caf28e06f03591224fe60b0b  app/src/main/java/com/miflix/native2/ui/Screens.kt
+91206611571edf2fed454fd7627430fa8c27ff609fd1d1a8ff24cf7fa676a031  app/src/main/java/com/miflix/native2/ui/SearchPhoneKeyboardRP136.kt
+c4a855b99d8349081b833d470845180fd30ea50dc223f7872b46a5eee953f8d3  app/src/main/java/com/miflix/native2/ui/UpdateNotes.kt
+096efefcc6ab6b77ec536cb923371ba29d4a572794386218ee0192b680552cf1  app/src/test/java/com/miflix/native2/data/LiveRecoveryHttpRP137Test.kt
+91928245acf1c4e75caedb8b81f24a3ece61e92f65212715a6408b035285d9ec  app/src/test/java/com/miflix/native2/data/SearchKeyboardRP136Test.java
+4e789b478791d9155361bf0482f40f1f136f0ffdf9a6aa1d3ee22fa4489ead4b  app/src/test/java/com/miflix/native2/data/SportsRecoveryRP137Test.java

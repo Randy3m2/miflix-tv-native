@@ -68,7 +68,7 @@ internal fun EventLogoRP120(logo:String,caption:String,modifier:Modifier=Modifie
     val context=LocalContext.current
     var imageFailed by remember(logo) {mutableStateOf(false)}
     val model=remember(logo) {if(logo.startsWith("drawable:")) context.resources.getIdentifier(logo.substringAfter(":"),"drawable",context.packageName) else logo}
-    Box(modifier.background(Color.White.copy(alpha=.06f),RoundedCornerShape(8.dp)),contentAlignment=Alignment.Center) {
+    Box(modifier.background(if(logo.endsWith("/grammys.png")) Color(0xFFF2EAD5) else Color.White.copy(alpha=.06f),RoundedCornerShape(8.dp)),contentAlignment=Alignment.Center) {
         if(logo.isBlank() || imageFailed) Text(caption.take(3),color=Color.White,fontSize=10.sp,fontWeight=FontWeight.Bold)
         else AsyncImage(ImageRequest.Builder(context).data(model).size(128,128).build(),caption,Modifier.fillMaxSize().padding(3.dp),contentScale=ContentScale.Fit,onError={imageFailed=true})
     }
@@ -138,13 +138,13 @@ internal fun CalendarSubscriptionsRP120(state:AppState,initialLeagueRP121:String
             items(CalendarSourcesRP120.leagues) {id ->
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                     EventLogoRP120(CalendarSourcesRP120.logo(id),id,Modifier.size(44.dp))
-                    FocusButton(id+(if(subs.any {it.startsWith("$id:")}) "  ✓" else ""),Modifier.weight(1f)) {league=id;query=""}
+                    FocusButton((if(id=="MOTOGP") "MotoGP" else id)+(if(subs.any {it.startsWith("$id:")}) "  ✓" else ""),Modifier.weight(1f)) {league=id;query=""}
                 }
             }
         } else {
             val id=league!!
             item {FocusButton(tr("‹ Todas las ligas y eventos","‹ All leagues and events")) {league=null}}
-            item {FocusButton((if("$id:*" in subs) "✓ " else "+ ")+tr("Seguir ","Follow ")+id,Modifier.fillMaxWidth(),primary="$id:*" in subs) {follow("$id:*")}}
+            item {FocusButton((if("$id:*" in subs) "✓ " else "+ ")+tr("Seguir ","Follow ")+(if(id=="MOTOGP") "MotoGP" else id),Modifier.fillMaxWidth(),primary="$id:*" in subs) {follow("$id:*")}}
             val choices=teams.filter {it.league==id}
             if(choices.isNotEmpty()) item {NativeTextField(query,{query=it},tr("Buscar equipo","Find team"),modifier=Modifier.fillMaxWidth())}
             items(choices.filter {IptvPlaylist.searchKey(it.name).contains(IptvPlaylist.searchKey(query))},key={it.id}) {team ->

@@ -893,9 +893,9 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
     var helpDescription by remember(category) { mutableStateOf("Select a setting to see its details. Changes are saved on this device.") }
     var helpIndex by remember(category) { mutableStateOf(-1) }
     var visualHelp by remember(category) {mutableStateOf<SettingsHelpRC103?>(null)}
-    val settingsScroll=rememberLazyListState()
+    val settingsScroll=rememberScrollState()
     var settingsViewportRP129 by remember {mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)}
-    LaunchedEffect(category) { settingsScroll.scrollToItem(0) }
+    LaunchedEffect(category) { settingsScroll.scrollTo(0) }
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -960,14 +960,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
     }
     AppShell(state, Screen.SETTINGS, { state.screen = it }) {
         SocialBackdrop()
-        CompositionLocalProvider(LocalSettingsViewportRP129 provides settingsViewportRP129,LocalSettingsHelpRC103 provides {visualHelp=it},LocalBringIntoViewSpec provides object : BringIntoViewSpec {
-            override fun calculateScrollDistance(offset: Float,size: Float,containerSize: Float): Float = when {
-                size>containerSize-48 -> offset-24
-                offset<24 -> offset-24
-                offset+size>containerSize-24 -> offset+size-containerSize+24
-                else -> 0f
-            }
-        }) {
+        CompositionLocalProvider(LocalSettingsViewportRP129 provides settingsViewportRP129,LocalSettingsHelpRC103 provides {visualHelp=it},LocalBringIntoViewSpec provides SettingsBringRP138) {
         Column(Modifier.fillMaxSize().padding(horizontal=34.dp)) {
             Text(tr("Configuración","Settings"),color=Color.White,fontSize=34.sp,lineHeight=41.sp,fontWeight=FontWeight.Black,
                 modifier=Modifier.padding(top=24.dp))
@@ -979,8 +972,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
             }
             Spacer(Modifier.height(18.dp))
             Row(Modifier.weight(1f).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(22.dp)) {
-                LazyColumn(Modifier.weight(.7f).fillMaxHeight().onGloballyPositioned {settingsViewportRP129=it.boundsInWindow()},state=settingsScroll,
-                    contentPadding=PaddingValues(top=8.dp,bottom=42.dp),verticalArrangement=Arrangement.spacedBy(20.dp)) {
+                SettingsScrollColumnRP138(Modifier.weight(.7f).fillMaxHeight().onGloballyPositioned {settingsViewportRP129=it.boundsInWindow()},settingsScroll) {
                     if(category=="system" && !state.kidsMode) item(key="final-m3u-rp97") {
                         SettingsSectionCard(onFocused={helpTitle=tr("Canales Live TV","Live TV channels");helpDescription=tr("Actualiza la lista M3U por URL Raw, sin otra build. El QR funciona en la red local y conserva la última copia válida si falla la descarga.","Update the M3U using a Raw URL without another build. QR works on the local network; failed downloads retain the last valid copy.");visualHelp=null}) {FinalM3USettingsRP97(state)}
                     }
@@ -1073,11 +1065,15 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         "Links: Latin American and Spain Spanish first, then the selected secondary language."),color=Muted,fontSize=14.sp)
                     Text(tr("Con BruniO Native activado en Fuentes, también buscamos por el título original y en español, priorizando latino.","With BruniO Native enabled in Sources, we also search original and Spanish titles, prioritizing Latino releases."),color=Muted,fontSize=14.sp)
                 }
-                LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(vertical=8.dp)) { item { FlowRow(horizontalArrangement=Arrangement.spacedBy(18.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+                FlowRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                     listOf("" to tr("Automático","Auto"), "es" to "Español", "en" to "English", "pt" to "Português", "fr" to "Français", "ko" to "Korean · 한국어").forEach { (code,label) ->
                         FocusButton(label,primary=state.audioLanguage==code) { state.savePlaybackPreferences(code,state.subtitleLanguage,state.autoplayNext) }
                     }
-                } } }
+                }
+                        }
+                    }
+                    if(category=="language") item(key="secondary-audio-rp138") {
+                        SettingsSectionCard {
                 Text(tr("Idioma secundario · este perfil","Secondary language · this profile"),color=Color.White,fontSize=18.sp)
                 Text(tr("Si el principal no está disponible, intenta este idioma automáticamente. No cambia el idioma de la interfaz.","If the primary language is unavailable, automatically try this language. Does not change the interface language."),color=Muted,fontSize=14.sp)
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
@@ -1162,11 +1158,11 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     if(category=="language") item(key="setting-5") {
                         SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="Subtitles";helpDescription="Choose the subtitle language used for playback.";helpIndex=5 }) {
                 Text("${tr("Subtítulos","Subtitles")}: ${state.subtitleLanguage}",color=Muted)
-                LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(vertical=8.dp)) { item { FlowRow(horizontalArrangement=Arrangement.spacedBy(18.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+                FlowRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                     listOf("off" to tr("Desactivado","Off"), "es" to "Español", "en" to "English", "pt" to "Português", "fr" to "Français", "ko" to "Korean · 한국어").forEach { (code,label) ->
                         FocusButton(label,primary=state.subtitleLanguage==code) { state.savePlaybackPreferences(state.audioLanguage,code,state.autoplayNext) }
                     }
-                } } }
+                }
 
                         }
                     }

@@ -9,7 +9,7 @@ internal fun liveSportGroupRP41(category:LiveCategory):String {
         listOf("american football","americanfootball","nfl","ncaaf","fútbol americano","futbol americano").any {it in text}->"football"
         listOf("basketball","basket ball","nba","baloncesto").any {it in text}->"basketball"
         listOf("baseball","mlb","béisbol","beisbol").any {it in text}->"baseball"
-        listOf("formula 1","formula1","formula one","fórmula","f1","motorsport","motor sport","racing").any {it in text}->"f1"
+        listOf("formula 1","formula1","formula one","fórmula","f1","motorsport","motor sport","racing","motogp","moto gp").any {it in text}->"f1"
         listOf("soccer","football","fútbol","futbol").any {it in text}->"soccer"
         else->"others"
     }

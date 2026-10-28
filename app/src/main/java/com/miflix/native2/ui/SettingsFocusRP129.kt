@@ -32,7 +32,8 @@ internal fun Modifier.settingsCardHeaderRP129():Modifier {
     val firstActions=with(LocalDensity.current) {160.dp.toPx()}
     DisposableEffect(Unit) {onDispose {work[0]?.cancel()}}
     return bringIntoViewRequester(requester).onGloballyPositioned {own[0]=it}.onFocusedBoundsChanged {focused ->
-        if(target[0]!==focused) {work[0]?.cancel();target[0]=focused}
+        if(target[0]===focused) return@onFocusedBoundsChanged
+        work[0]?.cancel();target[0]=focused
         val card=own[0]
         if(focused!=null && card!=null && focused.isAttached && card.isAttached && viewport!=null && work[0]?.isActive!=true) {
             val bounds=card.boundsInWindow()

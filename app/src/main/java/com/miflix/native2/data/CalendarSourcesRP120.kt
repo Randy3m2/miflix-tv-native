@@ -28,15 +28,16 @@ internal data class SportEventRP120(val id:String,val league:String,val title:St
 }
 
 internal object CalendarSourcesRP120 {
-    val leagues=listOf("NBA","MLB","LIDOM","F1","BOXING","GRAMMYS","OSCARS","MISS_UNIVERSE")
+    val leagues=listOf("NBA","MLB","LIDOM","F1","MOTOGP","BOXING","GRAMMYS","OSCARS","MISS_UNIVERSE")
     fun logo(league:String)=when(league) {
         "NBA","MLB" ->"https://a.espncdn.com/i/teamlogos/leagues/500/${league.lowercase()}.png"
+        "MOTOGP"->"file:///android_asset/league_logos_rp138/motogp.png"
         "F1"->"drawable:calendar_f1_official_rp123"
-        "BOXING"->"drawable:calendar_boxing_rp120"
-        "GRAMMYS"->"drawable:calendar_music_rp120"
-        "OSCARS"->"drawable:calendar_trophy_rp120"
-        "MISS_UNIVERSE"->"drawable:calendar_crown_rp120"
-        "LIDOM"->"drawable:calendar_baseball_rp120"
+        "BOXING"->"file:///android_asset/league_logos_rp138/boxing.svg"
+        "GRAMMYS"->"file:///android_asset/league_logos_rp138/grammys.png"
+        "OSCARS"->"file:///android_asset/league_logos_rp138/oscars.png"
+        "MISS_UNIVERSE"->"file:///android_asset/league_logos_rp138/miss_universe.png"
+        "LIDOM"->"file:///android_asset/league_logos_rp138/lidom.png"
         else->""
     }
     fun teams(context:Context):List<CalendarTeamRP120> {
@@ -45,6 +46,7 @@ internal object CalendarSourcesRP120 {
     }
     private suspend fun json(url:String,maxChars:Int=2*1024*1024)=JSONObject(withContext(Dispatchers.IO) {Http.text(url,timeoutMs=8000).also {require(it.length<=maxChars) {"Schedule response too large"}}})
     suspend fun schedule(league:String,start:LocalDate,end:LocalDate,teams:List<CalendarTeamRP120>):List<SportEventRP120> {
+        if(league=="MOTOGP") return MotoGpCalendarRP138.schedule(start,end)
         if(league=="F1") {
             val events=mutableListOf<SportEventRP120>()
             for(year in start.year..end.year) events+=f1(json("https://api.jolpi.ca/ergast/f1/$year.json?limit=100"))

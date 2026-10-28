@@ -33,7 +33,7 @@ internal object SportsBrowsePolicyRP121 {
             "lidom"->lidom(text)
             "basketball"->listOf("wnba","ncaa","ncaab","euroleague").none {" $it " in value}
             "baseball"->!lidom(text) && listOf("npb","kbo","lmp").none {" $it " in value}
-            "f1"->listOf("motogp","nascar","indycar","f2","f3").none {" $it " in value}
+            "f1"->listOf("nascar","indycar","f2","f3","moto2","moto3").none {" $it " in value}
             else->true
         }
     }

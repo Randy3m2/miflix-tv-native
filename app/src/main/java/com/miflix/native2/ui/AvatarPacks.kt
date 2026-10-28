@@ -14,11 +14,14 @@ import androidx.compose.ui.unit.IntSize
 import com.miflix.native2.R
 import kotlin.math.roundToInt
 
-data class CharacterAvatarPack(val id: String,val title: String,val image: Int,val names: List<String>)
+data class CharacterAvatarPack(val id: String,val title: String,val image: Int,val names: List<String>,val portraits:List<Int> = emptyList())
 data class CharacterAvatar(val key: String,val label: String,val pack: CharacterAvatarPack,val index: Int)
 
-// One five-portrait atlas per pack keeps APK asset count and texture decoding small.
+// Existing atlas keys stay intact; new packs use small bundled character portraits.
 val CharacterAvatarPacks=listOf(
+    CharacterAvatarPack("friends","Friends",R.drawable.brunio_friends_0_rp138,listOf("Rachel Green","Monica Geller","Phoebe Buffay","Joey Tribbiani","Chandler Bing","Ross Geller"),portraits=listOf(R.drawable.brunio_friends_0_rp138,R.drawable.brunio_friends_1_rp138,R.drawable.brunio_friends_2_rp138,R.drawable.brunio_friends_3_rp138,R.drawable.brunio_friends_4_rp138,R.drawable.brunio_friends_5_rp138)),
+    CharacterAvatarPack("visionquest","VisionQuest",R.drawable.brunio_visionquest_0_rp138,listOf("Vision","Ultron","Thomas","F.R.I.D.A.Y.","E.D.I.T.H.","J.A.R.V.I.S."),portraits=listOf(R.drawable.brunio_visionquest_0_rp138,R.drawable.brunio_visionquest_1_rp138,R.drawable.brunio_visionquest_2_rp138,R.drawable.brunio_visionquest_3_rp138,R.drawable.brunio_visionquest_4_rp138,R.drawable.brunio_visionquest_5_rp138)),
+    CharacterAvatarPack("loki","Loki",R.drawable.brunio_loki_0_rp138,listOf("Loki","Mobius M. Mobius","Sylvie","Hunter B-15","Ravonna Lexus Renslayer","Miss Minutes"),portraits=listOf(R.drawable.brunio_loki_0_rp138,R.drawable.brunio_loki_1_rp138,R.drawable.brunio_loki_2_rp138,R.drawable.brunio_loki_3_rp138,R.drawable.brunio_loki_4_rp138,R.drawable.brunio_loki_5_rp138)),
     CharacterAvatarPack("f1","Formula 1",R.drawable.brunio_pack_f1,listOf("Lewis Hamilton","Max Verstappen","Fernando Alonso","Charles Leclerc","Lando Norris")),
     CharacterAvatarPack("got","Game of Thrones",R.drawable.brunio_pack_got,listOf("Jon Snow","Daenerys","Tyrion","Arya","Cersei")),
     CharacterAvatarPack("lanterns","Lanterns",R.drawable.brunio_pack_lanterns,listOf("Hal Jordan","John Stewart","Sinestro","Sheriff Kerry","William Macon")),
@@ -49,6 +52,10 @@ private object AvatarAtlasCache {
 
 @Composable
 internal fun CharacterAvatarImage(avatar: CharacterAvatar,modifier: Modifier=Modifier) {
+    if(avatar.pack.portraits.isNotEmpty()) {
+        androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(avatar.pack.portraits[avatar.index]),avatar.label,modifier,alignment=androidx.compose.ui.Alignment.TopCenter,contentScale=androidx.compose.ui.layout.ContentScale.Crop)
+        return
+    }
     val resources=LocalContext.current.resources
     val atlas=remember(avatar.pack.image) { AvatarAtlasCache.image(resources,avatar.pack.image) }
     Canvas(modifier) {

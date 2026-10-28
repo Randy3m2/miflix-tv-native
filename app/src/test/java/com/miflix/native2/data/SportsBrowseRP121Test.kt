@@ -24,7 +24,7 @@ class SportsBrowseRP121Test {
         assertFalse(SportsBrowsePolicyRP121.lidom("San Francisco Giants vs Tigers"));assertFalse(SportsBrowsePolicyRP121.lidom("Toros de Tijuana"))
     }
     @Test fun separateSportsDoNotMix() {
-        assertFalse(SportsBrowsePolicyRP121.leagueEvent("basketball","WNBA finals"));assertFalse(SportsBrowsePolicyRP121.leagueEvent("f1","MotoGP"))
+        assertFalse(SportsBrowsePolicyRP121.leagueEvent("basketball","WNBA finals"));assertTrue(SportsBrowsePolicyRP121.leagueEvent("f1","MotoGP"));assertFalse(SportsBrowsePolicyRP121.leagueEvent("f1","NASCAR"))
         assertFalse(SportsBrowsePolicyRP121.leagueEvent("baseball","LIDOM: Licey vs Aguilas"))
         assertTrue(SportsBrowsePolicyRP121.leagueEvent("baseball","Dodgers vs Yankees"))
     }

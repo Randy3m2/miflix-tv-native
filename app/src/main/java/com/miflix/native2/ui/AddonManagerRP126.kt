@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class,androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 
 package com.miflix.native2.ui
 
@@ -50,6 +50,7 @@ private fun AddonManagerContentRP126(state:AppState,close:()->Unit) {
         }}
     }
     PlayerMenuDialog(onDismissRequest=close,fullScreen=true) {
+        CompositionLocalProvider(androidx.compose.foundation.gestures.LocalBringIntoViewSpec provides SettingsBringRP138) {
         Column(Modifier.fillMaxSize().background(Bg).padding(horizontal=34.dp,vertical=22.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 Column(Modifier.weight(1f)) {
@@ -86,6 +87,7 @@ private fun AddonManagerContentRP126(state:AppState,close:()->Unit) {
                     }
                 }
             }
+        }
         }
     }
     if(order) AddonPrioritySettingsRP2(state) {order=false}

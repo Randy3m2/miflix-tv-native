@@ -1,0 +1,13 @@
+BruniO TV RP138 / 22242
+
+Gradle 8.13 :app:clean :app:testReleaseUnitTest -Pkotlin.incremental=false --no-build-cache --max-workers=1
+BUILD SUCCESSFUL
+Kotlin Release y Java Release compilados.
+461 pruebas, 0 fallos, 0 errores.
+
+7 pruebas nuevas: normalización de offsets horarios MotoGP, exclusión Moto2, fechas sin horas inventadas, cancelaciones/aplazamientos, eventos ocultos y temporadas, convivencia F1/MotoGP, distancias de scroll para controles visibles/fuera de pantalla. La prueba anterior de separación de deportes se actualizó para la nueva convivencia explícita de F1/MotoGP.
+
+Respuesta real del calendario MotoGP verificada desde la fuente oficial. 18 imágenes de personajes y cinco logos PNG decodificados y verificados. Boxing SVG incluido. Referencias a archivos de logos y recursos de avatares comprobadas contra los archivos del ZIP.
+Git diff --check: correcto. ZIP íntegro y limitado a 41 archivos de código/recursos más cuatro documentos.
+
+No se generó APK firmado ni se probó la navegación con control remoto en una TV física. El comportamiento visual y de foco requiere confirmación en TV. El parche aplica sobre RP137, conserva el teclado QR RP136 y la recuperación deportiva RP137. No requiere SQL.

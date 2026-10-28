@@ -77,7 +77,9 @@ internal fun LiveHubRP41(state:AppState) {
         Column(Modifier.weight(1f).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         if(section!="hub") Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
             FocusButton("‹",horizontalPadding=14.dp) {if(section=="hub") state.screen=Screen.HOME else back()}
-            Text(if(section=="hub") tr("En Vivo","Live") else when(section) {"basketball"->"NBA · Basketball";"baseball"->"MLB · Baseball";"football"->"NFL · American Football";"soccer"->tr("Fútbol","Football");"f1"->"F1";"lidom"->"LIDOM";"tv"->tr("Canales de TV","TV Channels");"nauta-source"->"Nauta Source";else->"Others"},color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
+            if(section in listOf("f1","lidom")) EventLogoRP120(CalendarSourcesRP120.logo(if(section=="f1") "F1" else "LIDOM"),section,Modifier.size(34.dp))
+            if(section=="f1") EventLogoRP120(CalendarSourcesRP120.logo("MOTOGP"),"MotoGP",Modifier.size(42.dp))
+            Text(if(section=="hub") tr("En Vivo","Live") else when(section) {"basketball"->"NBA · Basketball";"baseball"->"MLB · Baseball";"football"->"NFL · American Football";"soccer"->tr("Fútbol","Football");"f1"->"F1 · MotoGP";"lidom"->"LIDOM";"tv"->tr("Canales de TV","TV Channels");"nauta-source"->"Nauta Source";else->"Others"},color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
             if(section=="others") {
                 FocusButton(tr("Marcadores en vivo","Live scores")) {state.showLiveScoresRP11=true}
                 FocusButton(tr("Mis canales","My channels")) {customChannelsRP45=true}
@@ -299,7 +301,9 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,dayRP1
     var showCalendarRP120 by remember {mutableStateOf(false)}
     if(showStandingsRP120) StandingsScreenRP120 {showStandingsRP120=false}
     if(showCalendarRP120) CalendarDialog(state) {showCalendarRP120=false}
-    Column(modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+    LazyVerticalGrid(GridCells.Adaptive(240.dp),modifier.fillMaxSize(),horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(6.dp,6.dp,6.dp,40.dp)) {
+        item(span={GridItemSpan(maxLineSpan)},key="sports-controls-rp138") {
+        Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
         if(section=="others") Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
             FocusButton(tr("Tabla de posiciones","Standings")) {showStandingsRP120=true}
             FocusButton(tr("Calendario y suscripciones","Calendar & subscriptions")) {showCalendarRP120=true}
@@ -332,8 +336,9 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,dayRP1
         if(iptvWarningRP43.isNotBlank()) Text(iptvWarningRP43,color=Muted,fontSize=12.sp)
         if(nautaWarningRP42.isNotBlank()) Text(nautaWarningRP42,color=Muted,fontSize=12.sp)
         if(message.isNotBlank()) {Text(message,color=Muted);FocusButton(tr("Reintentar","Retry")) {retry++}}
-        LazyVerticalGrid(GridCells.Adaptive(240.dp),Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(6.dp,6.dp,6.dp,30.dp)) {
-            items(displayedRP42,key={it.key}) {event ->HubEventCardRP41(event.channel.name,event.channel.poster,when {event.provider=="nauta"->if(f1ChannelRP42(event.channel.name)) "Live TV · F1" else "Live TV · DAZN";event.provider in IptvRepository.sources->"IPTV · "+IptvRepository.sources[event.provider]?.first.orEmpty();else->listOf(SportsBrowsePolicyRP121.startLabel(event.channel.startsAtRP121),event.channel.description).filter {it.isNotBlank()}.joinToString(" · ")},onHoldRP48={tune(event,manual=true)}) {tune(event)}}
+        }
+        }
+            items(displayedRP42,key={it.key}) {event ->HubEventCardRP41(event.channel.name,event.channel.poster,when {event.provider=="nauta"->if(f1ChannelRP42(event.channel.name)) "Live TV · F1" else "Live TV · DAZN";event.provider in IptvRepository.sources->"IPTV · "+IptvRepository.sources[event.provider]?.first.orEmpty();else->listOf(SportsBrowsePolicyRP121.startLabel(event.channel.startsAtRP121),event.channel.description).filter {it.isNotBlank()}.joinToString(" · ")},sportLogoRP138=if(MotoGpCalendarRP138.matches(event.channel.name+" "+event.category.name+" "+event.category.genre.orEmpty())) CalendarSourcesRP120.logo("MOTOGP") else "",onHoldRP48={tune(event,manual=true)}) {tune(event)}}
             if(!loading && displayedRP42.isEmpty() && customRowsRP48.isEmpty() && message.isBlank()) item(span={GridItemSpan(maxLineSpan)}) {Text(tr("No hay eventos publicados ahora.","No events published right now."),color=Muted)}
             if(more && !loading) item(span={GridItemSpan(maxLineSpan)}) {FocusButton(tr("Cargar más","Load more")) {
                 val c=selected
@@ -356,7 +361,6 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,dayRP1
                     finally {if(stamp==generation) loading=false}
                 }
             }}
-        }
     }
     customManageRP48?.let {channel ->CustomChannelManageRP48(state,channel) {customManageRP48=null}}
 
@@ -364,7 +368,7 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,dayRP1
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-internal fun HubEventCardRP41(title:String,poster:String?,subtitle:String,onHoldRP48:(()->Unit)?=null,logoRP50:Boolean=false,click:()->Unit) {
+internal fun HubEventCardRP41(title:String,poster:String?,subtitle:String,onHoldRP48:(()->Unit)?=null,logoRP50:Boolean=false,sportLogoRP138:String="",click:()->Unit) {
     var logoFailedRP50 by remember(poster) {mutableStateOf(false)}
     var focused by remember(title) {mutableStateOf(false)}
     val bring=remember {BringIntoViewRequester()}
@@ -377,6 +381,7 @@ internal fun HubEventCardRP41(title:String,poster:String?,subtitle:String,onHold
             if(!poster.isNullOrBlank() && !logoFailedRP50) AsyncImage(poster,null,Modifier.fillMaxSize().padding(if(logoRP50) 22.dp else 0.dp),contentScale=if(logoRP50) ContentScale.Fit else ContentScale.Crop,onError={logoFailedRP50=true})
             else Text(title,color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(14.dp),maxLines=2)
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0x80000000)))))
+            if(sportLogoRP138.isNotBlank()) EventLogoRP120(sportLogoRP138,"MotoGP",Modifier.align(Alignment.TopStart).padding(8.dp).size(58.dp))
         }
         Text(title,color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(horizontal=12.dp,vertical=6.dp))
         if(subtitle.isNotBlank()) Text(subtitle,color=Muted,fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(start=12.dp,end=12.dp,bottom=8.dp))

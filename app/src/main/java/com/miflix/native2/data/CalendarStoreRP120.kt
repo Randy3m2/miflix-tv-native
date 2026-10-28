@@ -88,7 +88,7 @@ internal object CalendarStoreRP120 {
         val old=runCatching {JSONArray(prefs(c).getString("events:$owner","[]"))}.getOrDefault(JSONArray())
         var all=(0 until old.length()).mapNotNull {runCatching {SportEventRP120.parse(old.getJSONObject(it))}.getOrNull()}
         for((league,rows) in results) {
-            if(league in listOf("NBA","MLB","LIDOM","F1")) all=all.filterNot {it.league==league && it.date>=start.toString() && it.date<=end.toString()}+rows
+            if(league in listOf("NBA","MLB","LIDOM","F1","MOTOGP")) all=all.filterNot {it.league==league && it.date>=start.toString() && it.date<=end.toString()}+rows
         }
         all=all+CalendarSourcesRP120.specials()
         val url=feed(c,owner)

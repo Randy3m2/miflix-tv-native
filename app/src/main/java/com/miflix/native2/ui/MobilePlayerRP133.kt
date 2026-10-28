@@ -47,11 +47,11 @@ internal fun MobilePlayerControlsRP133(request:PlayerRequest,paused:Boolean,posi
         val notify=latestOverlayRP139;notify(more)
         onDispose {notify(false)}
     }
-    var muted by remember(player) {mutableStateOf(player?.volume==0f)}
     LaunchedEffect(more) {while(more) {onInteraction();delay(1000)}}
     fun action(block:()->Unit) {onInteraction();block()}
     if(more) MobileSheetRP133(tr("Opciones del reproductor","Player options"),{more=false}) {
         LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            if(!request.live) item {MobileButtonRP133(tr("Compartir contenido","Share content"),"share",Modifier.fillMaxWidth()) {more=false;action {shareMobileRP140(context,request.item)}}}
             item {MobileButtonRP133(tr("Audio","Audio"),"audio",Modifier.fillMaxWidth()) {more=false;action {onMenu("audio")}}}
             item {MobileButtonRP133(tr("Subtítulos","Subtitles"),"cc",Modifier.fillMaxWidth()) {more=false;action {onMenu("subtitles")}}}
             item {MobileButtonRP133(if(request.live) tr("Canales / juegos","Channels / games") else tr("Episodios","Episodes"),"grid",Modifier.fillMaxWidth()) {more=false;action(onEpisodes)}}
@@ -65,7 +65,6 @@ internal fun MobilePlayerControlsRP133(request:PlayerRequest,paused:Boolean,posi
                 if(!request.live && MobileDownloadRP133.direct(request.stream)) item {MobileButtonRP133(tr("Descargar","Download"),"download",Modifier.fillMaxWidth()) {more=false;action {
                     context.playbackActivity()?.lifecycleScope?.launch(Dispatchers.IO) {runCatching {MobileDownloadsRP134.enqueue(context,request.item,request.stream,request.season,request.episode)}}
                 }}}
-                item {MobileButtonRP133(tr("Transmitir pantalla","Cast screen"),"cast",Modifier.fillMaxWidth()) {more=false;action {runCatching {context.startActivity(android.content.Intent(android.provider.Settings.ACTION_CAST_SETTINGS))}}}}
                 item {MobileButtonRP133("Watch Party","friends",Modifier.fillMaxWidth()) {more=false;action(onParty)}}
                 item {MobileButtonRP133("Chat","friends",Modifier.fillMaxWidth()) {more=false;action(onChat)}}
                 item {MobileButtonRP133(tr("Reacciones","Reactions"),"heart",Modifier.fillMaxWidth()) {more=false;action(onReactions)}}
@@ -81,7 +80,7 @@ internal fun MobilePlayerControlsRP133(request:PlayerRequest,paused:Boolean,posi
             MobileIconButtonRP133("back",tr("Volver","Back")) {action(onClose)}
             Text(request.item.title,color=Color.White,fontSize=16.sp,fontWeight=FontWeight.SemiBold,maxLines=1,
                 overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
-            MobileIconButtonRP133(if(muted) "mute" else "volume",tr("Silenciar / activar sonido","Mute / unmute")) {action {muted=!muted;player?.volume=if(muted) 0f else 1f}}
+            MobileIconButtonRP133("cast",tr("Transmitir pantalla","Cast screen")) {action {openMobileCastRP140(context)}}
             MobileIconButtonRP133("more",tr("Más opciones","More options")) {action {more=true}}
         }
         Row(Modifier.align(Alignment.Center),horizontalArrangement=Arrangement.spacedBy(32.dp),verticalAlignment=Alignment.CenterVertically) {
@@ -173,10 +172,19 @@ internal fun MobileTracksRP133(menu:String,player:Player,tracks:Tracks,speed:Flo
 internal fun MobileSourcesRP133(state:AppState,selection:SourceSelection) {
     val context=LocalContext.current
     val owner=state.localExtrasScope()
+    var addon by remember(selection) {mutableStateOf("")}
+    val addons=remember(selection) {((if(selection.item.type!="tv") state.orderedSourceAddonsRP2().map {it.name} else emptyList())+selection.streams.map {mobileAddonRP140(it)}).distinct()}
+    val visible=remember(selection,addon) {selection.streams.filter {addon.isBlank() || mobileAddonRP140(it)==addon}}
     MobileSheetRP133(tr("Cambiar fuente","Change source"),{state.sourceSelection=null}) {
         Text(selection.item.title,color=Color.White,fontSize=17.sp,fontWeight=FontWeight.Bold)
+        LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            item {MobileButtonRP133(tr("Todos","All"),selected=addon.isBlank()) {addon=""}}
+            items(addons) {name->MobileButtonRP133(name,selected=addon==name) {addon=name}}
+        }
+        Text(tr("Selecciona un add-on y luego un enlace","Choose an add-on, then a link"),color=Muted,fontSize=12.sp)
         LazyColumn(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-            itemsIndexed(selection.streams,key={index,it->index.toString()+it.url}) {_,stream->
+            if(visible.isEmpty()) item {Text(tr("Este add-on no devolvió enlaces para este contenido.","This add-on returned no sources for this title."),color=Muted,modifier=Modifier.padding(12.dp))}
+            itemsIndexed(visible,key={index,it->index.toString()+it.url}) {_,stream->
                 Column(Modifier.fillMaxWidth().mobileGlassRP133().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     Text(stream.name,color=Color.White,fontWeight=FontWeight.Bold)
                     Text(stream.title,color=Muted,fontSize=12.sp,maxLines=4)

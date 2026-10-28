@@ -1,0 +1,14 @@
+BruniO Mobile M4 / RP140
+1.0.3-m4-rp140 / versionCode 22244
+
+:mobile:testReleaseUnitTest — BUILD SUCCESSFUL in 3m 18s.
+472 pruebas, 0 fallos, 0 errores. Incluye compilación Kotlin y Java Release.
+6 pruebas nuevas de enlaces BruniO/IMDb y texto compartido.
+Página web de respaldo: 4 escenarios correctos (película, serie, ID inválido, tipo inválido).
+Manifest móvil, ruta limitada de FileProvider y asociación del certificado estable: correctos.
+git diff --check: sin errores.
+
+No se generó ni publicó un APK de producción firmado ni se desplegó la web.
+Generar APK estable con Build BruniO Mobile APK; publicar los dos archivos web incluidos para la asociación de enlaces.
+Pendiente de dispositivo: apariencia/interacción táctil, selector de compartir, entrega de carátula y texto a apps receptoras, entrada por enlaces en frío/caliente y selección de perfil, Cast y Party.
+Cast abre la transmisión de pantalla Android disponible en el dispositivo.

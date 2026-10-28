@@ -47,6 +47,18 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="miflix" android:host="watch-party" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="brunio" android:host="content" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="miflix-tv-native-web.vercel.app" android:path="/watch.html" />
+            </intent-filter>
         </activity>
     </application>
 </manifest>

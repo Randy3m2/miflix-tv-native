@@ -14,6 +14,7 @@ import com.miflix.native2.data.AppUsageTracker
 
 class MainActivity : ComponentActivity() {
     private var partyCodeRP43 by mutableStateOf<String?>(null)
+    private var contentLinkRP140 by mutableStateOf<String?>(null)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         com.miflix.native2.data.CrashReportRP135.install(applicationContext)
@@ -32,7 +33,8 @@ class MainActivity : ComponentActivity() {
             androidx.core.view.WindowInsetsControllerCompat(window,window.decorView).apply {isAppearanceLightStatusBars=false;isAppearanceLightNavigationBars=false}
         }
         partyCodeRP43 = intent?.data?.takeIf { it.scheme == "miflix" && it.host == "watch-party" }?.getQueryParameter("code")
-        setContent { MiFlixNativeApp(partyCodeRP43) }
+        contentLinkRP140=intent?.dataString
+        setContent { MiFlixNativeApp(partyCodeRP43,contentLinkRP140) {contentLinkRP140=null;intent?.data=null} }
         window.decorView.post {com.miflix.native2.data.CrashReportRP135.showPrevious(this)}
     }
 
@@ -49,6 +51,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        contentLinkRP140=intent.dataString
         intent.data?.takeIf { it.scheme == "miflix" && it.host == "watch-party" }?.getQueryParameter("code")?.let { code ->
             partyCodeRP43=code
         }

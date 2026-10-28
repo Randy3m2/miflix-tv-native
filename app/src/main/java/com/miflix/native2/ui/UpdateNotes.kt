@@ -229,9 +229,14 @@ internal object UpdateNotes {
         "MotoGP y eventos especiales en suscripciones, logos locales y calendario con varias ligas por día." to "MotoGP and special events in subscriptions, bundled logos and multiple leagues per calendar day.",
         "Avatares por grupos, incluidos Friends, VisionQuest y Loki; edición de perfil desplazable y audio secundario claro." to "Grouped avatars including Friends, VisionQuest and Loki; scrollable profile editing and clear secondary audio."
     )
+    val mobileRP140Changes=listOf(
+        "RP140: Mobile M4 · historial de búsqueda y selector de add-on con Mandanguita TV separado." to "RP140: Mobile M4 · search history and add-on picker with separate Mandanguita TV results.",
+        "Cast visible arriba del reproductor, sin botón de mute. Compartir carátula y sinopsis con enlace de BruniO o IMDb." to "Cast visible at the top of the player, with no mute button. Share artwork and synopsis with a BruniO or IMDb link.",
+        "Tráiler con aviso cuando no está disponible; Watch Party abre la sala al crearla." to "Trailer feedback when unavailable; Watch Party opens the room after creation."
+    )
     private val mobileReleaseRP135=com.miflix.native2.BuildConfig.APPLICATION_ID.startsWith("com.brunio.mobile")
-    val changes=if(mobileReleaseRP135) mobileRP139Changes else rp138Changes
-    val previousChanges=(if(mobileReleaseRP135) rp134Changes else rp137Changes+rp136Changes+rp135Changes+rp134Changes)+rp133Changes+rp132Changes+rp131Changes+rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
+    val changes=if(mobileReleaseRP135) mobileRP140Changes else rp138Changes
+    val previousChanges=(if(mobileReleaseRP135) mobileRP139Changes+rp134Changes else rp137Changes+rp136Changes+rp135Changes+rp134Changes)+rp133Changes+rp132Changes+rp131Changes+rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
         "Menú de amigos: Watch, View Details, Recommendations y Close; detalles abre la ficha sin iniciar reproducción." to "Friend menu: Watch, View Details, Recommendations and Close; details opens the title without starting playback.",
         "Enlaces de Comet y Torrentio con texto ordenado e insignias de Dolby/HDR según sus metadatos." to "Clean Comet and Torrentio link metadata with small Dolby/HDR badges when reported by the source.",
         "Envío local a TV por Wi-Fi, con enlace y código de conexión; sin reproducción web." to "Send titles to TV over local Wi-Fi with a connection link and code; no web playback.",

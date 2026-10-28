@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Abrir en BruniO</title>
+<style>body{margin:0;min-height:100vh;background:radial-gradient(at top,#25213e,#080a10 65%);color:#fff;font:18px system-ui;display:grid;place-items:center}main{max-width:420px;padding:32px;text-align:center}img{width:76px;border-radius:18px}a{display:block;margin:14px 0;padding:16px;border-radius:24px;background:#ffffff16;border:1px solid #ffffff40;color:inherit;text-decoration:none}p{color:#b9bbca;line-height:1.6}</style>
+<main><img src="brunio-logo.png" alt="BruniO"><h1>Contenido compartido</h1><p id="message">Abre este título en BruniO móvil o continúa en la web.</p><a id="app" hidden>Abrir en BruniO móvil</a><a id="web" href="/">Continuar en la web</a></main>
+<script>
+const q=new URLSearchParams(location.search),type=q.get('type'),id=q.get('id');
+if(['movie','series'].includes(type)&&/^[1-9][0-9]*$/.test(id||'')&&Number.isSafeInteger(Number(id))&&Number(id)<=2147483647){
+const app=document.getElementById('app');app.hidden=false;app.href='brunio://content/'+type+'/'+id;
+document.getElementById('web').href='/#'+(type==='series'?'s':'m')+Number(id).toString(36);
+}else{document.getElementById('message').textContent='Este enlace no es válido.';}
+</script></html>

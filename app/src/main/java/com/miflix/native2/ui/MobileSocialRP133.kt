@@ -28,7 +28,7 @@ import java.time.format.DateTimeFormatter
 
 @Composable
 internal fun MobileFriendsRP133(state:AppState) {
-    var tab by rememberSaveable {mutableStateOf("Friends")}
+    var tab by rememberSaveable {mutableStateOf(if(state.screen==Screen.WATCH_PARTY) "Party" else "Friends")}
     var code by rememberSaveable {mutableStateOf("")}
     var nickname by rememberSaveable {mutableStateOf("")}
     var chat by rememberSaveable {mutableStateOf("")}
@@ -54,7 +54,7 @@ internal fun MobileFriendsRP133(state:AppState) {
             MobileIconButtonRP133("refresh",tr("Actualizar","Refresh")) {state.refreshFriendsTab()}
         }
         LazyRow(contentPadding=PaddingValues(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            items(listOf("Friends" to tr("Amigos","Friends"),"Requests" to tr("Solicitudes","Requests"),"Calendar" to tr("Calendario","Calendar"))) {(id,label)->MobileButtonRP133(label,selected=tab==id) {tab=id}}
+            items(listOf("Friends" to tr("Amigos","Friends"),"Requests" to tr("Solicitudes","Requests"),"Calendar" to tr("Calendario","Calendar"))+(if(state.watchParty!=null) listOf("Party" to "Watch Party") else emptyList())) {(id,label)->MobileButtonRP133(label,selected=tab==id) {tab=id}}
         }
         if(tab=="Calendar") {MobileCalendarRP133(state);return@Column}
         LazyColumn(contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
@@ -66,7 +66,7 @@ internal fun MobileFriendsRP133(state:AppState) {
                     MobileButtonRP133(state.friendPeople[row.sender] ?: tr("Solicitud de amistad","Friend request"),"check",Modifier.fillMaxWidth()) {state.launch {state.addFriend(row.sender)}}
                 }
                 items(state.partyInvitations,key={it.room}) {invite->MobileButtonRP133(invite.host+" · "+invite.title,"friends",Modifier.fillMaxWidth()) {state.launch {state.joinWatchParty(invite.room)}}}
-            } else {
+            } else if(tab=="Friends") {
                 items(state.friendActivity,key={it.id}) {person->
                     Box(Modifier.fillMaxWidth().height(205.dp).mobileGlassRP133().clickable {friend=person}) {
                         art[person.cloudId]?.let {AsyncImage(it.backdrop ?: it.poster,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)}
@@ -80,7 +80,7 @@ internal fun MobileFriendsRP133(state:AppState) {
                 }
                 if(state.friendActivity.isEmpty() && !state.friendsTabLoading) item {Text(tr("Tus amigos aparecerán aquí al conectarse.","Your friends will appear here when available."),color=Muted)}
             }
-            item {MobileButtonRP133(tr("Crear Watch Party","Create Watch Party"),"friends",Modifier.fillMaxWidth(),selected=true) {state.launch {state.createWatchParty()}}}
+            if(state.watchParty==null) item {MobileButtonRP133(tr("Crear Watch Party","Create Watch Party"),"friends",Modifier.fillMaxWidth(),selected=true) {state.launch {if(state.createWatchParty()!=null) tab="Party"}}}
             item {Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 MobileFieldRP133(code,{code=it.filter(Char::isDigit).take(6)},tr("Código Party","Party code"),modifier=Modifier.weight(1f),keyboard=androidx.compose.ui.text.input.KeyboardType.Number)
                 MobileButtonRP133(tr("Unirme","Join"),enabled=code.length==6) {state.launch {state.joinWatchParty(code)}}

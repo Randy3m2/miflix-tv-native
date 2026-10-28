@@ -132,6 +132,10 @@ internal fun MobileSearchRP133(state:AppState) {
     var busy by remember {mutableStateOf(false)}
     var filter by rememberSaveable {mutableStateOf("")}
     val context=LocalContext.current
+    var history by remember(state.searchHistoryOwner()) {mutableStateOf(state.searchHistory())}
+    LaunchedEffect(query,state.searchHistoryOwner()) {
+        if(query.trim().length>=2) {delay(1200);state.rememberSearch(query.trim());history=state.searchHistory()}
+    }
     val voice=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {result->
         result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.let {query=it}
     }
@@ -156,6 +160,9 @@ internal fun MobileSearchRP133(state:AppState) {
         }
         LazyRow(contentPadding=PaddingValues(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             items(listOf("" to tr("Todo","All"),"movie" to tr("Películas","Movies"),"series" to tr("Series","Series"))) {(id,title)->MobileButtonRP133(title,selected=filter==id) {filter=id}}
+        }
+        if(query.isBlank() && history.isNotEmpty()) LazyRow(contentPadding=PaddingValues(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            items(history) {term->MobileButtonRP133(term,"search") {query=term}}
         }
         if(busy) Text(tr("Buscando…","Searching…"),color=MobileTintRP133,modifier=Modifier.padding(horizontal=16.dp))
         val visible=items.filter {filter.isBlank() || it.type==filter}
@@ -206,10 +213,15 @@ internal fun MobileDetailsRP133(state:AppState) {
                 if(item.type=="series") state.episodes.firstOrNull {it.season==(resume?.season ?: 1) && it.episode==(resume?.episode ?: 1)}?.let {state.playEpisode(it)} ?: state.playSeriesFromStart() else state.playMovie()
             }}
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly) {
-                MobileIconButtonRP133(if(item.cloudId in state.favorites) "check" else "plus",tr("Mi lista","My list"),selected=item.cloudId in state.favorites) {state.toggleFavorite(item)}
-                MobileIconButtonRP133("play",tr("Tráiler","Trailer")) {detail?.trailers?.firstOrNull()?.watchUrl?.let {url->runCatching {context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse(url)))}}}
-                if(!state.kidsMode && !state.easyModeRP79) MobileIconButtonRP133("friends","Watch Party") {state.launch {state.createWatchParty(true)}}
-                if(!state.easyModeRP79) MobileIconButtonRP133("link",tr("Reproducir manualmente","Play manually")) {state.launch {if(item.type=="series") state.episodes.firstOrNull()?.let {state.chooseEpisodeSources(it)} else state.chooseCurrentSources()}}
+                MobileDetailActionRP140(if(item.cloudId in state.favorites) "check" else "plus",tr("Mi lista","My list"),selected=item.cloudId in state.favorites) {state.toggleFavorite(item)}
+                MobileDetailActionRP140("share",tr("Compartir","Share")) {shareMobileRP140(context,item,detail?.imdbId)}
+                MobileDetailActionRP140("play",tr("Tráiler","Trailer")) {state.launch {
+                    val trailer=detail?.trailers?.firstOrNull() ?: state.tmdb.previewTrailers(item).firstOrNull()
+                    if(trailer==null) state.error=tr("No hay un tráiler disponible para este contenido.","No trailer is available for this title.")
+                    else runCatching {context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse(trailer.watchUrl)))}.onFailure {state.error=tr("No se pudo abrir el tráiler.","Unable to open the trailer.")}
+                }}
+                if(!state.kidsMode && !state.easyModeRP79) MobileDetailActionRP140("friends","Party") {state.launch {if(state.createWatchParty(true)!=null) state.screen=Screen.WATCH_PARTY}}
+                if(!state.easyModeRP79) MobileDetailActionRP140("link",tr("Fuentes","Sources")) {state.launch {if(item.type=="series") state.episodes.firstOrNull()?.let {state.chooseEpisodeSources(it)} else state.chooseCurrentSources()}}
             }
         }}
         if(!state.kidsMode) item("download") {

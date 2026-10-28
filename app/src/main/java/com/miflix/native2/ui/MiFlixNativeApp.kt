@@ -28,7 +28,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
-fun MiFlixNativeApp(initialPartyCode: String? = null) {
+fun MiFlixNativeApp(initialPartyCode: String? = null,initialContentLinkRP140:String?=null,onContentConsumedRP140:()->Unit={}) {
     val baseContext=LocalContext.current
     val context = baseContext.applicationContext
     val state = remember { AppState(context) }
@@ -81,6 +81,15 @@ fun MiFlixNativeApp(initialPartyCode: String? = null) {
         LaunchedEffect(bootstrapped, initialPartyCode,state.easyModeRP79) {
             if (bootstrapped && !state.easyModeRP79 && !initialPartyCode.isNullOrBlank()) {
                 state.launch { state.joinWatchParty(initialPartyCode) }
+            }
+        }
+        val contentReadyRP140=mobileRP133 && state.screen !in listOf(Screen.SPLASH,Screen.PROFILES,Screen.SETTINGS)
+        LaunchedEffect(initialContentLinkRP140,contentReadyRP140) {
+            if(contentReadyRP140) com.miflix.native2.data.MobileShareRP140.cloudId(initialContentLinkRP140)?.let {id->
+                try {state.playerRequest=null;state.openRecommendation(id)}
+                catch(e:kotlinx.coroutines.CancellationException) {throw e}
+                catch(e:Exception) {state.error=e.message ?: tr("No se pudo abrir el contenido compartido.","Unable to open shared content.")}
+                onContentConsumedRP140()
             }
         }
         LaunchedEffect(state.screen) { if(state.screen==Screen.PLAYER) state.miniPlayer=false }

@@ -50,6 +50,7 @@ private val mobilePathsRP133=mapOf(
     "grid" to "M3 3H10V10H3ZM14 3H21V10H14ZM3 14H10V21H3ZM14 14H21V21H14Z",
     "full" to "M3 9V3H9M15 3H21V9M21 15V21H15M9 21H3V15",
     "volume" to "M3 9H7L12 4V20L7 15H3ZM16 8C20 10 20 14 16 16M19 4C26 9 26 15 19 20",
+    "share" to "M12 3V15M7 8L12 3L17 8M5 12V21H19V12",
     "mute" to "M3 9H7L12 4V20L7 15H3ZM17 8L23 16M23 8L17 16",
     "audio" to "M4 15V10C4 0 20 0 20 10V15M4 13H8V21H4ZM16 13H20V21H16Z",
     "cc" to "M3 5H21V19H3ZM10 9C5 6 5 18 10 15M18 9C13 6 13 18 18 15",
@@ -135,5 +136,13 @@ internal fun MobilePosterRP133(state:AppState,item:MediaSummary,modifier:Modifie
             rank?.let {Text(it.toString(),color=Color.White,fontSize=39.sp,fontWeight=FontWeight.Black,modifier=Modifier.align(Alignment.BottomStart).background(Color.Black.copy(alpha=.4f)).padding(horizontal=5.dp))}
         }
         Text(item.title,color=Color.White,fontSize=12.sp,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(top=5.dp))
+    }
+}
+
+@Composable
+internal fun MobileDetailActionRP140(icon:String,label:String,selected:Boolean=false,click:()->Unit) {
+    Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(5.dp)) {
+        MobileIconButtonRP133(icon,label,selected=selected,click=click)
+        Text(label,color=Color.White,fontSize=11.sp,maxLines=1)
     }
 }

@@ -1,0 +1,6 @@
+154001e4467b7ffd1eadf300f408e75e65f47e7353efd1ff7076adfa8066ef88  LEEME_MOBILE_RP142.md
+89d0316bc57c9c5cfd840f969235a12fa367174835ebe3c70ed163dfedcfc685  VALIDACION_MOBILE_RP142.txt
+cfc5b4ebda8752339961466beff2dc39351b5c613cce1e192a2da89e1f4abdce  app/src/main/java/com/miflix/native2/ui/AppState.kt
+63dce62ed808b190b0055457ad5e49deb5f231ec9d4447076157b32fe36fb070  app/src/main/java/com/miflix/native2/ui/MobileSettingsRP133.kt
+cac72e9d1846f8c4940738eb547a57246ebe345f6be511bca6350d1934a9bc93  app/src/main/java/com/miflix/native2/ui/UpdateNotes.kt
+4d200b18249e99effe7fd5cc3eb763f440b93c404bb7f02361a6b8ce34668354  mobile/build.gradle

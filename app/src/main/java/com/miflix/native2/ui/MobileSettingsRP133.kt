@@ -89,6 +89,10 @@ internal fun MobileSettingsRP133(state:AppState) {
             MobileIconRP133("chevron")
         }}
         item {Text(tr("Ajustes","Settings"),color=Color.White,fontSize=27.sp,fontWeight=FontWeight.Bold)}
+        item {MobileSettingsCardRP133(tr("Inicio y perfiles","Startup and profiles")) {
+            MobileSettingRowRP133(tr("Recordar último perfil","Remember last profile"),if(state.rememberLastProfile) tr("Activado","On") else tr("Desactivado","Off")) {state.setRememberProfile(!state.rememberLastProfile)}
+            Text(tr("Al abrir BruniO, entra directamente al último perfil que usaste.","Open BruniO directly in the last profile you used."),color=Muted,fontSize=12.sp)
+        }}
         item {MobileSettingsCardRP133(tr("Cuenta","Account")) {
             if(state.session==null || state.sessionNeedsSignIn) {
                 MobileFieldRP133(email,{email=it},tr("Correo electrónico","Email"),keyboard=androidx.compose.ui.text.input.KeyboardType.Email)

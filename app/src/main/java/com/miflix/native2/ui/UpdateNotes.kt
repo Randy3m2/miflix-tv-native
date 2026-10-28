@@ -238,8 +238,11 @@ internal object UpdateNotes {
     val rp141Changes=listOf(
         "RP141: Filmografía del reparto corregida en móvil y TV: consulta por identificador, sin mezclar búsquedas anteriores, entrevistas ni apariciones como él mismo." to "RP141: Cast filmography fixed on mobile and TV: exact person ID, without previous search results, talk shows or self appearances."
     )
-    val changes=rp141Changes
-    val previousChanges=(if(mobileReleaseRP135) mobileRP140Changes+mobileRP139Changes+rp134Changes else rp138Changes+rp137Changes+rp136Changes+rp135Changes+rp134Changes)+rp133Changes+rp132Changes+rp131Changes+rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
+    val mobileRP142Changes=listOf(
+        "RP142: Mobile M6 · Recordar último perfil disponible en Ajustes → Inicio y perfiles." to "RP142: Mobile M6 · Remember last profile available in Settings → Startup and profiles."
+    )
+    val changes=if(mobileReleaseRP135) mobileRP142Changes else rp141Changes
+    val previousChanges=(if(mobileReleaseRP135) rp141Changes+mobileRP140Changes+mobileRP139Changes+rp134Changes else rp138Changes+rp137Changes+rp136Changes+rp135Changes+rp134Changes)+rp133Changes+rp132Changes+rp131Changes+rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
         "Menú de amigos: Watch, View Details, Recommendations y Close; detalles abre la ficha sin iniciar reproducción." to "Friend menu: Watch, View Details, Recommendations and Close; details opens the title without starting playback.",
         "Enlaces de Comet y Torrentio con texto ordenado e insignias de Dolby/HDR según sus metadatos." to "Clean Comet and Torrentio link metadata with small Dolby/HDR badges when reported by the source.",
         "Envío local a TV por Wi-Fi, con enlace y código de conexión; sin reproducción web." to "Send titles to TV over local Wi-Fi with a connection link and code; no web playback.",

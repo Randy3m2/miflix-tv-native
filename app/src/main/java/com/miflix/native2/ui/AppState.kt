@@ -287,11 +287,20 @@ class AppState(context: Context) {
     fun titleActions(item: MediaSummary, continuing: Boolean = false) {if(!easyModeRP79) {contextContinue=continuing;contextTitle=item}}
     var focusColor by mutableIntStateOf(playbackPrefs.getInt("focus_color",0xFFB792FF.toInt()))
         private set
-    var rememberLastProfile by mutableStateOf(playbackPrefs.getBoolean("remember_last_profile",false))
+    private fun rememberedProfileEnabledRP142():Boolean {
+        val key=if(BuildConfig.APPLICATION_ID.startsWith("com.brunio.mobile") && playbackPrefs.contains("mobile_remember_last_profile_rp142")) "mobile_remember_last_profile_rp142" else "remember_last_profile"
+        return playbackPrefs.getBoolean(key,false)
+    }
+    var rememberLastProfile by mutableStateOf(rememberedProfileEnabledRP142())
         private set
     init { FocusTheme.argb=focusColor }
     fun saveFocusColor(value: Int) { focusColor=value;FocusTheme.argb=value;playbackPrefs.edit().putInt("focus_color",value).apply() }
-    fun setRememberProfile(value: Boolean) { rememberLastProfile=value;playbackPrefs.edit().putBoolean("remember_last_profile",value).apply() }
+    fun setRememberProfile(value:Boolean) {
+        rememberLastProfile=value
+        val edit=playbackPrefs.edit().putBoolean("remember_last_profile",value)
+        if(BuildConfig.APPLICATION_ID.startsWith("com.brunio.mobile")) edit.putBoolean("mobile_remember_last_profile_rp142",value)
+        edit.apply()
+    }
     private fun readNoticesKey()="read_"+noticesKey()
     var noticesRevision by mutableIntStateOf(0)
         private set
@@ -4105,7 +4114,7 @@ class AppState(context: Context) {
             easyRevisionRP79++;easySpanishRevisionRP83++;secondaryAudioRevisionRP62++;voiceRevisionRP81++
             simpleHomeRevision++;unwatchedVisibilityRevisionRP20++;contentWarningsRevisionRP31++;addonOrderRevision++;profileAddonRevision++
             streamSizeLimitGb=(playbackPrefs.getString(streamSizePreferenceKeyRP134,"0")?.toDoubleOrNull() ?: 0.0).coerceIn(0.0,500.0)
-            rememberLastProfile=playbackPrefs.getBoolean("remember_last_profile",false)
+            rememberLastProfile=rememberedProfileEnabledRP142()
             hiddenAvatars=playbackPrefs.getStringSet("hidden_avatars",emptySet()).orEmpty().toSet()
             LiveLibrary.revision++;CustomChannelsRP45.changesRP48.value++
             importLocalBackupRC100(backup,reloadHome=false)

@@ -1,0 +1,11 @@
+BruniO Mobile M6 / RP142
+1.0.5-m6-rp142 / versionCode 22246
+
+:mobile:testReleaseUnitTest — BUILD SUCCESSFUL in 1m 25s.
+479 pruebas, 0 fallos, 0 errores. Incluye compilación Kotlin y Java Release.
+git diff --check: sin errores.
+
+Se expone el ajuste existente de recordar el último perfil. La elección móvil se mantiene localmente al restaurar los ajustes de otros perfiles. La rama de TV conserva el comportamiento anterior.
+No hay cambios SQL, identificador de app ni firma. TV conserva versión RP141; solo debe generarse el APK móvil.
+No se publica un APK de producción firmado desde esta sesión.
+Pendiente: verificar en teléfono real activación/desactivación, cambio de perfil y reinicio completo de la aplicación.

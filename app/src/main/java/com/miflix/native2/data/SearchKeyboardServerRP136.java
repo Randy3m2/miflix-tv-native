@@ -10,6 +10,19 @@ import java.util.concurrent.*;
 /** Ephemeral LAN search input. Text is POST-only and never logged. */
 public final class SearchKeyboardServerRP136 implements AutoCloseable {
     public interface Save { boolean save(String key); }
+    public enum SaveError { INVALID_KEY, SECURE_STORAGE, STORAGE, UNAVAILABLE }
+    public static final class SaveFailure extends RuntimeException {
+        public final SaveError reason;
+        public SaveFailure(SaveError reason) {super(reason.name());this.reason=reason;}
+    }
+    private static String safeSaveError(SaveError error) {
+        switch(error) {
+            case INVALID_KEY:return "Invalid key format. Paste only the complete API key. / Formato no válido. Pega solo la clave completa.";
+            case SECURE_STORAGE:return "The TV could not encrypt the key. Restart BruniO and retry. / La TV no pudo cifrar la clave. Reinicia BruniO y reintenta.";
+            case STORAGE:return "The TV could not persist the key. Check free storage. / La TV no pudo guardar la clave. Revisa el espacio disponible.";
+            default:return "QR unavailable. Reopen Gemini setup on TV. / QR no disponible. Abre Configurar Gemini otra vez en la TV.";
+        }
+    }
     private final Inet4Address address;
     private final int prefix;
     private final ServerSocket socket;
@@ -83,11 +96,18 @@ public final class SearchKeyboardServerRP136 implements AutoCloseable {
         if(!acceptsForm(getBase(),origin,formToken,value(fields,"csrf",""))) {reply(s,403,page("Formulario no válido / Invalid form","Scan the QR on the TV again."));return;}
         String key=value(fields,"text","");
         long sequence=Long.parseLong(value(fields,"sequence","-1"));
-        if(!valid(key)) {reply(s,400,page("Texto no válido / Invalid text", "Use up to 256 characters."));return;}
+        if(secretInputRP150 ? key.length()>GeminiKeyInputRP153.MAX_LENGTH || key.codePoints().anyMatch(c->Character.isISOControl(c)) : !valid(key)) {reply(s,400,secretInputRP150 ? safeSaveError(SaveError.INVALID_KEY) : page("Texto no válido / Invalid text", "Use up to 256 characters."));return;}
         synchronized(this) {
             if(sequence<0) {reply(s,400,"Invalid sequence");return;}
             if(sequence<=lastSequence) {reply(s,200,"OK");return;}
-            if(closed || !save.save(key)) {reply(s,409,"Search unavailable. Reopen the QR on TV.");return;}
+            if(closed) {reply(s,409,secretInputRP150?safeSaveError(SaveError.UNAVAILABLE):"Search unavailable. Reopen the QR on TV.");return;}
+            try {
+                if(!save.save(key)) {reply(s,409,secretInputRP150?safeSaveError(SaveError.UNAVAILABLE):"Search unavailable. Reopen the QR on TV.");return;}
+            } catch(SaveFailure failure) {
+                reply(s,409,secretInputRP150?safeSaveError(failure.reason):"Search unavailable. Reopen the QR on TV.");return;
+            } catch(Exception ignored) {
+                reply(s,409,secretInputRP150?safeSaveError(SaveError.SECURE_STORAGE):"Search unavailable. Reopen the QR on TV.");return;
+            }
             lastSequence=sequence;
         }
         reply(s,200,"OK");
@@ -102,7 +122,7 @@ public final class SearchKeyboardServerRP136 implements AutoCloseable {
     private static String page(String title,String text){return shell("<h1>"+escape(title)+"</h1><p>"+escape(text)+"</p>");}
     private static String shell(String body){return "<!doctype html><html lang='es'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>BruniO · Search</title><style>body{margin:0;background:#080808;color:#fff;font:16px system-ui}main{max-width:480px;margin:6vh auto;padding:28px}small,p{color:#aaa;line-height:1.6}h1{font-size:29px}label{display:block;margin-top:22px}input,button{box-sizing:border-box;width:100%;padding:16px;margin-top:9px;border-radius:14px;border:1px solid #444;background:#171717;color:white;font:inherit}button{background:#eee;color:#111;font-weight:700;margin-top:28px}input:focus{outline:2px solid #b4a0d4}</style><main><small>BRUNIO · SEARCH</small>"+body+"</main></html>";}
     private String form(String ticket){if(secretInputRP150)return secretFormRP150(ticket);return shell("<h1>Escribe en tu TV</h1><p>Write a title, actor or director. / Escribe un título, actor o director.</p><label for='text'>Título, actor o director / Title, actor or director</label><input id='text' type='text' inputmode='text' maxlength='256' autocomplete='off' placeholder='Buscar / Search' aria-describedby='voice-help'><button id='dictate' type='button'>🎙 Dictar con mi teclado / Use keyboard dictation</button><p id='voice-help'>Toca el micrófono de Gboard, Samsung o el teclado de tu celular. Lo que dictes se enviará a la TV. El idioma se elige en tu teclado. / Tap your phone keyboard microphone. Dictated text is sent to your TV; choose the language in your keyboard.</p><p id='status'>Conectado · Connected</p><script>const input=document.getElementById('text'),status=document.getElementById('status');document.getElementById('dictate').addEventListener('click',()=>{input.focus();status.textContent='Toca el micrófono del teclado de tu celular / Tap your phone keyboard microphone';});let sequence=Date.now(),timer,busy=false,pending=null;async function send(){if(busy||!pending)return;busy=true;const job=pending;pending=null;try{const r=await fetch('/save/"+ticket+"',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrf:'"+formToken+"',text:job.text,sequence:job.sequence})});status.textContent=r.ok?'✓ Enviado a la TV / Sent to TV':'Vuelve a abrir el QR en TV / Reopen QR on TV';}catch(e){status.textContent='Sin conexión / Disconnected';}finally{busy=false;if(pending)send();}}input.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>{pending={text:input.value,sequence:++sequence};send();},180);});</script>");}
-    private String secretFormRP150(String ticket) {return shell("<h1>BruniO · Gemini</h1><p>Use your own free-tier project. Only your API key is sent to this TV; it is not displayed or included in the URL.</p><form id='form'><label for='key'>Gemini API key</label><input id='key' type='password' autocomplete='off' maxlength='160'><button>Save to TV / Guardar en TV</button></form><p id='status'></p><script>document.getElementById('form').onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector('button');b.disabled=true;try{const r=await fetch('/save/"+ticket+"',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrf:'"+formToken+"',sequence:Date.now(),text:document.getElementById('key').value.trim()})});document.getElementById('status').textContent=r.ok?'Received by TV / Recibida en TV':'Could not save. Retry / Reintenta';if(r.ok)document.getElementById('key').value='';}catch(e){document.getElementById('status').textContent='Connection failed / Sin conexión';}finally{b.disabled=false;}};</script>");}
+    private String secretFormRP150(String ticket) {return shell("<h1>BruniO · Gemini</h1><p>Use your own free-tier project. Only your API key is sent to this TV; it is not displayed or included in the URL.</p><form id='form'><label for='key'>Gemini API key</label><input id='key' type='password' autocomplete='off' maxlength='2048'><button>Save to TV / Guardar en TV</button></form><p id='status'></p><script>document.getElementById('form').onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector('button');b.disabled=true;try{const r=await fetch('/save/"+ticket+"',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({csrf:'"+formToken+"',sequence:Date.now(),text:document.getElementById('key').value.trim()})});const detail=await r.text();document.getElementById('status').textContent=r.ok?'Saved on TV. Close this panel and enable Gemini. / Guardada en TV. Cierra este panel y activa Gemini.':(detail.includes('<')?'Could not save. Reopen QR on TV. / No se guardó. Abre el QR otra vez en TV.':detail.slice(0,300));if(r.ok)document.getElementById('key').value='';}catch(e){document.getElementById('status').textContent='Connection failed / Sin conexión';}finally{b.disabled=false;}};</script>");}
     private static void reply(Socket s,int status,String html) throws IOException {
         byte[] body=html.getBytes(StandardCharsets.UTF_8);
         String header="HTTP/1.1 "+status+" Response\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: "+body.length+"\r\nConnection: close\r\nCache-Control: no-store\r\nReferrer-Policy: no-referrer\r\nX-Content-Type-Options: nosniff\r\nContent-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'\r\n\r\n";

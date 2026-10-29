@@ -201,7 +201,7 @@ internal fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTea
             Text(source.note,color=Muted,fontSize=11.sp)
         }
         if(busy) item {Text(tr("Comprobando opciones…","Checking options…"),color=Muted)}
-        if(error.isNotBlank()) item {Text(error,color=Color(0xFFFFC6C6));FocusButton(tr("Cerrar","Dismiss")) {error=""}}
+        if(error.isNotBlank()) item {Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {Text(error,color=Color(0xFFFFC6C6));FocusButton(tr("Cerrar","Dismiss")) {error=""}}}
         item {FocusButton(tr("Agregar / editar fuentes","Add / edit sources"),modifier=Modifier.fillMaxWidth(),onClick=settings)}
     }
     if(showYoutubeQRRP61) LidomYoutubeQRSheetRP61(state,repo,team,{sourceRevisionRP61++}) {showYoutubeQRRP61=false}

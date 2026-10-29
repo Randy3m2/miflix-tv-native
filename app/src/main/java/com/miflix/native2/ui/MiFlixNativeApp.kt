@@ -38,6 +38,7 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
     val context = baseContext.applicationContext
     val state = remember { AppState(context) }
     var showAssistantRP150 by remember {mutableStateOf(false)}
+    LaunchedEffect(state.screen,state.activeProfile.id,state.session?.userId) {showAssistantRP150=false}
     var showGuestRP150 by remember {mutableStateOf(false)}
     var consumedPartyRP150 by remember {mutableStateOf<String?>(null)}
     if(showGuestRP150 && !guestRP150) {
@@ -91,7 +92,6 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
             BruniOSplashScreen()
             return@MaterialTheme
         }
-        if(showAssistantRP150 && !guestRP150) AssistantPanelRP150(state,{showAssistantRP150=false},{showAssistantRP150=false;showGuestRP150=true})
         if(guestRP150) androidx.activity.compose.BackHandler(enabled=state.screen==Screen.HOME) {exitGuestRP150()}
         MobilePlayerEnvironmentRP133(mobileRP133 && state.screen in listOf(Screen.PLAYER,Screen.MULTIVIEW))
         val calendarRevisionRP134 by com.miflix.native2.data.CalendarStoreRP120.revision.collectAsState()
@@ -146,10 +146,13 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
                 shortcut();true
             } else false
         }.pointerInput(Unit) {awaitPointerEventScope {while(true) {awaitPointerEvent(PointerEventPass.Initial);MenuActivity.touch()} }}) {
-        navigationState.SaveableStateProvider("${state.session?.userId}:${state.activeProfile.id}:${state.screen.name}") {
+        navigationState.SaveableStateProvider("${state.session?.userId}:${state.activeProfile.id}:${if(showAssistantRP150 && !guestRP150 && !mobileRP133 && !state.kidsMode) "ASSISTANT" else state.screen.name}") {
         val destination=if(guestRP150 && state.screen in setOf(Screen.SETTINGS,Screen.PROFILES,Screen.FRIENDS,Screen.WATCH_PARTY,Screen.NOTIFICATIONS,Screen.DOWNLOADS,Screen.TRAKT)) Screen.HOME else if(state.easyModeRP79 && !(mobileRP133 && state.screen==Screen.DOWNLOADS) && !com.miflix.native2.data.EasyModePolicyRP79.allowsScreen(state.screen.name)) Screen.HOME else if(state.kidsMode && state.screen !in setOf(Screen.HOME,Screen.SEARCH,Screen.MY_LIST,Screen.DETAILS,Screen.PROFILES,Screen.NOTIFICATIONS,Screen.PLAYER)) Screen.HOME else state.screen
         LaunchedEffect(destination,state.screen) {if(destination!=state.screen) state.screen=destination}
-        if(mobileRP133) MobileAppRP133(state,destination)
+        if(showAssistantRP150 && !guestRP150 && !mobileRP133 && !state.kidsMode) AppShell(state,state.screen,{showAssistantRP150=false;state.screen=it}) {
+            AssistantPanelRP150(state,{showAssistantRP150=false},{showAssistantRP150=false;showGuestRP150=true})
+        }
+        else if(mobileRP133) MobileAppRP133(state,destination)
         else if(state.easyModeRP79 && destination!=Screen.PLAYER) EasyScreenRP79(state,destination)
         else when (destination) {
             Screen.SPLASH -> BruniOSplashScreen()

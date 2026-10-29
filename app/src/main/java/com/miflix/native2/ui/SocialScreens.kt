@@ -242,7 +242,7 @@ fun TraktScreen(state: AppState) {
     }
     BackHandler { state.screen=Screen.SETTINGS }
     LazyColumn(Modifier.fillMaxSize().background(Bg).padding(35.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
-        item { Text("Trakt",color=Color.White,fontSize=30.sp, lineHeight=36.sp); Text(state.traktStatus,color=Muted) }
+        item { Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {Text("Trakt",color=Color.White,fontSize=30.sp, lineHeight=36.sp); Text(state.traktStatus,color=Muted)} }
         item {
             Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 if(!state.traktConnected) FocusButton(tr("Conectar Trakt","Connect Trakt")) { state.launch { state.traktStart() } }

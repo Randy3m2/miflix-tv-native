@@ -84,7 +84,6 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit) {
         }
     }
     var voiceOwner by remember {mutableStateOf<String?>(null)}
-    var searchFocused by remember {mutableStateOf(false)}
     val voice=androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) {result ->
         if(result.resultCode==android.app.Activity.RESULT_OK && voiceOwner==owner && state.localExtrasScope()==owner) {
             result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.trim()?.takeIf {it.isNotBlank()}?.let {query=it.take(500);message=tr("Listo. Pulsa Buscar para descubrir tu próxima historia.","Ready. Select Search to discover your next story.")}
@@ -105,8 +104,9 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit) {
     val starters=(state.forYou+state.trending+state.topRated).distinctBy {it.cloudId}.filter {(!it.poster.isNullOrBlank() || !it.backdrop.isNullOrBlank()) && !state.kidsMode}.take(10)
     if(sceneFinder) {SceneFinderRP151(state) {sceneFinder=false};return}
     if(phone) AssistantTextQrRP150(state,{if(!busy) query=it},{phone=false})
-    PlayerMenuDialog(onDismissRequest=close,fullScreen=true) {
-        Column(Modifier.fillMaxSize().consumeOpeningPress().background(Brush.linearGradient(listOf(Color(0xff25203d),Color(0xff101624),Color(0xff090b13)))).padding(horizontal=34.dp,vertical=18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+    androidx.activity.compose.BackHandler(onBack=close)
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        Column(Modifier.fillMaxSize().consumeOpeningPress().background(Color.Black).padding(horizontal=34.dp,vertical=18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp),verticalAlignment=Alignment.CenterVertically) {
                 Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
                     Text("✦  BruniO AI",color=Color.White,fontSize=29.sp,fontWeight=FontWeight.Bold)
@@ -120,7 +120,7 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit) {
             LazyColumn(Modifier.weight(1f).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(bottom=24.dp)) {
                 item(key="search-rp152") {
                     Row(Modifier.fillMaxWidth().background(Color.White.copy(alpha=.065f),RoundedCornerShape(20.dp)).border(1.dp,Color.White.copy(alpha=.12f),RoundedCornerShape(20.dp)).padding(8.dp),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
-                        BasicTextField(query,{if(!busy) query=it.take(500)},singleLine=true,textStyle=androidx.compose.ui.text.TextStyle(color=Color.White,fontSize=19.sp),cursorBrush=SolidColor(Color(0xffc8adff)),modifier=Modifier.weight(1f).onFocusChanged {searchFocused=it.isFocused}.border(1.dp,if(searchFocused) Color(0xffc8adff) else Color.Transparent,RoundedCornerShape(12.dp)).padding(14.dp),decorationBox={inner ->if(query.isBlank()) Text(tr("Cuéntame qué te apetece ver…","Tell me what you're in the mood for…"),color=Color(0xffaaa6bb),fontSize=18.sp,maxLines=1,overflow=TextOverflow.Ellipsis);inner()})
+                        AssistantSearchFieldRP153(query,{if(!busy) query=it.take(500)},!busy,Modifier.weight(1f)) {submit()}
                         AssistantActionRP152(tr("Dictar","Speak"),"mic",onClick={dictate()})
                         AssistantActionRP152(if(busy) tr("Buscando…","Searching…") else tr("Buscar","Search"),"search",selected=true) {submit()}
                         AssistantActionRP152("QR") {if(!busy) phone=true}
@@ -155,11 +155,10 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit) {
                     LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {items(saved) {row ->AssistantActionRP152(row.optString("title"),"list") {submit(row.optString("query"),row.optInt("budget"),runCatching {AssistantPlanRP150.json(row.getJSONObject("plan").toString())}.getOrNull())}}}
                     AssistantActionRP152(tr("Borrar colecciones","Clear collections")) {collectionPrefs.edit().remove(owner).apply();collectionRevision++}
                 }}
-                if(picks.isEmpty() && starters.isNotEmpty() && !busy) item(key="starter-rp152") {
+                if(picks.isEmpty() && starters.isNotEmpty() && !busy) item(key="starter-rp152") {Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     Text(tr("Empieza con una buena historia","Start with a great story"),color=Color.White,fontSize=20.sp,fontWeight=FontWeight.SemiBold)
-                    Spacer(Modifier.height(10.dp))
                     LazyRow(horizontalArrangement=Arrangement.spacedBy(14.dp)) {items(starters,key={it.cloudId}) {media ->AssistantPosterRP152(AssistantPickRP150(media,0),Modifier.width(136.dp),details={close();state.launch {state.open(media)}},play=null)}}
-                }
+                }}
             }
         }
     }
@@ -178,19 +177,32 @@ internal fun GeminiSetupRP150(state:AppState,ai:GeminiAssistantRP150,close:()->U
         try {val created=withContext(Dispatchers.IO) {
             val endpoint=localQrEndpointsRP145(context).firstOrNull() ?: error("LAN unavailable")
             SearchKeyboardServerRP136(endpoint.address,endpoint.prefixLength,{key ->
-                if(!alive.get()) false else try {synchronized(ai) {if(!alive.get()) return@SearchKeyboardServerRP136 false;ai.save(key.trim())};main.post {if(alive.get()) status=tr("Clave guardada en esta TV. Ya puedes cerrar.","Key saved on this TV. You can close this panel.")};true} catch(_:Exception) {false}
+                if(!alive.get()) false else try {
+                    synchronized(ai) {if(!alive.get()) return@SearchKeyboardServerRP136 false;ai.save(key)}
+                    main.post {if(alive.get()) status=tr("Clave guardada en esta TV. Ya puedes cerrar.","Key saved on this TV. You can close this panel.")};true
+                } catch(e:SearchKeyboardServerRP136.SaveFailure) {
+                    main.post {if(alive.get()) status=when(e.reason) {
+                        SearchKeyboardServerRP136.SaveError.INVALID_KEY ->tr("Formato de clave no válido. Copia la clave completa, sin código ni comillas.","Invalid key format. Copy the full key without code or quotes.")
+                        SearchKeyboardServerRP136.SaveError.STORAGE ->tr("La TV no pudo guardar la clave. Revisa el espacio disponible.","The TV could not persist the key. Check available storage.")
+                        else ->tr("La TV no pudo cifrar la clave. Reinicia BruniO y reintenta.","The TV could not encrypt the key. Restart BruniO and retry.")
+                    }}
+                    throw e
+                }
             },true).also {server.set(it);if(!alive.get()) it.close()}
         };qr=created.url;delay(900000);created.close();qr="";status=tr("QR vencido.","QR expired.")}
         catch(e:CancellationException) {throw e} catch(_:Exception) {status=tr("No se pudo abrir el QR local. Revisa la red.","Could not open local QR. Check your network.")}
     }
     PlayerMenuDialog(onDismissRequest=close,fullScreen=true) {
-        LazyColumn(Modifier.fillMaxSize().consumeOpeningPress().background(Bg).padding(28.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+        LazyColumn(Modifier.fillMaxSize().consumeOpeningPress().background(Color.Black).padding(28.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
             item(key="assistant-static-rp150-9") {Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)) {Text("Gemini · Personal API key",color=Color.White,fontSize=26.sp,modifier=Modifier.weight(1f));FocusButton("×",onClick=close)}}
             item(key="assistant-static-rp150-10") {Text(tr("Opcional. Escanea el QR y pega tu propia clave de Google AI Studio. Usa un proyecto Free Tier sin facturación: BruniO no puede convertir una clave de pago en gratuita. La clave se cifra en este dispositivo y no se sincroniza.","Optional. Scan and paste your own Google AI Studio key. Use a Free Tier project without billing: BruniO cannot make a paid key free. The key is encrypted on this device and never synced."),color=Muted,fontSize=15.sp)}
             item(key="assistant-static-rp150-11") {Text(tr("Solo se envía la consulta que escribas. Google puede usar solicitudes del nivel gratuito para mejorar sus productos. Límite local: 20 consultas al día, una cada 20 segundos; las cuotas de Google son independientes.","Only your submitted request is sent. Google may use free-tier requests to improve products. Local cap: 20 requests/day, one per 20 seconds; Google quotas are separate."),color=Muted,fontSize=13.sp)}
             if(qr.isNotBlank()) item(key="assistant-static-rp150-12") {QrCode(qr,190.dp)}
             if(status.isNotBlank()) item(key="assistant-static-rp150-13") {Text(status,color=Color.White)}
-            item(key="assistant-static-rp150-14") {FocusButton(tr("Eliminar clave","Remove key")) {alive.set(false);server.getAndSet(null)?.close();qr="";synchronized(ai) {ai.clear()};status=tr("Clave eliminada.","Key removed.")};FocusButton(tr("Cerrar","Close"),onClick=close)}
+            item(key="assistant-static-rp150-14") {FlowRow(horizontalArrangement=Arrangement.spacedBy(16.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+                FocusButton(tr("Eliminar clave","Remove key")) {alive.set(false);server.getAndSet(null)?.close();qr="";synchronized(ai) {ai.clear()};status=tr("Clave eliminada.","Key removed.")}
+                FocusButton(tr("Cerrar","Close"),onClick=close)
+            }}
         }
     }
 }
@@ -217,7 +229,7 @@ private fun AssistantTextQrRP150(state:AppState,received:(String)->Unit,close:()
         catch(e:CancellationException) {throw e} catch(_:Exception) {status=tr("No se pudo abrir el QR local. Usa el teclado de TV o Bluetooth.","Could not open local QR. Use the TV keyboard or Bluetooth.")}
     }
     PlayerMenuDialog(onDismissRequest=close,fullScreen=true) {
-        LazyColumn(Modifier.fillMaxSize().consumeOpeningPress().background(Bg).padding(30.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
+        LazyColumn(Modifier.fillMaxSize().consumeOpeningPress().background(Color.Black).padding(30.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             item(key="assistant-static-rp150-15") {Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)) {Text(tr("Escribe o dicta desde tu celular","Type or dictate from your phone"),color=Color.White,fontSize=26.sp,modifier=Modifier.weight(1f));FocusButton("×",onClick=close)}}
             item(key="assistant-static-rp150-16") {Text(tr("Escanea el QR. Puedes usar el micrófono del teclado del celular. El texto llegará al campo de BruniO AI; después cierra este panel y pulsa Buscar. No se consulta Gemini mientras escribes.","Scan the QR and use your phone keyboard microphone if desired. Text fills BruniO AI; then close this panel and select Find. Typing never calls Gemini."),color=Muted,fontSize=15.sp)}
             if(url.isNotBlank()) item(key="assistant-static-rp150-17") {QrCode(url,190.dp)}

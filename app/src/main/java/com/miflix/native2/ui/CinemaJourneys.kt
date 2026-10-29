@@ -102,7 +102,7 @@ private fun JourneyEpisodes(state:AppState,entry:JourneyEntry,exit:()->Unit,back
     PlayerSideSheet(entry.title,back) {
         item {Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {if(season>1) FocusButton("←") {season--};Text("Season $season",color=Color.White,modifier=Modifier.padding(top=12.dp));if(season<seasons) FocusButton("→") {season++}}}
         if(loading) item {Text(tr("Cargando…","Loading…"),color=Muted)}
-        if(message.isNotBlank()) item {Text(message,color=Accent);FocusButton(tr("Reintentar","Retry")) {retry++}}
+        if(message.isNotBlank()) item {Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {Text(message,color=Accent);FocusButton(tr("Reintentar","Retry")) {retry++}}}
         if(!loading) items(rows,key={"${it.season}:${it.episode}"}) {ep ->
             val watched=state.episodeWatched(entry.summary(),ep)
             Row(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(16.dp)).padding(10.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {

@@ -238,7 +238,7 @@ private fun CreateEventDialog(state: AppState, day: String?, close: () -> Unit) 
             item { NativeTextField(title,{title=it},tr("Título del evento","Event title")) }
             item { NativeTextField(date,{date=it},"YYYY-MM-DD HH:mm") }
             if(kind=="movie" || kind=="series") {
-                item { NativeTextField(query,{query=it},tr("Buscar contenido","Search titles"));FocusButton(tr("Buscar","Search")) { state.launch { state.socialAction { val requestedKind=kind;val requestedQuery=query;val found=state.tmdb.search(requestedQuery).filter { it.type==requestedKind };if(kind==requestedKind && query==requestedQuery) results=found } } } }
+                item { Column(verticalArrangement=Arrangement.spacedBy(14.dp)) {NativeTextField(query,{query=it},tr("Buscar contenido","Search titles"));FocusButton(tr("Buscar","Search")) { state.launch { state.socialAction { val requestedKind=kind;val requestedQuery=query;val found=state.tmdb.search(requestedQuery).filter { it.type==requestedKind };if(kind==requestedKind && query==requestedQuery) results=found } } }} }
                 items(results.chunked(3)) { row ->
                     Row(Modifier.fillMaxWidth().padding(horizontal=8.dp,vertical=12.dp),horizontalArrangement=Arrangement.spacedBy(22.dp)) {
                         row.forEach { result -> Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(8.dp)) {

@@ -21,11 +21,22 @@ internal class GeminiAssistantRP150(context:Context,private val fetch:suspend (S
         (store.getKey("brunio_gemini_rp150",null) as? SecretKey)?.let {return it}
         return KeyGenerator.getInstance("AES","AndroidKeyStore").apply {init(android.security.keystore.KeyGenParameterSpec.Builder("brunio_gemini_rp150",android.security.keystore.KeyProperties.PURPOSE_ENCRYPT or android.security.keystore.KeyProperties.PURPOSE_DECRYPT).setBlockModes("GCM").setEncryptionPaddings("NoPadding").build())}.generateKey()
     }
-    fun configured()=prefs.contains("cipher")
+    fun configured()=prefs.contains("cipher") && prefs.contains("iv")
     fun save(value:String) {
-        require(Regex("[A-Za-z0-9_-]{20,160}").matches(value)) {"Invalid Gemini API key"}
-        val cipher=Cipher.getInstance("AES/GCM/NoPadding");cipher.init(Cipher.ENCRYPT_MODE,key())
-        prefs.edit().putString("cipher",Base64.encodeToString(cipher.doFinal(value.toByteArray()),Base64.NO_WRAP)).putString("iv",Base64.encodeToString(cipher.iv,Base64.NO_WRAP)).apply()
+        val normalized=try {GeminiKeyInputRP153.normalize(value)} catch(_:IllegalArgumentException) {
+            throw SearchKeyboardServerRP136.SaveFailure(SearchKeyboardServerRP136.SaveError.INVALID_KEY)
+        }
+        val encrypted=try {
+            val secret=key()
+            val cipher=Cipher.getInstance("AES/GCM/NoPadding");cipher.init(Cipher.ENCRYPT_MODE,secret)
+            val bytes=normalized.toByteArray(Charsets.UTF_8)
+            val ciphertext=cipher.doFinal(bytes)
+            val verify=Cipher.getInstance("AES/GCM/NoPadding");verify.init(Cipher.DECRYPT_MODE,secret,GCMParameterSpec(128,cipher.iv))
+            check(java.security.MessageDigest.isEqual(bytes,verify.doFinal(ciphertext)))
+            Base64.encodeToString(ciphertext,Base64.NO_WRAP) to Base64.encodeToString(cipher.iv,Base64.NO_WRAP)
+        } catch(_:Exception) {throw SearchKeyboardServerRP136.SaveFailure(SearchKeyboardServerRP136.SaveError.SECURE_STORAGE)}
+        val committed=try {prefs.edit().putString("cipher",encrypted.first).putString("iv",encrypted.second).commit()} catch(_:Exception) {false}
+        if(!committed) throw SearchKeyboardServerRP136.SaveFailure(SearchKeyboardServerRP136.SaveError.STORAGE)
     }
     fun clear() {prefs.edit().remove("cipher").remove("iv").apply()}
     private fun read():String {

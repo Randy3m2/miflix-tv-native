@@ -1,0 +1,5 @@
+BUILD SUCCESSFUL: :app:testReleaseUnitTest :mobile:compileReleaseKotlin
+{'tests': 528, 'failures': 0, 'errors': 0, 'skipped': 0}
+Última compilación: 38 segundos, 45 tareas.
+Pruebas nuevas: formatos de clave antiguos/nuevos y largos, rechazo sin eco de valores, entrega íntegra por QR, errores específicos y reintento de la misma revisión, ausencia de datos sensibles en errores inesperados.
+No probado en TV física ni con una clave real de Gemini. No incluye APK firmado ni publicación remota.

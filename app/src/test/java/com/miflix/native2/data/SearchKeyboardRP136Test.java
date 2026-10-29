@@ -80,4 +80,36 @@ public class SearchKeyboardRP136Test {
         assertTrue(SearchKeyboardServerRP136.acceptsPeer(new byte[]{(byte)192,(byte)168,2,3}));
         assertFalse(SearchKeyboardServerRP136.acceptsPeer(new byte[]{8,8,8,8}));
     }
+    @Test public void longAuthKeyIsDeliveredIntactAndNeverEchoed() throws Exception {
+        String secret="AQ."+"fixture_not_a_key_".repeat(40);List<String> delivered=new ArrayList<>();
+        try(SearchKeyboardServerRP136 server=SearchKeyboardServerRP136.secretLoopbackForTests(value->{delivered.add(GeminiKeyInputRP153.normalize(value));return true;})) {
+            URI uri=URI.create(server.getUrl());String html=request(uri,"GET",uri.getPath(),null,"");
+            assertTrue(html.contains("maxlength='2048'"));
+            String body="csrf="+token(html)+"&sequence=1&text="+URLEncoder.encode(secret,"UTF-8");
+            String response=request(uri,"POST",uri.getPath().replace("/add/","/save/"),null,body);
+            assertTrue(response.startsWith("HTTP/1.1 200"));assertFalse(response.contains(secret));assertEquals(Collections.singletonList(secret),delivered);
+        }
+    }
+    @Test public void credentialSaveErrorsAreSafeSpecificAndRetryable() throws Exception {
+        String secret="AQ.fixture_NOT_A_REAL_SECRET_123456";AtomicInteger count=new AtomicInteger();
+        try(SearchKeyboardServerRP136 server=SearchKeyboardServerRP136.secretLoopbackForTests(value->{
+            if(count.incrementAndGet()==1) throw new SearchKeyboardServerRP136.SaveFailure(SearchKeyboardServerRP136.SaveError.SECURE_STORAGE);
+            return true;
+        })) {
+            URI uri=URI.create(server.getUrl());String html=request(uri,"GET",uri.getPath(),null,"");String path=uri.getPath().replace("/add/","/save/");
+            String body="csrf="+token(html)+"&sequence=1&text="+secret;
+            String response=request(uri,"POST",path,null,body);
+            assertTrue(response.startsWith("HTTP/1.1 409"));assertTrue(response.contains("encrypt"));assertFalse(response.contains(secret));
+            assertTrue(request(uri,"POST",path,null,body).startsWith("HTTP/1.1 200"));assertEquals(2,count.get());
+        }
+    }
+    @Test public void unexpectedSaveExceptionNeverExposesItsMessage() throws Exception {
+        String secret="AQ.fixture_NOT_A_REAL_SECRET_123456";
+        try(SearchKeyboardServerRP136 server=SearchKeyboardServerRP136.secretLoopbackForTests(value->{throw new RuntimeException(value);} )) {
+            URI uri=URI.create(server.getUrl());String html=request(uri,"GET",uri.getPath(),null,"");
+            String response=request(uri,"POST",uri.getPath().replace("/add/","/save/"),null,"csrf="+token(html)+"&sequence=1&text="+secret);
+            assertTrue(response.startsWith("HTTP/1.1 409"));assertFalse(response.contains(secret));
+        }
+    }
+
 }

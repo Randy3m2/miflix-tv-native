@@ -74,7 +74,7 @@ internal fun MobileAppRP133(state:AppState,destination:Screen) {
             }
         }
         if(destination !in listOf(Screen.PLAYER,Screen.MULTIVIEW)) Row(Modifier.fillMaxWidth().background(Color(0xF00C0E14)).padding(vertical=5.dp),horizontalArrangement=Arrangement.SpaceEvenly) {
-            val tabs=listOf(Triple(Screen.HOME,"home","Home"),Triple(Screen.SEARCH,"search",tr("Buscar","Search")),Triple(Screen.LIVE_TV,"live",tr("En vivo","Live")),Triple(Screen.FRIENDS,"friends",tr("Amigos","Friends")),Triple(Screen.MY_LIST,"list",tr("Mi lista","My list")),Triple(Screen.DOWNLOADS,"download",tr("Descargas","Downloads")))
+            val tabs=listOf(Triple(Screen.HOME,"home",tr("Inicio","Home")),Triple(Screen.SEARCH,"search",tr("Buscar","Search")),Triple(Screen.LIVE_TV,"live",tr("En vivo","Live")),Triple(Screen.FRIENDS,"friends",tr("Amigos","Friends")),Triple(Screen.MY_LIST,"list",tr("Mi lista","My list")),Triple(Screen.DOWNLOADS,"download",tr("Descargas","Downloads")))
             tabs.filter {(!state.kidsMode || it.first !in listOf(Screen.LIVE_TV,Screen.FRIENDS,Screen.DOWNLOADS)) && (!state.easyModeRP79 || it.first!=Screen.FRIENDS)}.forEach {(screen,icon,title)->
                 val selected=active==screen.name
                 Column(Modifier.weight(1f).heightIn(min=52.dp).clickable {

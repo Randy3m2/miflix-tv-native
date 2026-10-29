@@ -58,7 +58,7 @@ internal fun MobileSettingsRP133(state:AppState) {
     if(sheet=="addons") MobileAddonsRP133(state) {sheet=null}
     if(sheet in listOf("interface","audio","secondary","subtitles","size","text")) MobileSheetRP133(when(sheet) {"size"->tr("Límite por archivo","File size limit");"text"->tr("Tamaño del texto","Text size");else->tr("Idioma","Language")},{sheet=null}) {
         val choices=when(sheet) {
-            "interface"->listOf("es" to "Español","en" to "English")
+            "interface"->AppLanguagesRP148.choices
             "secondary"->listOf("" to tr("Desactivado","Off"))+langs.filter {it.first!=state.audioLanguage}
             "subtitles"->listOf("off" to tr("Desactivados","Off"))+langs
             "size"->listOf("0" to tr("Sin límite","Unlimited"),"1" to "1 GB","2" to "2 GB","4" to "4 GB","8" to "8 GB","15" to "15 GB","30" to "30 GB")
@@ -122,7 +122,7 @@ internal fun MobileSettingsRP133(state:AppState) {
             MobileSettingRowRP133("BruniO + TorBox",if(state.nativeSourceEnabled) "ON" else "OFF") {sheet="torbox"}
         }}
         item {MobileSettingsCardRP133(tr("Experiencia","Experience")) {
-            MobileSettingRowRP133(tr("Idioma de interfaz","Interface language"),if(state.interfaceLanguage=="es") "Español" else "English") {sheet="interface"}
+            MobileSettingRowRP133(tr("Idioma de interfaz","Interface language"),AppLanguagesRP148.label(state.interfaceLanguage)) {sheet="interface"}
             MobileSettingRowRP133(tr("Tamaño del texto","Text size"),if(MobileUiPrefsRP133.scale>1f) tr("Grande","Large") else tr("Normal","Normal")) {sheet="text"}
             MobileSettingRowRP133(tr("Modo fácil","Easy mode"),if(state.easyModeRP79) "ON" else "OFF") {state.launch {state.setEasyModeRP79(!state.easyModeRP79)}}
             MobileSettingRowRP133(tr("Limpiar caché de imágenes","Clear artwork cache"),"") {state.launch {state.clearCache()}}

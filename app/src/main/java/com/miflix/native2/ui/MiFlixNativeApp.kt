@@ -51,7 +51,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null,initialContentLinkRP140:Str
 
     val localizedContext=remember(baseContext,state.interfaceLanguage) {
         val config=android.content.res.Configuration(context.resources.configuration)
-        config.setLocale(java.util.Locale.forLanguageTag(if(state.interfaceLanguage=="es") "es-MX" else "en-US"))
+        config.setLocale(java.util.Locale.forLanguageTag(AppLanguagesRP148.locale(state.interfaceLanguage)))
         android.view.ContextThemeWrapper(baseContext,0).apply { applyOverrideConfiguration(config) }
     }
     CompositionLocalProvider(LocalMobileBrunioRP133 provides mobileRP133,androidx.compose.ui.platform.LocalDensity provides (if(mobileRP133) androidx.compose.ui.unit.Density(systemDensityRP133.density,systemDensityRP133.fontScale*MobileUiPrefsRP133.scale) else systemDensityRP133),LocalCardFreshnessLoad provides {item: com.miflix.native2.model.MediaSummary -> state.requestCardFreshness(item)},LocalCardFreshness provides {item: com.miflix.native2.model.MediaSummary -> state.cardFreshness(item)},LocalPlayerMenuSide provides (state.screen==Screen.PLAYER || state.screen==Screen.MULTIVIEW),LocalContext provides localizedContext,LocalProfileManage provides {state.socialProfileEditor=true},LocalCastPair provides {state.localCastPairing=true},LocalTitleActions provides {item: com.miflix.native2.model.MediaSummary -> state.titleActions(item)}) {

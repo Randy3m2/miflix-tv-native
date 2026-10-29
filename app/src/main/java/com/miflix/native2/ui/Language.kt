@@ -8,4 +8,4 @@ import androidx.compose.runtime.mutableStateOf
 object UiLanguage {
     var code by mutableStateOf("en")
 }
-fun tr(es: String,en: String): String = if(UiLanguage.code=="es") es else en
+fun tr(es: String,en: String): String = when(UiLanguage.code) {"es" -> es; "fr","ko" -> AppLanguagesRP148.translate(UiLanguage.code,en);else -> en}

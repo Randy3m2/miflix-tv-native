@@ -945,7 +945,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
 
     val helpValue = visualHelp?.value ?: when(helpIndex) {
         0 -> "BruniO ${BuildConfig.VERSION_NAME}"
-        1 -> if(state.interfaceLanguage=="en") "English" else "Español (Latinoamérica)"
+        1 -> AppLanguagesRP148.label(state.interfaceLanguage)
         2 -> state.session?.email ?: tr("Sin sesión","Not signed in")
         3 -> state.audioLanguage.ifBlank { tr("Automático","Automatic") }
         4 -> if(state.streamSizeLimitGb==0.0) tr("Sin límite","Unlimited") else "${state.streamSizeLimitGb} GB"
@@ -1017,6 +1017,8 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                     FocusButton("Español (Latinoamérica)",primary=state.interfaceLanguage=="es") { state.launch { state.setInterfaceLanguage("es") } }
                     FocusButton("English",primary=state.interfaceLanguage=="en") { state.launch { state.setInterfaceLanguage("en") } }
+                    FocusButton("Français",primary=state.interfaceLanguage=="fr") { state.launch { state.setInterfaceLanguage("fr") } }
+                    FocusButton("한국어",primary=state.interfaceLanguage=="ko") { state.launch { state.setInterfaceLanguage("ko") } }
                 }
 
                         }
@@ -1390,6 +1392,7 @@ internal fun playbackSetupRP92(context:android.content.Context,prefs:PlaybackPre
     fun audioCodes(code:String):List<String> = if(com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(code))
         listOf("es-419","es-MX","es-AR","es-CO","es-DO","es-CL","es-PE","es-VE","es-EC","es-ES","es")
         else if(com.miflix.native2.data.StreamLanguagePriority.prefersKorean(code)) listOf("ko-KR","ko")
+        else if(com.miflix.native2.data.StreamLanguagePriority.languageMatches(code,"fr")) listOf("fr-FR","fr-CA","fr")
         else listOf(code).filter {it.isNotBlank()}
     val audio=if(strictSpanish) audioCodes("es") else (audioCodes(prefs.audio)+audioCodes(prefs.secondary)+
         if(prefs.secondary.isBlank() && com.miflix.native2.data.StreamLanguagePriority.prefersSpanish(prefs.audio)) listOf("en") else emptyList()).distinct()
@@ -1464,6 +1467,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var maximized by remember { mutableStateOf(true) }
     var speed by remember(request.playbackId) { mutableStateOf(1f) }
     var playbackError by remember(request.playbackId) { mutableStateOf<String?>(null) }
+    var liveRetryAttemptRP144 by remember(request.playbackId) {mutableStateOf<Int?>(null)}
     var mobileMenuOpenRP139 by remember(request.playbackId) {mutableStateOf(false)}
     var sportsRecoveringRP137 by remember(request.playbackId) {mutableStateOf(false)}
     var sportsRetryPendingRP137 by remember(request.playbackId) {mutableStateOf(false)}
@@ -1743,11 +1747,20 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                     (player.playbackState == Player.STATE_READY || player.playbackState == Player.STATE_BUFFERING)
                 )
         }
+        val retry404RP144=com.miflix.native2.data.Live404RetrySessionRP144(channelMenuScopeRP34,
+            com.miflix.native2.data.Live404RetryBudgetRP144.eligible(request.live,request.sportsRecordingRP72,request.liveProvider,request.liveType),
+            owner={state.playerRequest?.playbackId==request.playbackId},
+            allowed={state.appForeground && !state.miniPlayer && !state.isPlaybackParked(request) && player.playWhenReady && state.partyRole!=PartyRole.GUEST && playerMenu==null && state.sourceSelection==null && !mobileMenuOpenRP139},
+            playing={player.isPlaying},
+            reload={playbackError=null;player.setMediaItem(player.currentMediaItem ?: MediaItem.fromUri(request.stream.url));player.prepare()},
+            status={attempt->if(state.playerRequest?.playbackId==request.playbackId) {liveRetryAttemptRP144=attempt;if(attempt!=null) playbackError=null}},
+            failed={failure->if(state.playerRequest?.playbackId==request.playbackId) playbackError=playerFailureDetails(failure as androidx.media3.common.PlaybackException)})
         var triedLiveHls=false
         var restoredSeriesAudio=false
         val listener = object : Player.Listener {
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                 if(state.playerRequest?.playbackId!=request.playbackId) return
+                if(retry404RP144.offer(error,liveHttpStatusRP144(error))) return
                 if(sportsRecoveringRP137 || sportsExhaustedRP137 || sportsRetryPendingRP137) return
                 if(sportsRetryRP108.take(request.live,request.sportsRecordingRP72,request.liveProvider)) {
                     sportsRetryPendingRP137=true
@@ -1859,6 +1872,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 updateScreenAwake()
             }
 
+            override fun onIsPlayingChanged(value:Boolean) {retry404RP144.onPlaying(value)}
             override fun onRenderedFirstFrame() {if(state.playerRequest?.playbackId!=request.playbackId) return;if(!firstFrame && (!strictSpanishRP83 || spanishVerifiedRP83)) state.rememberSuccessfulPlaybackRP16(request);state.recordSuccessfulLiveChannel(request);if(!firstFrame) LiveHubPlaybackRP41.remember(context,state,request);state.socialPlaybackStarted(request,player.currentPosition,player.duration);if(!firstFrame) state.markLidomSourceWorking(request);firstFrame=true;state.finishPlaybackLoading(request.playbackId)}
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if(state.playerRequest?.playbackId!=request.playbackId) return
@@ -1890,11 +1904,11 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                     state.launch {state.traktMarkWatched(request,lastPosition,lastDuration)}
                     state.launch {runCatching {state.pushCloud()}}
                 }
-            } finally {player.release()}
+            } finally {retry404RP144.close();player.release()}
         }
         // A prepared player already discovered its tracks before this visible listener was installed.
         if(player.currentTracks.groups.isNotEmpty()) listener.onTracksChanged(player.currentTracks)
-        onDispose {state.playerReleaseRP87.dispose(leaseRP87)}
+        onDispose {retry404RP144.close();state.playerReleaseRP87.dispose(leaseRP87)}
     }
 
     LaunchedEffect(player,state.partyReturnPulseRP88) {
@@ -2138,6 +2152,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         ) }
         if(sportsRecoveringRP137) Text(tr("Probando otro enlace…","Trying another link…"),color=Color.White,modifier=Modifier.align(Alignment.TopStart).padding(24.dp).background(Color(0xDD171717),RoundedCornerShape(14.dp)).padding(16.dp))
         if(!firstFrame && !hadPlaybackError && playbackError==null && state.playbackLoading==null) PlaybackArtwork(state,request)
+        if(liveRetryAttemptRP144!=null) Text(tr("Reconectando canal","Reconnecting channel")+" · ${liveRetryAttemptRP144}/4",color=Color.White,modifier=Modifier.align(Alignment.TopStart).padding(24.dp).background(Color.Black.copy(alpha=.7f),RoundedCornerShape(12.dp)).padding(14.dp))
         if(!state.easyModeRP79) ContentWarningOverlayRP31(state,request,firstFrame,visible=!mini && state.appForeground && playerMenu==null && !showEpisodes && !showPartyActions,
             modifier=Modifier.align(Alignment.TopStart).padding(start=28.dp,top=24.dp))
         if(mini) {

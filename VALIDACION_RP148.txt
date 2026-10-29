@@ -1,0 +1,6 @@
+Release Kotlin/Java TV y móvil: OK
+app: 497 tests, 0 failures, 0 errors
+mobile: 497 tests, 0 failures, 0 errors
+BUILD SUCCESSFUL in 12m 29s
+9 pruebas nuevas de idiomas y playback francés por módulo. Traducción parcial: 226 entradas por idioma; fallback inglés.
+Sin prueba física de layout, pistas o subtítulos reales. No APK firmado.

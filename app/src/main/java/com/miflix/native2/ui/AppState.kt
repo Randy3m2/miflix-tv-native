@@ -210,7 +210,7 @@ class AppState(context: Context) {
         require(body.getInt("brunioLocalBackup")==100)
         localExtras.validateImport(ratingsKey(),body.getJSONObject("extras"))
         for(key in listOf("homeOrder","hiddenRows")) {val a=body.getJSONArray(key);require(a.length()<=100);for(i in 0 until a.length()) require(a.getString(i).length in 1..100)}
-        require(body.getString("interface") in listOf("en","es"))
+        require(body.getString("interface") in com.miflix.native2.ui.AppLanguagesRP148.codes)
         require(body.getString("audio").length<=10 && body.getString("subtitle").length<=10)
         if(body.has("easySubtitle")) require(body.getString("easySubtitle").length in 1..10)
         for(key in listOf("autoplay","nextLink","adaptive")) body.getBoolean(key)
@@ -310,19 +310,19 @@ class AppState(context: Context) {
         val ids=playbackPrefs.getStringSet(readNoticesKey(),emptySet()).orEmpty().toSet()+(id?.let {setOf(it)} ?: (notifications.map {it.id}.toSet()+UpdateNotes.id))
         playbackPrefs.edit().putStringSet(readNoticesKey(),ids).apply();noticesRevision++
     }
-    private val legacyInterfaceLanguage=playbackPrefs.getString("interface","en").takeIf {it in listOf("en","es")} ?: "en"
+    private val legacyInterfaceLanguage=playbackPrefs.getString("interface","en").takeIf {it in com.miflix.native2.ui.AppLanguagesRP148.codes} ?: "en"
     var interfaceLanguage by mutableStateOf(legacyInterfaceLanguage)
         private set
     init { UiLanguage.code=interfaceLanguage }
     private fun interfaceLanguageKey()="interface:${ratingsKey()}"
     private fun applyProfileInterfaceLanguage() {
         val key=interfaceLanguageKey()
-        val code=playbackPrefs.getString(key,legacyInterfaceLanguage).takeIf {it in listOf("en","es")} ?: "en"
+        val code=playbackPrefs.getString(key,legacyInterfaceLanguage).takeIf {it in com.miflix.native2.ui.AppLanguagesRP148.codes} ?: "en"
         // Pin the legacy default once; edits in another profile never change it.
         if(!playbackPrefs.contains(key)) playbackPrefs.edit().putString(key,code).apply()
         val changed=interfaceLanguage!=code
         interfaceLanguage=code;UiLanguage.code=code
-        tmdb.language=if(code=="es") "es-MX" else "en-US"
+        tmdb.language=AppLanguagesRP148.locale(code)
         if(changed) clearTranslatedCatalogRC100()
     }
     private fun clearTranslatedCatalogRC100() {
@@ -334,7 +334,7 @@ class AppState(context: Context) {
         seasonalItems.clear();seasonalKey="";seasonalRetryAt=0L;comingSoonKey=""
     }
     suspend fun setInterfaceLanguage(code: String) {
-        require(code in listOf("en","es"))
+        require(code in com.miflix.native2.ui.AppLanguagesRP148.codes)
         playbackPrefs.edit().putString(interfaceLanguageKey(),code).apply()
         val changed=interfaceLanguage!=code
         applyProfileInterfaceLanguage()
@@ -1164,7 +1164,7 @@ class AppState(context: Context) {
     }
     fun retrySocialPresenceEvent() { profileSocialSession()?.takeUnless {sessionNeedsSignIn}?.let {presenceEvents.retry(it)} }
 
-    val tmdb = TmdbRepository(BuildConfig.MIFLIX_TMDB_TOKEN).also { it.language=if(interfaceLanguage=="es") "es-MX" else "en-US" }
+    val tmdb = TmdbRepository(BuildConfig.MIFLIX_TMDB_TOKEN).also { it.language=AppLanguagesRP148.locale(interfaceLanguage) }
     val streamRepo = StreamRepository("")
     private val nativeStore=NativeSourceStore(context)
     private val nativeSources=NativeSourceRepository()

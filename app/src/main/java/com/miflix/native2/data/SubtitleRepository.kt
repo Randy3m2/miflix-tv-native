@@ -75,6 +75,7 @@ class SubtitleRepository(
                     "es" -> "Español · $sourceName"
                     "en" -> "English · $sourceName"
                     "ko" -> "Korean · 한국어 · $sourceName"
+                    "fr" -> "Français · $sourceName"
                     else -> "${x.optString("lang", "Subtitle")} · $sourceName"
                 }
             }
@@ -92,7 +93,7 @@ class SubtitleRepository(
             "spa", "es-es", "es-la", "es_419", "spanish", "español" -> "es"
             "eng", "en-us", "en-gb", "english" -> "en"
             "por", "pt-br", "pt-pt", "portuguese" -> "pt"
-            "fre", "fra", "fr-fr", "french" -> "fr"
+            "fre", "fra", "fr-fr", "fr-ca", "français", "french" -> "fr"
             else -> StreamLanguagePriority.normalizeKoreanLanguage(x)
         }
     }

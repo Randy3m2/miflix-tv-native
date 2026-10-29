@@ -55,7 +55,7 @@ internal fun EasyNavigationRP79(state:AppState,onMoveDown:()->Unit={}) {
             } else false
         },verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
         EasyExitLogoRP80(state,onCountdown={exitReady=false;remaining=15;exit=true}) {exitReady=true;remaining=0;exit=true}
-        listOf(Screen.HOME to "Home",Screen.SEARCH to tr("🔍 Buscar","🔍 Search"),
+        listOf(Screen.HOME to tr("Inicio","Home"),Screen.SEARCH to tr("🔍 Buscar","🔍 Search"),
             Screen.MY_LIST to tr("Mi lista","My List")).forEach {(screen,label) ->
             FocusButton(label,primary=state.screen==screen,horizontalPadding=16.dp) {state.screen=screen}
         }

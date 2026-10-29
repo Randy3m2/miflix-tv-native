@@ -366,8 +366,9 @@ internal fun MultiViewTile(req: PlayerRequest, audible: Boolean, hd: Boolean, po
     val mobile=LocalMobileBrunioRP133.current
     val latestClick by rememberUpdatedState(click)
     var player by remember(req.playbackId) { mutableStateOf<ExoPlayer?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var buffering by remember { mutableStateOf(true) }
+    var error by remember(req.playbackId) { mutableStateOf<String?>(null) }
+    var buffering by remember(req.playbackId) { mutableStateOf(true) }
+    var retryAttemptRP144 by remember(req.playbackId) {mutableStateOf<Int?>(null)}
     var focused by remember { mutableStateOf(false) }
     val lifecycle=context.playbackActivity()?.lifecycle
     DisposableEffect(player,lifecycle) {
@@ -385,6 +386,7 @@ internal fun MultiViewTile(req: PlayerRequest, audible: Boolean, hd: Boolean, po
     LaunchedEffect(req.playbackId) {
         // Stagger decoder creation; the single player is disposed before four tiles start.
         delay(250L+order*180L)
+        var retryRP144:Live404RetrySessionRP144?=null
         try {
             if(pool.closed) return@LaunchedEffect
             val http=DefaultHttpDataSource.Factory().setAllowCrossProtocolRedirects(true).setDefaultRequestProperties(req.stream.requestHeaders)
@@ -396,10 +398,22 @@ internal fun MultiViewTile(req: PlayerRequest, audible: Boolean, hd: Boolean, po
                 .setMaxVideoBitrate(if(latestHd) 3000000 else 1800000).setMaxVideoFrameRate(30).setTrackTypeDisabled(C.TRACK_TYPE_TEXT,true)
                 .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,!latestAudible).build()
             p.volume=if(latestAudible) 1f else 0f
+            val retry=Live404RetrySessionRP144(this,
+                Live404RetryBudgetRP144.eligible(req.live,req.sportsRecordingRP72,req.liveProvider,req.liveType),
+                owner={pool.owns(req.playbackId,p) && player===p},
+                allowed={lifecycle?.currentState?.isAtLeast(Lifecycle.State.STARTED)!=false && p.playWhenReady},
+                playing={p.isPlaying},
+                reload={error=null;buffering=true;p.setMediaItem(p.currentMediaItem ?: MediaItem.fromUri(req.stream.url));p.prepare()},
+                status={attempt->if(player===p) {retryAttemptRP144=attempt;if(attempt!=null) error=null}},
+                failed={failure->if(player===p) {error=playerFailureDetails(failure as androidx.media3.common.PlaybackException);p.stop()}})
+            retryRP144=retry
             var triedLiveHls=false
             p.addListener(object: Player.Listener {
-                override fun onPlaybackStateChanged(state: Int) { buffering=state==Player.STATE_BUFFERING }
+                override fun onPlaybackStateChanged(state:Int) {buffering=state==Player.STATE_BUFFERING}
+                override fun onIsPlayingChanged(value:Boolean) {retry.onPlaying(value)}
                 override fun onPlayerError(e: androidx.media3.common.PlaybackException) {
+                    if(!pool.owns(req.playbackId,p)) return
+                    if(retry.offer(e,liveHttpStatusRP144(e))) return
                     if(!triedLiveHls && e.errorCode==androidx.media3.common.PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED) {
                         triedLiveHls=true
                         p.setMediaItem(MediaItem.Builder().setUri(req.stream.url).setMimeType(androidx.media3.common.MimeTypes.APPLICATION_M3U8).build())
@@ -412,7 +426,7 @@ internal fun MultiViewTile(req: PlayerRequest, audible: Boolean, hd: Boolean, po
             p.setMediaItem(MediaItem.Builder().setUri(req.stream.url).apply {if(req.liveMime.isNotBlank()) setMimeType(req.liveMime)}.build());p.prepare();p.playWhenReady=true;player=p
             kotlinx.coroutines.awaitCancellation()
         } catch(e: CancellationException) { throw e } catch(e: Exception) { error=e.message }
-        finally { player=null;pool.release(req.playbackId) }
+        finally {retryRP144?.close();player=null;pool.release(req.playbackId)}
     }
     LaunchedEffect(player,audible,hd) {
         player?.let { p ->
@@ -429,6 +443,7 @@ internal fun MultiViewTile(req: PlayerRequest, audible: Boolean, hd: Boolean, po
                 } },update={ it.player=p },modifier=Modifier.fillMaxSize()) }
         Text((if(audible) "♫  " else "")+req.item.title,color=Color.White,fontSize=15.sp,modifier=Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(end=if(statsFooterRP130) 110.dp else 0.dp).background(Color(0xB0000000)).padding(8.dp))
         if(error!=null) Text(tr("No se pudo abrir. OK para cambiar o reintentar.","Unable to play. OK to change or retry.")+"\n"+error,color=Color.White,modifier=Modifier.align(Alignment.Center).background(Color.Black).padding(14.dp))
+        else if(retryAttemptRP144!=null) Text(tr("Reconectando canal","Reconnecting channel")+" · ${retryAttemptRP144}/4",color=Color.White,modifier=Modifier.align(Alignment.Center).background(Color.Black.copy(alpha=.65f)).padding(14.dp))
         else if(buffering) Text(tr("Cargando…","Loading…"),color=Color.White,modifier=Modifier.align(Alignment.Center))
     }
 }
@@ -438,6 +453,7 @@ internal class MultiPlayerPool {
     private val players=mutableMapOf<String,ExoPlayer>()
     var closed=false
         private set
+    fun owns(id:String,player:ExoPlayer)=!closed && players[id]===player
     fun add(id: String,player: ExoPlayer): Boolean {
         if(closed) { player.release();return false }
         release(id);players[id]=player;return true

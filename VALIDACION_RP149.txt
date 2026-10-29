@@ -1,0 +1,4 @@
+compileReleaseKotlin y compileReleaseJavaWithJavac: OK
+testReleaseUnitTest: 497 tests, 0 failures, 0 errors
+BUILD SUCCESSFUL in 3m 59s
+Se incluyen los archivos que definen los tres símbolos ausentes reportados. Sin APK firmado ni prueba física.

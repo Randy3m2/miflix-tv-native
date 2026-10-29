@@ -12,3 +12,6 @@ internal fun playerFailureDetails(error: androidx.media3.common.PlaybackExceptio
         ?.let {"${it.className.substringAfterLast('.')}.${it.methodName}:${it.lineNumber}"}
     return listOf(error.errorCodeName,http?.let {"HTTP ${it.responseCode}"},detail.takeIf {it.isNotBlank()},site).filterNotNull().joinToString(" · ")
 }
+
+internal fun liveHttpStatusRP144(error:Throwable):Int? = generateSequence(error) {it.cause}.take(8)
+    .filterIsInstance<androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException>().firstOrNull()?.responseCode

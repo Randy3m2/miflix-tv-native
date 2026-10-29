@@ -70,6 +70,8 @@ class AppState(context: Context) {
 
     private val socialPrefs = context.getSharedPreferences("miflix_social", Context.MODE_PRIVATE)
     private val playbackPrefs = context.getSharedPreferences("miflix_playback", Context.MODE_PRIVATE)
+    internal var assistantQueryRP156 by mutableStateOf<String?>(null)
+    internal var assistantLeagueRP156 by mutableStateOf<String?>(null)
     var assistantEnabledRP155 by mutableStateOf(playbackPrefs.getBoolean("assistant_enabled_rp155",false))
         private set
     fun saveAssistantEnabledRP155(enabled:Boolean) {assistantEnabledRP155=enabled;playbackPrefs.edit().putBoolean("assistant_enabled_rp155",enabled).apply()}

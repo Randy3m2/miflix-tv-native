@@ -22,7 +22,6 @@ internal fun AssistantCommandPanelRP155(state:AppState,command:AssistantCommandR
     var rows by remember(command) {mutableStateOf<List<AssistantLiveRP155>>(emptyList())}
     var message by remember(command) {mutableStateOf("")}
     var busy by remember(command) {mutableStateOf(false)}
-    var table by remember(command) {mutableStateOf(false)}
     var calendar by remember {mutableStateOf(false)}
     var queue by remember {mutableStateOf(false)}
     var day by remember(command) {mutableStateOf(command.date)}
@@ -31,13 +30,18 @@ internal fun AssistantCommandPanelRP155(state:AppState,command:AssistantCommandR
     var saved by remember(command) {mutableStateOf(false)}
     fun runAction(block:suspend ()->Unit) {if(busy) return;busy=true;scope.launch {try {check(state.localExtrasScope()==owner);block()} catch(e:CancellationException) {throw e} catch(_:Exception) {message=tr("No se pudo completar esta acción. Puedes reintentar.","Could not complete this action. You can retry.")} finally {busy=false}}}
     LaunchedEffect(command,owner) {
+        if(command.raw==state.assistantQueryRP156 && AssistantDirectRP156.run(state,command.raw)) {state.assistantQueryRP156=null;close();return@LaunchedEffect}
         if(command.action !in listOf(AssistantActionRP155.CHANNEL,AssistantActionRP155.GAME)) return@LaunchedEffect
         if(command.target.length<2) {message=tr("Dime el nombre del canal o equipo.","Tell me the channel or team name.");return@LaunchedEffect}
         busy=true
         try {
             val answer=withTimeout(30_000) {if(command.action==AssistantActionRP155.GAME) AssistantLiveCatalogRP155.games(state,command.target) else AssistantLiveCatalogRP155.channels(context,state,command.target) to ""}
             ensureActive();if(state.localExtrasScope()!=owner) return@LaunchedEffect
-            rows=answer.first;message=answer.second.ifBlank {if(rows.isEmpty()) tr("No encontré ese canal en tus fuentes configuradas.","That channel was not found in your configured sources.") else tr("Selecciona la opción que quieres reproducir.","Select the option you want to play.")}
+            rows=answer.first
+            if(command.raw==state.assistantQueryRP156 && rows.size==1) {
+                AssistantLiveCatalogRP155.play(state,rows.single());state.assistantQueryRP156=null;close();return@LaunchedEffect
+            }
+            message=answer.second.ifBlank {if(rows.isEmpty()) tr("No encontré ese canal en tus fuentes configuradas.","That channel was not found in your configured sources.") else tr("Selecciona la opción que quieres reproducir.","Select the option you want to play.")}
         } catch(e:CancellationException) {throw e} catch(_:Exception) {message=tr("No se pudo consultar la fuente. Revisa Live TV.","Could not query the source. Check Live TV.")} finally {busy=false}
     }
     if(calendar) CalendarDialog(state) {calendar=false}
@@ -56,8 +60,7 @@ internal fun AssistantCommandPanelRP155(state:AppState,command:AssistantCommandR
                 AssistantActionRP152(tr("Ver Live TV","Open Live TV")) {state.screen=Screen.LIVE_TV;close()}
             }
             AssistantActionRP155.STANDINGS -> {
-                AssistantActionRP152(tr("Abrir posiciones · ","Open standings · ")+command.target) {table=!table}
-                if(table) Box(Modifier.fillMaxWidth().height(340.dp)) {StandingsScreenRP120(initialLeagueRP121=command.target,embeddedRP121=true,close={table=false})}
+                AssistantActionRP152(tr("Abrir posiciones · ","Open standings · ")+command.target) {state.assistantLeagueRP156=command.target;state.normalLiveEntryRP85=false;state.screen=Screen.LIVE_TV;close()}
             }
             AssistantActionRP155.NAVIGATE -> {
                 AssistantActionRP152(tr("Abrir: ","Open: ")+command.target) {

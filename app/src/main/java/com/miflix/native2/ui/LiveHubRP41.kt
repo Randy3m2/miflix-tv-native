@@ -58,7 +58,7 @@ private val hubCatalogRP41=PlaybackLinkCache<String,List<LiveCategory>>(4) {Syst
 internal fun LiveHubRP41(state:AppState) {
     val context=LocalContext.current
     val owner="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
-    var section by remember(owner) {mutableStateOf(if(state.normalLiveEntryRP85) "hub" else LiveHubMemoryRP46.section(owner).let {if(it in listOf("nuvio","nauta-source")) "others" else it})}
+    var section by remember(owner) {mutableStateOf(if(state.assistantLeagueRP156!=null) when(state.assistantLeagueRP156) {"MLB"->"baseball";"LIDOM"->"lidom";"F1"->"f1";else->"basketball"} else if(state.normalLiveEntryRP85) "hub" else LiveHubMemoryRP46.section(owner).let {if(it in listOf("nuvio","nauta-source")) "others" else it})}
     var customChannelsRP45 by remember(owner) {mutableStateOf(false)}
     var configuring by remember {mutableStateOf(false)}
     var sportsQrRP71 by remember {mutableStateOf(false)}
@@ -68,6 +68,11 @@ internal fun LiveHubRP41(state:AppState) {
     fun changeSectionRP46(value:String) {CrashReportRP135.stage("live/"+value);LiveHubMemoryRP46.section(owner,value);section=value}
     LaunchedEffect(state.normalLiveEntryRP85) {
         if(state.normalLiveEntryRP85) {changeSectionRP46("hub");state.normalLiveEntryRP85=false}
+    }
+    LaunchedEffect(state.assistantLeagueRP156) {
+        state.assistantLeagueRP156?.let {league ->
+            changeSectionRP46(when(league) {"MLB"->"baseball";"LIDOM"->"lidom";"F1"->"f1";else->"basketball"})
+        }
     }
     fun back() {changeSectionRP46(if(section=="nauta-source") "others" else "hub")}
     BackHandler {if(section!="hub") back() else state.screen=Screen.HOME}

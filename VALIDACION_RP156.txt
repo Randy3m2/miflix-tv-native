@@ -1,0 +1,7 @@
+RP156 / Build 156 · versionCode 22260
+Gradle :app:testReleaseUnitTest :mobile:compileReleaseKotlin
+BUILD SUCCESSFUL
+{'tests': 538, 'failures': 0, 'errors': 0, 'skipped': 0}
+git diff --check: passed
+Paquete comparado con las fuentes compiladas: idéntico.
+No probado en TV/Firestick físico. Sin llamadas reales con la clave personal de Gemini.

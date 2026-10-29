@@ -293,6 +293,7 @@ class TmdbRepository internal constructor(var token:String,private val fetchRP14
         val params=linkedMapOf("language" to language,"include_adult" to "false","sort_by" to "popularity.desc","vote_count.gte" to "20")
         if(plan.genres.isNotEmpty()) params["with_genres"]=plan.genres.joinToString(",")
         if(plan.minutes>0) {params["with_runtime.gte"]="1";params["with_runtime.lte"]=plan.minutes.toString()}
+        if(plan.minMinutes>0) params["with_runtime.gte"]=plan.minMinutes.toString()
         if(plan.decade>0) {params["primary_release_date.gte"]="${plan.decade}-01-01";params["primary_release_date.lte"]="${plan.decade+9}-12-31"}
         if(plan.keyword.isNotBlank()) {
             val keywords=get("/search/keyword",mapOf("query" to plan.keyword)).optJSONArray("results")

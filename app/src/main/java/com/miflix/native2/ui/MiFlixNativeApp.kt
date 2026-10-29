@@ -38,7 +38,9 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
     val context = baseContext.applicationContext
     val state = remember { AppState(context) }
     var showAssistantRP150 by remember {mutableStateOf(false)}
-    LaunchedEffect(state.screen,state.activeProfile.id,state.session?.userId,state.assistantEnabledRP155) {showAssistantRP150=false}
+    var assistantSequenceRP156 by remember {mutableIntStateOf(0)}
+    var assistantEntryRP156 by remember {mutableStateOf(false)}
+    LaunchedEffect(state.screen,state.activeProfile.id,state.session?.userId,state.assistantEnabledRP155) {showAssistantRP150=false;assistantEntryRP156=false}
     var showGuestRP150 by remember {mutableStateOf(false)}
     var consumedPartyRP150 by remember {mutableStateOf<String?>(null)}
     if(showGuestRP150 && !guestRP150) {
@@ -72,7 +74,7 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
         config.setLocale(java.util.Locale.forLanguageTag(AppLanguagesRP148.locale(state.interfaceLanguage)))
         android.view.ContextThemeWrapper(baseContext,0).apply { applyOverrideConfiguration(config) }
     }
-    CompositionLocalProvider(LocalGuestOpenRP154 provides (if(guestRP150 || state.kidsMode) null else ({showAssistantRP150=false;showGuestRP150=true})),LocalAssistantOpenRP150 provides (if(guestRP150 || state.kidsMode || !state.assistantEnabledRP155) null else ({showAssistantRP150=true})),LocalGuestExitRP150 provides (if(guestRP150) exitGuestRP150 else null),LocalMobileBrunioRP133 provides mobileRP133,androidx.compose.ui.platform.LocalDensity provides (if(mobileRP133) androidx.compose.ui.unit.Density(systemDensityRP133.density,systemDensityRP133.fontScale*MobileUiPrefsRP133.scale) else systemDensityRP133),LocalCardFreshnessLoad provides {item: com.miflix.native2.model.MediaSummary -> state.requestCardFreshness(item)},LocalCardFreshness provides {item: com.miflix.native2.model.MediaSummary -> state.cardFreshness(item)},LocalPlayerMenuSide provides (state.screen==Screen.PLAYER || state.screen==Screen.MULTIVIEW),LocalContext provides localizedContext,LocalProfileManage provides (if(guestRP150) null else ({state.socialProfileEditor=true})),LocalCastPair provides (if(guestRP150) null else ({state.localCastPairing=true})),LocalTitleActions provides {item: com.miflix.native2.model.MediaSummary -> state.titleActions(item)}) {
+    CompositionLocalProvider(LocalGuestOpenRP154 provides (if(guestRP150 || state.kidsMode) null else ({showAssistantRP150=false;showGuestRP150=true})),LocalAssistantOpenRP150 provides (if(guestRP150 || state.kidsMode || !state.assistantEnabledRP155) null else ({assistantEntryRP156=true})),LocalGuestExitRP150 provides (if(guestRP150) exitGuestRP150 else null),LocalMobileBrunioRP133 provides mobileRP133,androidx.compose.ui.platform.LocalDensity provides (if(mobileRP133) androidx.compose.ui.unit.Density(systemDensityRP133.density,systemDensityRP133.fontScale*MobileUiPrefsRP133.scale) else systemDensityRP133),LocalCardFreshnessLoad provides {item: com.miflix.native2.model.MediaSummary -> state.requestCardFreshness(item)},LocalCardFreshness provides {item: com.miflix.native2.model.MediaSummary -> state.cardFreshness(item)},LocalPlayerMenuSide provides (state.screen==Screen.PLAYER || state.screen==Screen.MULTIVIEW),LocalContext provides localizedContext,LocalProfileManage provides (if(guestRP150) null else ({state.socialProfileEditor=true})),LocalCastPair provides (if(guestRP150) null else ({state.localCastPairing=true})),LocalTitleActions provides {item: com.miflix.native2.model.MediaSummary -> state.titleActions(item)}) {
     val originalDensity=androidx.compose.ui.platform.LocalDensity.current
     CompositionLocalProvider(LocalSimpleHome provides state.easyModeRP79,androidx.compose.ui.platform.LocalDensity provides
         androidx.compose.ui.unit.Density(originalDensity.density,if(state.easyModeRP79) maxOf(originalDensity.fontScale,1.2f) else originalDensity.fontScale)) {
@@ -146,7 +148,7 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
                 shortcut();true
             } else false
         }.pointerInput(Unit) {awaitPointerEventScope {while(true) {awaitPointerEvent(PointerEventPass.Initial);MenuActivity.touch()} }}) {
-        navigationState.SaveableStateProvider("${state.session?.userId}:${state.activeProfile.id}:${if(showAssistantRP150 && !guestRP150 && !mobileRP133 && !state.kidsMode) "ASSISTANT" else state.screen.name}") {
+        navigationState.SaveableStateProvider("${state.session?.userId}:${state.activeProfile.id}:${if(showAssistantRP150 && !guestRP150 && !mobileRP133 && !state.kidsMode) "ASSISTANT:$assistantSequenceRP156" else state.screen.name}") {
         val destination=if(guestRP150 && state.screen in setOf(Screen.SETTINGS,Screen.PROFILES,Screen.FRIENDS,Screen.WATCH_PARTY,Screen.NOTIFICATIONS,Screen.DOWNLOADS,Screen.TRAKT)) Screen.HOME else if(state.easyModeRP79 && !(mobileRP133 && state.screen==Screen.DOWNLOADS) && !com.miflix.native2.data.EasyModePolicyRP79.allowsScreen(state.screen.name)) Screen.HOME else if(state.kidsMode && state.screen !in setOf(Screen.HOME,Screen.SEARCH,Screen.MY_LIST,Screen.DETAILS,Screen.PROFILES,Screen.NOTIFICATIONS,Screen.PLAYER)) Screen.HOME else state.screen
         LaunchedEffect(destination,state.screen) {if(destination!=state.screen) state.screen=destination}
         if(showAssistantRP150 && !guestRP150 && !mobileRP133 && !state.kidsMode) CinematicSearchScreen(state,{showAssistantRP150=false},initialAi=true)
@@ -209,6 +211,12 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
         }
         LaunchedEffect(bootstrapped,state.session?.userId,state.activeProfile.id,state.easyModeRP79) {
             if(bootstrapped && !state.easyModeRP79) runCatching { state.loadRatings() }.onFailure { state.error=it.message }
+        }
+        if(assistantEntryRP156 && state.assistantEnabledRP155 && !guestRP150 && !state.kidsMode) AssistantEntryRP156(state,{assistantEntryRP156=false}) {request ->
+            assistantEntryRP156=false
+            if(!AssistantDirectRP156.run(state,request)) {
+                navigationState.removeState("${state.session?.userId}:${state.activeProfile.id}:ASSISTANT:$assistantSequenceRP156");assistantSequenceRP156++;state.assistantQueryRP156=request;state.searchQuery=request;showAssistantRP150=true
+            }
         }
         LaunchedEffect(bootstrapped, state.session?.userId, state.activeProfile.id, state.favorites.toList(),state.easyModeRP79) {
             if(bootstrapped && !state.easyModeRP79) while(true) {

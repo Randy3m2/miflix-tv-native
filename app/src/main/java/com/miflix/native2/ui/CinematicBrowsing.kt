@@ -211,7 +211,7 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit,initialAi:
     var aiMode by rememberSaveable(owner) {mutableStateOf(initialAi && state.assistantEnabledRP155 && !state.kidsMode && !easySearchRP80)}
     val openGuest=LocalGuestOpenRP154.current
     LaunchedEffect(state.assistantEnabledRP155) {if(!state.assistantEnabledRP155) aiMode=false}
-    var query by rememberSaveable(owner) {mutableStateOf(state.searchQuery)}
+    var query by rememberSaveable(owner) {mutableStateOf(if(initialAi) state.assistantQueryRP156 ?: state.searchQuery else state.searchQuery)}
     var phoneKeyboardRP136 by remember(owner) {mutableStateOf(false)}
     var cursor by rememberSaveable(owner) {mutableIntStateOf(query.length)}
     var results by remember {mutableStateOf<List<MediaSummary>>(emptyList())}
@@ -228,10 +228,10 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit,initialAi:
     fun acceptVoiceRP85(result:androidx.activity.result.ActivityResult) {
         if(result.resultCode==android.app.Activity.RESULT_OK && voiceOwnerRP81==state.searchHistoryOwner()) {
             val heard=result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS).orEmpty()
-                .map {it.trim().take(120)}.filter {it.isNotBlank()}
+                .map {it.trim().take(if(aiMode) 500 else 120)}.filter {it.isNotBlank()}
                 .distinctBy {com.miflix.native2.data.SearchQueryRP81.normalize(it)}.take(5)
             voiceAlternativesRP81=heard
-            heard.firstOrNull()?.let {replace(it)}
+            heard.firstOrNull()?.let {if(aiMode) state.assistantQueryRP156=it;replace(it)}
         }
     }
     fun voiceIntentRP85(automatic:Boolean):android.content.Intent {

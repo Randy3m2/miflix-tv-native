@@ -25,11 +25,11 @@ internal class AssistantRepositoryRP150(private val tmdb:TmdbRepository) {
         val rows=coroutineScope {movies.map {item ->async {
             gate.withPermit {
                 try {val detail=tmdb.details(item);val minutes=detail.runtimeMinutes
-                    if(minutes<=0 || plan.minutes>0 && minutes>plan.minutes) null else AssistantPickRP150(if(item.poster.isNullOrBlank() && item.backdrop.isNullOrBlank()) detail.summary else item,minutes)
+                    if(minutes<=0 || minutes<plan.minMinutes || plan.minutes>0 && minutes>plan.minutes) null else AssistantPickRP150(if(item.poster.isNullOrBlank() && item.backdrop.isNullOrBlank()) detail.summary else item,minutes)
                 } catch(e:CancellationException) {throw e} catch(_:Exception) {null}
             }
         }}.awaitAll().filterNotNull()}
-        val genericTime=plan.minutes>0 && plan.genres.isEmpty() && plan.keyword.isBlank() && plan.query.isBlank() && plan.decade==0
+        val genericTime=plan.minMinutes==0 && plan.minutes>0 && plan.genres.isEmpty() && plan.keyword.isBlank() && plan.query.isBlank() && plan.decade==0
         val resumedMovies=if(genericTime) coroutineScope {
             continueRows.filter {it.type=="movie"}.distinctBy {it.cloudId}.take(4).map {item ->async {gate.withPermit {
                 try {val saved=progress[item.cloudId] ?: return@withPermit null

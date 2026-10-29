@@ -47,11 +47,11 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
     val columns=4
     var budget by remember {mutableIntStateOf(0)}
     val useGemini=remember {context.getSharedPreferences("brunio_gemini_rp150",0).getBoolean("enabled",false)}
-    var sceneFinder by remember {mutableStateOf(false)}
     var phone by remember {mutableStateOf(false)}
     val configured=ai.configured()
     var busy by remember {mutableStateOf(false)}
     var message by remember {mutableStateOf("")}
+    var sceneHitsRP156 by remember(owner) {mutableStateOf<List<AssistantSceneHitRP156>>(emptyList())}
     var appCommand by remember(owner) {mutableStateOf<AssistantCommandRP155?>(null)}
     var contextPicks by remember(owner) {mutableStateOf<List<AssistantPickRP150>>(emptyList())}
     var refinementBase by remember(owner) {mutableStateOf<Pair<AssistantPlanRP150,List<AssistantPickRP150>>?>(null)}
@@ -70,7 +70,7 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
     fun submit(text:String=query,time:Int=budget,preset:AssistantPlanRP150?=null,automatic:Boolean=false,allowRemote:Boolean=true,commandOverride:AssistantCommandRP155?=null) {
         if(busy) return
         if(!automatic) cancelledKey=null
-        lastSubmitted="$text:$time";sharedReplace?.invoke(text);query=text;budget=time;resultQuery=text;resultBudget=time;activePlan=null;message="";picks=emptyList();appCommand=null;desiredAudio="";busy=true
+        lastSubmitted="$text:$time";sharedReplace?.invoke(text);query=text;budget=time;resultQuery=text;resultBudget=time;activePlan=null;message="";picks=emptyList();appCommand=null;sceneHitsRP156=emptyList();desiredAudio="";busy=true
         val generation=++requestGeneration
         val remote=allowRemote && preset==null && useGemini && configured && (!automatic || ai.readyRP154())
         job=scope.launch {
@@ -110,7 +110,18 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
                         else -> {appCommand=command;return@launch}
                     }
                 }
-                if(Regex("(?i)(en qu[eé] episodio|which episode|scene finder|escena|timestamp)").containsMatchIn(text)) {if(!automatic) sceneFinder=true else message=tr("Abre Scene Finder para buscar pistas en episodios.","Open Scene Finder to search episode clues.");return@launch}
+                if(AssistantSceneRP156.detects(text)) {
+                    val hint=if(allowRemote && useGemini && configured && ai.readyRP154()) try {withContext(Dispatchers.IO) {ai.sceneRP156(text)}} catch(e:CancellationException) {throw e} catch(_:Exception) {AssistantSceneRP156.local(text)} else AssistantSceneRP156.local(text)
+                    val hits=withTimeout(45000) {AssistantSceneRP156.find(state.tmdb,hint)}
+                    ensureActive();if(generation!=requestGeneration || state.localExtrasScope()!=owner) return@launch
+                    if(hits.size==1 && !hits.single().suggested && state.assistantQueryRP156==text) {
+                        val hit=hits.single();state.assistantQueryRP156=null;close();state.launch {state.open(hit.show);if(state.selected?.cloudId==hit.show.cloudId && state.localExtrasScope()==owner) state.playEpisode(hit.episode)}
+                        return@launch
+                    }
+                    sceneHitsRP156=hits
+                    message=if(hits.isEmpty()) tr("No pude identificar ese episodio en el catálogo. Prueba el nombre exacto de la serie y una pista corta. Las frases del doblaje no siempre aparecen en las sinopsis.","Could not identify the episode in the catalog. Try the exact series name and a short clue. Dubbed quotes may not appear in synopses.") else tr("Episodios encontrados. Las sugerencias de Gemini no verifican la frase ni el minuto de la escena.","Episodes found. Gemini suggestions do not verify the quote or scene timestamp.")
+                    return@launch
+                }
                 val key="$remote:$text:$time:$preset"
                 var cachePlan=true
                 val plan=preset ?: plans[key] ?: if(remote) try {
@@ -125,6 +136,7 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
                 if(state.localExtrasScope()!=owner || generation!=requestGeneration) return@launch
                 picks=if(state.kidsMode) {val allowed=state.tmdb.kidsFilter(rows.map {it.item}).map {it.cloudId}.toSet();rows.filter {it.item.cloudId in allowed}} else rows
                 if(picks.isNotEmpty() && (text.trim().length>=8 || contextPicks.isEmpty())) {contextPicks=picks;contextPlan=plan;refinementBase=null}
+                if(state.assistantQueryRP156==text) state.assistantQueryRP156=null
                 activePlan=plan
                 desiredAudio=plan.audio
                 if(picks.isEmpty()) message=tr("No encontramos coincidencias verificadas. Prueba otros filtros.","No verified matches found. Try different filters.")
@@ -134,13 +146,14 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
     }
     LaunchedEffect(query,budget,owner) {
         val text=query.trim()
+        if(state.assistantQueryRP156!=null && state.assistantQueryRP156!=query) state.assistantQueryRP156=null
         if(cancelledKey=="$query:$budget") return@LaunchedEffect
         cancelledKey=null
         if(lastSubmitted=="$query:$budget") return@LaunchedEffect
-        requestGeneration++;job?.cancel();busy=false;picks=emptyList();appCommand=null;message="";activePlan=null
+        requestGeneration++;job?.cancel();busy=false;picks=emptyList();appCommand=null;sceneHitsRP156=emptyList();message="";activePlan=null
         if(text.length<2) {lastSubmitted=null;return@LaunchedEffect}
         delay(600)
-        submit(query,budget,automatic=true,allowRemote=false)
+        submit(query,budget,automatic=true,allowRemote=AssistantSceneRP156.detects(query) && state.assistantQueryRP156==query)
     }
     LaunchedEffect(query,budget,owner,useGemini,configured) {
         if(!useGemini || !configured || query.trim().length<8 || AssistantCommandsRP155.parse(query)!=null) return@LaunchedEffect
@@ -153,7 +166,7 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
     var voiceOwner by remember {mutableStateOf<String?>(null)}
     val voice=androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) {result ->
         if(result.resultCode==android.app.Activity.RESULT_OK && voiceOwner==owner && state.localExtrasScope()==owner) {
-            result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.trim()?.takeIf {it.isNotBlank()}?.let {query=it.take(500);message=""}
+            result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.trim()?.takeIf {it.isNotBlank()}?.let {state.assistantQueryRP156=it.take(500);query=it.take(500);message=""}
         }
         voiceOwner=null
     }
@@ -169,7 +182,6 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
     }
     val artwork=state.moodArtworkRC102()
     val starters=(state.forYou+state.trending+state.topRated).distinctBy {it.cloudId}.filter {(!it.poster.isNullOrBlank() || !it.backdrop.isNullOrBlank()) && !state.kidsMode}.take(10)
-    if(sceneFinder) {SceneFinderRP151(state) {sceneFinder=false};return}
     if(phone) AssistantTextQrRP150(state,{if(!busy) query=it},{phone=false})
     androidx.activity.compose.BackHandler(onBack=close)
     Box(Modifier.fillMaxSize().background(Color.Black)) {
@@ -178,7 +190,7 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
                 Text("✦  BruniO Assistant",color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     if(!state.kidsMode && LocalGuestExitRP150.current==null) AssistantActionRP152(tr("Invitado","Guest"),"friends") {if(state.prepareGuestRP150()) guest()}
-                    AssistantActionRP152("Scene Finder","search") {sceneFinder=true}
+                    AssistantActionRP152(tr("Buscar una escena","Find a scene"),"search") {sharedReplace?.invoke(tr("Episodio de ","Episode of "));query=tr("Episodio de ","Episode of ")}
                     AssistantActionRP152(tr("Búsqueda normal","Title search")) {close()}
                 }
             } else {
@@ -189,7 +201,7 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
                 }
                 Text(if(useGemini && configured) "GEMINI" else tr("EN TU TV","ON YOUR TV"),color=Color(0xffc8adff),fontSize=9.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(end=8.dp))
                 if(!state.kidsMode && LocalGuestExitRP150.current==null) AssistantActionRP152(tr("Invitado","Guest"),"friends") {if(state.prepareGuestRP150()) guest() else message=tr("Cierra el reproductor y sal del Party para entrar como invitado.","Close playback and leave the Party to enter guest mode.")}
-                AssistantActionRP152("Scene Finder","search") {sceneFinder=true}
+                AssistantActionRP152(tr("Buscar una escena","Find a scene"),"search") {sharedReplace?.invoke(tr("Episodio de ","Episode of "));query=tr("Episodio de ","Episode of ")}
                 AssistantActionRP152("×",onClick=close)
             }
             }
@@ -202,14 +214,18 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
                         AssistantActionRP152("QR") {if(!busy) phone=true}
                     }
                 }
-                item(key="time-rp152") {Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                    Text(tr("Tu tiempo","Your time"),color=Color(0xffbcb4cf),fontSize=12.sp)
-                    LazyRow(horizontalArrangement=Arrangement.spacedBy(7.dp)) {items(listOf(0,15,30,45,60,90,120)) {time ->AssistantActionRP152(if(time==0) tr("Según consulta","From request") else "$time min",selected=budget==time) {if(!busy) budget=time}}}
-                }}
                 if(busy || message.isNotBlank()) item(key="status-rp152") {Row(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
                     Text(if(busy) tr("✦ Buscando historias para ti…","✦ Finding your next story…") else message,color=Color(0xffcdb9ef),fontSize=13.sp,modifier=Modifier.weight(1f))
                     if(busy) AssistantActionRP152(tr("Cancelar","Cancel")) {cancelledKey="$query:$budget";requestGeneration++;job?.cancel();busy=false}
                 }}
+                items(sceneHitsRP156,key={"scene:${it.show.cloudId}:${it.episode.season}:${it.episode.episode}"}) {hit ->
+                    Column(Modifier.fillMaxWidth().background(Color(0xff151515),RoundedCornerShape(14.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                        Text(hit.show.title+" · S${hit.episode.season} E${hit.episode.episode} · "+hit.episode.title,color=Color.White,fontSize=17.sp)
+                        Text(if(hit.suggested) tr("Sugerencia de Gemini · episodio comprobado en el catálogo; escena sin confirmar.","Gemini suggestion · catalog episode checked; scene unconfirmed.") else tr("Coincidencia en título o sinopsis.","Title or synopsis match."),color=Muted,fontSize=12.sp)
+                        Text(hit.episode.overview,color=Muted,fontSize=13.sp,maxLines=4)
+                        AssistantActionRP152(tr("Ver episodio","Watch episode"),"play") {close();state.launch {state.open(hit.show);if(state.selected?.cloudId==hit.show.cloudId && state.localExtrasScope()==owner) state.playEpisode(hit.episode)}}
+                    }
+                }
                 appCommand?.let {command ->item(key="command-rp155") {AssistantCommandPanelRP155(state,command,close)}}
                 if(picks.isNotEmpty()) {
                     item(key="results-title-rp152") {Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {

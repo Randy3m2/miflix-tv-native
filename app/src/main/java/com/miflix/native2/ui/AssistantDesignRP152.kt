@@ -76,7 +76,7 @@ internal fun AssistantPosterRP152(pick:AssistantPickRP150,modifier:Modifier=Modi
     var focused by remember {mutableStateOf(false)}
     val shape=RoundedCornerShape(16.dp)
     Column(modifier,verticalArrangement=Arrangement.spacedBy(7.dp)) {
-        Box(Modifier.fillMaxWidth().aspectRatio(2f/3f).onFocusChanged {focused=it.isFocused}
+        Box(Modifier.fillMaxWidth().heightIn(max=210.dp).aspectRatio(2f/3f).onFocusChanged {focused=it.isFocused}
             .semantics {contentDescription=pick.item.title;role=Role.Button}.clip(shape).background(Panel)
             .border(if(focused) 3.dp else 1.dp,if(focused) Color.White else Color.White.copy(alpha=.12f),shape)
             .tvClick(details).clickable(onClick=details)) {
@@ -84,7 +84,7 @@ internal fun AssistantPosterRP152(pick:AssistantPickRP150,modifier:Modifier=Modi
             Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(70.dp).background(Brush.verticalGradient(listOf(Color.Transparent,Color.Black.copy(alpha=.9f)))))
             Text(if(pick.minutes<=0) pick.item.year else "${pick.minutes} min"+if(pick.resume) tr(" · para terminar"," · left") else "",modifier=Modifier.align(Alignment.BottomStart).padding(12.dp),color=Color.White,fontSize=12.sp,fontWeight=FontWeight.Bold)
         }
-        Text(pick.item.title,color=Color.White,fontSize=15.sp,fontWeight=FontWeight.SemiBold,maxLines=2,minLines=2,overflow=TextOverflow.Ellipsis)
+        Text(pick.item.title,color=Color.White,fontSize=14.sp,lineHeight=18.sp,fontWeight=FontWeight.SemiBold,minLines=2)
         pick.episode?.let {Text("S${it.season} · E${it.episode}",color=Muted,fontSize=12.sp)}
         if(play!=null) AssistantActionRP152(if(pick.resume) tr("Continuar","Resume") else tr("Ver episodio","Watch episode"),"play",modifier=Modifier.fillMaxWidth(),onClick=play)
     }

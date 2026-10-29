@@ -41,6 +41,9 @@ internal fun SportsLeagueHubRP121(state:AppState,league:String,modifier:Modifier
     val owner="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
     val saved=remember(owner,league) {SportsBrowseMemoryRP121.get(owner,league)}
     var tab by rememberSaveable(owner,league) {mutableStateOf(saved.first)}
+    LaunchedEffect(state.assistantLeagueRP156) {
+        if(state.assistantLeagueRP156==league) {tab="table";state.assistantLeagueRP156=null}
+    }
     var day by rememberSaveable(owner,league) {mutableStateOf(saved.second)}
     val latest by rememberUpdatedState(tab to day)
     DisposableEffect(owner,league) {onDispose {SportsBrowseMemoryRP121.put(owner,league,latest)}}

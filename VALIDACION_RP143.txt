@@ -1,0 +1,12 @@
+BruniO TV RP143
+2.0.0-rp143 / versionCode 22247
+
+:app:testReleaseUnitTest — BUILD SUCCESSFUL in 5m 38s.
+482 pruebas, 0 fallos, 0 errores. Incluye compilación Kotlin y Java Release.
+Tres pruebas nuevas de ruta de entrada Fire TV/AFT y conservación de la ruta de voz en otros Android TV.
+git diff --check: sin errores.
+
+Las pruebas automáticas no verifican dictado físico del mando, presentación del teclado, temporización visible del diálogo ni disponibilidad real de una señal LIDOM. Esas pruebas deben hacerse en el Firestick afectado.
+La entrada usa el teclado nativo y depende de que Fire OS ofrezca dictado al campo; no se implementa acceso propio al micrófono de Alexa.
+LIDOM TV/HLS/DASH selecciona automáticamente la primera coincidencia resuelta; páginas de canal YouTube conservan su selector de videos.
+No se genera ni publica un APK de producción firmado desde esta sesión. Aplicar después de RP142 y ejecutar build-native-tv-apk.yml para el APK estable de TV. No hay SQL ni secretos nuevos.

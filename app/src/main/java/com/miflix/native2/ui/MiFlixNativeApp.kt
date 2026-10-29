@@ -270,13 +270,17 @@ fun MiFlixNativeApp(initialPartyCode: String? = null,initialContentLinkRP140:Str
                 }
             }
         }
-        state.error?.takeIf { it.isNotBlank() }?.let { message ->
+        var heldErrorRP143 by remember {mutableStateOf<String?>(null)}
+        val incomingErrorRP143=state.error
+        LaunchedEffect(incomingErrorRP143) {if(!mobileRP133 && !incomingErrorRP143.isNullOrBlank()) heldErrorRP143=incomingErrorRP143}
+        fun dismissErrorRP143(message:String) {if(heldErrorRP143==message) heldErrorRP143=null;if(state.error==message) state.error=null}
+        (if(mobileRP133) state.error else heldErrorRP143)?.takeIf { it.isNotBlank() }?.let { message ->
             key(message) {
                 LaunchedEffect(message) {
-                    delay(5000)
-                    if(state.error==message) state.error=null
+                    delay(if(mobileRP133) 5000 else com.miflix.native2.data.TvInputPolicyRP143.ERROR_VISIBLE_MS)
+                    dismissErrorRP143(message)
                 }
-                Dialog(onDismissRequest={ if(state.error==message) state.error=null },
+                Dialog(onDismissRequest={ dismissErrorRP143(message) },
                     properties=androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth=false)) {
                     val dismissFocus=remember { FocusRequester() }
                     LaunchedEffect(Unit) { withFrameNanos { };runCatching { dismissFocus.requestFocus() } }
@@ -288,9 +292,9 @@ fun MiFlixNativeApp(initialPartyCode: String? = null,initialContentLinkRP140:Str
                             .verticalScroll(androidx.compose.foundation.rememberScrollState()))) {
                             Text(message,color=Color.White,fontSize=15.sp,lineHeight=20.sp)
                         }
-                        Text(tr("Se cierra automáticamente en 5 segundos.","Closes automatically after 5 seconds."),color=Color(0xFFDEBAC3),fontSize=12.sp)
+                        Text(if(mobileRP133) tr("Se cierra automáticamente en 5 segundos.","Closes automatically after 5 seconds.") else tr("Se cierra automáticamente en 8 segundos.","Closes automatically after 8 seconds."),color=Color(0xFFDEBAC3),fontSize=12.sp)
                         FocusButton(tr("Cerrar","Dismiss"),modifier=Modifier.focusRequester(dismissFocus)) {
-                            if(state.error==message) state.error=null
+                            dismissErrorRP143(message)
                         }
                     }
                 }

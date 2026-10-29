@@ -1,0 +1,10 @@
+71ae3bb417f1015a5f23b0fb48e5ae417a5ce23c959dbc1dfec21f033806e9d6  LEEME_RP143_TV.md
+830bfefcc5fe83cb7358c72d9b1ab7a18d147f30a8976b38f11f2154fe1ef6cb  VALIDACION_RP143.txt
+0b169151bb3a8db00c0250bc4db8c52cc12681099c527c9d5f0ea4fc06a1312c  app/build.gradle
+eba1d0ec87efb83bdf7a75b0f4e1f7dd72303a3b0fca2cc30c16ea9a83a94f5b  app/src/main/java/com/miflix/native2/data/TvInputPolicyRP143.kt
+5789183868ce5edfd8aad7b48e98e750ffaede16ce4274cf998462cd81478531  app/src/main/java/com/miflix/native2/ui/CinematicBrowsing.kt
+c57c59908f43ee8d3d0e2d4c3ced50e098939666b87584362a485f0e27aea7e8  app/src/main/java/com/miflix/native2/ui/LidomScreen.kt
+616652c6ebd8a5b7f6ac63e64fe2d90d945face3cecc682db15ecafadec00403  app/src/main/java/com/miflix/native2/ui/MiFlixNativeApp.kt
+e0e5a69d9a7c152332ece561be948ef51f29db20fb45c0c57b78986c117968a3  app/src/main/java/com/miflix/native2/ui/TvSystemInputRP143.kt
+d2c247d43d49e2e443fe28da28d686fbb348760498daf738314a270e3fccfc57  app/src/main/java/com/miflix/native2/ui/UpdateNotes.kt
+4bfa0b194ae0991ae964d9720d2c48ece8fdf6c6713cd976bca499bdd805e120  app/src/test/java/com/miflix/native2/data/TvInputPolicyRP143Test.kt

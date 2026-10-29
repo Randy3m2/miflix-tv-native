@@ -159,7 +159,6 @@ internal fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTea
     var sourceRevisionRP61 by remember(team.id) {mutableIntStateOf(0)}
     val savedSourcesRP61=remember(team.id,repo,sourceRevisionRP61) {repo.sources(team.id)}
     val scope=rememberCoroutineScope();var busy by remember {mutableStateOf(false)};var error by remember {mutableStateOf("")}
-    var selected by remember {mutableStateOf<LidomSource?>(null)};var candidates by remember {mutableStateOf<List<com.miflix.native2.model.StreamChoice>>(emptyList())}
     var youtube by remember {mutableStateOf<LidomSource?>(null)}
     var video by remember {mutableStateOf<LidomYoutubeSelection?>(null)}
     fun play(source:LidomSource,stream:com.miflix.native2.model.StreamChoice) {
@@ -184,7 +183,7 @@ internal fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTea
         items(sources,key={it.id}) {source ->
             FocusButton(source.name+(if(repo.last(team.id)==source.id) " · ✓ "+tr("Última funcional","Last working") else ""),modifier=Modifier.fillMaxWidth(),) {
                 if(!busy) {
-                    error="";candidates=emptyList();selected=source
+                    error=""
                     if(source.kind=="YOUTUBE") {
                         val id=LidomRepository.youtubeId(source.url)
                         if(id==null) youtube=source
@@ -192,16 +191,17 @@ internal fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTea
                         else video=LidomYoutubeSelection(team.id,source.id,id)
                     }
                     else scope.launch {busy=true;try {
-                        candidates=repo.resolve(source,state.calendarLiveManifest("nauta"))
-                        if(candidates.isEmpty()) error=tr("No se encontró una señal compatible en tus canales. Agrega una URL autorizada en configuración o elige otra fuente.","No compatible signal found in your channels. Add an authorized URL in settings or try another source.")
+                        val streams=repo.resolve(source,state.calendarLiveManifest("nauta"))
+                        val first=streams.firstOrNull()
+                        if(first!=null) play(source,first)
+                        else error=tr("No se encontró una señal compatible en tus canales. Agrega una URL autorizada en configuración o elige otra fuente.","No compatible signal found in your channels. Add an authorized URL in settings or try another source.")
                     } catch(e:CancellationException) {throw e} catch(_:Exception) {error=tr("No se pudo cargar. Prueba otra fuente.","Could not load. Try another source.")} finally {busy=false}}
                 }
             }
             Text(source.note,color=Muted,fontSize=11.sp)
         }
         if(busy) item {Text(tr("Comprobando opciones…","Checking options…"),color=Muted)}
-        if(error.isNotBlank()) item {Text(error,color=Color(0xFFFFC6C6));FocusButton(tr("Probar otra fuente","Try another source")) {error="";selected=null;candidates=emptyList()}}
-        items(candidates.indices.toList(),key={"choice:$it"}) {index -> val stream=candidates[index];FocusButton("▶ ${index+1} · "+stream.name+" · "+stream.title,modifier=Modifier.fillMaxWidth()) {selected?.let {play(it,stream)}}}
+        if(error.isNotBlank()) item {Text(error,color=Color(0xFFFFC6C6));FocusButton(tr("Cerrar","Dismiss")) {error=""}}
         item {FocusButton(tr("Agregar / editar fuentes","Add / edit sources"),modifier=Modifier.fillMaxWidth(),onClick=settings)}
     }
     if(showYoutubeQRRP61) LidomYoutubeQRSheetRP61(state,repo,team,{sourceRevisionRP61++}) {showYoutubeQRRP61=false}

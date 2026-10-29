@@ -209,6 +209,7 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
     val owner=state.searchHistoryOwner()
     var query by rememberSaveable(owner) {mutableStateOf(state.searchQuery)}
     var phoneKeyboardRP136 by remember(owner) {mutableStateOf(false)}
+    var nativeVoiceRP143 by remember(owner) {mutableStateOf(false)}
     var cursor by rememberSaveable(owner) {mutableIntStateOf(query.length)}
     var results by remember {mutableStateOf<List<MediaSummary>>(emptyList())}
     var searching by remember {mutableStateOf(false)}
@@ -260,11 +261,12 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
     }
     fun dictate() {
         voiceOwnerRP81=owner;voiceAlternativesRP81=emptyList()
+        if(com.miflix.native2.data.TvInputPolicyRP143.systemKeyboard(android.os.Build.MANUFACTURER,android.os.Build.MODEL)) {nativeVoiceRP143=true;return}
         try {voice.launch(voiceIntentRP85(true))}
-        catch(e:android.content.ActivityNotFoundException) {
-            state.error=tr("Esta TV no tiene un servicio de dictado disponible.","No voice input service is available on this TV.")
-        } catch(e:Exception) {state.error=tr("No se pudo iniciar el micrófono.","Could not start voice input.")}
+        catch(e:android.content.ActivityNotFoundException) {nativeVoiceRP143=true}
+        catch(e:Exception) {nativeVoiceRP143=true}
     }
+    if(nativeVoiceRP143) TvSystemInputRP143(query,{replace(it);nativeVoiceRP143=false},{nativeVoiceRP143=false;phoneKeyboardRP136=true},{nativeVoiceRP143=false})
     LaunchedEffect(Unit) {withFrameNanos { };runCatching {keyboardFocus.requestFocus()}}
     LaunchedEffect(query,state.interfaceLanguage,owner) {
         val term=query.trim()

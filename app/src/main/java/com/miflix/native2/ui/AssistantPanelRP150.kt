@@ -3,6 +3,12 @@ package com.miflix.native2.ui
 import android.os.Handler
 import android.os.Looper
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -29,7 +35,6 @@ internal val LocalGuestExitRP150=staticCompositionLocalOf<(() -> Unit)?> {null}
 @Composable
 internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit) {
     val context=LocalContext.current.applicationContext
-    var scenePreviewsRP151 by remember {mutableStateOf(scenePreviewEnabledRP151(context))}
     val ai=remember(context) {GeminiAssistantRP150(context)}
     val scope=rememberCoroutineScope()
     val collectionPrefs=remember(context) {context.getSharedPreferences("brunio_smart_collections_rp150",android.content.Context.MODE_PRIVATE)}
@@ -38,11 +43,10 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit) {
     val saved=remember(owner,collectionRevision) {runCatching {val a=org.json.JSONArray(collectionPrefs.getString(owner,"[]"));(0 until a.length()).mapNotNull {a.optJSONObject(it)}}.getOrDefault(emptyList())}
     var query by remember(owner) {mutableStateOf("")}
     var budget by remember {mutableIntStateOf(0)}
-    var useGemini by remember {mutableStateOf(false)}
+    val useGemini=remember {context.getSharedPreferences("brunio_gemini_rp150",0).getBoolean("enabled",false)}
     var sceneFinder by remember {mutableStateOf(false)}
-    var setup by remember {mutableStateOf(false)}
     var phone by remember {mutableStateOf(false)}
-    var configured by remember {mutableStateOf(ai.configured())}
+    val configured=ai.configured()
     var busy by remember {mutableStateOf(false)}
     var message by remember {mutableStateOf("")}
     var picks by remember(owner) {mutableStateOf<List<AssistantPickRP150>>(emptyList())}
@@ -79,57 +83,82 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit) {
             finally {if(generation==requestGeneration) busy=false}
         }
     }
+    var voiceOwner by remember {mutableStateOf<String?>(null)}
+    var searchFocused by remember {mutableStateOf(false)}
+    val voice=androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) {result ->
+        if(result.resultCode==android.app.Activity.RESULT_OK && voiceOwner==owner && state.localExtrasScope()==owner) {
+            result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.trim()?.takeIf {it.isNotBlank()}?.let {query=it.take(500);message=tr("Listo. Pulsa Buscar para descubrir tu próxima historia.","Ready. Select Search to discover your next story.")}
+        }
+        voiceOwner=null
+    }
+    fun dictate() {
+        if(busy) return
+        voiceOwner=owner
+        try {voice.launch(android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE,state.voiceLocaleRP81)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS,3)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT,tr("¿Qué te apetece ver?","What would you like to watch?")))}
+        catch(_:Exception) {voiceOwner=null;phone=true;message=tr("Esta TV no ofrece dictado. Escanea el QR y usa el micrófono del celular.","This TV does not offer dictation. Scan the QR and use your phone microphone.")}
+    }
+    val artwork=state.moodArtworkRC102()
+    val starters=(state.forYou+state.trending+state.topRated).distinctBy {it.cloudId}.filter {(!it.poster.isNullOrBlank() || !it.backdrop.isNullOrBlank()) && !state.kidsMode}.take(10)
     if(sceneFinder) {SceneFinderRP151(state) {sceneFinder=false};return}
     if(phone) AssistantTextQrRP150(state,{if(!busy) query=it},{phone=false})
-    if(setup) GeminiSetupRP150(state,ai,{configured=ai.configured();setup=false})
     PlayerMenuDialog(onDismissRequest=close,fullScreen=true) {
-        Column(Modifier.fillMaxSize().consumeOpeningPress().background(Bg).padding(horizontal=34.dp,vertical=20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                Column(Modifier.weight(1f)) {Text("✦ BruniO AI",color=Color.White,fontSize=30.sp);Text(tr("Tu próxima historia, a tu manera","Your next story, your way"),color=Muted,fontSize=14.sp)}
-                if(!state.kidsMode && LocalGuestExitRP150.current==null) FocusButton(tr("Modo invitado","Guest mode")) {if(state.prepareGuestRP150()) guest() else message=tr("Cierra la reproducción o sal del Watch Party antes de entrar como invitado.","Close playback or leave the Watch Party before entering guest mode.")}
-                FocusButton("Scene Finder") {sceneFinder=true}
-                FocusButton("×",onClick=close)
+        Column(Modifier.fillMaxSize().consumeOpeningPress().background(Brush.linearGradient(listOf(Color(0xff25203d),Color(0xff101624),Color(0xff090b13)))).padding(horizontal=34.dp,vertical=18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp),verticalAlignment=Alignment.CenterVertically) {
+                Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
+                    Text("✦  BruniO AI",color=Color.White,fontSize=29.sp,fontWeight=FontWeight.Bold)
+                    Text(tr("Menos buscar. Más descubrir.","Less searching. More discovering."),color=Color(0xffbcb4cf),fontSize=13.sp)
+                }
+                Text(if(useGemini && configured) "GEMINI" else tr("EN TU TV","ON YOUR TV"),color=Color(0xffc8adff),fontSize=9.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(end=8.dp))
+                if(!state.kidsMode && LocalGuestExitRP150.current==null) AssistantActionRP152(tr("Invitado","Guest"),"friends") {if(state.prepareGuestRP150()) guest() else message=tr("Cierra el reproductor y sal del Party para entrar como invitado.","Close playback and leave the Party to enter guest mode.")}
+                AssistantActionRP152("Scene Finder","search") {sceneFinder=true}
+                AssistantActionRP152("×",onClick=close)
             }
-            LazyColumn(Modifier.weight(1f).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(bottom=24.dp)) {
-                item(key="assistant-static-rp150-0") {
-                    BasicTextField(query,{if(!busy) query=it.take(500)},textStyle=androidx.compose.ui.text.TextStyle(color=Color.White,fontSize=19.sp),cursorBrush=SolidColor(Accent),modifier=Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(16.dp)).padding(18.dp),decorationBox={inner ->if(query.isBlank()) Text(tr("¿Qué te apetece ver?","What would you like to watch?"),color=Muted,fontSize=19.sp);inner()})
-                    Text(tr("Puedes usar el teclado del sistema o un teclado Bluetooth. La IA solo recibe tu consulta al enviar.","Use the system keyboard or Bluetooth. AI receives only your submitted request."),color=Muted,fontSize=11.sp,modifier=Modifier.padding(top=6.dp))
-                }
-                item(key="preview-rp151") {
-                    FocusButton(tr("Miniaturas al buscar: ","Seek thumbnails: ")+if(scenePreviewsRP151) "ON" else "OFF") {scenePreviewsRP151=!scenePreviewsRP151;context.getSharedPreferences("brunio_scene_preview_rp151",0).edit().putBoolean("enabled",scenePreviewsRP151).apply()}
-                    Text(tr("Opcional: extrae una imagen al detenerte sobre la barra. Depende de la fuente; puede usar datos de vídeo. OK confirma y Atrás cancela.","Optional: extracts a frame when you stop on the seek bar. Source dependent; may use video data. OK confirms and Back cancels."),color=Muted,fontSize=11.sp)
-                }
-                item(key="assistant-static-rp150-1") {LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {items(listOf(0,15,30,45,60,90,120)) {time ->FocusButton(if(time==0) tr("Según consulta","From request") else "$time min",primary=budget==time) {if(!busy) budget=time}}}}
-                item(key="assistant-static-rp150-2") {LazyRow(horizontalArrangement=Arrangement.spacedBy(10.dp)) {items(listOf(tr("Terror de los 90","90s horror"),tr("Películas de viajes en el tiempo","Time travel movies"),tr("Mejores finales inesperados","Thrillers with plot twists"),tr("Ciencia ficción con acción menos de 2 horas en español","Sci-fi action under 2 hours in Spanish"))) {example ->FocusButton(example) {submit(example)}}}}
-                if(saved.isNotEmpty()) item(key="assistant-static-rp150-3") {Text(tr("Tus colecciones inteligentes","Your smart collections"),color=Color.White,fontSize=18.sp);LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {items(saved) {row ->FocusButton(row.optString("title")) {submit(row.optString("query"),row.optInt("budget"),runCatching {AssistantPlanRP150.json(row.getJSONObject("plan").toString())}.getOrNull())}}}}
-                if(picks.isNotEmpty() && resultQuery.isNotBlank()) item(key="assistant-static-rp150-4") {Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                    FocusButton(tr("Guardar colección","Save collection")) {
-                        val values=(listOf(org.json.JSONObject().put("title",resultQuery.take(65)).put("query",resultQuery).put("budget",resultBudget).put("plan",activePlan?.json()))+saved.filterNot {it.optString("query")==resultQuery}).take(10)
-                        collectionPrefs.edit().putString(owner,org.json.JSONArray(values).toString()).apply();collectionRevision++
+            LazyColumn(Modifier.weight(1f).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(bottom=24.dp)) {
+                item(key="search-rp152") {
+                    Row(Modifier.fillMaxWidth().background(Color.White.copy(alpha=.065f),RoundedCornerShape(20.dp)).border(1.dp,Color.White.copy(alpha=.12f),RoundedCornerShape(20.dp)).padding(8.dp),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
+                        BasicTextField(query,{if(!busy) query=it.take(500)},singleLine=true,textStyle=androidx.compose.ui.text.TextStyle(color=Color.White,fontSize=19.sp),cursorBrush=SolidColor(Color(0xffc8adff)),modifier=Modifier.weight(1f).onFocusChanged {searchFocused=it.isFocused}.border(1.dp,if(searchFocused) Color(0xffc8adff) else Color.Transparent,RoundedCornerShape(12.dp)).padding(14.dp),decorationBox={inner ->if(query.isBlank()) Text(tr("Cuéntame qué te apetece ver…","Tell me what you're in the mood for…"),color=Color(0xffaaa6bb),fontSize=18.sp,maxLines=1,overflow=TextOverflow.Ellipsis);inner()})
+                        AssistantActionRP152(tr("Dictar","Speak"),"mic",onClick={dictate()})
+                        AssistantActionRP152(if(busy) tr("Buscando…","Searching…") else tr("Buscar","Search"),"search",selected=true) {submit()}
+                        AssistantActionRP152("QR") {if(!busy) phone=true}
                     }
-                    if(saved.isNotEmpty()) FocusButton(tr("Borrar colecciones guardadas","Clear saved collections")) {collectionPrefs.edit().remove(owner).apply();collectionRevision++}
+                }
+                item(key="time-rp152") {Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                    Text(tr("Tu tiempo","Your time"),color=Color(0xffbcb4cf),fontSize=12.sp)
+                    LazyRow(horizontalArrangement=Arrangement.spacedBy(7.dp)) {items(listOf(0,15,30,45,60,90,120)) {time ->AssistantActionRP152(if(time==0) tr("Según consulta","From request") else "$time min",selected=budget==time) {if(!busy) budget=time}}}
                 }}
-                item(key="assistant-static-rp150-5") {Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                    FocusButton(if(busy) tr("Buscando…","Searching…") else tr("Buscar para mí","Find something for me")) {submit()}
-                    FocusButton(tr("Escribir por QR","Type with phone QR")) {if(!busy) phone=true}
-                    if(busy) FocusButton(tr("Cancelar","Cancel")) {requestGeneration++;job?.cancel();busy=false}
-                    if(!state.kidsMode) {FocusButton(if(useGemini) "Gemini · ON" else tr("Filtros locales","Local filters"),primary=useGemini) {if(!busy) {if(configured) useGemini=!useGemini else setup=true}};FocusButton(tr("Configurar Gemini","Set up Gemini")) {setup=true}}
+                if(busy || message.isNotBlank()) item(key="status-rp152") {Row(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
+                    Text(if(busy) tr("✦ Buscando historias para ti…","✦ Finding your next story…") else message,color=Color(0xffcdb9ef),fontSize=13.sp,modifier=Modifier.weight(1f))
+                    if(busy) AssistantActionRP152(tr("Cancelar","Cancel")) {requestGeneration++;job?.cancel();busy=false}
                 }}
-                if(message.isNotBlank()) item(key="assistant-static-rp150-6") {Text(message,color=Muted,fontSize=14.sp)}
-                if(desiredAudio.isNotBlank()) item(key="assistant-static-rp150-7") {Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {Text(tr("El doblaje se confirma en las fuentes disponibles, no por la sinopsis.","Dubbed audio is confirmed by available sources, not by the synopsis."),color=Muted,fontSize=13.sp);FocusButton(tr("Preferir audio: ","Prefer audio: ")+AppLanguagesRP148.label(desiredAudio)) {state.savePlaybackPreferences(desiredAudio,state.subtitleLanguage,state.autoplayNext);message=tr("Preferencia de audio guardada.","Audio preference saved.")}}}
-                if(picks.isNotEmpty()) item(key="assistant-static-rp150-8") {Text(tr("Resultados: ","Results: ")+resultQuery.ifBlank {"${resultBudget} min"},color=Color.White,fontSize=17.sp)}
-                items(picks,key={"${it.item.cloudId}:${it.episode?.season}:${it.episode?.episode}"}) {pick ->
-                    Row(Modifier.fillMaxWidth().background(Panel,RoundedCornerShape(18.dp)).padding(12.dp),horizontalArrangement=Arrangement.spacedBy(16.dp)) {
-                        AsyncImage(pick.item.backdrop ?: pick.item.poster,pick.item.title,Modifier.width(156.dp).height(88.dp),contentScale=ContentScale.Crop)
-                        Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                            Text(pick.item.title,color=Color.White,fontSize=19.sp,maxLines=2)
-                            Text("${pick.minutes} min"+(pick.episode?.let {" · S${it.season} E${it.episode}"} ?: "")+if(pick.resume) tr(" · para terminar"," · remaining") else "",color=Accent,fontSize=13.sp)
-                            Text(pick.item.overview,color=Muted,fontSize=12.sp,maxLines=2)
+                if(picks.isNotEmpty()) {
+                    item(key="results-title-rp152") {Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {Text(tr("Hecho para tu momento","Made for your moment"),color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold);Text(resultQuery.ifBlank {"${resultBudget} min"},color=Muted,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis)}
+                        if(resultQuery.isNotBlank()) AssistantActionRP152(tr("Guardar colección","Save collection"),"list") {
+                            val values=(listOf(org.json.JSONObject().put("title",resultQuery.take(65)).put("query",resultQuery).put("budget",resultBudget).put("plan",activePlan?.json()))+saved.filterNot {it.optString("query")==resultQuery}).take(10)
+                            collectionPrefs.edit().putString(owner,org.json.JSONArray(values).toString()).apply();collectionRevision++
                         }
-                        FocusButton(tr("Detalles","Details")) {close();state.launch {state.open(pick.item)}}
-                        if(pick.resume && pick.episode==null) FocusButton(tr("Continuar","Continue")) {close();state.launch {state.open(pick.item);state.playMovie()}}
-                        pick.episode?.let {ep ->FocusButton(if(pick.resume) tr("Continuar","Continue") else tr("Reproducir","Play")) {close();state.launch {state.open(pick.item);state.playEpisode(ep)}}}
-                    }
+                    }}
+                    items(picks.chunked(4),key={chunk ->"result:"+chunk.first().item.cloudId+":"+chunk.first().episode?.episode}) {chunk ->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(16.dp)) {
+                        chunk.forEach {pick ->AssistantPosterRP152(pick,Modifier.weight(1f),details={close();state.launch {state.open(pick.item)}},play=if(pick.resume || pick.episode!=null) ({close();state.launch {state.open(pick.item);if(state.selected?.cloudId==pick.item.cloudId) {val ep=pick.episode;if(ep!=null) state.playEpisode(ep) else state.playMovie()}}}) else null)}
+                        repeat(4-chunk.size) {Spacer(Modifier.weight(1f))}
+                    }}
+                }
+                if(desiredAudio.isNotBlank()) item(key="audio-rp152") {AssistantActionRP152(tr("Preferir audio: ","Prefer audio: ")+AppLanguagesRP148.label(desiredAudio)) {state.savePlaybackPreferences(desiredAudio,state.subtitleLanguage,state.autoplayNext);message=tr("Audio preferido guardado. El doblaje se confirma en las fuentes.","Audio preference saved. Dubbed audio depends on available sources.")}}
+                item(key="ideas-title-rp152") {Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {Text(tr("Una idea para esta noche","A little inspiration for tonight"),color=Color.White,fontSize=20.sp,fontWeight=FontWeight.SemiBold);Text(tr("EXPLORA →","EXPLORE →"),color=Color(0xffb9a1e1),fontSize=10.sp,modifier=Modifier.padding(top=6.dp))}}
+                item(key="ideas-rp152") {LazyRow(horizontalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(vertical=4.dp)) {items(AssistantIdeasRP152,key={it.id}) {idea ->AssistantIdeaCardRP152(state,idea,artwork[idea.art]) {submit(idea.query())}}}}
+                if(saved.isNotEmpty()) item(key="collections-rp152") {Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    Text(tr("Tus colecciones","Your collections"),color=Color.White,fontSize=20.sp,fontWeight=FontWeight.SemiBold)
+                    LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {items(saved) {row ->AssistantActionRP152(row.optString("title"),"list") {submit(row.optString("query"),row.optInt("budget"),runCatching {AssistantPlanRP150.json(row.getJSONObject("plan").toString())}.getOrNull())}}}
+                    AssistantActionRP152(tr("Borrar colecciones","Clear collections")) {collectionPrefs.edit().remove(owner).apply();collectionRevision++}
+                }}
+                if(picks.isEmpty() && starters.isNotEmpty() && !busy) item(key="starter-rp152") {
+                    Text(tr("Empieza con una buena historia","Start with a great story"),color=Color.White,fontSize=20.sp,fontWeight=FontWeight.SemiBold)
+                    Spacer(Modifier.height(10.dp))
+                    LazyRow(horizontalArrangement=Arrangement.spacedBy(14.dp)) {items(starters,key={it.cloudId}) {media ->AssistantPosterRP152(AssistantPickRP150(media,0),Modifier.width(136.dp),details={close();state.launch {state.open(media)}},play=null)}}
                 }
             }
         }
@@ -137,7 +166,7 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit) {
 }
 
 @Composable
-private fun GeminiSetupRP150(state:AppState,ai:GeminiAssistantRP150,close:()->Unit) {
+internal fun GeminiSetupRP150(state:AppState,ai:GeminiAssistantRP150,close:()->Unit) {
     var qr by remember {mutableStateOf("")};var status by remember {mutableStateOf("")};val context=LocalContext.current.applicationContext
     val main=remember {Handler(Looper.getMainLooper())}
     val alive=remember(state.appForeground) {AtomicBoolean(true)}

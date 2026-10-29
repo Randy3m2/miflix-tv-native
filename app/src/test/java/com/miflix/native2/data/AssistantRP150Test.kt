@@ -88,4 +88,14 @@ class AssistantRP150Test {
         val p=MemoryPreferencesRP150();val e=p.edit().putInt("x",5)
         assertEquals(0,p.getInt("x",0));e.apply();assertEquals(5,p.getInt("x",0));p.edit().remove("x").commit();assertFalse(p.contains("x"))
     }
+    @Test fun posterResultsExcludeResumedTitlesWithoutArtwork()=runBlocking {
+        val tmdb=TmdbRepository("test") {url,_->if(url.contains("/discover/")) """{"results":[]}""" else error("Unexpected route")}
+        val illustrated=com.miflix.native2.model.MediaSummary(1,"movie","Illustrated","",null,"https://example.test/poster.jpg",8.0,"2000")
+        val noArt=illustrated.copy(id=2,title="No artwork",poster=null)
+        val progress=PlaybackProgress(position=600000,duration=1800000)
+        val rows=AssistantRepositoryRP150(tmdb).picks("artwork",AssistantPlanRP150(minutes=30),listOf(illustrated,noArt),mapOf(illustrated.cloudId to progress,noArt.cloudId to progress))
+        assertEquals(listOf(1),rows.map {it.item.id})
+        assertTrue(rows.single().resume)
+    }
+
 }

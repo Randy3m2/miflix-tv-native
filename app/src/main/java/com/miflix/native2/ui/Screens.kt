@@ -973,6 +973,9 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
             Spacer(Modifier.height(18.dp))
             Row(Modifier.weight(1f).fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(22.dp)) {
                 SettingsScrollColumnRP138(Modifier.weight(.7f).fillMaxHeight().onGloballyPositioned {settingsViewportRP129=it.boundsInWindow()},settingsScroll) {
+                    if(category=="ai" && !state.kidsMode) item(key="assistant-settings-rp152") {
+                        SettingsSectionCard(onFocused={helpTitle="BruniO AI";helpDescription=tr("Configura Gemini y descubre cómo funciona tu asistente.","Configure Gemini and learn how your assistant works.");visualHelp=null}) {AssistantSettingsRP152(state)}
+                    }
                     if(category=="system" && !state.kidsMode) item(key="final-m3u-rp97") {
                         SettingsSectionCard(onFocused={helpTitle=tr("Canales Live TV","Live TV channels");helpDescription=tr("Actualiza la lista M3U por URL Raw, sin otra build. El QR funciona en la red local y conserva la última copia válida si falla la descarga.","Update the M3U using a Raw URL without another build. QR works on the local network; failed downloads retain the last valid copy.");visualHelp=null}) {FinalM3USettingsRP97(state)}
                     }

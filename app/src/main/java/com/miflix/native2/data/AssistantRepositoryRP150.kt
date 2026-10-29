@@ -25,7 +25,7 @@ internal class AssistantRepositoryRP150(private val tmdb:TmdbRepository) {
         val rows=coroutineScope {movies.map {item ->async {
             gate.withPermit {
                 try {val detail=tmdb.details(item);val minutes=detail.runtimeMinutes
-                    if(minutes<=0 || plan.minutes>0 && minutes>plan.minutes) null else AssistantPickRP150(item,minutes)
+                    if(minutes<=0 || plan.minutes>0 && minutes>plan.minutes) null else AssistantPickRP150(if(item.poster.isNullOrBlank() && item.backdrop.isNullOrBlank()) detail.summary else item,minutes)
                 } catch(e:CancellationException) {throw e} catch(_:Exception) {null}
             }
         }}.awaitAll().filterNotNull()}
@@ -51,7 +51,7 @@ internal class AssistantRepositoryRP150(private val tmdb:TmdbRepository) {
                 } catch(e:CancellationException) {throw e} catch(_:Exception) {null}
             }}}.awaitAll().filterNotNull()}
         } else emptyList()
-        val answer=(resumedMovies+episodes+rows).distinctBy {"${it.item.cloudId}:${it.episode?.season}:${it.episode?.episode}"}
+        val answer=(resumedMovies+episodes+rows).filter { !it.item.poster.isNullOrBlank() || !it.item.backdrop.isNullOrBlank() }.distinctBy {"${it.item.cloudId}:${it.episode?.season}:${it.episode?.episode}"}
         if(cache.size>=12) cache.remove(cache.keys.first())
         cache[key]=System.currentTimeMillis() to answer
         answer

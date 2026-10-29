@@ -1,0 +1,4 @@
+BUILD SUCCESSFUL: :app:testReleaseUnitTest :mobile:compileReleaseKotlin
+{'tests': 523, 'failures': 0, 'errors': 0, 'skipped': 0}
+Compilación de TV y código compartido móvil correcta.
+Sin APK firmado ni publicación en GitHub. Sin prueba física en TV, dictado real ni clave real de Gemini.

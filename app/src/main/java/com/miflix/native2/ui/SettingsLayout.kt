@@ -27,6 +27,7 @@ internal val SettingsCategories = listOf(
     SettingsCategory("language","Language","Idioma"),
     SettingsCategory("appearance","Appearance","Apariencia"),
     SettingsCategory("sources","Sources","Fuentes"),
+    SettingsCategory("ai","BruniO AI","BruniO AI"),
     SettingsCategory("system","System","Sistema")
 )
 

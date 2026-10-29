@@ -45,7 +45,8 @@ private object SceneFramesRP151 {
     }
 }
 
-internal fun scenePreviewEnabledRP151(context:android.content.Context)=context.getSharedPreferences("brunio_scene_preview_rp151",0).getBoolean("enabled",false)
+@Suppress("UNUSED_PARAMETER")
+internal fun scenePreviewEnabledRP151(context:android.content.Context)=true
 
 @Composable
 internal fun ScenePreviewRP151(source:StreamChoice,position:Long,modifier:Modifier=Modifier) {

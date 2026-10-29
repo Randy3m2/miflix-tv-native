@@ -208,8 +208,9 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit,initialAi:
     val contextRP146=androidx.compose.ui.platform.LocalContext.current
     val easySearchRP80=LocalEasySearchRP80.current
     val owner=state.searchHistoryOwner()
-    var aiMode by rememberSaveable(owner) {mutableStateOf(initialAi && !state.kidsMode && !easySearchRP80)}
+    var aiMode by rememberSaveable(owner) {mutableStateOf(initialAi && state.assistantEnabledRP155 && !state.kidsMode && !easySearchRP80)}
     val openGuest=LocalGuestOpenRP154.current
+    LaunchedEffect(state.assistantEnabledRP155) {if(!state.assistantEnabledRP155) aiMode=false}
     var query by rememberSaveable(owner) {mutableStateOf(state.searchQuery)}
     var phoneKeyboardRP136 by remember(owner) {mutableStateOf(false)}
     var cursor by rememberSaveable(owner) {mutableIntStateOf(query.length)}
@@ -316,7 +317,7 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit,initialAi:
                                 }
                                 if(!opened) state.error=tr("Abre los ajustes de la TV y empareja un teclado Bluetooth en Controles y dispositivos Bluetooth.","Open TV settings and pair a Bluetooth keyboard under Remotes & Bluetooth Devices.")
                             }
-                            if(!state.kidsMode && !easySearchRP80) SearchKey("✦ BruniO AI",Modifier.weight(2f),selected=aiMode) {aiMode=!aiMode}
+                            if(state.assistantEnabledRP155 && !state.kidsMode && !easySearchRP80) SearchKey("✦ Assistant",Modifier.weight(2f),selected=aiMode) {aiMode=!aiMode}
                             }
                             SearchPhoneKeyboardRP136(state,phoneKeyboardRP136,{replace(it)})
                             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {

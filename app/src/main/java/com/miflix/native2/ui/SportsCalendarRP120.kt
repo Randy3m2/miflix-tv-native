@@ -94,7 +94,7 @@ internal fun CalendarSportEventRP120(state:AppState,event:SportEventRP120) {
         }}
         item {Text(event.day()+" · "+eventTimeRP120(event),color=Color.White)}
         item {Text(if(event.timed) tr("Recibirás un aviso al comenzar si sigues este evento o sus equipos.","Get a start alert by following this event or its teams.") else tr("Hora por confirmar. No se programa un aviso hasta tener una hora confirmada.","Time to be confirmed. No start alert until a confirmed time is available."),color=Muted)}
-        item {FocusButton(tr("Seguir / dejar de seguir este evento","Follow / unfollow this event")) {CalendarStoreRP120.toggle(context,owner,"EVENT:"+event.key)}}
+        item {if(event.league=="BRUNIO") FocusButton(tr("Eliminar recordatorio","Delete reminder")) {CalendarStoreRP120.deletePersonalRP155(context,owner,event.id)} else FocusButton(tr("Seguir / dejar de seguir este evento","Follow / unfollow this event")) {CalendarStoreRP120.toggle(context,owner,"EVENT:"+event.key)}}
     }
 }
 internal fun eventTimeRP120(event:SportEventRP120)=if(event.timed) DateTimeFormatter.ofPattern("h:mm a").withZone(ZoneId.systemDefault()).format(Instant.ofEpochMilli(event.starts)) else tr("Hora por confirmar","Time TBA")

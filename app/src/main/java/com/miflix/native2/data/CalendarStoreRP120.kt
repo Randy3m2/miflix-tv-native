@@ -61,10 +61,32 @@ internal object CalendarStoreRP120 {
         }
     }
     fun follows(c:Context,owner:String,e:SportEventRP120)=CalendarPolicyRP120.follows(subscriptions(c,owner),e.league,e.id,e.teams)
-    fun events(c:Context,owner:String):List<SportEventRP120> = runCatching {
-        val a=JSONArray(prefs(c).getString("events:$owner","[]"))
-        (0 until a.length()).mapNotNull {i ->runCatching {SportEventRP120.parse(a.getJSONObject(i))}.getOrNull()}
-    }.getOrDefault(emptyList()).filter {follows(c,owner,it) && !it.cancelled}.sortedWith(compareBy<SportEventRP120> {it.day()}.thenBy {it.starts})
+    private fun personalRP155(c:Context,owner:String):List<SportEventRP120> = runCatching {
+        val a=JSONArray(prefs(c).getString("personal:$owner","[]"))
+        (0 until a.length()).mapNotNull {runCatching {SportEventRP120.parse(a.getJSONObject(it))}.getOrNull()}
+    }.getOrDefault(emptyList())
+    @Synchronized fun addPersonalRP155(c:Context,owner:String,title:String,starts:Long) {
+        require(title.isNotBlank() && title.length<=120 && starts>System.currentTimeMillis())
+        val day=Instant.ofEpochMilli(starts).atZone(ZoneId.systemDefault()).toLocalDate().toString()
+        val id=java.util.UUID.nameUUIDFromBytes((title.trim().lowercase()+":"+starts).toByteArray()).toString()
+        val entry=SportEventRP120(id,"BRUNIO",title.trim(),day,starts)
+        val rows=(personalRP155(c,owner).filter {it.starts>System.currentTimeMillis()-86400000L}+entry).distinctBy {it.key}.sortedBy {it.starts}
+        require(rows.size<=100)
+        check(prefs(c).edit().putString("personal:$owner",JSONArray(rows.map {it.json()}).toString()).commit())
+        changed();CalendarAlarmsRP120.schedule(c,owner)
+    }
+    @Synchronized fun deletePersonalRP155(c:Context,owner:String,id:String) {
+        val rows=personalRP155(c,owner).filterNot {it.id==id}
+        check(prefs(c).edit().putString("personal:$owner",JSONArray(rows.map {it.json()}).toString()).commit())
+        changed();CalendarAlarmsRP120.schedule(c,owner)
+    }
+    fun events(c:Context,owner:String):List<SportEventRP120> {
+        val subscribed=runCatching {
+            val a=JSONArray(prefs(c).getString("events:$owner","[]"))
+            (0 until a.length()).mapNotNull {i ->runCatching {SportEventRP120.parse(a.getJSONObject(i))}.getOrNull()}
+        }.getOrDefault(emptyList()).filter {follows(c,owner,it) && !it.cancelled}
+        return (subscribed+personalRP155(c,owner)).filterNot {it.cancelled}.distinctBy {it.key}.sortedWith(compareBy<SportEventRP120> {it.day()}.thenBy {it.starts})
+    }
     fun lastRefresh(c:Context,owner:String)=prefs(c).getLong("refresh:$owner",0)
     fun error(c:Context,owner:String)=prefs(c).getString("error:$owner","").orEmpty()
     suspend fun refresh(c:Context,owner:String,force:Boolean=false,month:java.time.YearMonth?=null) = mutex.withLock {

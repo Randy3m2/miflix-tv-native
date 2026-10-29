@@ -32,7 +32,7 @@ internal object CalendarAlarmsRP120 {
             }
         }
         for(event in targets) put(event.key,event.starts,true)
-        if(CalendarStoreRP120.subscriptions(c,owner).isNotEmpty()) put("refresh",now+6*3600000L,false)
+        if(CalendarStoreRP120.subscriptions(c,owner).isNotEmpty() || CalendarStoreRP120.events(c,owner).any {it.league=="BRUNIO" && it.starts>now+7*86400000L}) put("refresh",now+6*3600000L,false)
         prefs.edit().putStringSet("alarms:$owner",keys).apply()
     }
     fun notify(c:Context,owner:String,event:SportEventRP120) {

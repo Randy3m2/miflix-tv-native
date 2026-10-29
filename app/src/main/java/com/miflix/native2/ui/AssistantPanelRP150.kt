@@ -52,6 +52,10 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
     val configured=ai.configured()
     var busy by remember {mutableStateOf(false)}
     var message by remember {mutableStateOf("")}
+    var appCommand by remember(owner) {mutableStateOf<AssistantCommandRP155?>(null)}
+    var contextPicks by remember(owner) {mutableStateOf<List<AssistantPickRP150>>(emptyList())}
+    var refinementBase by remember(owner) {mutableStateOf<Pair<AssistantPlanRP150,List<AssistantPickRP150>>?>(null)}
+    var contextPlan by remember(owner) {mutableStateOf<AssistantPlanRP150?>(null)}
     var picks by remember(owner) {mutableStateOf<List<AssistantPickRP150>>(emptyList())}
     var resultQuery by remember(owner) {mutableStateOf("")}
     var resultBudget by remember {mutableIntStateOf(0)}
@@ -63,25 +67,64 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
     DisposableEffect(owner) {onDispose {job?.cancel()}}
     var cancelledKey by remember(owner) {mutableStateOf<String?>(null)}
     var lastSubmitted by remember(owner) {mutableStateOf<String?>(null)}
-    fun submit(text:String=query,time:Int=budget,preset:AssistantPlanRP150?=null,automatic:Boolean=false,allowRemote:Boolean=true) {
+    fun submit(text:String=query,time:Int=budget,preset:AssistantPlanRP150?=null,automatic:Boolean=false,allowRemote:Boolean=true,commandOverride:AssistantCommandRP155?=null) {
         if(busy) return
         if(!automatic) cancelledKey=null
-        lastSubmitted="$text:$time";sharedReplace?.invoke(text);query=text;budget=time;resultQuery=text;resultBudget=time;activePlan=null;message="";picks=emptyList();desiredAudio="";busy=true
+        lastSubmitted="$text:$time";sharedReplace?.invoke(text);query=text;budget=time;resultQuery=text;resultBudget=time;activePlan=null;message="";picks=emptyList();appCommand=null;desiredAudio="";busy=true
         val generation=++requestGeneration
         val remote=allowRemote && preset==null && useGemini && configured && (!automatic || ai.readyRP154())
         job=scope.launch {
             try {
+                val command=commandOverride ?: AssistantCommandsRP155.parse(text)
+                if(command!=null) {
+                    when(command.action) {
+                        AssistantActionRP155.SIMILAR -> {
+                            val result=AssistantDiscoveryRP155.similar(state,command,contextPicks,time)
+                            ensureActive();if(generation!=requestGeneration || state.localExtrasScope()!=owner) return@launch
+                            picks=result.first;contextPicks=result.first;message=result.second;return@launch
+                        }
+                        AssistantActionRP155.COMPARE -> {val comparison=AssistantDiscoveryRP155.compare(state,command.target,contextPicks);ensureActive();if(generation!=requestGeneration || state.localExtrasScope()!=owner) return@launch;message=comparison;return@launch}
+                        AssistantActionRP155.EXPLAIN -> {
+                            val first=contextPicks.firstOrNull()
+                            message=if(first==null) tr("Busca una recomendación primero.","Search for recommendations first.") else tr("Esta selección usa tus filtros y los metadatos del catálogo: ","These picks use your filters and catalog metadata: ")+first.item.title+" · ${first.minutes} min · ★ ${first.item.rating}. "+tr("No se verificó el doblaje de los enlaces.","Dubbed audio availability has not been verified.")
+                            return@launch
+                        }
+                        AssistantActionRP155.REFINE -> {
+                            if(refinementBase==null) refinementBase=(contextPlan ?: AssistantPlanRP150()) to contextPicks
+                            val previous=refinementBase!!.first
+                            val local=AssistantPlanRP150.local(text,time).copy(query="")
+                            val q=AssistantCommandsRP155.normalize(text)
+                            val plan=previous.copy(query="",minutes=if(local.minutes>0) local.minutes else if(q.contains("corta") || q.contains("shorter")) (refinementBase!!.second.minOfOrNull {it.minutes}?.minus(1) ?: 89).coerceAtLeast(1) else previous.minutes,
+                                genres=if(local.genres.isNotEmpty()) local.genres else if(q.contains("oscuro") || q.contains("darker")) listOf(53) else previous.genres)
+                            val found=state.assistantRP150.picks(owner,plan,state.continueWatching.toList(),state.progress.toMap()).filter {row->!(q.contains("reciente") || q.contains("recent")) || (row.item.year.toIntOrNull() ?: 0)>=java.time.LocalDate.now().year-5}
+                            ensureActive();if(generation!=requestGeneration || state.localExtrasScope()!=owner) return@launch
+                            picks=found;contextPicks=found;activePlan=plan;contextPlan=plan;message=tr("Selección ajustada.","Selection refined.");return@launch
+                        }
+                        AssistantActionRP155.NIGHT -> {
+                            val nightLimit=AssistantPlanRP150.local(text,time).minutes.let {if(it>0) (it/2).coerceAtLeast(1) else 120}
+                            val comedy=state.assistantRP150.picks(owner,AssistantPlanRP150(genres=listOf(35),minutes=nightLimit),emptyList(),emptyMap()).firstOrNull()
+                            val thriller=state.assistantRP150.picks(owner,AssistantPlanRP150(genres=listOf(53),minutes=nightLimit),emptyList(),emptyMap()).firstOrNull {it.item.cloudId!=comedy?.item?.cloudId}
+                            ensureActive();if(generation!=requestGeneration || state.localExtrasScope()!=owner) return@launch
+                            picks=listOfNotNull(comedy,thriller);contextPicks=picks;message=tr("Comedia y thriller · duración total: ","Comedy and thriller · total runtime: ")+picks.sumOf {it.minutes}+" min";return@launch
+                        }
+                        else -> {appCommand=command;return@launch}
+                    }
+                }
                 if(Regex("(?i)(en qu[eé] episodio|which episode|scene finder|escena|timestamp)").containsMatchIn(text)) {if(!automatic) sceneFinder=true else message=tr("Abre Scene Finder para buscar pistas en episodios.","Open Scene Finder to search episode clues.");return@launch}
                 val key="$remote:$text:$time:$preset"
                 var cachePlan=true
                 val plan=preset ?: plans[key] ?: if(remote) try {
-                    withContext(Dispatchers.IO) {ai.plan(text,time)}
+                    val interpretation=withContext(Dispatchers.IO) {ai.interpretRP155(text,time)}
+                    ensureActive();if(generation!=requestGeneration || state.localExtrasScope()!=owner) return@launch
+                    if(interpretation.command!=null) {busy=false;submit(text,time,automatic=true,allowRemote=false,commandOverride=interpretation.command);return@launch}
+                    interpretation.plan
                 } catch(e:CancellationException) {throw e} catch(_:Exception) {cachePlan=false;if(generation==requestGeneration) message=tr("Gemini no respondió o alcanzó su límite. Usando filtros locales.","Gemini unavailable or limit reached. Using local filters.");AssistantPlanRP150.local(text,time)} else AssistantPlanRP150.local(text,time)
                 if(cachePlan) {if(plans.size>=12) plans.remove(plans.keys.first());plans[key]=plan}
                 val rows=state.assistantRP150.picks(owner,plan,state.continueWatching.toList(),state.progress.toMap())
                 currentCoroutineContext().ensureActive()
                 if(state.localExtrasScope()!=owner || generation!=requestGeneration) return@launch
                 picks=if(state.kidsMode) {val allowed=state.tmdb.kidsFilter(rows.map {it.item}).map {it.cloudId}.toSet();rows.filter {it.item.cloudId in allowed}} else rows
+                if(picks.isNotEmpty() && (text.trim().length>=8 || contextPicks.isEmpty())) {contextPicks=picks;contextPlan=plan;refinementBase=null}
                 activePlan=plan
                 desiredAudio=plan.audio
                 if(picks.isEmpty()) message=tr("No encontramos coincidencias verificadas. Prueba otros filtros.","No verified matches found. Try different filters.")
@@ -94,13 +137,13 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
         if(cancelledKey=="$query:$budget") return@LaunchedEffect
         cancelledKey=null
         if(lastSubmitted=="$query:$budget") return@LaunchedEffect
-        requestGeneration++;job?.cancel();busy=false;picks=emptyList();message="";activePlan=null
+        requestGeneration++;job?.cancel();busy=false;picks=emptyList();appCommand=null;message="";activePlan=null
         if(text.length<2) {lastSubmitted=null;return@LaunchedEffect}
         delay(600)
         submit(query,budget,automatic=true,allowRemote=false)
     }
     LaunchedEffect(query,budget,owner,useGemini,configured) {
-        if(!useGemini || !configured || query.trim().length<8) return@LaunchedEffect
+        if(!useGemini || !configured || query.trim().length<8 || AssistantCommandsRP155.parse(query)!=null) return@LaunchedEffect
         delay(1800)
         if(cancelledKey=="$query:$budget") return@LaunchedEffect
         if(!ai.readyRP154()) return@LaunchedEffect
@@ -132,7 +175,7 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         Column(Modifier.fillMaxSize().consumeOpeningPress().background(Color.Black).padding(horizontal=if(sharedQuery!=null) 12.dp else 34.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             if(sharedQuery!=null) Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                Text("✦  BruniO AI",color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
+                Text("✦  BruniO Assistant",color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     if(!state.kidsMode && LocalGuestExitRP150.current==null) AssistantActionRP152(tr("Invitado","Guest"),"friends") {if(state.prepareGuestRP150()) guest()}
                     AssistantActionRP152("Scene Finder","search") {sceneFinder=true}
@@ -141,7 +184,7 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
             } else {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp),verticalAlignment=Alignment.CenterVertically) {
                 Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
-                    Text("✦  BruniO AI",color=Color.White,fontSize=29.sp,fontWeight=FontWeight.Bold)
+                    Text("✦  BruniO Assistant",color=Color.White,fontSize=29.sp,fontWeight=FontWeight.Bold)
                     Text(tr("Menos buscar. Más descubrir.","Less searching. More discovering."),color=Color(0xffbcb4cf),fontSize=13.sp)
                 }
                 Text(if(useGemini && configured) "GEMINI" else tr("EN TU TV","ON YOUR TV"),color=Color(0xffc8adff),fontSize=9.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(end=8.dp))
@@ -167,6 +210,7 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
                     Text(if(busy) tr("✦ Buscando historias para ti…","✦ Finding your next story…") else message,color=Color(0xffcdb9ef),fontSize=13.sp,modifier=Modifier.weight(1f))
                     if(busy) AssistantActionRP152(tr("Cancelar","Cancel")) {cancelledKey="$query:$budget";requestGeneration++;job?.cancel();busy=false}
                 }}
+                appCommand?.let {command ->item(key="command-rp155") {AssistantCommandPanelRP155(state,command,close)}}
                 if(picks.isNotEmpty()) {
                     item(key="results-title-rp152") {Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {Text(tr("Hecho para tu momento","Made for your moment"),color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold);Text(resultQuery.ifBlank {"${resultBudget} min"},color=Muted,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis)}
@@ -264,7 +308,7 @@ private fun AssistantTextQrRP150(state:AppState,received:(String)->Unit,close:()
     PlayerMenuDialog(onDismissRequest=close,fullScreen=true) {
         LazyColumn(Modifier.fillMaxSize().consumeOpeningPress().background(Color.Black).padding(30.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             item(key="assistant-static-rp150-15") {Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)) {Text(tr("Escribe o dicta desde tu celular","Type or dictate from your phone"),color=Color.White,fontSize=26.sp,modifier=Modifier.weight(1f));FocusButton("×",onClick=close)}}
-            item(key="assistant-static-rp150-16") {Text(tr("Escanea el QR. Puedes usar el micrófono del teclado del celular. El texto llegará al campo de BruniO AI; después cierra este panel y pulsa Buscar. No se consulta Gemini mientras escribes.","Scan the QR and use your phone keyboard microphone if desired. Text fills BruniO AI; then close this panel and select Find. Typing never calls Gemini."),color=Muted,fontSize=15.sp)}
+            item(key="assistant-static-rp150-16") {Text(tr("Escanea el QR. Puedes usar el micrófono del teclado del celular. El texto llegará al campo de BruniO Assistant; después cierra este panel y pulsa Buscar. No se consulta Gemini mientras escribes.","Scan the QR and use your phone keyboard microphone if desired. Text fills BruniO Assistant; then close this panel and select Find. Typing never calls Gemini."),color=Muted,fontSize=15.sp)}
             if(url.isNotBlank()) item(key="assistant-static-rp150-17") {QrCode(url,190.dp)}
             if(status.isNotBlank()) item(key="assistant-static-rp150-18") {Text(status,color=Muted)}
             item(key="assistant-static-rp150-19") {FocusButton(tr("Listo · volver a mi consulta","Done · back to my request"),onClick=close)}

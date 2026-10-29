@@ -70,6 +70,12 @@ class AppState(context: Context) {
 
     private val socialPrefs = context.getSharedPreferences("miflix_social", Context.MODE_PRIVATE)
     private val playbackPrefs = context.getSharedPreferences("miflix_playback", Context.MODE_PRIVATE)
+    var assistantEnabledRP155 by mutableStateOf(playbackPrefs.getBoolean("assistant_enabled_rp155",false))
+        private set
+    fun saveAssistantEnabledRP155(enabled:Boolean) {assistantEnabledRP155=enabled;playbackPrefs.edit().putBoolean("assistant_enabled_rp155",enabled).apply()}
+    var assistantSettingsCategoryRP155 by mutableStateOf<String?>(null)
+    internal var assistantPlaybackRP155:((String)->Boolean)?=null
+
     private val lastSourcePrefsRP16=context.getSharedPreferences("brunio_last_source_rp16",Context.MODE_PRIVATE)
     private val lastSourceRP16=LastPlaybackSourceRP16({lastSourcePrefsRP16.getString("rows","{}").orEmpty()},
         {lastSourcePrefsRP16.edit().putString("rows",it).apply()})

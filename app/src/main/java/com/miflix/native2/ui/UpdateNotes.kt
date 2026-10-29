@@ -277,8 +277,11 @@ internal object UpdateNotes {
     val rp154Changes=listOf(
         "RP154: Teclado unificado para búsqueda normal y BruniO AI; resultados automáticos al escribir, dictar o usar QR. Botón AI junto al icono Bluetooth." to "RP154: One keyboard for title search and BruniO AI; automatic results while typing, dictating or using QR. AI button beside the Bluetooth icon."
     )
-    val changes=if(mobileReleaseRP135) rp148Changes else rp154Changes
-    val previousChanges=(if(mobileReleaseRP135) mobileRP142Changes+rp141Changes+mobileRP140Changes+mobileRP139Changes+rp134Changes else rp153Changes+rp152Changes+rp151Changes+rp150Changes+rp149Changes+rp148Changes+rp147Changes+rp146Changes+rp145Changes+rp144Changes+rp143Changes+rp141Changes+rp138Changes+rp137Changes+rp136Changes+rp135Changes+rp134Changes)+rp133Changes+rp132Changes+rp131Changes+rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
+    val rp155Changes=listOf(
+        "RP155: BruniO Assistant opcional, con icono AI redondo junto a Settings. Comandos de la app, canales/juegos verificados, posiciones, recordatorios locales, similares, refinamiento y comparación sin spoilers." to "RP155: Optional BruniO Assistant with a round AI icon beside Settings. App commands, verified channels/live games, standings, local reminders, similar picks, refinement and spoiler-free comparisons."
+    )
+    val changes=if(mobileReleaseRP135) rp148Changes else rp155Changes
+    val previousChanges=(if(mobileReleaseRP135) mobileRP142Changes+rp141Changes+mobileRP140Changes+mobileRP139Changes+rp134Changes else rp154Changes+rp153Changes+rp152Changes+rp151Changes+rp150Changes+rp149Changes+rp148Changes+rp147Changes+rp146Changes+rp145Changes+rp144Changes+rp143Changes+rp141Changes+rp138Changes+rp137Changes+rp136Changes+rp135Changes+rp134Changes)+rp133Changes+rp132Changes+rp131Changes+rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
         "Menú de amigos: Watch, View Details, Recommendations y Close; detalles abre la ficha sin iniciar reproducción." to "Friend menu: Watch, View Details, Recommendations and Close; details opens the title without starting playback.",
         "Enlaces de Comet y Torrentio con texto ordenado e insignias de Dolby/HDR según sus metadatos." to "Clean Comet and Torrentio link metadata with small Dolby/HDR badges when reported by the source.",
         "Envío local a TV por Wi-Fi, con enlace y código de conexión; sin reproducción web." to "Send titles to TV over local Wi-Fi with a connection link and code; no web playback.",

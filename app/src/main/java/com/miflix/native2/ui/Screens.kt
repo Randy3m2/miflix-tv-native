@@ -889,6 +889,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
 @Composable
 fun SettingsScreen(state: AppState, onBack: () -> Unit) {
     var category by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("account") }
+    LaunchedEffect(state.assistantSettingsCategoryRP155) {state.assistantSettingsCategoryRP155?.let {requested ->if(SettingsCategories.any {it.id==requested}) category=requested;state.assistantSettingsCategoryRP155=null}}
     var helpTitle by remember(category) { mutableStateOf(SettingsCategories.first { it.id==category }.english) }
     var helpDescription by remember(category) { mutableStateOf("Select a setting to see its details. Changes are saved on this device.") }
     var helpIndex by remember(category) { mutableStateOf(-1) }
@@ -1547,6 +1548,25 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             if(state.partyRole==PartyRole.HOST) state.hostPartyUpdate(request,player.currentPosition,playing)
             state.publishPartyPlaybackNotice(playing)
         }
+    }
+    val assistantNextRP155 by rememberUpdatedState(upcoming)
+    DisposableEffect(player,request.playbackId) {
+        val handler:(String)->Boolean = action@{action ->
+            if(state.playerRequest?.playbackId!=request.playbackId) return@action false
+            when(action) {
+                "pause" ->userPlayback(false)
+                "resume" ->userPlayback(true)
+                "next" -> {val next=assistantNextRP155 ?: return@action false;if(state.partyRole==PartyRole.GUEST) return@action false;state.launch {state.playNext(request,next)}}
+                "subtitles_es" -> {state.savePlaybackPreferences(state.audioLanguage,"es",state.autoplayNext);player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT,false).setPreferredTextLanguage("es").build()}
+                "subtitles_off" -> {state.savePlaybackPreferences(state.audioLanguage,"off",state.autoplayNext);player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT,true).build()}
+                "audio_es" -> {state.savePlaybackPreferences("es",state.subtitleLanguage,state.autoplayNext);player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().setPreferredAudioLanguages("es-419","es-MX","es-ES","es").build()}
+                "previous_channel" -> {if(state.previousLiveChannel(request)==null || state.partyRole==PartyRole.GUEST) return@action false;state.returnToPreviousLiveChannel(request)}
+                else ->return@action false
+            }
+            true
+        }
+        state.assistantPlaybackRP155=handler
+        onDispose {if(state.assistantPlaybackRP155===handler) state.assistantPlaybackRP155=null}
     }
     fun openPlayerParty() { showPartyActions=true }
     fun createPlayerParty() {

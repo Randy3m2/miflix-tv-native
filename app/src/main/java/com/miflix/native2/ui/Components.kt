@@ -486,11 +486,10 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
                     if(destination==Screen.SEARCH) SearchNavigationButton(selected=current==destination,modifier=if(current==destination) Modifier.focusRequester(headerTarget) else Modifier,onClick=activate)
                     else NavigationTab(label,selected=current==destination,modifier=if(current==destination) Modifier.focusRequester(headerTarget) else Modifier,onClick=activate)
                 }
-                if(!kids && assistantOpenRP150!=null) item(key="ai-rp150") {FocusButton("✦ AI",horizontalPadding=14.dp,onClick=assistantOpenRP150)}
                 if(guestExitRP150!=null) item(key="guest-exit-rp150") {FocusButton(tr("Salir invitado","Exit guest"),onClick=guestExitRP150)}
             }
         }
-        Row(Modifier.width(136.dp),horizontalArrangement=Arrangement.spacedBy(10.dp,Alignment.End),verticalAlignment=Alignment.CenterVertically) {
+        Row(Modifier.width(if(assistantOpenRP150!=null) 174.dp else 136.dp),horizontalArrangement=Arrangement.spacedBy(10.dp,Alignment.End),verticalAlignment=Alignment.CenterVertically) {
             val calendarContextRP120=androidx.compose.ui.platform.LocalContext.current.applicationContext
         val calendarOwnerRP120=if(profile==null) "" else com.miflix.native2.data.CalendarStoreRP120.owner(calendarContextRP120,profile.id)
         val calendarRevisionRP120 by com.miflix.native2.data.CalendarStoreRP120.revision.collectAsState()
@@ -498,6 +497,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
             value=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {com.miflix.native2.data.CalendarStoreRP120.unread(calendarContextRP120,calendarOwnerRP120)}
         }
         if(guestExitRP150==null) NotificationButton(notificationCount+sportUnreadRP120,if(current==Screen.NOTIFICATIONS) Modifier.focusRequester(headerTarget) else Modifier) {navigateHeader(Screen.NOTIFICATIONS)}
+            if(!kids && assistantOpenRP150!=null) AssistantOrbRP155(onClick=assistantOpenRP150)
             if(!kids && guestExitRP150==null) SettingsNavigationButtonRP106(current==Screen.SETTINGS,if(current==Screen.SETTINGS) Modifier.focusRequester(headerTarget) else Modifier) {navigateHeader(Screen.SETTINGS)}
         }
 

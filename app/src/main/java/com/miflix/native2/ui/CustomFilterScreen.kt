@@ -195,6 +195,9 @@ private fun CatalogGenrePicker(state: AppState,type: String,select: (CatalogGenr
 
 @Composable
 fun FranchiseScreen(state: AppState) {
+    var timelineRP150 by androidx.compose.runtime.saveable.rememberSaveable(state.franchiseBrand) {mutableStateOf(timelineSagaRP150(state.franchiseBrand)!=null || state.franchiseBrand=="walking_dead")}
+    if(timelineRP150) {FranchiseTimelineRP150(state) {timelineRP150=false};return}
+
     val grid=rememberLazyGridState(state.franchiseScrollIndex,state.franchiseScrollOffset)
     var previous by remember { mutableStateOf(state.franchiseType) }
     LaunchedEffect(state.franchiseType) { if(previous!=state.franchiseType) { grid.scrollToItem(0);previous=state.franchiseType } }
@@ -206,6 +209,7 @@ fun FranchiseScreen(state: AppState) {
                 Text(com.miflix.native2.data.FranchiseCatalogRP29.title(state.franchiseBrand),color=Color.White,fontSize=30.sp,modifier=Modifier.weight(1f))
                 if(com.miflix.native2.data.FranchiseCatalogRP29.supportsMovies(state.franchiseBrand)) FocusButton(tr("Películas","Movies"),primary=state.franchiseType=="movie") { state.launch { state.loadFranchise("movie") } }
                 FocusButton(tr("Series","Series"),primary=state.franchiseType=="series") { state.launch { state.loadFranchise("series") } }
+                FocusButton(tr("Línea temporal","Timeline")) {timelineRP150=true}
                 FocusButton(tr("Atrás","Back")) { state.screen=Screen.COLLECTIONS }
             }
             if(state.franchiseLoading) Text(tr("Cargando…","Loading…"),color=Muted)

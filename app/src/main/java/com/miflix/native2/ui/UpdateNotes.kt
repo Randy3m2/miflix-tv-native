@@ -262,8 +262,14 @@ internal object UpdateNotes {
     val rp149Changes=listOf(
         "RP149: Hotfix de compilación: incluye el controlador de reintentos HTTP 404 y la detección del código HTTP que necesita el reproductor." to "RP149: Build hotfix: bundles the HTTP 404 retry controller and HTTP status detection required by the player."
     )
-    val changes=if(mobileReleaseRP135) rp148Changes else rp149Changes
-    val previousChanges=(if(mobileReleaseRP135) mobileRP142Changes+rp141Changes+mobileRP140Changes+mobileRP139Changes+rp134Changes else rp148Changes+rp147Changes+rp146Changes+rp145Changes+rp144Changes+rp143Changes+rp141Changes+rp138Changes+rp137Changes+rp136Changes+rp135Changes+rp134Changes)+rp133Changes+rp132Changes+rp131Changes+rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
+    val rp150Changes=listOf(
+        "RP150: V1 de descubrimiento: línea temporal de franquicias, BruniO AI con filtros locales y Gemini opcional, colecciones por perfil, selección por tiempo y sesión de invitado en memoria." to "RP150: Discovery V1: franchise timeline, BruniO AI with local filters and optional Gemini, profile collections, time-based picks and an in-memory guest session."
+    )
+    val rp151Changes=listOf(
+        "RP151: Timeline TV con foco y progreso; Discovery AI/Gemini opcional, colecciones y modo invitado. Vota qué ver en Party, busca pistas en sinopsis de episodios, activa miniaturas al buscar y recibe avisos poscréditos cuando hay marcas disponibles." to "RP151: Focused TV timeline and progress; Discovery AI/optional Gemini, collections and guest mode. Vote on party playback, search episode synopsis clues, enable seek thumbnails and receive post-credits notices when markers are available."
+    )
+    val changes=if(mobileReleaseRP135) rp148Changes else rp151Changes
+    val previousChanges=(if(mobileReleaseRP135) mobileRP142Changes+rp141Changes+mobileRP140Changes+mobileRP139Changes+rp134Changes else rp150Changes+rp149Changes+rp148Changes+rp147Changes+rp146Changes+rp145Changes+rp144Changes+rp143Changes+rp141Changes+rp138Changes+rp137Changes+rp136Changes+rp135Changes+rp134Changes)+rp133Changes+rp132Changes+rp131Changes+rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
         "Menú de amigos: Watch, View Details, Recommendations y Close; detalles abre la ficha sin iniciar reproducción." to "Friend menu: Watch, View Details, Recommendations and Close; details opens the title without starting playback.",
         "Enlaces de Comet y Torrentio con texto ordenado e insignias de Dolby/HDR según sus metadatos." to "Clean Comet and Torrentio link metadata with small Dolby/HDR badges when reported by the source.",
         "Envío local a TV por Wi-Fi, con enlace y código de conexión; sin reproducción web." to "Send titles to TV over local Wi-Fi with a connection link and code; no web playback.",

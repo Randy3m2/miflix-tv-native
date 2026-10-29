@@ -38,10 +38,17 @@ import java.util.Locale
 import java.util.UUID
 
 class AppState(context: Context) {
+    internal val assistantRP150 by lazy { AssistantRepositoryRP150(tmdb) }
+    internal fun prepareGuestRP150():Boolean {
+        if(playerRequest!=null || playbackLoading!=null || watchParty!=null || busyMessage!=null) return false
+        discardPreparedVideoRP91();sourceWarmupJobRP90?.cancel();sourceWarmupJobRP90=null;sourceWarmupKeyRP90=null
+        return true
+    }
+    internal fun disposeGuestRP150() {discardPreparedVideoRP91();appScope.coroutineContext[kotlinx.coroutines.Job]?.cancel()}
     private val rapidPlaybackRP87=RapidActionRP87()
     private val latestPlaybackRP87=LatestPlaybackRP87()
     internal val playerReleaseRP87=PlayerReleaseRP87()
-    init {LocalCrashRP87.install(context)}
+    init {if(context !is GuestContextRP150) LocalCrashRP87.install(context)}
     init { com.miflix.native2.data.AwardSelections.configure(context.assets.open("awards_catalog.json").bufferedReader().use {it.readText()}) }
     private val appContext=context.applicationContext
     internal var focusScorePinRP15:(() -> Unit)?=null
@@ -1100,6 +1107,15 @@ class AppState(context: Context) {
     }
     val friendRows = mutableStateListOf<Friendship>()
     val friendPeople = mutableStateMapOf<String, String>()
+    internal var partyBallotRP151 by mutableStateOf<PartyBallotRP151?>(null)
+    private var ballotRoomRP151:String?=null
+    internal fun currentBallotRP151()=partyBallotRP151.takeIf {ballotRoomRP151==watchParty?.roomCode}
+    internal suspend fun ballotVoterRP151()=profileSocialSession()?.userId.orEmpty()
+    internal suspend fun sendBallotRP151(body:String) {
+        val s=profileSocialSession() ?: return
+        val room=watchParty ?: return
+        social.send(s,room.roomCode,"chat",body)
+    }
     val partyMessages = mutableStateListOf<PartyEvent>()
     val floatingEvents = mutableStateListOf<PartyEvent>()
     val partyPhrases = mutableStateListOf<String>()
@@ -1674,7 +1690,7 @@ class AppState(context: Context) {
     private val sessionRenewal=SessionRenewal({ session },{ session=it;local.saveSession(it) },
         { jwt(it.accessToken).optLong("exp",0)*1000L<=System.currentTimeMillis()+90000L },{ cloud.refresh(it) })
     init {
-        Http.authorize={ url,headers,force ->
+        if(context !is GuestContextRP150) Http.authorize={ url,headers,force ->
             val root=BuildConfig.SUPABASE_URL.trimEnd('/')
             val bearer=headers["Authorization"]?.removePrefix("Bearer ")
             if(bearer==null || !(url.startsWith("$root/rest/v1/") || url.startsWith("$root/functions/v1/") || url.startsWith("$root/storage/v1/"))) headers
@@ -3766,7 +3782,7 @@ class AppState(context: Context) {
         partyEpoch++; switchingPartyEpoch=null; invalidatePlaybackWork()
         session?.let { socialPrefs.edit().remove(socialRoomKey()).apply() }
         watchParty=null; partyRole=null;partyFollowHost=true; pendingPartyCode=null; accessRequests.clear()
-        partyMessages.clear(); floatingEvents.clear(); partyMembers.clear(); lastEventId=-1
+        partyMessages.clear(); floatingEvents.clear(); partyMembers.clear(); lastEventId=-1;partyBallotRP151=null;ballotRoomRP151=null
         recentPartyMembersRP88.clear();recentPartyRoomRP88=null;partyReturnPulseRP88=0
         knownPartyMembers=null; partyJoinedNotice=null; joinedNoticeSequence++;sharedSourcePlaybackId=null
         partyPlaybackNotice=null;playbackNoticeSequence++
@@ -3862,11 +3878,16 @@ class AppState(context: Context) {
         partyMembers.clear(); partyMembers.addAll(members)
         val events=social.events(s,p.roomCode,lastEventId)
         if(!valid()) return
+        if(ballotRoomRP151!=p.roomCode) {ballotRoomRP151=p.roomCode;partyBallotRP151=null}
+        for(event in events) if(PartyVotingRP151.accepts(event)) {
+            partyBallotRP151=PartyVotingRP151.reduce(partyBallotRP151,event,fresh.hostUserId,members.map {it.id}.toSet()+fresh.hostUserId,System.currentTimeMillis())
+        }
         val firstPollRP88=lastEventId<0
-        if(firstPollRP88) {partyMessages.clear();partyMessages.addAll(events.filter {it.kind!="playback"});lastEventId=events.lastOrNull()?.id ?: 0}
+        if(firstPollRP88) {partyMessages.clear();partyMessages.addAll(events.filter {it.kind!="playback" && !PartyVotingRP151.accepts(it)});lastEventId=events.lastOrNull()?.id ?: 0}
         run {
             for(event in events) {
                 lastEventId=maxOf(lastEventId,event.id)
+                if(PartyVotingRP151.accepts(event)) continue
                 if(firstPollRP88 && event.kind!="playback") continue
                 if(event.kind=="playback") {
                     if(partyRole==PartyRole.GUEST && com.miflix.native2.data.PartyReturnPolicyRP88.accepts(

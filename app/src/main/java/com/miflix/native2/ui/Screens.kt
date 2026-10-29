@@ -999,7 +999,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         SettingsSectionCard(onFocused={ visualHelp=null;helpTitle="About BruniO";helpDescription="Usage on this device, installed version and updates.";helpIndex=0 }) {
                 Text(tr("Acerca de BruniO","About BruniO"),color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
 
-                Text("BruniO ${BuildConfig.VERSION_NAME}", color = Muted, fontSize = 14.sp, lineHeight=17.sp)
+                Text("BruniO ${BuildConfig.VERSION_NAME} · Build ${BuildConfig.VERSION_NAME.substringAfterLast("-rp")}", color = Muted, fontSize = 14.sp, lineHeight=17.sp)
 
                 FocusButton("Changelog / Details") {state.changelogOpen=true}
 
@@ -2029,6 +2029,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     LaunchedEffect(pauseSynopsis, pauseInfoDismissed, mini, statsOpenRP95) {
         if(!statsOpenRP95 && !mini && pauseSynopsis && !pauseInfoDismissed) { withFrameNanos { }; runCatching { surfaceFocus.requestFocus() } }
     }
+    var postNoticeDismissedRP151 by remember(request.playbackId) {mutableStateOf(false)}
     var exitArmedAt by remember(request.playbackId) { mutableStateOf(0L) }
     fun requestExit() {
         if(mobileRP133) {parkCurrentPlayback();onClose();return}
@@ -2360,12 +2361,19 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 Text(if(request.live || durationMs <= 0) remainingText else "${tr("Finaliza","Ends")} · "+com.miflix.native2.player.PlaybackClockRP63.format(clockNow+((durationMs-positionMs).coerceAtLeast(0)/speed.coerceAtLeast(0.1f)).toLong()),color=Color(0xFFE0E0E0),fontSize=19.sp, lineHeight=23.sp)
             }
         }
+        val postSceneRP151=segments.postCredits?.takeIf {it.startMs in 1 until durationMs && it.endMs<=durationMs}
+        if(!request.live && !postNoticeDismissedRP151 && postSceneRP151!=null && positionMs<postSceneRP151.startMs && (positionMs>=durationMs-300_000L || segments.outro?.let {positionMs>=it.startMs}==true) && !mini && playerMenu==null && !showPartyActions && !showEpisodes) {
+            Row(Modifier.align(Alignment.TopEnd).padding(24.dp).background(Color(0xf0191725),RoundedCornerShape(18.dp)).padding(14.dp),horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
+                Column {Text(tr("No te vayas todavía","Stay for one more scene"),color=Color.White,fontSize=18.sp);Text(tr("Hay una escena después de los créditos","There is a post-credits scene"),color=Accent,fontSize=13.sp)}
+                FocusButton(tr("Entendido","Got it")) {postNoticeDismissedRP151=true}
+            }
+        }
         if(!state.easyModeRP79 && request.momentEndMs<=0 && !ended && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu==null && !quickReactions && state.sourceSelection==null && state.partyRole != PartyRole.GUEST && durationMs > 0) {
             val intro = segments.intro?.takeIf { it.endMs <= durationMs && positionMs >= it.startMs && positionMs < it.endMs }
             val credits = segments.outro?.takeIf { it.startMs < durationMs && positionMs >= it.startMs && positionMs < it.endMs }
             if(intro != null || credits != null) Box(Modifier.align(Alignment.BottomEnd).padding(end=30.dp,bottom=100.dp)) {
                 if(intro != null && !introDismissed) SkipIntroDialog({ introDismissed=true;player.seekTo(intro.endMs) }) { introDismissed=true }
-                else if(credits != null) FocusButton(tr("Saltar créditos","Skip Credits"),primary=true) {
+                else if(credits != null) FocusButton(if(postSceneRP151!=null && positionMs<postSceneRP151.startMs) tr("Ir a escena poscréditos","Go to post-credits scene") else tr("Saltar créditos","Skip Credits"),primary=true) {
                     val post = segments.postCredits?.startMs?.takeIf { it > positionMs && it < durationMs }
                     player.seekTo(post ?: credits.endMs.coerceAtMost(durationMs))
                 }

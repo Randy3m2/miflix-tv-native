@@ -1,0 +1,4 @@
+TV :app:testReleaseUnitTest y código compartido :mobile:compileReleaseKotlin: BUILD SUCCESSFUL.
+{'tests': 522, 'failures': 0, 'errors': 0, 'skipped': 0}
+Última validación: 31 segundos, 45 tareas.
+Sin APK firmado ni publicación remota. Sin prueba física en TV, clave real de Gemini, fuentes reales ni dos dispositivos en party.

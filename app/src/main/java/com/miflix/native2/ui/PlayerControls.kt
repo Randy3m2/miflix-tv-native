@@ -109,7 +109,7 @@ internal fun CompactPlayerControls(
             Text(if(request.item.type=="series") "S${request.season} E${request.episode} · ${request.stream.name}" else request.stream.name,
                 color=Color(0xFFBBBBBB),fontSize=12.sp,lineHeight=15.sp,maxLines=1)
             Text(focusedLabel,color=Color.White,fontSize=12.sp,lineHeight=16.sp,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,modifier=Modifier.fillMaxWidth().height(18.dp))
-            if(!request.live || request.sportsRecordingRP72) PlayerSeekBar(position,duration,seekable,seekFocus,playFocus,onInteraction,onSeek)
+            if(!request.live || request.sportsRecordingRP72) PlayerSeekBar(position,duration,seekable,seekFocus,playFocus,onInteraction,onSeek,previewSourceRP151=if(!request.live) request.stream else null)
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 if(request.sportsRecordingRP72) PlayerIconButton("rewind",tr("Retroceder 10 segundos","Back 10 seconds"),onInteraction=onInteraction,onClick={onSeek((position-10_000L).coerceAtLeast(0L))},onLabel={focusedLabel=it},enabled=seekable)
                 if(!request.live || request.sportsRecordingRP72) PlayerIconButton(if(paused) "play" else "pause",if(paused) tr("Reproducir","Play") else tr("Pausar","Pause"),Modifier.focusRequester(playFocus).focusProperties { up=seekFocus },onInteraction,onPlay,onLabel={ focusedLabel=it })
@@ -188,29 +188,34 @@ private fun PlayerGlyph(icon: String, color: Color, modifier: Modifier) {
 
 /** Left/right seeks ten seconds while this bar has focus; up/down uses normal TV navigation. */
 @Composable
-private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seekFocus: FocusRequester, playFocus: FocusRequester, onInteraction: () -> Unit, onSeek: (Long) -> Unit,largeRP89:Boolean=false) {
+private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seekFocus: FocusRequester, playFocus: FocusRequester, onInteraction: () -> Unit, onSeek: (Long) -> Unit,largeRP89:Boolean=false,previewSourceRP151:com.miflix.native2.model.StreamChoice?=null) {
+    val previewContextRP151=androidx.compose.ui.platform.LocalContext.current
+    val stagedRP151=previewSourceRP151!=null && remember(previewSourceRP151) {scenePreviewEnabledRP151(previewContextRP151)}
     var focused by remember {mutableStateOf(false)}
     var dragging by remember {mutableStateOf(false)}
     var preview by remember {mutableStateOf<Long?>(null)}
+    androidx.activity.compose.BackHandler(enabled=stagedRP151 && preview!=null) {preview=null}
     val latestSeek by rememberUpdatedState(onSeek)
     val interaction by rememberUpdatedState(onInteraction)
     val shown=(preview ?: position).coerceIn(0L,duration.coerceAtLeast(0L))
     val fraction=if(duration>0) (shown.toFloat()/duration).coerceIn(0f,1f) else 0f
-    LaunchedEffect(position,dragging) {if(!dragging && preview?.let {kotlin.math.abs(position-it)<1000L}==true) preview=null}
-    LaunchedEffect(preview,dragging) {if(preview!=null && !dragging) {kotlinx.coroutines.delay(1500);preview=null} }
+    LaunchedEffect(position,dragging) {if(!stagedRP151 && !dragging && preview?.let {kotlin.math.abs(position-it)<1000L}==true) preview=null}
+    LaunchedEffect(preview,dragging) {if(!stagedRP151 && preview!=null && !dragging) {kotlinx.coroutines.delay(1500);preview=null} }
     Box(Modifier.fillMaxWidth().height(if(largeRP89) 52.dp else 30.dp).focusRequester(seekFocus).focusProperties {down=playFocus}
-        .onFocusChanged {focused=it.isFocused;if(it.isFocused) interaction()}
+        .onFocusChanged {focused=it.isFocused;if(it.isFocused) interaction() else if(stagedRP151) preview=null}
         .semantics {contentDescription=playbackTime(shown)+" / "+playbackTime(duration)}
         .onPreviewKeyEvent {event ->
             val code=event.nativeKeyEvent.keyCode
             if(code==android.view.KeyEvent.KEYCODE_DPAD_LEFT || code==android.view.KeyEvent.KEYCODE_DPAD_RIGHT) {
                 if(event.type==KeyEventType.KeyDown && enabled) {
                     interaction();val target=com.miflix.native2.data.EasyPlaybackRP89.seekTarget(preview ?: position,duration,if(code==android.view.KeyEvent.KEYCODE_DPAD_LEFT) -1 else 1)
-                    preview=target;latestSeek(target)
+                    preview=target;if(!stagedRP151) latestSeek(target)
                 };true
+            } else if(stagedRP151 && preview!=null && code in listOf(android.view.KeyEvent.KEYCODE_DPAD_CENTER,android.view.KeyEvent.KEYCODE_ENTER,android.view.KeyEvent.KEYCODE_NUMPAD_ENTER,android.view.KeyEvent.KEYCODE_BACK)) {
+                if(event.type==KeyEventType.KeyUp) {if(code!=android.view.KeyEvent.KEYCODE_BACK) preview?.let {latestSeek(it)};preview=null;interaction()};true
             } else false
         }.focusable()
-        .pointerInput(duration,enabled) {detectTapGestures {if(enabled && size.width>0) {interaction();val target=(it.x/size.width*duration).toLong().coerceIn(0L,duration);preview=target;latestSeek(target)} } }
+        .pointerInput(duration,enabled) {detectTapGestures {if(enabled && size.width>0) {interaction();val target=(it.x/size.width*duration).toLong().coerceIn(0L,duration);preview=target;if(!stagedRP151) latestSeek(target)} } }
         .pointerInput(duration,enabled) {
             detectDragGestures(
                 onDragStart={dragging=true;interaction()},
@@ -219,6 +224,10 @@ private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seek
                 onDrag={change,_ -> if(enabled && size.width>0) {change.consume();interaction();preview=(change.position.x/size.width*duration).toLong().coerceIn(0L,duration)}}
             )
         }) {
+        if(stagedRP151 && preview!=null && previewSourceRP151!=null) {
+            val popupOffsetRP151=with(androidx.compose.ui.platform.LocalDensity.current) {160.dp.roundToPx()}
+            androidx.compose.ui.window.Popup(alignment=Alignment.TopStart,offset=androidx.compose.ui.unit.IntOffset(0,-popupOffsetRP151),properties=androidx.compose.ui.window.PopupProperties(focusable=false,clippingEnabled=false)) {ScenePreviewRP151(previewSourceRP151,shown)}
+        }
         Text(playbackTime(shown)+" / "+playbackTime(duration),color=Color.White,fontSize=if(largeRP89) 19.sp else 12.sp,lineHeight=if(largeRP89) 24.sp else 16.sp,
             modifier=Modifier.align(Alignment.TopEnd).background(Color(0xA0000000),RoundedCornerShape(5.dp)).padding(horizontal=7.dp,vertical=2.dp))
         Canvas(Modifier.align(Alignment.BottomCenter).padding(bottom=2.dp).fillMaxWidth().height(if(largeRP89) {if(focused || dragging) 12.dp else 8.dp} else if(focused || dragging) 8.dp else 5.dp)) {

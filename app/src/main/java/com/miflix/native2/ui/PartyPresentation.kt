@@ -146,6 +146,8 @@ internal fun PartyMembersOverlay(state: AppState,modifier: Modifier=Modifier,pla
 
 @Composable
 internal fun PartyRoomSheet(state: AppState,onCreate: () -> Unit,onRefreshRequests: () -> Unit,onSwitchCurrent: () -> Unit,onWatchParty: () -> Unit,close: () -> Unit) {
+    var votingRP151 by remember {mutableStateOf(false)}
+    if(votingRP151) {PartyVotingPanelRP151(state) {votingRP151=false};return}
     var selectedFriend by remember {mutableStateOf<com.miflix.native2.data.FriendActivity?>(null)}
     var invite by remember {mutableStateOf(false)}
     var bringBack by remember {mutableStateOf(false)}
@@ -163,6 +165,7 @@ internal fun PartyRoomSheet(state: AppState,onCreate: () -> Unit,onRefreshReques
             item {FocusButton(tr("Crear party","Create party"),primary=true,modifier=Modifier.fillMaxWidth(),onClick=onCreate)}
         } else {
             item {PartyCode(room.roomCode)}
+            item {FocusButton(tr("Votar qué ver","Vote on what to watch"),primary=true,modifier=Modifier.fillMaxWidth()) {votingRP151=true}}
             item {Text(listOf(room.title,if(room.season>0) "S${room.season} E${room.episode}" else "").filter {it.isNotBlank()}.joinToString(" · "),color=Color.White,fontSize=15.sp,maxLines=2)}
             val current=state.playerRequest
             if(current!=null && state.screen!=Screen.PLAYER) item {

@@ -64,6 +64,16 @@ public class SearchKeyboardRP136Test {
             assertEquals(Collections.singletonList("Películas de acción"),edits);
         }
     }
+    @Test public void secretQrRequiresExplicitSubmitAndNeverEchoesKey() throws Exception {
+        String secret="test_only_not_a_real_key_123456";List<String> delivered=new ArrayList<>();
+        try(SearchKeyboardServerRP136 server=SearchKeyboardServerRP136.secretLoopbackForTests(value->{delivered.add(value);return true;})) {
+            URI uri=URI.create(server.getUrl());String html=request(uri,"GET",uri.getPath(),null,"");
+            assertTrue(html.contains("type='password'"));assertTrue(html.contains("onsubmit"));assertFalse(html.contains("addEventListener('input'"));
+            String body="csrf="+token(html)+"&sequence=1&text="+secret;
+            String reply=request(uri,"POST",uri.getPath().replace("/add/","/save/"),null,body);
+            assertTrue(reply.startsWith("HTTP/1.1 200"));assertFalse(reply.contains(secret));assertFalse(server.getUrl().contains(secret));assertEquals(Collections.singletonList(secret),delivered);
+        }
+    }
     @Test public void boundsAndNetworkRules() {
         assertTrue(SearchKeyboardServerRP136.valid(""));assertTrue(SearchKeyboardServerRP136.valid("acción 한국어"));
         assertFalse(SearchKeyboardServerRP136.valid("x".repeat(257)));assertFalse(SearchKeyboardServerRP136.valid("a\nb"));

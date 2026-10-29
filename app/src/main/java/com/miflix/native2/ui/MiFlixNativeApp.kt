@@ -28,15 +28,32 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
-fun MiFlixNativeApp(initialPartyCode: String? = null,initialContentLinkRP140:String?=null,onContentConsumedRP140:()->Unit={}) {
+fun MiFlixNativeApp(initialPartyCode:String?=null,initialContentLinkRP140:String?=null,onContentConsumedRP140:()->Unit={}) {
+    MiFlixNativeAppImplRP150(initialPartyCode,initialContentLinkRP140,onContentConsumedRP140)
+}
+
+@Composable
+private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialContentLinkRP140:String?=null,onContentConsumedRP140:()->Unit={},guestRP150:Boolean=false,exitGuestRP150:()->Unit={},guestProvidersRP150:List<String> = emptyList(),guestAudioRP150:String="",guestSubtitlesRP150:String="off") {
     val baseContext=LocalContext.current
     val context = baseContext.applicationContext
     val state = remember { AppState(context) }
+    var showAssistantRP150 by remember {mutableStateOf(false)}
+    var showGuestRP150 by remember {mutableStateOf(false)}
+    var consumedPartyRP150 by remember {mutableStateOf<String?>(null)}
+    if(showGuestRP150 && !guestRP150) {
+        val guestContext=remember {com.miflix.native2.data.GuestContextRP150(baseContext,state.interfaceLanguage)}
+        CompositionLocalProvider(LocalContext provides guestContext) {
+            key(guestContext) {MiFlixNativeAppImplRP150(guestRP150=true,guestProvidersRP150=state.streamRepo.manifests(),guestAudioRP150=state.audioLanguage,guestSubtitlesRP150=state.subtitleLanguage,exitGuestRP150={UiLanguage.code=state.interfaceLanguage;showGuestRP150=false})}
+        }
+        return
+    }
+    DisposableEffect(state) {onDispose {if(guestRP150) state.disposeGuestRP150()}}
+
     val mobileRP133=remember { (baseContext.getSystemService(android.content.Context.UI_MODE_SERVICE) as? android.app.UiModeManager)?.currentModeType!=android.content.res.Configuration.UI_MODE_TYPE_TELEVISION }
     val systemDensityRP133=androidx.compose.ui.platform.LocalDensity.current
     LaunchedEffect(mobileRP133,state.localExtrasScope()) {if(mobileRP133) MobileUiPrefsRP133.load(context,state.localExtrasScope())}
     DisposableEffect(baseContext) {
-        val lifecycle=(baseContext as? androidx.lifecycle.LifecycleOwner)?.lifecycle
+        val lifecycle=generateSequence(baseContext as android.content.Context) {(it as? android.content.ContextWrapper)?.baseContext}.take(8).filterIsInstance<androidx.lifecycle.LifecycleOwner>().firstOrNull()?.lifecycle
         state.appForeground=lifecycle?.currentState?.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)==true
         val observer=androidx.lifecycle.LifecycleEventObserver { _, _ ->
             state.appForeground=lifecycle?.currentState?.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)==true
@@ -54,7 +71,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null,initialContentLinkRP140:Str
         config.setLocale(java.util.Locale.forLanguageTag(AppLanguagesRP148.locale(state.interfaceLanguage)))
         android.view.ContextThemeWrapper(baseContext,0).apply { applyOverrideConfiguration(config) }
     }
-    CompositionLocalProvider(LocalMobileBrunioRP133 provides mobileRP133,androidx.compose.ui.platform.LocalDensity provides (if(mobileRP133) androidx.compose.ui.unit.Density(systemDensityRP133.density,systemDensityRP133.fontScale*MobileUiPrefsRP133.scale) else systemDensityRP133),LocalCardFreshnessLoad provides {item: com.miflix.native2.model.MediaSummary -> state.requestCardFreshness(item)},LocalCardFreshness provides {item: com.miflix.native2.model.MediaSummary -> state.cardFreshness(item)},LocalPlayerMenuSide provides (state.screen==Screen.PLAYER || state.screen==Screen.MULTIVIEW),LocalContext provides localizedContext,LocalProfileManage provides {state.socialProfileEditor=true},LocalCastPair provides {state.localCastPairing=true},LocalTitleActions provides {item: com.miflix.native2.model.MediaSummary -> state.titleActions(item)}) {
+    CompositionLocalProvider(LocalAssistantOpenRP150 provides (if(guestRP150 || state.kidsMode) null else ({showAssistantRP150=true})),LocalGuestExitRP150 provides (if(guestRP150) exitGuestRP150 else null),LocalMobileBrunioRP133 provides mobileRP133,androidx.compose.ui.platform.LocalDensity provides (if(mobileRP133) androidx.compose.ui.unit.Density(systemDensityRP133.density,systemDensityRP133.fontScale*MobileUiPrefsRP133.scale) else systemDensityRP133),LocalCardFreshnessLoad provides {item: com.miflix.native2.model.MediaSummary -> state.requestCardFreshness(item)},LocalCardFreshness provides {item: com.miflix.native2.model.MediaSummary -> state.cardFreshness(item)},LocalPlayerMenuSide provides (state.screen==Screen.PLAYER || state.screen==Screen.MULTIVIEW),LocalContext provides localizedContext,LocalProfileManage provides (if(guestRP150) null else ({state.socialProfileEditor=true})),LocalCastPair provides (if(guestRP150) null else ({state.localCastPairing=true})),LocalTitleActions provides {item: com.miflix.native2.model.MediaSummary -> state.titleActions(item)}) {
     val originalDensity=androidx.compose.ui.platform.LocalDensity.current
     CompositionLocalProvider(LocalSimpleHome provides state.easyModeRP79,androidx.compose.ui.platform.LocalDensity provides
         androidx.compose.ui.unit.Density(originalDensity.density,if(state.easyModeRP79) maxOf(originalDensity.fontScale,1.2f) else originalDensity.fontScale)) {
@@ -63,6 +80,10 @@ fun MiFlixNativeApp(initialPartyCode: String? = null,initialContentLinkRP140:Str
         LaunchedEffect(Unit) {
             val animation = launch { delay(2400) }
             state.bootstrap()
+            if(guestRP150) {
+                if(guestProvidersRP150.isNotEmpty()) state.streamRepo.setManifests(guestProvidersRP150)
+                state.savePlaybackPreferences(guestAudioRP150,guestSubtitlesRP150,true)
+            }
             animation.join()
             bootstrapped = true
         }
@@ -70,6 +91,8 @@ fun MiFlixNativeApp(initialPartyCode: String? = null,initialContentLinkRP140:Str
             BruniOSplashScreen()
             return@MaterialTheme
         }
+        if(showAssistantRP150 && !guestRP150) AssistantPanelRP150(state,{showAssistantRP150=false},{showAssistantRP150=false;showGuestRP150=true})
+        if(guestRP150) androidx.activity.compose.BackHandler(enabled=state.screen==Screen.HOME) {exitGuestRP150()}
         MobilePlayerEnvironmentRP133(mobileRP133 && state.screen in listOf(Screen.PLAYER,Screen.MULTIVIEW))
         val calendarRevisionRP134 by com.miflix.native2.data.CalendarStoreRP120.revision.collectAsState()
         val calendarOwnerRP134="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
@@ -79,7 +102,8 @@ fun MiFlixNativeApp(initialPartyCode: String? = null,initialContentLinkRP140:Str
         }
         CalendarRuntimeRP120("${state.session?.userId ?: "local"}:${state.activeProfile.id}",state.activeProfile.name,state.appForeground)
         LaunchedEffect(bootstrapped, initialPartyCode,state.easyModeRP79) {
-            if (bootstrapped && !state.easyModeRP79 && !initialPartyCode.isNullOrBlank()) {
+            if (bootstrapped && !state.easyModeRP79 && !initialPartyCode.isNullOrBlank() && consumedPartyRP150!=initialPartyCode) {
+                consumedPartyRP150=initialPartyCode
                 state.launch { state.joinWatchParty(initialPartyCode) }
             }
         }
@@ -123,7 +147,7 @@ fun MiFlixNativeApp(initialPartyCode: String? = null,initialContentLinkRP140:Str
             } else false
         }.pointerInput(Unit) {awaitPointerEventScope {while(true) {awaitPointerEvent(PointerEventPass.Initial);MenuActivity.touch()} }}) {
         navigationState.SaveableStateProvider("${state.session?.userId}:${state.activeProfile.id}:${state.screen.name}") {
-        val destination=if(state.easyModeRP79 && !(mobileRP133 && state.screen==Screen.DOWNLOADS) && !com.miflix.native2.data.EasyModePolicyRP79.allowsScreen(state.screen.name)) Screen.HOME else if(state.kidsMode && state.screen !in setOf(Screen.HOME,Screen.SEARCH,Screen.MY_LIST,Screen.DETAILS,Screen.PROFILES,Screen.NOTIFICATIONS,Screen.PLAYER)) Screen.HOME else state.screen
+        val destination=if(guestRP150 && state.screen in setOf(Screen.SETTINGS,Screen.PROFILES,Screen.FRIENDS,Screen.WATCH_PARTY,Screen.NOTIFICATIONS,Screen.DOWNLOADS,Screen.TRAKT)) Screen.HOME else if(state.easyModeRP79 && !(mobileRP133 && state.screen==Screen.DOWNLOADS) && !com.miflix.native2.data.EasyModePolicyRP79.allowsScreen(state.screen.name)) Screen.HOME else if(state.kidsMode && state.screen !in setOf(Screen.HOME,Screen.SEARCH,Screen.MY_LIST,Screen.DETAILS,Screen.PROFILES,Screen.NOTIFICATIONS,Screen.PLAYER)) Screen.HOME else state.screen
         LaunchedEffect(destination,state.screen) {if(destination!=state.screen) state.screen=destination}
         if(mobileRP133) MobileAppRP133(state,destination)
         else if(state.easyModeRP79 && destination!=Screen.PLAYER) EasyScreenRP79(state,destination)

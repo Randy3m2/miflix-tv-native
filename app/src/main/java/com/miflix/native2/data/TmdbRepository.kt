@@ -287,6 +287,23 @@ class TmdbRepository internal constructor(var token:String,private val fetchRP14
     }
 
     private val moodCache=linkedMapOf<String,Pair<Long,List<MediaSummary>>>()
+    internal suspend fun assistantDiscoverRP150(plan:AssistantPlanRP150):List<MediaSummary> {
+        plan.checked()
+        if(plan.query.isNotBlank()) return search(plan.query).filter {it.type=="movie"}
+        val params=linkedMapOf("language" to language,"include_adult" to "false","sort_by" to "popularity.desc","vote_count.gte" to "20")
+        if(plan.genres.isNotEmpty()) params["with_genres"]=plan.genres.joinToString(",")
+        if(plan.minutes>0) {params["with_runtime.gte"]="1";params["with_runtime.lte"]=plan.minutes.toString()}
+        if(plan.decade>0) {params["primary_release_date.gte"]="${plan.decade}-01-01";params["primary_release_date.lte"]="${plan.decade+9}-12-31"}
+        if(plan.keyword.isNotBlank()) {
+            val keywords=get("/search/keyword",mapOf("query" to plan.keyword)).optJSONArray("results")
+            val keyword=(0 until (keywords?.length() ?: 0)).mapNotNull {keywords?.optJSONObject(it)}.firstOrNull {it.optString("name").equals(plan.keyword,true)}
+                ?: return emptyList()
+            params["with_keywords"]=keyword.getInt("id").toString()
+        }
+        params["primary_release_date.lte"]=minOf(params["primary_release_date.lte"] ?: "9999-12-31",java.time.LocalDate.now().toString())
+        return parseList(get("/discover/movie",params),"movie",20)
+    }
+
     suspend fun moodPage(mood:String,page:Int):GenreSlice {
         require(page in 1..500)
         require(mood in setOf("quick","marathon","meaningful","background","comfort","family","twist","happy","sad","documentary","cozy","romantic","adrenaline","mindbending","nostalgia"))
@@ -779,7 +796,8 @@ class TmdbRepository internal constructor(var token:String,private val fetchRP14
                 overview = x.optString("overview"),
                 still = image(x.optString("still_path"), "w500"),
                 rating = x.optDouble("vote_average", 0.0),
-                airDate = x.optString("air_date")
+                airDate = x.optString("air_date"),
+                runtimeMinutesRP150=x.optInt("runtime",0)
             )
         }
     }

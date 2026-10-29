@@ -1,0 +1,4 @@
+BUILD SUCCESSFUL: :app:testReleaseUnitTest :mobile:compileReleaseKotlin
+{'tests': 528, 'failures': 0, 'errors': 0, 'skipped': 0}
+Compilación limpia y segunda comprobación correctas; compilación incremental desactivada durante la validación para evitar un fallo local de caché del compilador.
+No probado físicamente en TV, con dictado real ni con una clave real de Gemini. No contiene APK firmado ni publicación remota.

@@ -30,10 +30,11 @@ import kotlinx.coroutines.*
 import java.util.concurrent.atomic.AtomicBoolean
 
 internal val LocalAssistantOpenRP150=staticCompositionLocalOf<(() -> Unit)?> {null}
+internal val LocalGuestOpenRP154=staticCompositionLocalOf<(() -> Unit)?> {null}
 internal val LocalGuestExitRP150=staticCompositionLocalOf<(() -> Unit)?> {null}
 
 @Composable
-internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit) {
+internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sharedQuery:String?=null,sharedReplace:((String)->Unit)?=null) {
     val context=LocalContext.current.applicationContext
     val ai=remember(context) {GeminiAssistantRP150(context)}
     val scope=rememberCoroutineScope()
@@ -41,7 +42,9 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit) {
     val owner=state.localExtrasScope()
     var collectionRevision by remember {mutableIntStateOf(0)}
     val saved=remember(owner,collectionRevision) {runCatching {val a=org.json.JSONArray(collectionPrefs.getString(owner,"[]"));(0 until a.length()).mapNotNull {a.optJSONObject(it)}}.getOrDefault(emptyList())}
-    var query by remember(owner) {mutableStateOf("")}
+    var query by remember(owner) {mutableStateOf(sharedQuery.orEmpty())}
+    LaunchedEffect(sharedQuery) {if(sharedQuery!=null) query=sharedQuery}
+    val columns=4
     var budget by remember {mutableIntStateOf(0)}
     val useGemini=remember {context.getSharedPreferences("brunio_gemini_rp150",0).getBoolean("enabled",false)}
     var sceneFinder by remember {mutableStateOf(false)}
@@ -58,14 +61,17 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit) {
     var job by remember {mutableStateOf<Job?>(null)}
     val plans=remember(owner) {linkedMapOf<String,AssistantPlanRP150>()}
     DisposableEffect(owner) {onDispose {job?.cancel()}}
-    fun submit(text:String=query,time:Int=budget,preset:AssistantPlanRP150?=null) {
+    var cancelledKey by remember(owner) {mutableStateOf<String?>(null)}
+    var lastSubmitted by remember(owner) {mutableStateOf<String?>(null)}
+    fun submit(text:String=query,time:Int=budget,preset:AssistantPlanRP150?=null,automatic:Boolean=false,allowRemote:Boolean=true) {
         if(busy) return
-        query=text;budget=time;resultQuery=text;resultBudget=time;activePlan=null;message="";picks=emptyList();desiredAudio="";busy=true
+        if(!automatic) cancelledKey=null
+        lastSubmitted="$text:$time";sharedReplace?.invoke(text);query=text;budget=time;resultQuery=text;resultBudget=time;activePlan=null;message="";picks=emptyList();desiredAudio="";busy=true
         val generation=++requestGeneration
-        val remote=preset==null && useGemini && configured
+        val remote=allowRemote && preset==null && useGemini && configured && (!automatic || ai.readyRP154())
         job=scope.launch {
             try {
-                if(Regex("(?i)(en qu[eé] episodio|which episode|scene finder|escena|timestamp)").containsMatchIn(text)) {sceneFinder=true;return@launch}
+                if(Regex("(?i)(en qu[eé] episodio|which episode|scene finder|escena|timestamp)").containsMatchIn(text)) {if(!automatic) sceneFinder=true else message=tr("Abre Scene Finder para buscar pistas en episodios.","Open Scene Finder to search episode clues.");return@launch}
                 val key="$remote:$text:$time:$preset"
                 var cachePlan=true
                 val plan=preset ?: plans[key] ?: if(remote) try {
@@ -83,10 +89,28 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit) {
             finally {if(generation==requestGeneration) busy=false}
         }
     }
+    LaunchedEffect(query,budget,owner) {
+        val text=query.trim()
+        if(cancelledKey=="$query:$budget") return@LaunchedEffect
+        cancelledKey=null
+        if(lastSubmitted=="$query:$budget") return@LaunchedEffect
+        requestGeneration++;job?.cancel();busy=false;picks=emptyList();message="";activePlan=null
+        if(text.length<2) {lastSubmitted=null;return@LaunchedEffect}
+        delay(600)
+        submit(query,budget,automatic=true,allowRemote=false)
+    }
+    LaunchedEffect(query,budget,owner,useGemini,configured) {
+        if(!useGemini || !configured || query.trim().length<8) return@LaunchedEffect
+        delay(1800)
+        if(cancelledKey=="$query:$budget") return@LaunchedEffect
+        if(!ai.readyRP154()) return@LaunchedEffect
+        requestGeneration++;job?.cancel();busy=false
+        submit(query,budget,automatic=true)
+    }
     var voiceOwner by remember {mutableStateOf<String?>(null)}
     val voice=androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) {result ->
         if(result.resultCode==android.app.Activity.RESULT_OK && voiceOwner==owner && state.localExtrasScope()==owner) {
-            result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.trim()?.takeIf {it.isNotBlank()}?.let {query=it.take(500);message=tr("Listo. Pulsa Buscar para descubrir tu próxima historia.","Ready. Select Search to discover your next story.")}
+            result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.trim()?.takeIf {it.isNotBlank()}?.let {query=it.take(500);message=""}
         }
         voiceOwner=null
     }
@@ -106,7 +130,15 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit) {
     if(phone) AssistantTextQrRP150(state,{if(!busy) query=it},{phone=false})
     androidx.activity.compose.BackHandler(onBack=close)
     Box(Modifier.fillMaxSize().background(Color.Black)) {
-        Column(Modifier.fillMaxSize().consumeOpeningPress().background(Color.Black).padding(horizontal=34.dp,vertical=18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.fillMaxSize().consumeOpeningPress().background(Color.Black).padding(horizontal=if(sharedQuery!=null) 12.dp else 34.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+            if(sharedQuery!=null) Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                Text("✦  BruniO AI",color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
+                FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                    if(!state.kidsMode && LocalGuestExitRP150.current==null) AssistantActionRP152(tr("Invitado","Guest"),"friends") {if(state.prepareGuestRP150()) guest()}
+                    AssistantActionRP152("Scene Finder","search") {sceneFinder=true}
+                    AssistantActionRP152(tr("Búsqueda normal","Title search")) {close()}
+                }
+            } else {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp),verticalAlignment=Alignment.CenterVertically) {
                 Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {
                     Text("✦  BruniO AI",color=Color.White,fontSize=29.sp,fontWeight=FontWeight.Bold)
@@ -117,8 +149,9 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit) {
                 AssistantActionRP152("Scene Finder","search") {sceneFinder=true}
                 AssistantActionRP152("×",onClick=close)
             }
+            }
             LazyColumn(Modifier.weight(1f).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(bottom=24.dp)) {
-                item(key="search-rp152") {
+                if(sharedQuery==null) item(key="search-rp152") {
                     Row(Modifier.fillMaxWidth().background(Color.White.copy(alpha=.065f),RoundedCornerShape(20.dp)).border(1.dp,Color.White.copy(alpha=.12f),RoundedCornerShape(20.dp)).padding(8.dp),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
                         AssistantSearchFieldRP153(query,{if(!busy) query=it.take(500)},!busy,Modifier.weight(1f)) {submit()}
                         AssistantActionRP152(tr("Dictar","Speak"),"mic",onClick={dictate()})
@@ -132,7 +165,7 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit) {
                 }}
                 if(busy || message.isNotBlank()) item(key="status-rp152") {Row(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
                     Text(if(busy) tr("✦ Buscando historias para ti…","✦ Finding your next story…") else message,color=Color(0xffcdb9ef),fontSize=13.sp,modifier=Modifier.weight(1f))
-                    if(busy) AssistantActionRP152(tr("Cancelar","Cancel")) {requestGeneration++;job?.cancel();busy=false}
+                    if(busy) AssistantActionRP152(tr("Cancelar","Cancel")) {cancelledKey="$query:$budget";requestGeneration++;job?.cancel();busy=false}
                 }}
                 if(picks.isNotEmpty()) {
                     item(key="results-title-rp152") {Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
@@ -142,9 +175,9 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit) {
                             collectionPrefs.edit().putString(owner,org.json.JSONArray(values).toString()).apply();collectionRevision++
                         }
                     }}
-                    items(picks.chunked(4),key={chunk ->"result:"+chunk.first().item.cloudId+":"+chunk.first().episode?.episode}) {chunk ->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(16.dp)) {
+                    items(picks.chunked(columns),key={chunk ->"result:"+chunk.first().item.cloudId+":"+chunk.first().episode?.episode}) {chunk ->Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(16.dp)) {
                         chunk.forEach {pick ->AssistantPosterRP152(pick,Modifier.weight(1f),details={close();state.launch {state.open(pick.item)}},play=if(pick.resume || pick.episode!=null) ({close();state.launch {state.open(pick.item);if(state.selected?.cloudId==pick.item.cloudId) {val ep=pick.episode;if(ep!=null) state.playEpisode(ep) else state.playMovie()}}}) else null)}
-                        repeat(4-chunk.size) {Spacer(Modifier.weight(1f))}
+                        repeat(columns-chunk.size) {Spacer(Modifier.weight(1f))}
                     }}
                 }
                 if(desiredAudio.isNotBlank()) item(key="audio-rp152") {AssistantActionRP152(tr("Preferir audio: ","Prefer audio: ")+AppLanguagesRP148.label(desiredAudio)) {state.savePlaybackPreferences(desiredAudio,state.subtitleLanguage,state.autoplayNext);message=tr("Audio preferido guardado. El doblaje se confirma en las fuentes.","Audio preference saved. Dubbed audio depends on available sources.")}}

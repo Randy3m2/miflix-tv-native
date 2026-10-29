@@ -43,6 +43,12 @@ internal class GeminiAssistantRP150(context:Context,private val fetch:suspend (S
         val cipher=Cipher.getInstance("AES/GCM/NoPadding");cipher.init(Cipher.DECRYPT_MODE,key(),GCMParameterSpec(128,Base64.decode(prefs.getString("iv","").orEmpty(),Base64.NO_WRAP)))
         return String(cipher.doFinal(Base64.decode(prefs.getString("cipher","").orEmpty(),Base64.NO_WRAP)))
     }
+    fun readyRP154():Boolean {
+        val today=java.time.LocalDate.now().toString()
+        val count=if(prefs.getString("day","")==today) prefs.getInt("count",0) else 0
+        val now=android.os.SystemClock.elapsedRealtime();val last=prefs.getLong("last",0)
+        return count<20 && (last==0L || now<last || now-last>=20000L)
+    }
     suspend fun plan(query:String,budget:Int):AssistantPlanRP150=lock.withLock {
         require(query.length in 2..500 && budget in 0..240)
         val day=java.time.LocalDate.now().toString();val count=if(prefs.getString("day","")==day) prefs.getInt("count",0) else 0

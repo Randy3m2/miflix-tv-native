@@ -204,10 +204,12 @@ private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolea
 
 /** Remote keyboard and results share one viewport; no navigation to a second page. */
 @Composable
-internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
+internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit,initialAi:Boolean=false) {
     val contextRP146=androidx.compose.ui.platform.LocalContext.current
     val easySearchRP80=LocalEasySearchRP80.current
     val owner=state.searchHistoryOwner()
+    var aiMode by rememberSaveable(owner) {mutableStateOf(initialAi && !state.kidsMode && !easySearchRP80)}
+    val openGuest=LocalGuestOpenRP154.current
     var query by rememberSaveable(owner) {mutableStateOf(state.searchQuery)}
     var phoneKeyboardRP136 by remember(owner) {mutableStateOf(false)}
     var cursor by rememberSaveable(owner) {mutableIntStateOf(query.length)}
@@ -266,10 +268,10 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
         catch(e:Exception) {state.error=tr("No se pudo abrir el micrófono. Puedes escribir con el teclado original o usar QR.","Could not open voice input. Use the original keyboard or QR.")}
     }
     LaunchedEffect(Unit) {withFrameNanos { };runCatching {keyboardFocus.requestFocus()}}
-    LaunchedEffect(query,state.interfaceLanguage,owner) {
+    LaunchedEffect(query,state.interfaceLanguage,owner,aiMode) {
         val term=query.trim()
         searchError=false
-        if(term.length<2) {results=emptyList();searching=false;return@LaunchedEffect}
+        if(aiMode || term.length<2) {results=emptyList();searching=false;return@LaunchedEffect}
         searching=true
         try {
             // Debounce typing, then publish only the completed search batch.
@@ -299,11 +301,13 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
                 LazyColumn(Modifier.width(if(easySearchRP80) 270.dp else 252.dp).fillMaxHeight(),verticalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(bottom=20.dp)) {
                     item {
                         Column(verticalArrangement=Arrangement.spacedBy(7.dp)) {
+                            Text(query.ifBlank {tr("Escribe o dicta tu búsqueda","Type or dictate your search")},color=if(query.isBlank()) Muted else Color.White,fontSize=14.sp,maxLines=2,overflow=TextOverflow.Ellipsis)
                             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                                 SearchKey(tr("Voz","Voice"),Modifier.weight(1f),microphone=true) {dictate()}
                                 SearchKey("QR",Modifier.weight(1f)) {phoneKeyboardRP136=!phoneKeyboardRP136}
                             }
-                            SearchKey(tr("Teclado Bluetooth","Bluetooth keyboard"),Modifier.fillMaxWidth()) {
+                            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                            SearchKey(tr("Teclado Bluetooth","Bluetooth keyboard"),Modifier.weight(1f),keyIcon="bluetooth") {
                                 val opened=listOf(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS,android.provider.Settings.ACTION_SETTINGS).any {action ->
                                     runCatching {
                                         contextRP146.startActivity(android.content.Intent(action).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -311,6 +315,8 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
                                     }.getOrDefault(false)
                                 }
                                 if(!opened) state.error=tr("Abre los ajustes de la TV y empareja un teclado Bluetooth en Controles y dispositivos Bluetooth.","Open TV settings and pair a Bluetooth keyboard under Remotes & Bluetooth Devices.")
+                            }
+                            if(!state.kidsMode && !easySearchRP80) SearchKey("✦ BruniO AI",Modifier.weight(2f),selected=aiMode) {aiMode=!aiMode}
                             }
                             SearchPhoneKeyboardRP136(state,phoneKeyboardRP136,{replace(it)})
                             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -326,7 +332,9 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
                         }
                     }
                 }
-                Column(Modifier.weight(1f).fillMaxHeight()) {
+                if(aiMode) Box(Modifier.weight(1f).fillMaxHeight()) {
+                    AssistantPanelRP150(state,{aiMode=false},{openGuest?.invoke()},sharedQuery=query,sharedReplace={replace(it)})
+                } else Column(Modifier.weight(1f).fillMaxHeight()) {
                     Text(if(query.isBlank()) tr("Tus recomendaciones de búsqueda","Your Search Recommendations") else tr("Resultados para","Results for")+" “${query.trim()}”",
                         color=Color.White,fontSize=20.sp,lineHeight=24.sp,fontWeight=FontWeight.Bold,maxLines=2,modifier=Modifier.padding(bottom=6.dp))
                     if(!state.easyModeRP79 && com.miflix.native2.data.TasteQuery.parse(query)!=null) Text(tr("Coincidencias por temas, reparto y fotografía disponibles","Matches based on available themes, cast and cinematography"),color=Muted,fontSize=12.sp)
@@ -349,11 +357,11 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
 internal val LocalEasySearchRP80=staticCompositionLocalOf {false}
 
 @Composable
-private fun SearchKey(label: String,modifier: Modifier=Modifier,microphone:Boolean=false,keyIcon:String?=null,onClick: () -> Unit) {
+private fun SearchKey(label: String,modifier: Modifier=Modifier,microphone:Boolean=false,keyIcon:String?=null,selected:Boolean=false,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     val largeRP80=LocalEasySearchRP80.current
     Box(modifier.semantics {contentDescription=label}.height(if(largeRP80) 39.dp else 34.dp).onFocusChanged {focused=it.isFocused}.focusable().tvClick(onClick).clickable(onClick=onClick)
-        .background(GlassActionBrushRP108(focused),RoundedCornerShape(6.dp))
+        .background(GlassActionBrushRP108(focused,selected),RoundedCornerShape(6.dp))
         .border(if(focused) 2.dp else 1.dp,Color.White.copy(alpha=if(focused) .95f else .10f),RoundedCornerShape(6.dp)).padding(horizontal=4.dp),
         contentAlignment=Alignment.Center) {
         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -370,7 +378,11 @@ private fun SearchKey(label: String,modifier: Modifier=Modifier,microphone:Boole
             if(keyIcon!=null) androidx.compose.foundation.Canvas(Modifier.width(26.dp).height(18.dp)) {
                 val path=androidx.compose.ui.graphics.Path()
                 val w=size.width;val h=size.height
-                if(keyIcon=="space") {
+                if(keyIcon=="bluetooth") {
+                    path.moveTo(w*.48f,h*.05f);path.lineTo(w*.48f,h*.95f)
+                    path.lineTo(w*.78f,h*.7f);path.lineTo(w*.2f,h*.22f)
+                    path.moveTo(w*.48f,h*.05f);path.lineTo(w*.78f,h*.3f);path.lineTo(w*.2f,h*.78f)
+                } else if(keyIcon=="space") {
                     path.moveTo(w*.16f,h*.38f);path.lineTo(w*.16f,h*.7f)
                     path.lineTo(w*.84f,h*.7f);path.lineTo(w*.84f,h*.38f)
                 } else {

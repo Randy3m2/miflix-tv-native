@@ -51,6 +51,19 @@ public class SearchKeyboardRP136Test {
             assertTrue(request(uri,"POST",path,null,body).startsWith("HTTP/1.1 200"));assertEquals(2,calls.get());
         }
     }
+    @Test public void phoneDictationKeepsTheLocalTextDeliveryPath() throws Exception {
+        List<String> edits=new ArrayList<>();
+        try(SearchKeyboardServerRP136 server=SearchKeyboardServerRP136.loopbackForTests(value->{edits.add(value);return true;})) {
+            URI uri=URI.create(server.getUrl());String html=request(uri,"GET",uri.getPath(),null,"");
+            assertTrue(html.contains("id='dictate'"));
+            assertTrue(html.contains("input.focus()"));
+            assertTrue(html.contains("inputmode='text'"));
+            assertFalse(html.contains("getUserMedia"));
+            String body="csrf="+token(html)+"&sequence=1&text="+URLEncoder.encode("Películas de acción","UTF-8");
+            assertTrue(request(uri,"POST",uri.getPath().replace("/add/","/save/"),null,body).startsWith("HTTP/1.1 200"));
+            assertEquals(Collections.singletonList("Películas de acción"),edits);
+        }
+    }
     @Test public void boundsAndNetworkRules() {
         assertTrue(SearchKeyboardServerRP136.valid(""));assertTrue(SearchKeyboardServerRP136.valid("acción 한국어"));
         assertFalse(SearchKeyboardServerRP136.valid("x".repeat(257)));assertFalse(SearchKeyboardServerRP136.valid("a\nb"));

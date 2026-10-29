@@ -1,0 +1,4 @@
+BUILD SUCCESSFUL in 1m 10s
+Release Kotlin y Java compilados.
+testReleaseUnitTest: 492 tests, 0 failures, 0 errors
+Incluye prueba HTTP de formulario con guía de dictado y entrega de texto español. No prueba de micrófono real ni emparejamiento físico Bluetooth.

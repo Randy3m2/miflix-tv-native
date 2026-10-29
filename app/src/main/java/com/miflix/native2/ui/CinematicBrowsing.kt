@@ -205,11 +205,11 @@ private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolea
 /** Remote keyboard and results share one viewport; no navigation to a second page. */
 @Composable
 internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
+    val contextRP146=androidx.compose.ui.platform.LocalContext.current
     val easySearchRP80=LocalEasySearchRP80.current
     val owner=state.searchHistoryOwner()
     var query by rememberSaveable(owner) {mutableStateOf(state.searchQuery)}
     var phoneKeyboardRP136 by remember(owner) {mutableStateOf(false)}
-    var nativeVoiceRP143 by remember(owner) {mutableStateOf(false)}
     var cursor by rememberSaveable(owner) {mutableIntStateOf(query.length)}
     var results by remember {mutableStateOf<List<MediaSummary>>(emptyList())}
     var searching by remember {mutableStateOf(false)}
@@ -261,12 +261,10 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
     }
     fun dictate() {
         voiceOwnerRP81=owner;voiceAlternativesRP81=emptyList()
-        if(com.miflix.native2.data.TvInputPolicyRP143.systemKeyboard(android.os.Build.MANUFACTURER,android.os.Build.MODEL)) {nativeVoiceRP143=true;return}
         try {voice.launch(voiceIntentRP85(true))}
-        catch(e:android.content.ActivityNotFoundException) {nativeVoiceRP143=true}
-        catch(e:Exception) {nativeVoiceRP143=true}
+        catch(e:android.content.ActivityNotFoundException) {state.error=tr("Este Fire TV no ofrece dictado a BruniO. Usa QR y el micrófono del teclado del celular, o un teclado Bluetooth.","This TV does not provide dictation to BruniO. Use QR with your phone keyboard microphone, or a Bluetooth keyboard.")}
+        catch(e:Exception) {state.error=tr("No se pudo abrir el micrófono. Puedes escribir con el teclado original o usar QR.","Could not open voice input. Use the original keyboard or QR.")}
     }
-    if(nativeVoiceRP143) TvSystemInputRP143(query,{replace(it);nativeVoiceRP143=false},{nativeVoiceRP143=false;phoneKeyboardRP136=true},{nativeVoiceRP143=false})
     LaunchedEffect(Unit) {withFrameNanos { };runCatching {keyboardFocus.requestFocus()}}
     LaunchedEffect(query,state.interfaceLanguage,owner) {
         val term=query.trim()
@@ -304,6 +302,15 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit) {
                             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                                 SearchKey(tr("Voz","Voice"),Modifier.weight(1f),microphone=true) {dictate()}
                                 SearchKey("QR",Modifier.weight(1f)) {phoneKeyboardRP136=!phoneKeyboardRP136}
+                            }
+                            SearchKey(tr("Teclado Bluetooth","Bluetooth keyboard"),Modifier.fillMaxWidth()) {
+                                val opened=listOf(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS,android.provider.Settings.ACTION_SETTINGS).any {action ->
+                                    runCatching {
+                                        contextRP146.startActivity(android.content.Intent(action).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                                        true
+                                    }.getOrDefault(false)
+                                }
+                                if(!opened) state.error=tr("Abre los ajustes de la TV y empareja un teclado Bluetooth en Controles y dispositivos Bluetooth.","Open TV settings and pair a Bluetooth keyboard under Remotes & Bluetooth Devices.")
                             }
                             SearchPhoneKeyboardRP136(state,phoneKeyboardRP136,{replace(it)})
                             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {

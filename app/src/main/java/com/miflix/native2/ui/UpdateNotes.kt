@@ -244,8 +244,17 @@ internal object UpdateNotes {
     val rp143Changes=listOf(
         "RP143: Teclado del sistema para dictado en Fire TV, fuente de TV de LIDOM con reproducción directa y errores visibles durante 8 segundos con Cerrar." to "RP143: System keyboard input on Fire TV, direct playback for LIDOM TV sources and 8-second dismissible error notices."
     )
-    val changes=if(mobileReleaseRP135) mobileRP142Changes else rp143Changes
-    val previousChanges=(if(mobileReleaseRP135) rp141Changes+mobileRP140Changes+mobileRP139Changes+rp134Changes else rp141Changes+rp138Changes+rp137Changes+rp136Changes+rp135Changes+rp134Changes)+rp133Changes+rp132Changes+rp131Changes+rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
+    val rp144Changes=listOf(
+        "RP144: Reintentos limitados del mismo canal IPTV/LIDOM ante HTTP 404, en pantalla completa y SplitScreen, sin reiniciar los demás cuadros." to "RP144: Bounded same-channel IPTV/LIDOM retries on HTTP 404 in full screen and SplitScreen, without restarting other tiles."
+    )
+    val rp145Changes=listOf(
+        "RP145: Buscador con teclado original; retirado el diálogo Fire TV. QR con dirección de red activa, regeneración y redes alternativas cuando estén disponibles." to "RP145: Original search keyboard restored; Fire TV dialog removed. QR uses the active LAN address, regeneration and alternative interfaces when available."
+    )
+    val rp146Changes=listOf(
+        "RP146: Teclado Bluetooth opcional en el buscador y guía de dictado con el teclado del celular en la página QR local." to "RP146: Optional Bluetooth keyboard shortcut in Search and phone keyboard dictation guidance on the local QR page."
+    )
+    val changes=if(mobileReleaseRP135) mobileRP142Changes else rp146Changes
+    val previousChanges=(if(mobileReleaseRP135) rp141Changes+mobileRP140Changes+mobileRP139Changes+rp134Changes else rp145Changes+rp144Changes+rp143Changes+rp141Changes+rp138Changes+rp137Changes+rp136Changes+rp135Changes+rp134Changes)+rp133Changes+rp132Changes+rp131Changes+rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
         "Menú de amigos: Watch, View Details, Recommendations y Close; detalles abre la ficha sin iniciar reproducción." to "Friend menu: Watch, View Details, Recommendations and Close; details opens the title without starting playback.",
         "Enlaces de Comet y Torrentio con texto ordenado e insignias de Dolby/HDR según sus metadatos." to "Clean Comet and Torrentio link metadata with small Dolby/HDR badges when reported by the source.",
         "Envío local a TV por Wi-Fi, con enlace y código de conexión; sin reproducción web." to "Send titles to TV over local Wi-Fi with a connection link and code; no web playback.",

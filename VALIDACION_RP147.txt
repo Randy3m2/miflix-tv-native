@@ -1,0 +1,4 @@
+Release Kotlin/Java: OK
+testReleaseUnitTest: 488 tests, 0 failures, 0 errors
+BUILD SUCCESSFUL in 7m 3s
+Validado con fixtures; sin prueba física con proveedores reales.

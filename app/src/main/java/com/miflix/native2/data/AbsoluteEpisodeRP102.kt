@@ -2,9 +2,9 @@ package com.miflix.native2.data
 
 import com.miflix.native2.model.EpisodeSummary
 
-/** Presentation override only. Canonical season/episode coordinates remain intact. */
+/** DBZ-only presentation override. Naruto titles retain canonical provider seasons (RP147). */
 internal object AbsoluteEpisodeRP102 {
-    fun count(showId:Int):Int?=when(showId) {12971 ->291;46260 ->220;31910 ->500;else ->null}
+    fun count(showId:Int):Int?=when(showId) {12971 ->291;else ->null}
     fun enabled(showId:Int)=count(showId)!=null
     fun flatten(showId:Int,rows:List<EpisodeSummary>):List<EpisodeSummary> {
         val expected=count(showId) ?: return rows

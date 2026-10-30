@@ -78,6 +78,7 @@ internal fun MobileAppRP133(state:AppState,destination:Screen) {
             tabs.filter {(!state.kidsMode || it.first !in listOf(Screen.LIVE_TV,Screen.FRIENDS,Screen.DOWNLOADS)) && (!state.easyModeRP79 || it.first!=Screen.FRIENDS)}.forEach {(screen,icon,title)->
                 val selected=active==screen.name
                 Column(Modifier.weight(1f).heightIn(min=52.dp).clickable {
+                    if(screen==Screen.HOME) state.mobileHomeEntryRP162++
                     if(screen==Screen.FRIENDS) state.refreshFriendsTab()
                     if(screen==Screen.LIVE_TV) state.normalLiveEntryRP85=true
                     state.screen=screen

@@ -53,6 +53,7 @@ internal fun MobileHomeRP133(state:AppState) {
             launch {runCatching {state.loadNovelasHome()}}
         }
     }
+    val nowPlayingRP162=rememberMobileNowPlayingRP162(state)
     val kids=state.kidsMode
     val rows=if(kids) listOf(tr("Películas","Movies") to state.kidsMovies.toList(),tr("Series","Series") to state.kidsSeries.toList())
         else if(state.easyModeRP79) listOf(tr("Películas populares","Popular movies") to state.movies.toList(),tr("Series populares","Popular series") to state.series.toList())+EasyHomeRowsRP80.rows.map {tr(it.spanish,it.english) to state.easyRowsRP80[it.id].orEmpty()}
@@ -74,6 +75,7 @@ internal fun MobileHomeRP133(state:AppState) {
                 MobileButtonRP133(label,selected=filter==key) {filter=key}
             }
         }}
+        if(nowPlayingRP162.cards.any {filter.isBlank() || it.media?.type==filter}) item("now-playing-rp162") {MobileNowPlayingRowRP162(state,nowPlayingRP162,filter)}
         // Reserved first shelf: late metadata cannot anchor the list below Continue Watching.
         item("continue") {
             if(continueRows.isNotEmpty()) MobileRailRP133(state,tr("Seguir viendo","Continue Watching"),continueRows,true)

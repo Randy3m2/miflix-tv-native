@@ -16,6 +16,8 @@ internal class EventPresencePublisher(context: Context, private val social: Soci
     private val device=prefs.getString("device",null) ?: UUID.randomUUID().toString().also {
         prefs.edit().putString("device",it).commit()
     }
+    private val taggedDeviceRP162=NowPlayingRP162.deviceTag(device,
+        (context.getSystemService(Context.UI_MODE_SERVICE) as? android.app.UiModeManager)?.currentModeType==android.content.res.Configuration.UI_MODE_TYPE_TELEVISION)
     private val desired=mutableMapOf<String,String>()
     private var session: CloudSession?=null
     private var worker: Job?=null
@@ -30,7 +32,7 @@ internal class EventPresencePublisher(context: Context, private val social: Soci
         if(desired[s.userId]!=signature) {
             desired[s.userId]=signature
             val sequence=prefs.getLong("sequence",0L)+1
-            val body=JSONObject(signature).put("device",device).put("seq",sequence)
+            val body=JSONObject(signature).put("device",taggedDeviceRP162).put("seq",sequence)
                 .put("expiry",java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",java.util.Locale.US)
                     .apply { timeZone=java.util.TimeZone.getTimeZone("UTC") }.format(java.util.Date(expiresAt)))
             // Commit intent before network I/O so process death cannot lose a pending stop.

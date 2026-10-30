@@ -1,0 +1,21 @@
+RP162 Now Playing — validacion local
+
+Base RP160: ec7410822653f9bc3e8947942ec5498e0721d93a
+
+Gradle 8.13 / Java 17 / Android SDK 36:
+:app:testReleaseUnitTest + :mobile:compileReleaseKotlin
+BUILD SUCCESSFUL
+{'tests': 565, 'failures': 0, 'errors': 0, 'skipped': 0}
+
+Pruebas SQL PostgreSQL local (PGlite): PASS
+- Misma cuenta y perfiles multiples
+- Otras cuentas no pueden acceder
+- Telefono y sesiones vencidas excluidos
+- Sin sesion devuelve vacio; anonimo no tiene permiso
+- SQL ejecutado dos veces sin errores
+
+git diff --check: PASS
+Archivos empaquetados comparados con el codigo compilado.
+No incluye integracion GPT; Gemini conserva RP160.
+No se publico nada en GitHub ni Supabase.
+No se ensamblaron APK firmados ni se probo fisicamente TV/telefono.

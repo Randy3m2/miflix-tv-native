@@ -1,0 +1,1 @@
+{"name":"brunio-now-playing-tests","private":true,"type":"module","scripts":{"test":"node account_scope_test.mjs"},"devDependencies":{"@electric-sql/pglite":"0.3.14"}}

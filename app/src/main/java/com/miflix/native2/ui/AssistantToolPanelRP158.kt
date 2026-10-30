@@ -21,8 +21,8 @@ internal fun AssistantToolPanelRP158(state:AppState,request:AssistantToolRequest
     val view=LocalView.current
     val owner=state.localExtrasScope()
     val scope=rememberCoroutineScope()
-    val ai=remember {GeminiAssistantRP150(context)}
-    val aiEnabled=remember {context.getSharedPreferences("brunio_gemini_rp150",0).getBoolean("enabled",false)}
+    val ai=remember {BrunioAssistantRP161(context) { state.session?.accessToken }}
+    val aiEnabled=BrunioProviderRP161.online(context)
     var retryRP159 by remember(request,owner) {mutableIntStateOf(0)}
     var failedRP159 by remember(request,owner) {mutableStateOf(false)}
     var waitRP159 by remember(request,owner) {mutableIntStateOf(0)}
@@ -41,7 +41,7 @@ internal fun AssistantToolPanelRP158(state:AppState,request:AssistantToolRequest
     var importing by remember {mutableStateOf(false)}
     var indexJson by remember {mutableStateOf("")}
     var beforeHome by remember(request) {mutableStateOf<List<String>?>(null)}
-    suspend fun ask(prompt:String,image:String?=null):String {if(!aiEnabled || !ai.configured()) throw GeminiFailureRP159(GeminiErrorRP159.NOT_CONFIGURED);return withContext(Dispatchers.IO) {ai.toolsRP158(prompt,image,request.text) {seconds ->withContext(Dispatchers.Main) {waitRP159=seconds}}}}
+    suspend fun ask(prompt:String,image:String?=null):String {if(!aiEnabled || !ai.configured()) throw BrunioAIFailureRP161("NOT_CONFIGURED", "Activa y configura GPT o Gemini en Ajustes.");return withContext(Dispatchers.IO) {ai.toolsRP158(prompt,image,request.text) {seconds ->withContext(Dispatchers.Main) {waitRP159=seconds}}}}
     fun action(block:suspend ()->Unit) {if(busy) return;busy=true;scope.launch {try {check(state.localExtrasScope()==owner);block()} catch(e:CancellationException) {throw e} catch(_:Exception) {notice=tr("No se pudo completar. Revisa los datos y reintenta.","Could not complete. Check the data and retry.")} finally {busy=false}}}
     LaunchedEffect(request,owner,retryRP159) {
         busy=true;failedRP159=false;waitRP159=0;message=""
@@ -179,7 +179,7 @@ internal fun AssistantToolPanelRP158(state:AppState,request:AssistantToolRequest
                     screenshot=null
                 }
             }}
-        } catch(e:GeminiFailureRP159) {failedRP159=true;message=GeminiAccessRP159.message(e,state.interfaceLanguage=="es")} catch(e:TimeoutCancellationException) {failedRP159=true;message=tr("La consulta tardó demasiado. Puedes reintentar.","The request timed out. You can retry.")} catch(e:CancellationException) {throw e} catch(e:Exception) {failedRP159=true;message=e.message?.takeIf {it.length<350 && !it.contains("://")} ?: tr("No se pudo completar. Gemini puede estar sin configurar, en su límite o sin respuesta; también puede faltar una fuente.","Could not complete. Gemini may be unconfigured, rate-limited or unavailable, or a source may be missing.")}
+        } catch(e:BrunioAIFailureRP161) {failedRP159=true;message=e.message.orEmpty()} catch(e:GeminiFailureRP159) {failedRP159=true;message=GeminiAccessRP159.message(e,state.interfaceLanguage=="es")} catch(e:TimeoutCancellationException) {failedRP159=true;message=tr("La consulta tardó demasiado. Puedes reintentar.","The request timed out. You can retry.")} catch(e:CancellationException) {throw e} catch(e:Exception) {failedRP159=true;message=e.message?.takeIf {it.length<350 && !it.contains("://")} ?: tr("No se pudo completar. Gemini puede estar sin configurar, en su límite o sin respuesta; también puede faltar una fuente.","Could not complete. Gemini may be unconfigured, rate-limited or unavailable, or a source may be missing.")}
         finally {busy=false;waitRP159=0;screenshotReady=true}
     }
     if(!screenshotReady) return
@@ -201,7 +201,7 @@ internal fun AssistantToolPanelRP158(state:AppState,request:AssistantToolRequest
         AssistantToolRP158.VISUAL->tr("Entiende esta pantalla","Understand this screen")
     }
     PlayerSideSheet("✦ BruniO · "+toolTitle,close) {
-        item {Text(if(busy && waitRP159>0) tr("Gemini estará disponible en ","Gemini will be ready in ")+waitRP159+tr(" s. El análisis continuará automáticamente.","s. Analysis will continue automatically.") else if(busy) tr("Preparando…","Preparing…") else message,color=Muted,fontSize=15.sp)}
+        item {Text(if(busy && waitRP159>0) tr("El asistente estará disponible en ","Gemini will be ready in ")+waitRP159+tr(" s. El análisis continuará automáticamente.","s. Analysis will continue automatically.") else if(busy) tr("Preparando…","Preparing…") else message,color=Muted,fontSize=15.sp)}
         if(failedRP159 && !busy) item {FocusButton(tr("Reintentar","Retry")) {retryRP159++}}
         if(notice.isNotBlank()) item {Text(notice,color=Accent)}
         beforeHome?.let {old ->item {FocusButton(tr("Deshacer orden","Undo order")) {state.saveHomeRowOrder(old);beforeHome=null;notice=tr("Orden restaurado.","Order restored.")}}}
@@ -224,7 +224,7 @@ internal fun AssistantToolPanelRP158(state:AppState,request:AssistantToolRequest
                 }
             }
             val filtered=AssistantToolsRP158.matchingMarks(draft,marks)
-            if(filtered.isEmpty()) item {Text(tr("No hay una escena indexada que coincida. Gemini no proporciona un minuto inventado.","No matching indexed scene. Gemini does not supply an invented timestamp."),color=Muted)}
+            if(filtered.isEmpty()) item {Text(tr("No hay una escena indexada que coincida. La IA no proporciona un minuto inventado.","No matching indexed scene. Gemini does not supply an invented timestamp."),color=Muted)}
             items(filtered,key={"${it.cloud}:${it.season}:${it.episode}:${it.position}:${it.created}"}) {mark ->
                 FocusButton(mark.label+" · "+momentTime(mark.position),modifier=Modifier.fillMaxWidth()) {if(state.assistantSeekRP158?.invoke(mark)==true) close() else notice=tr("Abre ese episodio y la misma fuente/versión para aplicar este marcador.","Open that episode and the same source/version to apply this bookmark.")}
                 FocusButton(tr("Abrir contenido y aplicar marcador","Open title and apply bookmark")) {

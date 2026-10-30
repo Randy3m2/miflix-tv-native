@@ -151,7 +151,7 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
         navigationState.SaveableStateProvider("${state.session?.userId}:${state.activeProfile.id}:${if(showAssistantRP150 && !guestRP150 && !mobileRP133 && !state.kidsMode) "ASSISTANT:$assistantSequenceRP156" else state.screen.name}") {
         val destination=if(guestRP150 && state.screen in setOf(Screen.SETTINGS,Screen.PROFILES,Screen.FRIENDS,Screen.WATCH_PARTY,Screen.NOTIFICATIONS,Screen.DOWNLOADS,Screen.TRAKT)) Screen.HOME else if(state.easyModeRP79 && !(mobileRP133 && state.screen==Screen.DOWNLOADS) && !com.miflix.native2.data.EasyModePolicyRP79.allowsScreen(state.screen.name)) Screen.HOME else if(state.kidsMode && state.screen !in setOf(Screen.HOME,Screen.SEARCH,Screen.MY_LIST,Screen.DETAILS,Screen.PROFILES,Screen.NOTIFICATIONS,Screen.PLAYER)) Screen.HOME else state.screen
         LaunchedEffect(destination,state.screen) {if(destination!=state.screen) state.screen=destination}
-        if(showAssistantRP150 && !guestRP150 && !mobileRP133 && !state.kidsMode) CinematicSearchScreen(state,{showAssistantRP150=false},initialAi=true)
+        if(showAssistantRP150 && state.screen!=Screen.PLAYER && !guestRP150 && !mobileRP133 && !state.kidsMode) CinematicSearchScreen(state,{showAssistantRP150=false},initialAi=true)
         else if(mobileRP133) MobileAppRP133(state,destination)
         else if(state.easyModeRP79 && destination!=Screen.PLAYER) EasyScreenRP79(state,destination)
         else when (destination) {
@@ -212,6 +212,7 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
         LaunchedEffect(bootstrapped,state.session?.userId,state.activeProfile.id,state.easyModeRP79) {
             if(bootstrapped && !state.easyModeRP79) runCatching { state.loadRatings() }.onFailure { state.error=it.message }
         }
+        if(showAssistantRP150 && state.screen==Screen.PLAYER && !guestRP150 && !mobileRP133 && !state.kidsMode) AssistantPlayerOverlayRP159(state) {showAssistantRP150=false}
         state.assistantToolRP158?.takeIf {state.assistantEnabledRP155 && !state.kidsMode && !guestRP150}?.let {tool ->AssistantToolPanelRP158(state,tool) {state.assistantToolRP158=null}}
         LaunchedEffect(state.activeProfile.id,state.session?.userId,state.assistantEnabledRP155) {state.assistantToolRP158=null;state.assistantPendingSceneRP158=null}
         LaunchedEffect(state.appForeground,state.screen) {while(state.appForeground) {state.assistantHomeEpochRP158++;delay(60000)}}

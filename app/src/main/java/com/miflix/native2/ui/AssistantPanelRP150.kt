@@ -34,7 +34,7 @@ internal val LocalGuestOpenRP154=staticCompositionLocalOf<(() -> Unit)?> {null}
 internal val LocalGuestExitRP150=staticCompositionLocalOf<(() -> Unit)?> {null}
 
 @Composable
-internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sharedQuery:String?=null,sharedReplace:((String)->Unit)?=null) {
+internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sharedQuery:String?=null,sharedReplace:((String)->Unit)?=null,initialQueryRP159:String="") {
     val context=LocalContext.current.applicationContext
     val ai=remember(context) {GeminiAssistantRP150(context)}
     val scope=rememberCoroutineScope()
@@ -42,7 +42,7 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
     val owner=state.localExtrasScope()
     var collectionRevision by remember {mutableIntStateOf(0)}
     val saved=remember(owner,collectionRevision) {runCatching {val a=org.json.JSONArray(collectionPrefs.getString(owner,"[]"));(0 until a.length()).mapNotNull {a.optJSONObject(it)}}.getOrDefault(emptyList())}
-    var query by remember(owner) {mutableStateOf(sharedQuery.orEmpty())}
+    var query by remember(owner) {mutableStateOf(sharedQuery ?: initialQueryRP159)}
     LaunchedEffect(sharedQuery) {if(sharedQuery!=null) query=sharedQuery}
     val columns=4
     var budget by remember {mutableIntStateOf(0)}

@@ -1,0 +1,7 @@
+RP159 / Build 159 · versionCode 22263
+Gradle :app:testReleaseUnitTest :mobile:compileReleaseKotlin
+BUILD SUCCESSFUL
+{'tests': 556, 'failures': 0, 'errors': 0, 'skipped': 0}
+git diff --check: passed
+Paquete idéntico a las fuentes compiladas.
+Sin prueba física de TV, micrófono o foco del control remoto. No se usó una clave personal de Gemini.

@@ -23,6 +23,9 @@ internal fun AssistantToolPanelRP158(state:AppState,request:AssistantToolRequest
     val scope=rememberCoroutineScope()
     val ai=remember {GeminiAssistantRP150(context)}
     val aiEnabled=remember {context.getSharedPreferences("brunio_gemini_rp150",0).getBoolean("enabled",false)}
+    var retryRP159 by remember(request,owner) {mutableIntStateOf(0)}
+    var failedRP159 by remember(request,owner) {mutableStateOf(false)}
+    var waitRP159 by remember(request,owner) {mutableIntStateOf(0)}
     var busy by remember(request) {mutableStateOf(true)}
     var message by remember(request) {mutableStateOf("")}
     var picks by remember(request) {mutableStateOf<List<MediaSummary>>(emptyList())}
@@ -38,9 +41,10 @@ internal fun AssistantToolPanelRP158(state:AppState,request:AssistantToolRequest
     var importing by remember {mutableStateOf(false)}
     var indexJson by remember {mutableStateOf("")}
     var beforeHome by remember(request) {mutableStateOf<List<String>?>(null)}
-    suspend fun ask(prompt:String,image:String?=null):String {check(aiEnabled && ai.configured()) {tr("Activa y configura Gemini en Settings → Assistant.","Enable and configure Gemini in Settings → Assistant.")};return withContext(Dispatchers.IO) {ai.toolsRP158(prompt,image,request.text)}}
+    suspend fun ask(prompt:String,image:String?=null):String {if(!aiEnabled || !ai.configured()) throw GeminiFailureRP159(GeminiErrorRP159.NOT_CONFIGURED);return withContext(Dispatchers.IO) {ai.toolsRP158(prompt,image,request.text) {seconds ->withContext(Dispatchers.Main) {waitRP159=seconds}}}}
     fun action(block:suspend ()->Unit) {if(busy) return;busy=true;scope.launch {try {check(state.localExtrasScope()==owner);block()} catch(e:CancellationException) {throw e} catch(_:Exception) {notice=tr("No se pudo completar. Revisa los datos y reintenta.","Could not complete. Check the data and retry.")} finally {busy=false}}}
-    LaunchedEffect(request,owner) {
+    LaunchedEffect(request,owner,retryRP159) {
+        busy=true;failedRP159=false;waitRP159=0;message=""
         try {
             if(request.kind==AssistantToolRP158.VISUAL) {
                 withFrameNanos {}
@@ -175,8 +179,8 @@ internal fun AssistantToolPanelRP158(state:AppState,request:AssistantToolRequest
                     screenshot=null
                 }
             }}
-        } catch(e:TimeoutCancellationException) {message=tr("La consulta tardó demasiado. Puedes reintentar.","The request timed out. You can retry.")} catch(e:CancellationException) {throw e} catch(e:Exception) {message=e.message?.takeIf {it.length<350 && !it.contains("://")} ?: tr("No se pudo completar. Gemini puede estar sin configurar, en su límite o sin respuesta; también puede faltar una fuente.","Could not complete. Gemini may be unconfigured, rate-limited or unavailable, or a source may be missing.")}
-        finally {busy=false;screenshotReady=true}
+        } catch(e:GeminiFailureRP159) {failedRP159=true;message=GeminiAccessRP159.message(e,state.interfaceLanguage=="es")} catch(e:TimeoutCancellationException) {failedRP159=true;message=tr("La consulta tardó demasiado. Puedes reintentar.","The request timed out. You can retry.")} catch(e:CancellationException) {throw e} catch(e:Exception) {failedRP159=true;message=e.message?.takeIf {it.length<350 && !it.contains("://")} ?: tr("No se pudo completar. Gemini puede estar sin configurar, en su límite o sin respuesta; también puede faltar una fuente.","Could not complete. Gemini may be unconfigured, rate-limited or unavailable, or a source may be missing.")}
+        finally {busy=false;waitRP159=0;screenshotReady=true}
     }
     if(!screenshotReady) return
     trailerRows?.let {rows ->DiscoveryTrailers(state,rows,close={trailerRows=null;close()})}
@@ -197,7 +201,8 @@ internal fun AssistantToolPanelRP158(state:AppState,request:AssistantToolRequest
         AssistantToolRP158.VISUAL->tr("Entiende esta pantalla","Understand this screen")
     }
     PlayerSideSheet("✦ BruniO · "+toolTitle,close) {
-        item {Text(if(busy) tr("Preparando…","Preparing…") else message,color=Muted,fontSize=15.sp)}
+        item {Text(if(busy && waitRP159>0) tr("Gemini estará disponible en ","Gemini will be ready in ")+waitRP159+tr(" s. El análisis continuará automáticamente.","s. Analysis will continue automatically.") else if(busy) tr("Preparando…","Preparing…") else message,color=Muted,fontSize=15.sp)}
+        if(failedRP159 && !busy) item {FocusButton(tr("Reintentar","Retry")) {retryRP159++}}
         if(notice.isNotBlank()) item {Text(notice,color=Accent)}
         beforeHome?.let {old ->item {FocusButton(tr("Deshacer orden","Undo order")) {state.saveHomeRowOrder(old);beforeHome=null;notice=tr("Orden restaurado.","Order restored.")}}}
         if(request.kind==AssistantToolRP158.JUMP || request.kind==AssistantToolRP158.BOOKMARK) {

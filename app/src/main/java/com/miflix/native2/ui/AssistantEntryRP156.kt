@@ -62,6 +62,7 @@ internal fun AssistantEntryRP156(state:AppState,close:()->Unit,submit:(String)->
     DisposableEffect(Unit) {onDispose {ime?.hide()}}
     BackHandler(onBack=close)
     // Overlay only: the current destination and its scroll/focus state remain mounted.
+    androidx.compose.ui.window.Dialog(onDismissRequest=close,properties=androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
     Box(Modifier.fillMaxSize(),contentAlignment=Alignment.TopEnd) {
         Column(Modifier.padding(top=76.dp,end=24.dp).width(440.dp).background(Color(0xff101010),RoundedCornerShape(20.dp)).padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {Text("✦ BruniO Assistant",color=Color.White,fontSize=22.sp,modifier=Modifier.weight(1f));FocusButton("×",onClick=close)}
@@ -73,5 +74,6 @@ internal fun AssistantEntryRP156(state:AppState,close:()->Unit,submit:(String)->
                 if(!keyboard) FocusButton(tr("Teclado","Keyboard")) {keyboard=true}
             }
         }
+    }
     }
 }

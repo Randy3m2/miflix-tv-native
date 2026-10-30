@@ -1,5 +1,6 @@
 $ErrorActionPreference = 'Stop'
-$version = '1.0.0-rc6'
+$version = (python -c 'from brunio import VERSION; print(VERSION)').Trim()
+if ($LASTEXITCODE -ne 0 -or $version -notmatch '^\d+\.\d+\.\d+(?:-rc\d+)?$') { throw 'Invalid PC version' }
 $zipUrl = 'https://downloads.videolan.org/videolan/vlc/3.0.23/win64/vlc-3.0.23-win64.zip'
 New-Item -ItemType Directory -Force vendor | Out-Null
 Invoke-WebRequest $zipUrl -OutFile vendor/vlc.zip

@@ -35,11 +35,12 @@ internal fun AssistantEntryRP156(state:AppState,close:()->Unit,submit:(String)->
     val fire=remember {android.os.Build.MANUFACTURER.equals("Amazon",true) || android.os.Build.MODEL.startsWith("AFT",true) || context.packageManager.hasSystemFeature("amazon.hardware.fire_tv")}
     var keyboard by remember {mutableStateOf(fire)}
     var text by remember {mutableStateOf("")}
+    var submittedRP160 by remember {mutableStateOf(false)}
     var listening by remember {mutableStateOf(false)}
     var status by remember {mutableStateOf("")}
     val focus=remember {FocusRequester()}
     val ime=LocalSoftwareKeyboardController.current
-    fun finish(value:String) {if(state.localExtrasScope()==owner && state.assistantEnabledRP155 && value.isNotBlank()) {ime?.hide();submit(value.trim().take(500))}}
+    fun finish(value:String) {if(!submittedRP160 && state.localExtrasScope()==owner && state.assistantEnabledRP155 && value.isNotBlank()) {submittedRP160=true;ime?.hide();submit(value.trim().take(500))}}
     val voice=rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {result ->
         listening=false
         if(state.localExtrasScope()==owner) {

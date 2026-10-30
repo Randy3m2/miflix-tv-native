@@ -12,13 +12,22 @@ internal object AssistantCatalogRP157 {
     private val peopleLock=Mutex()
 
     fun person(text:String):AssistantPersonQueryRP157? {
-        val match=Regex("(?i)(?:pel[ií]culas?|series|movies?|films?|shows?)\\s+(?:(?:donde|en (?:las|la) que)\\s+(?:sale|act[uú]a|aparece|participa)|(?:con|de|with|starring|featuring)|(?:dirigid[ao]s? por|directed by))\\s+(.+)").find(text) ?: return null
+        val match=Regex("(?i)(?:pel[ií]culas?|series|movies?|films?|shows?)\\s+(?:(?:donde|en (?:las|la) que)\\s+(?:sale|act[uú]a|aparece|participa)|(?:con|de|with|starring|featuring)|(?:dirigid[ao]s? por|directed by))\\s+(.+)").find(text) ?: return trailingPersonRP160(text)
         val name=match.groupValues[1].split(Regex("(?i),|\\s+(?:que duren|menos de|m[aá]s de|under|over)\\s+")).first().trim().take(100)
         if(name.length<3) return null
         val normalized=DiscoveryMood.normalize(name)
         val filters=AssistantPlanRP150.local(name)
         if(Regex("^(?:un|una|unos|unas|a|an|the) ").containsMatchIn(normalized) || filters.genres.isNotEmpty() || filters.keyword.isNotBlank() || filters.decade>0) return null
         return AssistantPersonQueryRP157(name,if(Regex("(?i)dirigid|directed").containsMatchIn(match.value)) "director" else "actor",if(Regex("(?i)^(series|shows?)").containsMatchIn(match.value)) "series" else "movie")
+    }
+    private fun trailingPersonRP160(text:String):AssistantPersonQueryRP157? {
+        val stripped=text.trim().replace(Regex("(?i)^(?:(?:can|could|would) you )?(?:please )?(?:find|show|search|get|recommend)(?: for me| me)? (?:some |any |a |the )?"),"")
+        val match=Regex("(?i)^(.+?)\\s+(movies?|films?|series|shows?)[?.!]*$").find(stripped) ?: return null
+        val name=match.groupValues[1].trim()
+        if(name.split(Regex("\\s+")).size !in 2..5 || name.length>100) return null
+        val filters=AssistantPlanRP150.local(name)
+        if(filters.genres.isNotEmpty() || filters.keyword.isNotBlank() || filters.decade>0) return null
+        return AssistantPersonQueryRP157(name,type=if(match.groupValues[2].lowercase() in listOf("series","show","shows")) "series" else "movie")
     }
     fun description(text:String):Boolean {
         val q=DiscoveryMood.normalize(text)
@@ -51,8 +60,10 @@ internal object AssistantCatalogRP157 {
         cache[key]?.takeIf {System.currentTimeMillis()-it.first<15*60_000L}?.let {return@withLock it.second}
         val people=tmdb.filterPeople(query.name)
         val exact=people.filter {DiscoveryMood.normalize(it.name)==DiscoveryMood.normalize(query.name)}
-        if(exact.size!=1) return@withLock emptyList<AssistantPickRP150>() to people.take(4).map {it.name}
-        val items=tmdb.personCreditsRP141(exact.single().id,query.role).filter {it.type==query.type}.take(30)
+        val matchingRole=exact.filter {it.department.equals(if(query.role=="director") "Directing" else "Acting",true)}
+        val resolved=matchingRole.singleOrNull() ?: exact.singleOrNull()
+        if(resolved==null) return@withLock emptyList<AssistantPickRP150>() to people.take(4).map {it.name+it.knownFor.takeIf {known->known.isNotBlank()}?.let {known->" · $known"}.orEmpty()}
+        val items=tmdb.personCreditsRP141(resolved.id,query.role).filter {it.type==query.type}.take(30)
         val gate=Semaphore(3)
         val rows=coroutineScope {items.map {item ->async {gate.withPermit {
             try {

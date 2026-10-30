@@ -212,6 +212,7 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit,initialAi:
     val openGuest=LocalGuestOpenRP154.current
     LaunchedEffect(state.assistantEnabledRP155) {if(!state.assistantEnabledRP155) aiMode=false}
     var query by rememberSaveable(owner) {mutableStateOf(if(initialAi) state.assistantQueryRP156 ?: state.searchQuery else state.searchQuery)}
+    var normalQueryRP160 by rememberSaveable(owner) {mutableStateOf(state.searchQuery)}
     var phoneKeyboardRP136 by remember(owner) {mutableStateOf(false)}
     var cursor by rememberSaveable(owner) {mutableIntStateOf(query.length)}
     var results by remember {mutableStateOf<List<MediaSummary>>(emptyList())}
@@ -222,9 +223,13 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit,initialAi:
     val keyboardFocus=remember {FocusRequester()}
     val resultsFocus=remember {FocusRequester()}
     BackHandler(onBack=onBack)
-    fun apply(edit: SearchTextEditor.Edit) {query=edit.text;cursor=edit.cursor;state.searchQuery=query}
+    fun apply(edit: SearchTextEditor.Edit) {query=edit.text;cursor=edit.cursor;if(!aiMode && !initialAi) {state.searchQuery=query;normalQueryRP160=query}}
     fun replace(value: String) {apply(SearchTextEditor.replace(value))}
     fun insert(value: String) {apply(SearchTextEditor.insert(query,cursor,value))}
+    fun leaveAssistantRP160() {
+        state.assistantQueryRP156=null
+        if(initialAi) onBack() else {aiMode=false;query=normalQueryRP160;cursor=query.length;state.searchQuery=query}
+    }
     fun acceptVoiceRP85(result:androidx.activity.result.ActivityResult) {
         if(result.resultCode==android.app.Activity.RESULT_OK && voiceOwnerRP81==state.searchHistoryOwner()) {
             val heard=result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS).orEmpty()
@@ -317,12 +322,12 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit,initialAi:
                                 }
                                 if(!opened) state.error=tr("Abre los ajustes de la TV y empareja un teclado Bluetooth en Controles y dispositivos Bluetooth.","Open TV settings and pair a Bluetooth keyboard under Remotes & Bluetooth Devices.")
                             }
-                            if(state.assistantEnabledRP155 && !state.kidsMode && !easySearchRP80) SearchKey("✦ Assistant",Modifier.weight(2f),selected=aiMode) {aiMode=!aiMode}
+                            if(state.assistantEnabledRP155 && !state.kidsMode && !easySearchRP80) SearchKey("✦ Assistant",Modifier.weight(2f),selected=aiMode) {if(aiMode) leaveAssistantRP160() else {normalQueryRP160=query;aiMode=true}}
                             }
                             SearchPhoneKeyboardRP136(state,phoneKeyboardRP136,{replace(it)})
                             Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                                 SearchKey(tr("Espacio","Space"),Modifier.weight(1f),keyIcon="space") {insert(" ")}
-                                SearchKey(tr("Borrar letra","Delete letter"),Modifier.weight(1f),keyIcon="backspace") {apply(SearchTextEditor.backspace(query,cursor))}
+                                SearchKey(tr("Borrar letra · Mantén 3 s para borrar todo","Delete letter · Hold 3s to clear all"),Modifier.weight(1f),keyIcon="backspace",onClearRP160={state.assistantQueryRP156=null;replace("")}) {apply(SearchTextEditor.backspace(query,cursor))}
                             }
                             "abcdefghijklmnopqrstuvwxyz1234567890".chunked(6).forEachIndexed { row,letters ->
                                 Row(horizontalArrangement=Arrangement.spacedBy(4.dp)) {
@@ -334,7 +339,7 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit,initialAi:
                     }
                 }
                 if(aiMode) Box(Modifier.weight(1f).fillMaxHeight()) {
-                    AssistantPanelRP150(state,{aiMode=false},{openGuest?.invoke()},sharedQuery=query,sharedReplace={replace(it)})
+                    AssistantPanelRP150(state,{leaveAssistantRP160()},{openGuest?.invoke()},sharedQuery=query,sharedReplace={replace(it)})
                 } else Column(Modifier.weight(1f).fillMaxHeight()) {
                     Text(if(query.isBlank()) tr("Tus recomendaciones de búsqueda","Your Search Recommendations") else tr("Resultados para","Results for")+" “${query.trim()}”",
                         color=Color.White,fontSize=20.sp,lineHeight=24.sp,fontWeight=FontWeight.Bold,maxLines=2,modifier=Modifier.padding(bottom=6.dp))
@@ -358,10 +363,10 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit,initialAi:
 internal val LocalEasySearchRP80=staticCompositionLocalOf {false}
 
 @Composable
-private fun SearchKey(label: String,modifier: Modifier=Modifier,microphone:Boolean=false,keyIcon:String?=null,selected:Boolean=false,onClick: () -> Unit) {
+private fun SearchKey(label: String,modifier: Modifier=Modifier,microphone:Boolean=false,keyIcon:String?=null,selected:Boolean=false,onClearRP160:(()->Unit)?=null,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     val largeRP80=LocalEasySearchRP80.current
-    Box(modifier.semantics {contentDescription=label}.height(if(largeRP80) 39.dp else 34.dp).onFocusChanged {focused=it.isFocused}.focusable().tvClick(onClick).clickable(onClick=onClick)
+    Box(modifier.semantics {contentDescription=label}.height(if(largeRP80) 39.dp else 34.dp).onFocusChanged {focused=it.isFocused}.then(if(onClearRP160!=null) Modifier.searchDeleteHoldRP160(focused,onClick,onClearRP160) else Modifier.tvClick(onClick).clickable(onClick=onClick)).focusable()
         .background(GlassActionBrushRP108(focused,selected),RoundedCornerShape(6.dp))
         .border(if(focused) 2.dp else 1.dp,Color.White.copy(alpha=if(focused) .95f else .10f),RoundedCornerShape(6.dp)).padding(horizontal=4.dp),
         contentAlignment=Alignment.Center) {

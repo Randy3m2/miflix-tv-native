@@ -29,6 +29,7 @@ import com.miflix.native2.data.*
 import kotlinx.coroutines.*
 import java.util.concurrent.atomic.AtomicBoolean
 
+internal val LocalAssistantDismissNavigationRP160=staticCompositionLocalOf<()->Unit> {{}}
 internal val LocalAssistantOpenRP150=staticCompositionLocalOf<(() -> Unit)?> {null}
 internal val LocalGuestOpenRP154=staticCompositionLocalOf<(() -> Unit)?> {null}
 internal val LocalGuestExitRP150=staticCompositionLocalOf<(() -> Unit)?> {null}
@@ -179,7 +180,7 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
     }
     LaunchedEffect(query,budget,owner) {
         val text=query.trim()
-        if(state.assistantQueryRP156!=null && state.assistantQueryRP156!=query) state.assistantQueryRP156=null
+        if(AssistantInputPolicyRP160.discardPending(state.assistantQueryRP156,query,sharedQuery)) state.assistantQueryRP156=null
         if(cancelledKey=="$query:$budget") return@LaunchedEffect
         cancelledKey=null
         if(lastSubmitted=="$query:$budget") return@LaunchedEffect

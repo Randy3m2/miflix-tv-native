@@ -2,7 +2,7 @@ package com.miflix.native2.data
 
 import com.miflix.native2.model.MediaSummary
 
-data class CatalogPerson(val id: Int,val name: String,val photo: String?,val knownFor: String)
+data class CatalogPerson(val id: Int,val name: String,val photo: String?,val knownFor: String,val department:String="")
 data class CatalogGenre(val id: Int,val name: String)
 data class CustomCatalogFilter(
     val type: String="movie",

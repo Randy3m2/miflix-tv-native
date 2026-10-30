@@ -42,7 +42,7 @@ class TmdbRepository internal constructor(var token:String,private val fetchRP14
         return (0 until a.length()).map { a.getJSONObject(it) }.filter { !it.optBoolean("adult") }.map { x ->
             val known=x.optJSONArray("known_for") ?: org.json.JSONArray()
             CatalogPerson(x.getInt("id"),x.getString("name"),image(x.optString("profile_path"),"w185"),
-                (0 until known.length()).map { known.getJSONObject(it).let { k -> k.optString("title").ifBlank { k.optString("name") } } }.filter { it.isNotBlank() }.take(3).joinToString(" · "))
+                (0 until known.length()).map { known.getJSONObject(it).let { k -> k.optString("title").ifBlank { k.optString("name") } } }.filter { it.isNotBlank() }.take(3).joinToString(" · "),x.optString("known_for_department"))
         }
     }
     suspend fun actorCredits(personId:Int):List<MediaSummary> = personCreditsRP141(personId,"actor")

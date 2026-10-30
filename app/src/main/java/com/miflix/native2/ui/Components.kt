@@ -399,6 +399,7 @@ fun Sidebar(screen: Screen, profileName: String, onNavigate: (Screen) -> Unit) {
 fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,notificationCount: Int,
             profile: com.miflix.native2.model.Profile? = null, backgroundAlpha: Float = 0f, onHeaderFocused: (() -> Unit)? = null, onMoveDown: (() -> Unit)? = null,onEditPicture: (() -> Unit)? = null,kids: Boolean=false) {
     val assistantOpenRP150=LocalAssistantOpenRP150.current
+    val dismissAssistantRP160=LocalAssistantDismissNavigationRP160.current
     val guestExitRP150=LocalGuestExitRP150.current
     val manageProfile=LocalProfileManage.current
     val pairTv=LocalCastPair.current
@@ -411,7 +412,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
     val headerTarget=remember(current,owner) {FocusRequester()}
     val claim=remember(current,owner) {HeaderNavigationRP108.policy.claim(owner,current.name)}
     val navScroll=androidx.compose.foundation.lazy.rememberLazyListState()
-    fun navigateHeader(destination:Screen) {HeaderNavigationRP108.policy.navigate(owner,destination.name);onNavigate(destination)}
+    fun navigateHeader(destination:Screen) {dismissAssistantRP160();HeaderNavigationRP108.policy.navigate(owner,destination.name);onNavigate(destination)}
     val navItems=(if(kids) listOf(Screen.HOME to "Kids",Screen.SEARCH to tr("Buscar","Search"),Screen.MY_LIST to tr("Mi lista","My List")) else listOf(
         Screen.HOME to tr("Inicio","Home"),
         Screen.SEARCH to tr("Buscar","Search"),
@@ -482,7 +483,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
                 state=navScroll,verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp,Alignment.CenterHorizontally),
                 contentPadding=PaddingValues(horizontal=4.dp,vertical=6.dp)) {
                 items(navItems,key={it.first}) { (destination,label) ->
-                    val activate={if(destination==Screen.LIVE_TV && current==destination && onMoveDown!=null) onMoveDown() else navigateHeader(destination)}
+                    val activate={if(destination==Screen.LIVE_TV && current==destination && onMoveDown!=null) {dismissAssistantRP160();onMoveDown()} else navigateHeader(destination)}
                     if(destination==Screen.SEARCH) SearchNavigationButton(selected=current==destination,modifier=if(current==destination) Modifier.focusRequester(headerTarget) else Modifier,onClick=activate)
                     else NavigationTab(label,selected=current==destination,modifier=if(current==destination) Modifier.focusRequester(headerTarget) else Modifier,onClick=activate)
                 }

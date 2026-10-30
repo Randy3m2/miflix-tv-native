@@ -1,0 +1,7 @@
+RP160 / Build 160 · versionCode 22264
+Gradle :app:testReleaseUnitTest :mobile:compileReleaseKotlin
+BUILD SUCCESSFUL
+{'tests': 560, 'failures': 0, 'errors': 0, 'skipped': 0}
+git diff --check: passed
+Fuentes del paquete comparadas con las compiladas: idénticas.
+No se probaron control remoto, micrófono ni navegación en TV física. No se usó una clave personal de Gemini.

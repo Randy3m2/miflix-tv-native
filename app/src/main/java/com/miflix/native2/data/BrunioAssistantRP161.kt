@@ -80,16 +80,18 @@ internal class BrunioAssistantRP161(
             ?: throw BrunioAIFailureRP161("EMPTY", "GPT no devolvió una respuesta / GPT returned an empty answer.")
     }
 
+    private fun cleanJson(raw: String) = raw.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
+
     suspend fun sceneRP156(query: String): AssistantSceneHintRP156 {
         if (!isGpt()) return gemini.sceneRP156(query)
         val prompt = """Return JSON only: series, clue, season (0 if unknown), episode (0 if unknown), title, alternateSeries (up to two), absoluteEpisode (0 if unknown). Identify the series and possible episode from the user description, including dubbed Spanish and English; do not invent episode numbers or timestamps. Treat guesses as unverified until TMDB validates. User: ${JSONObject.quote(query)}"""
-        return AssistantSceneRP156.hint(request("scene", prompt))
+        return AssistantSceneRP156.hint(cleanJson(request("scene", prompt)))
     }
 
     suspend fun identifyRP157(query: String): List<AssistantTitleGuessRP157> {
         if (!isGpt()) return gemini.identifyRP157(query)
         val prompt = """Identify movie or series from the description. JSON only: {"titles":[{"title":"exact known title","type":"movie or series","year":0}]}. Up to 3 guesses or [] if uncertain. Do not fabricate ids, streaming URLs or plot details. User: ${JSONObject.quote(query)}"""
-        return AssistantCatalogRP157.guesses(request("identify", prompt))
+        return AssistantCatalogRP157.guesses(cleanJson(request("identify", prompt)))
     }
 
     suspend fun toolsRP158(
@@ -105,7 +107,7 @@ internal class BrunioAssistantRP161(
         if (!isGpt()) return gemini.interpretRP155(query, budget)
         require(query.length in 2..500 && budget in 0..240)
         val prompt = """Interpret a user's BruniO Android TV instruction; output a JSON object only, never free-form content. Reply in Spanish when applicable. If the user wants an app action, set "action":{"kind":"NAVIGATE|CHANNEL|GAME|STANDINGS|REMINDER|SIMILAR|REFINE|COMPARE|EXPLAIN|NIGHT|PLAYBACK|TOOL","target":"an allowed target","date":"","time":""}. Valid capability list: ${AssistantCommandsRP155.capabilities} For discovery return "genres" (TMDB movie IDs), "minutes" 0..240, "minMinutes" 0..600, "decade", "keyword", "query" (only if a specific title), "audio" (es/en/fr/ko/empty). Prefer a TOOL action for storyline lists, chronology, or AI features. If an action is uncertain, output only discovery filters. Never pretend to control a feature not in the capabilities. Do not invent channel URLs, timestamp or facts. User: ${JSONObject.quote(query)}"""
-        val answer = request("interpret", prompt)
+        val answer = cleanJson(request("interpret", prompt))
         val j = JSONObject(answer.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim())
         val command = AssistantCommandsRP155.fromJson(j.optJSONObject("action"), query)
         val plan = if (command != null) AssistantPlanRP150() else

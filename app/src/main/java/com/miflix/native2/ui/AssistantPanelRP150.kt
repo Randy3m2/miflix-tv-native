@@ -75,6 +75,12 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
         val remote=allowRemote && preset==null && useGemini && configured && (!automatic || ai.readyRP154())
         job=scope.launch {
             try {
+                val toolRequest=AssistantToolsRP158.parse(text)
+                if(toolRequest!=null) {
+                    if(state.assistantQueryRP156==text || !automatic) {state.assistantQueryRP156=null;state.assistantToolRP158=toolRequest;close()}
+                    else message=tr("Pulsa Buscar o dicta para ejecutar esta función.","Press Search or dictate to run this action.")
+                    return@launch
+                }
                 val personRequest=AssistantCatalogRP157.person(text)
                 val sceneRequest=AssistantSceneRP156.detects(text)
                 val identifyRequest=AssistantCatalogRP157.description(text) && !sceneRequest
@@ -102,6 +108,9 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
                 val command=if(sceneRequest) null else commandOverride ?: AssistantCommandsRP155.parse(text)
                 if(command!=null) {
                     when(command.action) {
+                        AssistantActionRP155.TOOL -> {
+                            appCommand=command;return@launch
+                        }
                         AssistantActionRP155.SIMILAR -> {
                             val result=AssistantDiscoveryRP155.similar(state,command,contextPicks,time)
                             ensureActive();if(generation!=requestGeneration || state.localExtrasScope()!=owner) return@launch
@@ -180,7 +189,7 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
         submit(query,budget,automatic=true,allowRemote=state.assistantQueryRP156==query)
     }
     LaunchedEffect(query,budget,owner,useGemini,configured) {
-        if(!useGemini || !configured || query.trim().length<8 || AssistantCatalogRP157.person(query)!=null || (!AssistantSceneRP156.detects(query) && !AssistantCatalogRP157.description(query) && AssistantCommandsRP155.parse(query)!=null)) return@LaunchedEffect
+        if(AssistantToolsRP158.parse(query)!=null || !useGemini || !configured || query.trim().length<8 || AssistantCatalogRP157.person(query)!=null || (!AssistantSceneRP156.detects(query) && !AssistantCatalogRP157.description(query) && AssistantCommandsRP155.parse(query)!=null)) return@LaunchedEffect
         delay(1800)
         if(cancelledKey=="$query:$budget") return@LaunchedEffect
         if(!ai.readyRP154()) return@LaunchedEffect

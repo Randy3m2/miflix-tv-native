@@ -25,10 +25,10 @@ internal object AssistantLiveCatalogRP155 {
         synchronized(cache) {if(cache.size>=12) cache.remove(cache.keys.first());cache[key]=System.currentTimeMillis() to rows}
         rows
     }
-    suspend fun games(state:AppState,team:String):Pair<List<AssistantLiveRP155>,String> {
+    suspend fun games(state:AppState,team:String,leagueOverrideRP158:String?=null):Pair<List<AssistantLiveRP155>,String> {
         val normalized=DiscoveryMood.normalize(team).removePrefix("los ").removePrefix("the ")
         require(normalized.length>=2)
-        val league=if(listOf("aguilas","tigres","licey","leones","escogido","gigantes","toros","estrellas").any {it in normalized}) "LIDOM" else if(listOf("yankees","dodgers","mets","red sox","padres","astros","blue jays").any {it in normalized}) "MLB" else "NBA"
+        val league=leagueOverrideRP158 ?: if(listOf("aguilas","tigres","licey","leones","escogido","gigantes","toros","estrellas").any {it in normalized}) "LIDOM" else if(listOf("yankees","dodgers","mets","red sox","padres","astros","blue jays").any {it in normalized}) "MLB" else "NBA"
         val games=scores.games(league,LiveScoresRP11.today()).filter {it.state=="live" && (matches(it.home.name+" "+it.home.short,normalized) || matches(it.away.name+" "+it.away.short,normalized))}
         if(games.isEmpty()) return emptyList<AssistantLiveRP155>() to tr("No encontré un juego en vivo de ese equipo en el marcador actual.","No live game for that team was found in the current scoreboard.")
         val source=state.calendarLiveManifest("sports");val key="$source:$league"
@@ -45,14 +45,16 @@ internal object AssistantLiveCatalogRP155 {
         }}.take(12)
         return choices to if(choices.isEmpty()) tr("El marcador confirma el juego, pero tu fuente configurada no devolvió un enlace identificable. Puedes revisar Live TV.","The scoreboard confirms the game, but your configured source returned no identifiable event. Check Live TV.") else games.joinToString {"${it.away.short} ${it.away.score} · ${it.home.short} ${it.home.score} · ${it.phase}"}
     }
-    suspend fun play(state:AppState,choice:AssistantLiveRP155) {
+    suspend fun resolveRP158(state:AppState,choice:AssistantLiveRP155):PlayerRequest {
         check(state.partyRole!=com.miflix.native2.model.PartyRole.GUEST) {"The party host controls playback"}
-        choice.custom?.let {state.openLivePlayer(CustomChannelsRP45.request(it));return}
+        choice.custom?.let {return CustomChannelsRP45.request(it)}
         val snapshot=state.localExtrasScope();val manifest=state.calendarLiveManifest(choice.provider)
         val streams=LiveRepository().streams(manifest,choice.channel);require(streams.isNotEmpty())
         check(snapshot==state.localExtrasScope() && manifest==state.calendarLiveManifest(choice.provider))
         val c=choice.channel
         val request=PlayerRequest(com.miflix.native2.model.MediaSummary(c.id.hashCode(),"live",c.name,c.description,null,c.poster,0.0,"LIVE"),streams.first(),0,0,0L,true,c.id,choice.provider,liveType=c.type,returnScreen=Screen.LIVE_TV)
-        state.openLivePlayer(if(choice.provider=="sports") state.sportsRequestRP71(request,streams) else request)
+        return if(choice.provider=="sports") state.sportsRequestRP71(request,streams) else request
     }
+    suspend fun play(state:AppState,choice:AssistantLiveRP155) {state.openLivePlayer(resolveRP158(state,choice))}
+
 }

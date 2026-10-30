@@ -47,7 +47,7 @@ internal object AssistantSceneRP156 {
             val seasons=(1..minOf(detail.seasonCount,40)).toList()
             val rows=episodes(tmdb,show.id,seasons,gate)
             val english=if(hint.title.isNotBlank() && tmdb.language!="en-US" && rows.none {DiscoveryMood.normalize(it.title)==DiscoveryMood.normalize(hint.title)})
-                episodes(tmdb,show.id,seasons,gate,true) else emptyList()
+                episodes(tmdb,show.id,rows.map {it.season}.distinct().sorted(),gate,true) else emptyList()
             val named=(rows+english).filter {hint.title.isNotBlank() && DiscoveryMood.normalize(it.title)==DiscoveryMood.normalize(hint.title)}.map {it.season to it.episode}.toSet()
             val tokens=DiscoveryMood.normalize(hint.clue).split(' ').filter {it.length>=4 && it !in setOf("episodio","capitulo","donde","episode","where","scene","escena","dice","esta","unico","mantiene")}.distinct()
             rows.filter {it.airDate.isNotBlank() && it.airDate<=java.time.LocalDate.now().toString()}.forEach {ep ->

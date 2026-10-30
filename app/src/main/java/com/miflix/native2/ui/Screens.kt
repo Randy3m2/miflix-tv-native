@@ -1553,6 +1553,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             state.publishPartyPlaybackNotice(playing)
         }
     }
+    val assistantOwnerRP158=remember(request.playbackId) {state.localExtrasScope()}
+    val assistantOpenRP158=LocalAssistantOpenRP150.current
     val assistantNextRP155 by rememberUpdatedState(upcoming)
     DisposableEffect(player,request.playbackId) {
         val handler:(String)->Boolean = action@{action ->
@@ -1571,6 +1573,28 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         }
         state.assistantPlaybackRP155=handler
         onDispose {if(state.assistantPlaybackRP155===handler) state.assistantPlaybackRP155=null}
+    }
+    DisposableEffect(player,request.playbackId,state.localExtrasScope()) {
+        val snapshot:()->com.miflix.native2.data.AssistantBookmarkRP158? = {
+            val duration=player.duration
+            if(state.localExtrasScope()!=assistantOwnerRP158 || state.playerRequest?.playbackId!=request.playbackId || request.live || duration<=0 || player.currentPosition>=duration) null
+            else com.miflix.native2.data.AssistantBookmarkRP158(request.item.cloudId,request.season,request.episode,player.currentPosition,duration,java.security.MessageDigest.getInstance("SHA-256").digest(request.stream.url.toByteArray()).joinToString("") {"%02x".format(it)},request.item.title+" · S${request.season} E${request.episode}",System.currentTimeMillis())
+        }
+        val seek:(com.miflix.native2.data.AssistantBookmarkRP158)->Boolean = {mark ->
+            val current=snapshot()
+            if(current!=null && state.partyRole!=PartyRole.GUEST && com.miflix.native2.data.AssistantLocalRP158.compatible(mark,current)) {player.seekTo(mark.position);true} else false
+        }
+        state.assistantSnapshotRP158=snapshot;state.assistantSeekRP158=seek
+        onDispose {if(state.assistantSnapshotRP158===snapshot) {state.assistantSnapshotRP158=null;state.assistantSeekRP158=null}}
+    }
+    LaunchedEffect(firstFrame,request.playbackId,state.assistantPendingSceneRP158) {
+        val pending=state.assistantPendingSceneRP158
+        if(firstFrame && pending!=null) {
+            state.assistantPendingSceneRP158=null
+            if(pending.first==state.localExtrasScope() && pending.second.cloud==request.item.cloudId && pending.second.season==request.season && pending.second.episode==request.episode) {
+                if(state.assistantSeekRP158?.invoke(pending.second)!=true) state.error=tr("El título se abrió, pero el marcador pertenece a otra fuente o duración. No se aplicó el salto.","The title opened, but this bookmark belongs to another source or duration. The seek was not applied.")
+            }
+        }
     }
     fun openPlayerParty() { showPartyActions=true }
     fun createPlayerParty() {
@@ -1900,7 +1924,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             }
 
             override fun onIsPlayingChanged(value:Boolean) {retry404RP144.onPlaying(value)}
-            override fun onRenderedFirstFrame() {if(state.playerRequest?.playbackId!=request.playbackId) return;if(!firstFrame && (!strictSpanishRP83 || spanishVerifiedRP83)) state.rememberSuccessfulPlaybackRP16(request);state.recordSuccessfulLiveChannel(request);if(!firstFrame) LiveHubPlaybackRP41.remember(context,state,request);state.socialPlaybackStarted(request,player.currentPosition,player.duration);if(!firstFrame) state.markLidomSourceWorking(request);firstFrame=true;state.finishPlaybackLoading(request.playbackId)}
+            override fun onRenderedFirstFrame() {if(state.playerRequest?.playbackId!=request.playbackId) return;if(!firstFrame && state.localExtrasScope()==assistantOwnerRP158) com.miflix.native2.data.AssistantLocalRP158.recordWatch(context,assistantOwnerRP158,request.item,request.season,request.episode,request.playbackId);if(!firstFrame && (!strictSpanishRP83 || spanishVerifiedRP83)) state.rememberSuccessfulPlaybackRP16(request);state.recordSuccessfulLiveChannel(request);if(!firstFrame) LiveHubPlaybackRP41.remember(context,state,request);state.socialPlaybackStarted(request,player.currentPosition,player.duration);if(!firstFrame) state.markLidomSourceWorking(request);firstFrame=true;state.finishPlaybackLoading(request.playbackId)}
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if(state.playerRequest?.playbackId!=request.playbackId) return
                 if(playbackState==Player.STATE_READY) state.socialPlaybackReady(request,player.currentPosition,player.duration)
@@ -2317,6 +2341,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                 nextAvailable=(randomMode || upcoming!=null) && state.partyRole!=PartyRole.GUEST,
                 onNext={cancelAutoplay=true;state.launch {state.socialAction {if(randomMode) state.playRandomEpisode(request.item) else upcoming?.let {state.playNext(request,it)} } }},
                 onEpisodes={ if(request.liveProvider=="lidom") state.showLidomSources(request) else if(request.live) playerMenu=if(state.partyRole==PartyRole.GUEST) "channel_permission" else if(request.liveProvider=="sports") "games" else "channels" else { episodesResumeAfterClose=false;showEpisodes=true } },onQueue={ showQueue=true },
+                assistantEnabledRP158=state.assistantEnabledRP155,
+                onAssistantRP158={assistantOpenRP158?.invoke()},
+                onSceneJumpRP158={state.assistantToolRP158=com.miflix.native2.data.AssistantToolRequestRP158(com.miflix.native2.data.AssistantToolRP158.JUMP)},
                 onMoment={momentNotice=false;showMomentComposer=true},onInfo={ playerMenu="info" },onPip={ parkCurrentPlayback();playerMenu=null;controlsVisible=false;state.miniPlayer=true;state.screen=Screen.HOME },
                 onScores={state.showLiveScoresRP11=true},
                 onStatsRP95={if(statsAllowedRP95) {playerMenu=null;controlsVisible=false;statsOpenRP95=true}},

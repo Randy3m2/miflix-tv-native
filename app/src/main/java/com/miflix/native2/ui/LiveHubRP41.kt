@@ -58,7 +58,7 @@ private val hubCatalogRP41=PlaybackLinkCache<String,List<LiveCategory>>(4) {Syst
 internal fun LiveHubRP41(state:AppState) {
     val context=LocalContext.current
     val owner="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
-    var section by remember(owner) {mutableStateOf(if(state.assistantLeagueRP156!=null) when(state.assistantLeagueRP156) {"MLB"->"baseball";"LIDOM"->"lidom";"F1"->"f1";else->"basketball"} else if(state.normalLiveEntryRP85) "hub" else LiveHubMemoryRP46.section(owner).let {if(it in listOf("nuvio","nauta-source")) "others" else it})}
+    var section by remember(owner) {mutableStateOf(if(state.assistantLiveEntryRP158!=null) "tv" else if(state.assistantLeagueRP156!=null) when(state.assistantLeagueRP156) {"MLB"->"baseball";"LIDOM"->"lidom";"F1"->"f1";else->"basketball"} else if(state.normalLiveEntryRP85) "hub" else LiveHubMemoryRP46.section(owner).let {if(it in listOf("nuvio","nauta-source")) "others" else it})}
     var customChannelsRP45 by remember(owner) {mutableStateOf(false)}
     var configuring by remember {mutableStateOf(false)}
     var sportsQrRP71 by remember {mutableStateOf(false)}
@@ -114,7 +114,8 @@ internal fun LiveHubRP41(state:AppState) {
                 }
             }
             }
-        } else if(section=="tv") key(owner) {LiveAutoStartRP83(state) {UnifiedLiveTVRP32(state,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())}}
+        } else if(section=="tv" && state.assistantLiveEntryRP158=="favorites") LiveChannelBrowserRP34(state,"nauta",select={state.openLivePlayer(it)},close={state.assistantLiveEntryRP158=null;changeSectionRP46("hub")},embeddedRP79=true)
+        else if(section=="tv") key(owner) {LiveAutoStartRP83(state) {UnifiedLiveTVRP32(state,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())}}
         else if(section=="nauta-source") NautaSourceScreenRP71(state,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup())
         else if(!state.easyModeRP79 && section in listOf("basketball","baseball","f1","lidom")) key(section,revision) {
             val league=when(section) {"basketball"->"NBA";"baseball"->"MLB";"f1"->"F1";else->"LIDOM"}

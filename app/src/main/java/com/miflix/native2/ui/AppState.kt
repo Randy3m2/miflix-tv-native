@@ -70,6 +70,12 @@ class AppState(context: Context) {
 
     private val socialPrefs = context.getSharedPreferences("miflix_social", Context.MODE_PRIVATE)
     private val playbackPrefs = context.getSharedPreferences("miflix_playback", Context.MODE_PRIVATE)
+    internal var assistantPendingSceneRP158 by mutableStateOf<Pair<String,com.miflix.native2.data.AssistantBookmarkRP158>?>(null)
+    internal var assistantToolRP158 by mutableStateOf<com.miflix.native2.data.AssistantToolRequestRP158?>(null)
+    internal var assistantSnapshotRP158:(()->com.miflix.native2.data.AssistantBookmarkRP158?)?=null
+    internal var assistantSeekRP158:((com.miflix.native2.data.AssistantBookmarkRP158)->Boolean)?=null
+    internal var assistantLiveEntryRP158 by mutableStateOf<String?>(null)
+    internal var assistantHomeEpochRP158 by mutableIntStateOf(0)
     internal var assistantDescriptionRP157 by mutableStateOf<String?>(null)
     internal var assistantEpisodeRP157 by mutableStateOf<com.miflix.native2.data.AssistantSceneHitRP156?>(null)
     internal var assistantQueryRP156 by mutableStateOf<String?>(null)
@@ -269,12 +275,15 @@ class AppState(context: Context) {
     fun cinemaReport()=cinemaStats.snapshot(ratingsKey())
     private var homeOrderRevision by mutableIntStateOf(0)
     val homeRowOrder:List<String> get() {homeOrderRevision;val a=runCatching {org.json.JSONArray(playbackPrefs.getString("home_order:${ratingsKey()}","[]"))}.getOrDefault(org.json.JSONArray());val keys=(0 until a.length()).map {a.getString(it)}.distinct().toMutableList()
-        if(keys.isNotEmpty() && "novelas" !in keys) {val anchor=listOf("genres_home","streaming","continue").firstOrNull {it in keys};keys.add(if(anchor!=null) keys.indexOf(anchor)+1 else 0,"novelas")};if(keys.isNotEmpty() && "comfort_comedies" !in keys) {val anchor=listOf("genres_home","streaming","continue").firstOrNull {it in keys};keys.add(if(anchor!=null) keys.indexOf(anchor)+1 else 0,"comfort_comedies")};return keys}
+        if(keys.isNotEmpty() && "novelas" !in keys) {val anchor=listOf("genres_home","streaming","continue").firstOrNull {it in keys};keys.add(if(anchor!=null) keys.indexOf(anchor)+1 else 0,"novelas")};if(keys.isNotEmpty() && "comfort_comedies" !in keys) {val anchor=listOf("genres_home","streaming","continue").firstOrNull {it in keys};keys.add(if(anchor!=null) keys.indexOf(anchor)+1 else 0,"comfort_comedies")};assistantHomeEpochRP158;return com.miflix.native2.data.AssistantLocalRP158.seasonalOrder(keys,com.miflix.native2.data.AssistantLocalRP158.event(appContext,localExtrasScope()),java.time.LocalDate.now())}
+    internal fun savedHomeOrderRP158():List<String> = runCatching {val a=org.json.JSONArray(playbackPrefs.getString("home_order:${ratingsKey()}","[]"));(0 until a.length()).map {a.getString(it)}}.getOrDefault(emptyList())
     fun saveHomeRowOrder(keys:List<String>) {playbackPrefs.edit().putString("home_order:${ratingsKey()}",org.json.JSONArray(keys.distinct()).toString()).apply();homeOrderRevision++}
 
     val hiddenHomeRows:Set<String> get() {
         homeOrderRevision
-        return playbackPrefs.getStringSet("hidden_home_rows:${ratingsKey()}",emptySet()).orEmpty().toSet()
+        assistantHomeEpochRP158
+        val hidden=playbackPrefs.getStringSet("hidden_home_rows:${ratingsKey()}",emptySet()).orEmpty().toSet()
+        return if(com.miflix.native2.data.AssistantLocalRP158.event(appContext,localExtrasScope()) && java.time.LocalDate.now().monthValue==10) hidden-setOf("horror_movies","seasonal") else hidden
     }
     fun setHomeRowVisible(key:String,visible:Boolean) {
         val hidden=hiddenHomeRows

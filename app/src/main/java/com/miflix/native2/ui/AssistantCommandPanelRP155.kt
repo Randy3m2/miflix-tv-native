@@ -30,6 +30,7 @@ internal fun AssistantCommandPanelRP155(state:AppState,command:AssistantCommandR
     var saved by remember(command) {mutableStateOf(false)}
     fun runAction(block:suspend ()->Unit) {if(busy) return;busy=true;scope.launch {try {check(state.localExtrasScope()==owner);block()} catch(e:CancellationException) {throw e} catch(_:Exception) {message=tr("No se pudo completar esta acción. Puedes reintentar.","Could not complete this action. You can retry.")} finally {busy=false}}}
     LaunchedEffect(command,owner) {
+        if(command.action==AssistantActionRP155.TOOL && command.raw==state.assistantQueryRP156) {state.assistantQueryRP156=null;state.assistantToolRP158=AssistantToolRequestRP158(AssistantToolRP158.valueOf(command.target),command.raw);close();return@LaunchedEffect}
         if(command.raw==state.assistantQueryRP156 && AssistantDirectRP156.run(state,command.raw)) {state.assistantQueryRP156=null;close();return@LaunchedEffect}
         if(command.action !in listOf(AssistantActionRP155.CHANNEL,AssistantActionRP155.GAME)) return@LaunchedEffect
         if(command.target.length<2) {message=tr("Dime el nombre del canal o equipo.","Tell me the channel or team name.");return@LaunchedEffect}
@@ -51,6 +52,9 @@ internal fun AssistantCommandPanelRP155(state:AppState,command:AssistantCommandR
         if(busy) Text(tr("Consultando…","Checking…"),color=Muted)
         if(message.isNotBlank()) Text(message,color=Muted,fontSize=13.sp)
         when(command.action) {
+            AssistantActionRP155.TOOL -> {
+                AssistantActionRP152(tr("Abrir función AI","Open AI tool")) {state.assistantToolRP158=AssistantToolRequestRP158(AssistantToolRP158.valueOf(command.target),command.raw);close()}
+            }
             AssistantActionRP155.HELP -> {
                 Text(tr("Puedo abrir las secciones de la app, buscar canales y juegos en vivo, mostrar posiciones, guardar recordatorios, buscar por actor o director, identificar películas y episodios por descripción, recomendar algo parecido, afinar resultados y comparar sin spoilers.","I can open app sections, find channels and live games, show standings, save reminders, search by actor or director, identify movies and episodes from descriptions, find similar titles, refine results and compare without spoilers."),color=Muted,fontSize=14.sp)
                 listOf("Pon el juego de Lakers que está now","Abre la tabla de posiciones de LIDOM","Pon un recordatorio para Vision Quest el viernes","Algo como Interstellar, pero más corto","Esas no, algo más reciente","Compara estas tres sin spoilers","Abre mi lista","Pon subtítulos en español").forEach {Text("• $it",color=Color.White,fontSize=13.sp)}

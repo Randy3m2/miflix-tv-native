@@ -72,6 +72,21 @@ internal class GeminiAssistantRP150(context:Context,private val fetch:suspend (S
         val parts=JSONObject(raw).getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts")
         AssistantCatalogRP157.guesses((0 until parts.length()).map {parts.getJSONObject(it)}.filterNot {it.optBoolean("thought")}.joinToString("") {it.optString("text")})
     }
+    suspend fun toolsRP158(prompt:String,image:String?=null,workflow:String?=null):String=lock.withLock {
+        val followup=workflow!=null && prefs.getString("followup_query_rp158",null)==workflow && android.os.SystemClock.elapsedRealtime()-prefs.getLong("followup_at_rp158",0) in 0..30000
+        require(prompt.length in 2..20000 && (readyRP154() || followup))
+        prefs.edit().remove("followup_query_rp158").apply()
+        val day=java.time.LocalDate.now().toString();val count=if(prefs.getString("day","")==day) prefs.getInt("count",0) else 0
+        require(count<20) {"Daily AI limit reached"}
+        val secret=read()
+        prefs.edit().putString("day",day).putInt("count",count+1).putLong("last",android.os.SystemClock.elapsedRealtime()).apply()
+        val parts=JSONArray().put(JSONObject().put("text",prompt))
+        if(image!=null) {require(image.length<2000000);parts.put(JSONObject().put("inlineData",JSONObject().put("mimeType","image/jpeg").put("data",image)))}
+        val body=JSONObject().put("contents",JSONArray().put(JSONObject().put("parts",parts))).put("generationConfig",JSONObject().put("maxOutputTokens",1400)).toString()
+        val raw=fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",mapOf("x-goog-api-key" to secret,"Content-Type" to "application/json"),body)
+        val answer=JSONObject(raw).getJSONArray("candidates").getJSONObject(0).getJSONObject("content").getJSONArray("parts")
+        (0 until answer.length()).map {answer.getJSONObject(it)}.filterNot {it.optBoolean("thought")}.joinToString("") {it.optString("text")}.take(12000)
+    }
     suspend fun plan(query:String,budget:Int):AssistantPlanRP150=interpretRP155(query,budget).plan
     suspend fun interpretRP155(query:String,budget:Int):AssistantInterpretationRP155=lock.withLock {
         require(query.length in 2..500 && budget in 0..240)
@@ -90,6 +105,7 @@ internal class GeminiAssistantRP150(context:Context,private val fetch:suspend (S
         val objectValue=JSONObject(answer)
         val action=AssistantCommandsRP155.fromJson(objectValue.optJSONObject("action"),query)
         val plan=if(action!=null) AssistantPlanRP150() else AssistantPlanRP150.json(answer).constrainedBy(AssistantPlanRP150.local(query,budget))
+        if(action?.action==AssistantActionRP155.TOOL) prefs.edit().putString("followup_query_rp158",query).putLong("followup_at_rp158",android.os.SystemClock.elapsedRealtime()).apply()
         AssistantInterpretationRP155(plan,action)
     }
 }

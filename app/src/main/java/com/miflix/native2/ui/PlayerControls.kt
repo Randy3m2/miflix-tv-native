@@ -53,7 +53,7 @@ internal fun CompactPlayerControls(
     onResize: () -> Unit, onMenu: (String) -> Unit, onLinks: () -> Unit, onSeek: (Long) -> Unit,
     seekable: Boolean, party: Boolean, onParty: () -> Unit, onChat: () -> Unit, onReactions: () -> Unit, onQuickReactions: () -> Unit, onClose: () -> Unit, onMaximize: () -> Unit,
     nextAvailable: Boolean, onNext: () -> Unit, onEpisodes: () -> Unit, onQueue: () -> Unit, onInfo: () -> Unit, onPip: () -> Unit, onMultiView: () -> Unit, onMoment: () -> Unit,
-    previousChannelVisible:Boolean=false,previousChannelAvailable:Boolean=false,previousChannelName:String="",onPreviousChannel:()->Unit={},onScores:()->Unit={},onStatsRP95:()->Unit={},channelFavoriteRP36: @Composable ()->Unit={},badgePlayerRP26:androidx.media3.exoplayer.ExoPlayer?=null,easyModeRP79:Boolean=false,onMobileOverlayRP139:(Boolean)->Unit={}
+    assistantEnabledRP158:Boolean=false,onAssistantRP158:()->Unit={},onSceneJumpRP158:()->Unit={},previousChannelVisible:Boolean=false,previousChannelAvailable:Boolean=false,previousChannelName:String="",onPreviousChannel:()->Unit={},onScores:()->Unit={},onStatsRP95:()->Unit={},channelFavoriteRP36: @Composable ()->Unit={},badgePlayerRP26:androidx.media3.exoplayer.ExoPlayer?=null,easyModeRP79:Boolean=false,onMobileOverlayRP139:(Boolean)->Unit={}
 ) {
     if(LocalMobileBrunioRP133.current) {
         MobilePlayerControlsRP133(request,paused,position,duration,seekable,nextAvailable,easyModeRP79,badgePlayerRP26,
@@ -89,6 +89,10 @@ internal fun CompactPlayerControls(
             PlayerIconButton("score",tr("PIN Live score","PIN Live score"),modifier=if(request.live && !request.sportsRecordingRP72) Modifier.focusRequester(playFocus) else Modifier,onInteraction=onInteraction,onClick=onScores,onLabel={focusedLabel=it})
             if(com.miflix.native2.data.SportsStatsRP95.available(request.live,request.sportsRecordingRP72,request.liveProvider,request.item.title+" "+request.item.overview)) PlayerIconButton("stats",tr("Estadísticas NBA / MLB","NBA / MLB stats"),onInteraction=onInteraction,onClick=onStatsRP95,onLabel={focusedLabel=it})
             if(!request.live) PlayerIconButton("info",tr("Información técnica","Playback info"),onInteraction=onInteraction,onClick=onInfo,onLabel={ focusedLabel=it })
+            if(assistantEnabledRP158) {
+                PlayerIconButton("ai",tr("BruniO Assistant","BruniO Assistant"),onInteraction=onInteraction,onClick=onAssistantRP158,onLabel={focusedLabel=it})
+                if(!request.live && seekable) PlayerIconButton("scenejump",tr("Saltar a escena indexada","Jump to indexed scene"),onInteraction=onInteraction,onClick=onSceneJumpRP158,onLabel={focusedLabel=it})
+            }
             if(!request.live && seekable) PlayerIconButton("moment",tr("Grabar momento","Mark a moment"),onInteraction=onInteraction,onClick=onMoment,onLabel={ focusedLabel=it })
             PlayerIconButton("pip",tr("Ventana flotante","Picture in Picture"),onInteraction=onInteraction,onClick=onPip,onLabel={ focusedLabel=it })
             if(request.live) PlayerIconButton("grid",if(request.liveProvider=="lidom") tr("SplitScreen · LIDOM","SplitScreen · LIDOM") else tr("Hasta 4 canales","Up to 4 channels"),onInteraction=onInteraction,onClick=onMultiView,onLabel={ focusedLabel=it })
@@ -166,6 +170,8 @@ private fun PlayerGlyph(icon: String, color: Color, modifier: Modifier) {
             "next" -> { drawPath(Path().apply { moveTo(w*.16f,h*.15f);lineTo(w*.70f,h*.5f);lineTo(w*.16f,h*.85f);close() },color);drawRect(color,Offset(w*.76f,h*.15f),Size(w*.10f,h*.70f)) }
             "queue" -> { line(.12f,.2f,.88f,.2f);line(.12f,.5f,.70f,.5f);line(.12f,.8f,.55f,.8f);line(.78f,.64f,.78f,.94f);line(.64f,.79f,.92f,.79f) }
             "episodes" -> { rectangle(.08f,.12f,.24f,.20f);rectangle(.08f,.42f,.24f,.20f);rectangle(.08f,.72f,.24f,.20f);line(.46f,.22f,.92f,.22f);line(.46f,.52f,.92f,.52f);line(.46f,.82f,.92f,.82f) }
+            "ai" -> {line(.2f,.75f,.38f,.22f);line(.38f,.22f,.56f,.75f);line(.27f,.55f,.49f,.55f);line(.72f,.22f,.72f,.75f);line(.63f,.22f,.81f,.22f);line(.63f,.75f,.81f,.75f)}
+            "scenejump" -> {line(.16f,.7f,.84f,.7f);line(.3f,.58f,.3f,.82f);line(.7f,.58f,.7f,.82f);line(.28f,.2f,.7f,.36f);line(.7f,.36f,.28f,.52f);line(.28f,.52f,.28f,.2f)}
             "moment" -> { rectangle(.12f,.22f,.76f,.56f);line(.3f,.12f,.3f,.88f);line(.7f,.12f,.7f,.88f) }
             "info" -> { drawCircle(color,w*.4f,Offset(w*.5f,h*.5f),style=stroke);line(.5f,.45f,.5f,.75f);drawCircle(color,w*.04f,Offset(w*.5f,h*.27f)) }
             "pip" -> { rectangle(.05f,.15f,.9f,.7f);drawRect(color,Offset(w*.52f,h*.48f),Size(w*.33f,h*.26f)) }

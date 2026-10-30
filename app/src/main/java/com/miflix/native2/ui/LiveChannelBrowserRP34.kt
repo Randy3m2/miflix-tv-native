@@ -96,7 +96,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
     var pendingChannelFocusRP88 by remember {mutableStateOf<String?>(null)}
     var loadedSelectionRP74 by remember {mutableStateOf("")}
     var categories by remember {mutableStateOf<List<BrowserCategoryRP34>>(emptyList())}
-    var selected by remember {mutableStateOf(restoredRP40?.category?.takeIf {it.value.id!="favorites"}?.key ?: "favorites")}
+    var selected by remember {mutableStateOf(if(state.assistantLiveEntryRP158=="favorites") "favorites" else restoredRP40?.category?.takeIf {it.value.id!="favorites"}?.key ?: "favorites")}
     var channels by remember {mutableStateOf<List<BrowserChannelRP34>>(emptyList())}
     var search by remember {mutableStateOf(restoredRP40?.search.orEmpty())}
     var loading by remember {mutableStateOf(true)}

@@ -1,0 +1,7 @@
+RP158 / Build 158 · versionCode 22262
+Gradle :app:testReleaseUnitTest :mobile:compileReleaseKotlin
+BUILD SUCCESSFUL
+{'tests': 551, 'failures': 0, 'errors': 0, 'skipped': 0}
+git diff --check: passed
+Paquete comparado con las fuentes compiladas: idéntico.
+Sin pruebas físicas de TV/Firestick, captura visual o reproducción. Sin llamadas reales con la clave personal de Gemini.

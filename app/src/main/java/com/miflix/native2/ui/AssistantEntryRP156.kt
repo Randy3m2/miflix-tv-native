@@ -53,7 +53,7 @@ internal fun AssistantEntryRP156(state:AppState,close:()->Unit,submit:(String)->
     fun dictate() {
         try {listening=true;voice.launch(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE,state.voiceLocaleRP81)
+            .putExtra(RecognizerIntent.EXTRA_LANGUAGE,com.miflix.native2.data.BrunioProviderRP161.voiceLocale(context,state.voiceLocaleRP81))
             .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,1)
             .putExtra(RecognizerIntent.EXTRA_PROMPT,tr("¿Qué hacemos en BruniO?","What shall we do in BruniO?")))}
         catch(_:Exception) {listening=false;keyboard=true;status=tr("Dictado no disponible. Usa el teclado.","Dictation unavailable. Use the keyboard.")}

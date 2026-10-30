@@ -14,7 +14,7 @@ internal fun AssistantPlayerOverlayRP159(state:AppState,close:()->Unit) {
     androidx.compose.ui.window.Dialog(onDismissRequest=close,properties=androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
         Box(Modifier.fillMaxSize(),contentAlignment=Alignment.CenterEnd) {
             Box(Modifier.fillMaxHeight().fillMaxWidth(.68f).widthIn(max=1000.dp).background(Color.Black).padding(10.dp)) {
-                AssistantPanelRP150(state,close,guest={},initialQueryRP159=state.assistantQueryRP156 ?: state.searchQuery)
+                AssistantPanelRP150(state,close,guest={},initialQueryRP159=state.assistantQueryRP156.orEmpty())
             }
         }
     }

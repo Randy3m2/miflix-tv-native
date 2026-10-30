@@ -37,7 +37,7 @@ internal val LocalGuestExitRP150=staticCompositionLocalOf<(() -> Unit)?> {null}
 @Composable
 internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sharedQuery:String?=null,sharedReplace:((String)->Unit)?=null,initialQueryRP159:String="") {
     val context=LocalContext.current.applicationContext
-    val ai=remember(context) {GeminiAssistantRP150(context)}
+    val ai=remember(context) {BrunioAssistantRP161(context) { state.session?.accessToken }}
     val scope=rememberCoroutineScope()
     val collectionPrefs=remember(context) {context.getSharedPreferences("brunio_smart_collections_rp150",android.content.Context.MODE_PRIVATE)}
     val owner=state.localExtrasScope()
@@ -47,7 +47,8 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
     LaunchedEffect(sharedQuery) {if(sharedQuery!=null) query=sharedQuery}
     val columns=4
     var budget by remember {mutableIntStateOf(0)}
-    val useGemini=remember {context.getSharedPreferences("brunio_gemini_rp150",0).getBoolean("enabled",false)}
+    val useGemini=BrunioProviderRP161.online(context)
+    val providerName=BrunioProviderRP161.label(context)
     var phone by remember {mutableStateOf(false)}
     val configured=ai.configured()
     var busy by remember {mutableStateOf(false)}
@@ -94,16 +95,16 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
                     return@launch
                 }
                 if(identifyRequest) {
-                    if(!allowRemote) {message=if(useGemini && configured) tr("Identificando la descripción…","Identifying the description…") else tr("Activa Gemini en Settings → Assistant para identificar por descripción.","Enable Gemini in Settings → Assistant to identify descriptions.");return@launch}
-                    if(!useGemini || !configured || !ai.readyRP154()) {message=tr("Activa Gemini en Settings → Assistant, o espera a que se libere su límite, para identificar por descripción.","Enable Gemini in Settings → Assistant, or wait for its limit to reset, to identify descriptions.");return@launch}
+                    if(!allowRemote) {message=if(useGemini && configured) tr("Identificando la descripción…","Identifying the description…") else tr("Activa un proveedor en Settings → Assistant para identificar por descripción.","Enable an AI provider in Settings → Assistant to identify descriptions.");return@launch}
+                    if(!useGemini || !configured || !ai.readyRP154()) {message=tr("Activa un proveedor en Settings → Assistant, o espera a que se libere su límite, para identificar por descripción.","Enable an AI provider in Settings → Assistant, or wait for its limit to reset, to identify descriptions.");return@launch}
                     val guesses=withContext(Dispatchers.IO) {ai.identifyRP157(text)}
                     val matches=AssistantCatalogRP157.identify(state.tmdb,guesses)
                     ensureActive();if(generation!=requestGeneration || state.localExtrasScope()!=owner) return@launch
                     if(matches.size==1 && state.assistantQueryRP156==text) {
-                        val item=matches.single().item;state.assistantQueryRP156=null;close();state.launch {if(state.localExtrasScope()==owner) {state.open(item);if(state.localExtrasScope()==owner && state.selected?.cloudId==item.cloudId) state.assistantDescriptionRP157=tr("Posible coincidencia de Gemini con tu descripción. Revisa la sinopsis.","Possible Gemini match to your description. Review the synopsis.")}};return@launch
+                        val item=matches.single().item;state.assistantQueryRP156=null;close();state.launch {if(state.localExtrasScope()==owner) {state.open(item);if(state.localExtrasScope()==owner && state.selected?.cloudId==item.cloudId) state.assistantDescriptionRP157=tr("Posible coincidencia de ${providerName} con tu descripción. Revisa la sinopsis.","Possible Gemini match to your description. Review the synopsis.")}};return@launch
                     }
                     picks=matches;contextPicks=matches
-                    message=if(matches.isEmpty()) tr("No pude identificar ese título. Añade un personaje, actor o detalle de la historia.","Could not identify that title. Add a character, actor or story detail.") else tr("Posibles coincidencias de Gemini, comprobadas en el catálogo. Revisa la sinopsis.","Possible Gemini matches, checked against the catalog. Review the synopsis.")
+                    message=if(matches.isEmpty()) tr("No pude identificar ese título. Añade un personaje, actor o detalle de la historia.","Could not identify that title. Add a character, actor or story detail.") else tr("Posibles coincidencias de ${providerName}, comprobadas en el catálogo. Revisa la sinopsis.","Possible Gemini matches, checked against the catalog. Review the synopsis.")
                     return@launch
                 }
                 val command=if(sceneRequest) null else commandOverride ?: AssistantCommandsRP155.parse(text)
@@ -153,7 +154,7 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
                         return@launch
                     }
                     sceneHitsRP156=hits
-                    message=if(hits.isEmpty()) tr("No pude identificar ese episodio en el catálogo. Prueba el nombre exacto de la serie y una pista corta. Las frases del doblaje no siempre aparecen en las sinopsis.","Could not identify the episode in the catalog. Try the exact series name and a short clue. Dubbed quotes may not appear in synopses.") else tr("Episodios encontrados. Las sugerencias de Gemini no verifican la frase ni el minuto de la escena.","Episodes found. Gemini suggestions do not verify the quote or scene timestamp.")
+                    message=if(hits.isEmpty()) tr("No pude identificar ese episodio en el catálogo. Prueba el nombre exacto de la serie y una pista corta. Las frases del doblaje no siempre aparecen en las sinopsis.","Could not identify the episode in the catalog. Try the exact series name and a short clue. Dubbed quotes may not appear in synopses.") else tr("Episodios encontrados. Las sugerencias de ${providerName} no verifican la frase ni el minuto de la escena.","Episodes found. AI suggestions do not verify the quote or scene timestamp.")
                     return@launch
                 }
                 val key="$remote:$text:$time:$preset"
@@ -163,7 +164,7 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
                     ensureActive();if(generation!=requestGeneration || state.localExtrasScope()!=owner) return@launch
                     if(interpretation.command!=null) {busy=false;submit(text,time,automatic=true,allowRemote=false,commandOverride=interpretation.command);return@launch}
                     interpretation.plan
-                } catch(e:CancellationException) {throw e} catch(_:Exception) {cachePlan=false;if(generation==requestGeneration) message=tr("Gemini no respondió o alcanzó su límite. Usando filtros locales.","Gemini unavailable or limit reached. Using local filters.");AssistantPlanRP150.local(text,time)} else AssistantPlanRP150.local(text,time)
+                } catch(e:CancellationException) {throw e} catch(_:Exception) {cachePlan=false;if(generation==requestGeneration) message=tr("El asistente no respondió o alcanzó su límite. Usando filtros locales.","Assistant unavailable or limit reached. Using local filters.");AssistantPlanRP150.local(text,time)} else AssistantPlanRP150.local(text,time)
                 if(cachePlan) {if(plans.size>=12) plans.remove(plans.keys.first());plans[key]=plan}
                 val rows=state.assistantRP150.picks(owner,plan,state.continueWatching.toList(),state.progress.toMap())
                 currentCoroutineContext().ensureActive()
@@ -209,7 +210,7 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
         voiceOwner=owner
         try {voice.launch(android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE,state.voiceLocaleRP81)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE,BrunioProviderRP161.voiceLocale(context,state.voiceLocaleRP81))
             .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS,3)
             .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT,tr("¿Qué te apetece ver?","What would you like to watch?")))}
         catch(_:Exception) {voiceOwner=null;phone=true;message=tr("Esta TV no ofrece dictado. Escanea el QR y usa el micrófono del celular.","This TV does not offer dictation. Scan the QR and use your phone microphone.")}
@@ -232,7 +233,7 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
                     Text("✦  BruniO Assistant",color=Color.White,fontSize=29.sp,fontWeight=FontWeight.Bold)
                     Text(tr("Menos buscar. Más descubrir.","Less searching. More discovering."),color=Color(0xffbcb4cf),fontSize=13.sp)
                 }
-                Text(if(useGemini && configured) "GEMINI" else tr("EN TU TV","ON YOUR TV"),color=Color(0xffc8adff),fontSize=9.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(end=8.dp))
+                Text(if(useGemini && configured) providerName.uppercase() else tr("EN TU TV","ON YOUR TV"),color=Color(0xffc8adff),fontSize=9.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(end=8.dp))
                 if(!state.kidsMode && LocalGuestExitRP150.current==null) AssistantActionRP152(tr("Invitado","Guest"),"friends") {if(state.prepareGuestRP150()) guest() else message=tr("Cierra el reproductor y sal del Party para entrar como invitado.","Close playback and leave the Party to enter guest mode.")}
                 AssistantActionRP152("×",onClick=close)
             }
@@ -253,7 +254,7 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
                 items(sceneHitsRP156,key={"scene:${it.show.cloudId}:${it.episode.season}:${it.episode.episode}"}) {hit ->
                     Column(Modifier.fillMaxWidth().background(Color(0xff151515),RoundedCornerShape(14.dp)).padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                         Text(hit.show.title+" · S${hit.episode.season} E${hit.episode.episode} · "+hit.episode.title,color=Color.White,fontSize=17.sp)
-                        Text(if(hit.suggested) tr("Sugerencia de Gemini · episodio comprobado en el catálogo; escena sin confirmar.","Gemini suggestion · catalog episode checked; scene unconfirmed.") else tr("Coincidencia en título o sinopsis.","Title or synopsis match."),color=Muted,fontSize=12.sp)
+                        Text(if(hit.suggested) tr("Sugerencia de ${providerName} · episodio comprobado en el catálogo; escena sin confirmar.","Gemini suggestion · catalog episode checked; scene unconfirmed.") else tr("Coincidencia en título o sinopsis.","Title or synopsis match."),color=Muted,fontSize=12.sp)
                         Text(hit.episode.overview,color=Muted,fontSize=13.sp,maxLines=4)
                         AssistantActionRP152(tr("Detalles del episodio","Episode details"),"search") {close();state.launch {state.openAssistantEpisodeRP157(hit,owner)}}
                     }

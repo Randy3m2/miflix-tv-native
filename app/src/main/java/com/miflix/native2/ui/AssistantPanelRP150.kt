@@ -75,7 +75,31 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
         val remote=allowRemote && preset==null && useGemini && configured && (!automatic || ai.readyRP154())
         job=scope.launch {
             try {
-                val command=commandOverride ?: AssistantCommandsRP155.parse(text)
+                val personRequest=AssistantCatalogRP157.person(text)
+                val sceneRequest=AssistantSceneRP156.detects(text)
+                val identifyRequest=AssistantCatalogRP157.description(text) && !sceneRequest
+                if(personRequest!=null) {
+                    val answer=AssistantCatalogRP157.filmography(state.tmdb,personRequest,AssistantPlanRP150.local(text,time).copy(query=""))
+                    ensureActive();if(generation!=requestGeneration || state.localExtrasScope()!=owner) return@launch
+                    picks=answer.first;contextPicks=picks
+                    message=if(answer.second.isNotEmpty()) tr("Especifica el nombre exacto: ","Specify the exact name: ")+answer.second.joinToString() else if(picks.isEmpty()) tr("No encontré créditos que coincidan con esa persona y tus filtros.","No credits matched this person and your filters.") else tr("Filmografía de ","Filmography of ")+personRequest.name+tr(" · créditos del catálogo."," · catalog credits.")
+                    if(state.assistantQueryRP156==text) state.assistantQueryRP156=null
+                    return@launch
+                }
+                if(identifyRequest) {
+                    if(!allowRemote) {message=if(useGemini && configured) tr("Identificando la descripción…","Identifying the description…") else tr("Activa Gemini en Settings → Assistant para identificar por descripción.","Enable Gemini in Settings → Assistant to identify descriptions.");return@launch}
+                    if(!useGemini || !configured || !ai.readyRP154()) {message=tr("Activa Gemini en Settings → Assistant, o espera a que se libere su límite, para identificar por descripción.","Enable Gemini in Settings → Assistant, or wait for its limit to reset, to identify descriptions.");return@launch}
+                    val guesses=withContext(Dispatchers.IO) {ai.identifyRP157(text)}
+                    val matches=AssistantCatalogRP157.identify(state.tmdb,guesses)
+                    ensureActive();if(generation!=requestGeneration || state.localExtrasScope()!=owner) return@launch
+                    if(matches.size==1 && state.assistantQueryRP156==text) {
+                        val item=matches.single().item;state.assistantQueryRP156=null;close();state.launch {if(state.localExtrasScope()==owner) {state.open(item);if(state.localExtrasScope()==owner && state.selected?.cloudId==item.cloudId) state.assistantDescriptionRP157=tr("Posible coincidencia de Gemini con tu descripción. Revisa la sinopsis.","Possible Gemini match to your description. Review the synopsis.")}};return@launch
+                    }
+                    picks=matches;contextPicks=matches
+                    message=if(matches.isEmpty()) tr("No pude identificar ese título. Añade un personaje, actor o detalle de la historia.","Could not identify that title. Add a character, actor or story detail.") else tr("Posibles coincidencias de Gemini, comprobadas en el catálogo. Revisa la sinopsis.","Possible Gemini matches, checked against the catalog. Review the synopsis.")
+                    return@launch
+                }
+                val command=if(sceneRequest) null else commandOverride ?: AssistantCommandsRP155.parse(text)
                 if(command!=null) {
                     when(command.action) {
                         AssistantActionRP155.SIMILAR -> {
@@ -114,8 +138,8 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
                     val hint=if(allowRemote && useGemini && configured && ai.readyRP154()) try {withContext(Dispatchers.IO) {ai.sceneRP156(text)}} catch(e:CancellationException) {throw e} catch(_:Exception) {AssistantSceneRP156.local(text)} else AssistantSceneRP156.local(text)
                     val hits=withTimeout(45000) {AssistantSceneRP156.find(state.tmdb,hint)}
                     ensureActive();if(generation!=requestGeneration || state.localExtrasScope()!=owner) return@launch
-                    if(hits.size==1 && !hits.single().suggested && state.assistantQueryRP156==text) {
-                        val hit=hits.single();state.assistantQueryRP156=null;close();state.launch {state.open(hit.show);if(state.selected?.cloudId==hit.show.cloudId && state.localExtrasScope()==owner) state.playEpisode(hit.episode)}
+                    if(hits.size==1 && state.assistantQueryRP156==text) {
+                        val hit=hits.single();state.assistantQueryRP156=null;close();state.launch {state.openAssistantEpisodeRP157(hit,owner)}
                         return@launch
                     }
                     sceneHitsRP156=hits
@@ -153,10 +177,10 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
         requestGeneration++;job?.cancel();busy=false;picks=emptyList();appCommand=null;sceneHitsRP156=emptyList();message="";activePlan=null
         if(text.length<2) {lastSubmitted=null;return@LaunchedEffect}
         delay(600)
-        submit(query,budget,automatic=true,allowRemote=AssistantSceneRP156.detects(query) && state.assistantQueryRP156==query)
+        submit(query,budget,automatic=true,allowRemote=state.assistantQueryRP156==query)
     }
     LaunchedEffect(query,budget,owner,useGemini,configured) {
-        if(!useGemini || !configured || query.trim().length<8 || AssistantCommandsRP155.parse(query)!=null) return@LaunchedEffect
+        if(!useGemini || !configured || query.trim().length<8 || AssistantCatalogRP157.person(query)!=null || (!AssistantSceneRP156.detects(query) && !AssistantCatalogRP157.description(query) && AssistantCommandsRP155.parse(query)!=null)) return@LaunchedEffect
         delay(1800)
         if(cancelledKey=="$query:$budget") return@LaunchedEffect
         if(!ai.readyRP154()) return@LaunchedEffect
@@ -190,7 +214,6 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
                 Text("✦  BruniO Assistant",color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
                 FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     if(!state.kidsMode && LocalGuestExitRP150.current==null) AssistantActionRP152(tr("Invitado","Guest"),"friends") {if(state.prepareGuestRP150()) guest()}
-                    AssistantActionRP152(tr("Buscar una escena","Find a scene"),"search") {sharedReplace?.invoke(tr("Episodio de ","Episode of "));query=tr("Episodio de ","Episode of ")}
                     AssistantActionRP152(tr("Búsqueda normal","Title search")) {close()}
                 }
             } else {
@@ -201,7 +224,6 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
                 }
                 Text(if(useGemini && configured) "GEMINI" else tr("EN TU TV","ON YOUR TV"),color=Color(0xffc8adff),fontSize=9.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(end=8.dp))
                 if(!state.kidsMode && LocalGuestExitRP150.current==null) AssistantActionRP152(tr("Invitado","Guest"),"friends") {if(state.prepareGuestRP150()) guest() else message=tr("Cierra el reproductor y sal del Party para entrar como invitado.","Close playback and leave the Party to enter guest mode.")}
-                AssistantActionRP152(tr("Buscar una escena","Find a scene"),"search") {sharedReplace?.invoke(tr("Episodio de ","Episode of "));query=tr("Episodio de ","Episode of ")}
                 AssistantActionRP152("×",onClick=close)
             }
             }
@@ -223,7 +245,7 @@ internal fun AssistantPanelRP150(state:AppState,close:()->Unit,guest:()->Unit,sh
                         Text(hit.show.title+" · S${hit.episode.season} E${hit.episode.episode} · "+hit.episode.title,color=Color.White,fontSize=17.sp)
                         Text(if(hit.suggested) tr("Sugerencia de Gemini · episodio comprobado en el catálogo; escena sin confirmar.","Gemini suggestion · catalog episode checked; scene unconfirmed.") else tr("Coincidencia en título o sinopsis.","Title or synopsis match."),color=Muted,fontSize=12.sp)
                         Text(hit.episode.overview,color=Muted,fontSize=13.sp,maxLines=4)
-                        AssistantActionRP152(tr("Ver episodio","Watch episode"),"play") {close();state.launch {state.open(hit.show);if(state.selected?.cloudId==hit.show.cloudId && state.localExtrasScope()==owner) state.playEpisode(hit.episode)}}
+                        AssistantActionRP152(tr("Detalles del episodio","Episode details"),"search") {close();state.launch {state.openAssistantEpisodeRP157(hit,owner)}}
                     }
                 }
                 appCommand?.let {command ->item(key="command-rp155") {AssistantCommandPanelRP155(state,command,close)}}

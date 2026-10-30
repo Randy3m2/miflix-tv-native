@@ -785,6 +785,8 @@ class TmdbRepository internal constructor(var token:String,private val fetchRP14
     suspend fun absoluteNumberRP102(showId:Int,season:Int,episode:Int):Int? =
         if(!AbsoluteEpisodeRP102.enabled(showId)) null else completeAnimeRP102(showId).firstOrNull {it.season==season && it.episode==episode}?.absoluteEpisodeRP102
 
+    internal suspend fun assistantEnglishSeasonRP157(showId:Int,season:Int)=rawSeasonRP102(showId,season,"en-US")
+
     private suspend fun rawSeasonRP102(showId: Int, season: Int,locale:String=language): List<EpisodeSummary> {
         val j = get("/tv/$showId/season/$season",mapOf("language" to locale))
         val a = j.optJSONArray("episodes") ?: return emptyList()

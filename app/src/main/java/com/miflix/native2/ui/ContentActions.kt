@@ -39,9 +39,9 @@ internal fun TitleActionsDialog(state: AppState,item: MediaSummary,continuing: B
 }
 
 @Composable
-internal fun EpisodeActionsDialog(state: AppState,item: MediaSummary,ep: EpisodeSummary,beforePlayback: ()->Unit = {},close: ()->Unit) {
+internal fun EpisodeActionsDialog(state: AppState,item: MediaSummary,ep: EpisodeSummary,beforePlayback: ()->Unit = {},assistantNoticeRP157:String?=null,close: ()->Unit) {
     val first=remember {FocusRequester()}
-    var reveal by remember(item.cloudId,ep.season,ep.episode) {mutableStateOf(false)}
+    var reveal by remember(item.cloudId,ep.season,ep.episode) {mutableStateOf(assistantNoticeRP157!=null)}
     val hidden=state.hideEpisodeSpoilersRP20(item,ep) && !reveal
     LaunchedEffect(Unit) {withFrameNanos {};runCatching {first.requestFocus()} }
     fun play(block:suspend ()->Unit) {close();beforePlayback();state.launch {state.socialAction {state.stopRandomEpisodes();block()}}}
@@ -54,6 +54,7 @@ internal fun EpisodeActionsDialog(state: AppState,item: MediaSummary,ep: Episode
             Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(Color(0xDC050505),Color(0xA0050505),Color(0xBB050505)))))
             val info:@Composable ()->Unit={
                 Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+                    assistantNoticeRP157?.let {Text(it,color=Color(0xFFDDCEFF),fontSize=13.sp)}
                     Text(item.title,color=Color(0xFFBBBBBB),fontSize=15.sp)
                     Text((if(ep.absoluteEpisodeRP102>0) "E${ep.absoluteEpisodeRP102}" else "S${ep.season} E${ep.episode}")+(if(!hidden && ep.rating>0) "  ·  ★ %.1f".format(ep.rating) else ""),color=Color.White,fontSize=14.sp)
                     Text(if(hidden) tr("No visto","Not watched") else ep.title,color=Color.White,fontSize=34.sp,lineHeight=39.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold)
@@ -63,9 +64,9 @@ internal fun EpisodeActionsDialog(state: AppState,item: MediaSummary,ep: Episode
             }
             val actions:@Composable ()->Unit={
                 Column(Modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(9.dp)) {
-                    FocusButton(tr("Marcar como visto","Mark as watched"),modifier=Modifier.fillMaxWidth().focusRequester(first)) {state.markWatched(item,ep.season,ep.episode);close()}
+                    FocusButton(tr("Marcar como visto","Mark as watched"),modifier=Modifier.fillMaxWidth().then(if(assistantNoticeRP157==null) Modifier.focusRequester(first) else Modifier)) {state.markWatched(item,ep.season,ep.episode);close()}
                     FocusButton(tr("Marcar temporada como vista","Mark season as watched"),modifier=Modifier.fillMaxWidth()) {close();state.launch {state.socialAction {state.markSeasonWatched(item,ep.season)}}}
-                    FocusButton(tr("▶  Reproducir","▶  Play"),modifier=Modifier.fillMaxWidth()) {play {state.playEpisode(ep)}}
+                    FocusButton(tr("▶  Reproducir","▶  Play"),modifier=Modifier.fillMaxWidth().then(if(assistantNoticeRP157!=null) Modifier.focusRequester(first) else Modifier)) {play {state.playEpisode(ep)}}
                     FocusButton(tr("Elegir enlace","Play manually"),modifier=Modifier.fillMaxWidth()) {play {state.chooseEpisodeSources(ep)}}
                     FocusButton(tr("Desde el principio","Start from beginning"),modifier=Modifier.fillMaxWidth()) {play {state.playEpisode(ep,true)}}
                     FocusButton(tr("Añadir a cola","Add to queue"),modifier=Modifier.fillMaxWidth()) {state.enqueue(item,ep.season,ep.episode);close()}

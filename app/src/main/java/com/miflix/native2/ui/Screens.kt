@@ -741,6 +741,9 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     if(showRecommend) RecommendTitleDialog(state,item) { showRecommend=false }
     if(showRating) RatingDialog(state,item) { showRating=false }
+    state.assistantEpisodeRP157?.takeIf {it.show.cloudId==item.cloudId}?.let {hit ->
+        EpisodeActionsDialog(state,item,hit.episode,assistantNoticeRP157=if(hit.suggested) tr("Sugerencia de Gemini; la escena descrita no está confirmada.","Gemini suggestion; the described scene is unconfirmed.") else tr("Encontrado por título o sinopsis.","Found by title or synopsis.")) {state.assistantEpisodeRP157=null}
+    }
     episodeChoice?.let { ep -> EpisodeActionsDialog(state,item,ep) {episodeChoice=null} }
     if(showQueueAdd) QueueAddDialog(state,item) { showQueueAdd=false }
     if(showQueue) QueueDialog(state) { showQueue=false }
@@ -790,6 +793,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                         WatchedFriendsBadgeRP93(state,item)
                     }
                     Spacer(Modifier.height(14.dp))
+                    state.assistantDescriptionRP157?.let {Text(it,color=Color(0xFFDDCEFF),fontSize=13.sp)}
                     Text(item.title, color = Color.White, fontSize = 40.sp, lineHeight=46.sp, fontWeight = FontWeight.Black, maxLines = 2, overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     observeCardFreshness(item)?.let {label ->CardFreshnessTag(label,Modifier.padding(top=8.dp))}
                     Spacer(Modifier.height(8.dp))

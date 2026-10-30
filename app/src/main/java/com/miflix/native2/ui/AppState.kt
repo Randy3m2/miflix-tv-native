@@ -70,6 +70,8 @@ class AppState(context: Context) {
 
     private val socialPrefs = context.getSharedPreferences("miflix_social", Context.MODE_PRIVATE)
     private val playbackPrefs = context.getSharedPreferences("miflix_playback", Context.MODE_PRIVATE)
+    internal var assistantDescriptionRP157 by mutableStateOf<String?>(null)
+    internal var assistantEpisodeRP157 by mutableStateOf<com.miflix.native2.data.AssistantSceneHitRP156?>(null)
     internal var assistantQueryRP156 by mutableStateOf<String?>(null)
     internal var assistantLeagueRP156 by mutableStateOf<String?>(null)
     var assistantEnabledRP155 by mutableStateOf(playbackPrefs.getBoolean("assistant_enabled_rp155",false))
@@ -2871,6 +2873,7 @@ class AppState(context: Context) {
         val language=tmdb.language
         val cacheKey="$language:${item.cloudId}"
         if(screen!=Screen.DETAILS && screen!=Screen.PLAYER) detailsReturnScreen=screen
+        assistantDescriptionRP157=null;assistantEpisodeRP157=null
         selected=item
         selectedUpcoming=upcoming || (comingMovies+comingSeries).any { it.cloudId==item.cloudId }
         details=detailsCache[cacheKey]?.takeIf { System.currentTimeMillis()-it.first<15*60*1000L }?.second

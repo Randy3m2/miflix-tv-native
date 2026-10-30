@@ -52,7 +52,7 @@ internal fun AssistantCommandPanelRP155(state:AppState,command:AssistantCommandR
         if(message.isNotBlank()) Text(message,color=Muted,fontSize=13.sp)
         when(command.action) {
             AssistantActionRP155.HELP -> {
-                Text(tr("Puedo abrir las secciones de la app, buscar canales y juegos en vivo, mostrar posiciones, guardar recordatorios, recomendar algo parecido, afinar resultados y comparar sin spoilers.","I can open app sections, find channels and live games, show standings, save reminders, find similar titles, refine results and compare without spoilers."),color=Muted,fontSize=14.sp)
+                Text(tr("Puedo abrir las secciones de la app, buscar canales y juegos en vivo, mostrar posiciones, guardar recordatorios, buscar por actor o director, identificar películas y episodios por descripción, recomendar algo parecido, afinar resultados y comparar sin spoilers.","I can open app sections, find channels and live games, show standings, save reminders, search by actor or director, identify movies and episodes from descriptions, find similar titles, refine results and compare without spoilers."),color=Muted,fontSize=14.sp)
                 listOf("Pon el juego de Lakers que está now","Abre la tabla de posiciones de LIDOM","Pon un recordatorio para Vision Quest el viernes","Algo como Interstellar, pero más corto","Esas no, algo más reciente","Compara estas tres sin spoilers","Abre mi lista","Pon subtítulos en español").forEach {Text("• $it",color=Color.White,fontSize=13.sp)}
             }
             AssistantActionRP155.CHANNEL,AssistantActionRP155.GAME -> {

@@ -435,7 +435,7 @@ internal fun MultiViewTile(req: PlayerRequest, audible: Boolean, hd: Boolean, po
                 .setMaxVideoSize(if(hd) 1280 else 960,if(hd) 720 else 540).setMaxVideoBitrate(if(hd) 3000000 else 1800000).build()
         }
     }
-    Box(modifier.onFocusChanged { focused=it.hasFocus }.tvClick(click).focusable().clickable(onClick=click)
+    Box(modifier.onFocusChanged { focused=it.hasFocus }.tvClick(click).clickable(onClick=click)
         .border(if(focused) 3.dp else 1.dp,if(focused) Accent else Color(0xFF444444)).padding(4.dp).background(Color.Black)) {
         player?.let { p -> AndroidView(factory={ ctx -> (if(mobile) android.view.LayoutInflater.from(ctx).inflate(com.miflix.native2.R.layout.mobile_multiview_texture_rp134,null,false) as PlayerView else PlayerView(ctx)).apply {
                     setEnableComposeSurfaceSyncWorkaround(true);useController=false;isFocusable=false;descendantFocusability=android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS;player=p

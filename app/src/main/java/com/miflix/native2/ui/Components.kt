@@ -82,21 +82,22 @@ val BrowseTileSlotHeight = 152.dp
 
 private val FastMotion = tween<Float>(durationMillis = 80, easing = LinearOutSlowInEasing)
 
-fun Modifier.tvClick(onClick: () -> Unit): Modifier = this.onPreviewKeyEvent { event ->
-    val activate = event.key == Key.DirectionCenter ||
-        event.key == Key.Enter ||
-        event.key == Key.NumPadEnter
-    MenuActivity.touch()
-    if (activate && event.type == KeyEventType.KeyUp) {
-        onClick()
-        true
-    } else {
-        false
+fun Modifier.tvClick(onClick: () -> Unit): Modifier = composed {
+    val action by rememberUpdatedState(onClick)
+    val press=remember {com.miflix.native2.data.TvPressRP163()}
+    this.tvFocusAnchorRP163().onFocusChanged {if(!it.hasFocus) press.reset()}.onPreviewKeyEvent {event ->
+        MenuActivity.touch()
+        val activate=event.key==Key.DirectionCenter || event.key==Key.Enter || event.key==Key.NumPadEnter || event.key==Key.Spacebar
+        if(!activate) false else {
+            if(event.type==KeyEventType.KeyDown) press.down(event.nativeKeyEvent.repeatCount)
+            else if(event.type==KeyEventType.KeyUp && press.up(event.nativeKeyEvent.isCanceled)) action()
+            true
+        }
     }
 }
 
 // Consume the full key gesture so a long press never triggers quick play on release.
-fun Modifier.tvPlaybackClick(onClick: () -> Unit, onLongClick: () -> Unit): Modifier = composed {
+fun Modifier.tvPlaybackClick(onClick: () -> Unit, onLongClick: () -> Unit,focusKeyRP163:String?=null): Modifier = composed {
     val scope = rememberCoroutineScope()
     val shortAction by rememberUpdatedState(onClick)
     val longAction by rememberUpdatedState(onLongClick)
@@ -104,7 +105,7 @@ fun Modifier.tvPlaybackClick(onClick: () -> Unit, onLongClick: () -> Unit): Modi
     var held by remember { mutableStateOf(false) }
     var longFired by remember { mutableStateOf(false) }
     DisposableEffect(Unit) { onDispose { pending?.cancel() } }
-    this.onFocusChanged {
+    this.tvFocusAnchorRP163(focusKeyRP163).onFocusChanged {
         if (!it.hasFocus) { pending?.cancel(); held = false }
     }.onPreviewKeyEvent { event ->
         MenuActivity.touch()
@@ -144,12 +145,12 @@ fun FocusButton(
     val actionFocused=actionFocusVisibleRP64(focused)
     Box(
         modifier
-            
+
             .onFocusChanged {
                 focused = it.isFocused
                 onFocused?.invoke(it.isFocused)
             }
-            .focusable()
+
             .then(if (onLongClick != null) Modifier.tvPlaybackClick(onClick, onLongClick) else Modifier.tvClick(onClick))
             .clickable(onClick = onClick)
             .background(GlassActionBrushRP108(actionFocused,primary,destructive), RoundedCornerShape(50))
@@ -170,7 +171,7 @@ fun FocusButton(
 fun BackIconButton(onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     val actionFocused=actionFocusVisibleRP64(focused)
-    Box(Modifier.size(44.dp).semantics { contentDescription=tr("Volver","Back") }.onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick)
+    Box(Modifier.size(44.dp).semantics { contentDescription=tr("Volver","Back") }.onFocusChanged { focused=it.isFocused }.tvClick(onClick)
         .clickable(onClick=onClick).background(GlassActionBrushRP108(actionFocused),RoundedCornerShape(22.dp))
         .border(if(actionFocused) 2.dp else 1.dp,if(actionFocused) Color.White else Color(0x557D8AA3),RoundedCornerShape(22.dp)),
         contentAlignment=Alignment.Center) {
@@ -218,12 +219,12 @@ fun MediaCard(
                     shadowElevation = 0f
                 }
                 .contentFocusBorder(18.dp)
-                
+
                 .onFocusChanged {
                     focused = it.isFocused
                     if (it.isFocused) { onFocused(item);publishPreview?.invoke(item) }
                 }
-                .focusable()
+
                 .then(if(hold==null) Modifier.tvClick(onClick) else Modifier.tvPlaybackClick(onClick,hold))
                 .clickable(onClick = onClick)
                 .clip(RoundedCornerShape(18.dp))
@@ -296,9 +297,9 @@ fun CollectionCard(
                     .height(BrowseTileHeight)
                     .graphicsLayer { scaleX = scale; scaleY = scale; shadowElevation = 0f }
                     .contentFocusBorder(14.dp)
-                    
+
                     .onFocusChanged { focused = it.isFocused }
-                    .focusable()
+
                     .tvClick(onClick)
                     .clickable(onClick = onClick)
                     .clip(RoundedCornerShape(14.dp))
@@ -358,7 +359,7 @@ fun NativeTextField(
     var focused by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf(false) }
     val keyboard=LocalSoftwareKeyboardController.current
-    Box(modifier.onFocusChanged { focused=it.isFocused }.focusable().tvClick { editing=true }
+    Box(modifier.onFocusChanged { focused=it.isFocused }.tvClick { editing=true }
         .clickable { editing=true }.background(GlassActionBrushRP108(focused),RoundedCornerShape(12.dp))
         .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(12.dp)).padding(15.dp)) {
         Text(if(value.isBlank()) hint else if(password) "•".repeat(value.length.coerceAtMost(24)) else value,
@@ -446,8 +447,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
         var profileMenu by remember { mutableStateOf(false) }
         val profileAnchor=remember { FocusRequester() }
         Box {
-        Row(Modifier.focusRequester(profileAnchor).onFocusChanged { profileFocused=it.isFocused }.focusable()
-            .tvClick { profileMenu=true }.clickable { profileMenu=true }
+        Row(Modifier.focusRequester(profileAnchor).onFocusChanged { profileFocused=it.isFocused }.tvClick { profileMenu=true }.clickable { profileMenu=true }
             .background(GlassActionBrushRP108(profileFocused),androidx.compose.foundation.shape.CircleShape)
             .border(1.dp,Color.White.copy(alpha=if(profileFocused) .45f else .16f),androidx.compose.foundation.shape.CircleShape).padding(4.dp),
             verticalAlignment=Alignment.CenterVertically) {
@@ -508,7 +508,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
 @Composable
 private fun NotificationButton(count: Int,modifier:Modifier=Modifier,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    Box(modifier.size(46.dp).semantics { contentDescription="${tr("Avisos","Alerts")}: $count" }.onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
+    Box(modifier.size(46.dp).semantics { contentDescription="${tr("Avisos","Alerts")}: $count" }.onFocusChanged { focused=it.isFocused }.tvClick(onClick).clickable(onClick=onClick)
         .background(GlassNavBrushRP106(focused,false),RoundedCornerShape(50))
         .border(1.dp,Color.White.copy(alpha=if(focused) .38f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
         BellIcon(Color.White,Modifier.size(25.dp))
@@ -534,7 +534,7 @@ private fun BellIcon(color: Color,modifier: Modifier) {
 @Composable
 private fun SearchNavigationButton(onFocused: (Boolean) -> Unit = {},selected:Boolean=false,modifier:Modifier=Modifier,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    Box(modifier.size(44.dp).semantics { contentDescription=tr("Buscar","Search") }.onFocusChanged { focused=it.isFocused; onFocused(it.isFocused) }.focusable().tvClick(onClick).clickable(onClick=onClick)
+    Box(modifier.size(44.dp).semantics { contentDescription=tr("Buscar","Search") }.onFocusChanged { focused=it.isFocused; onFocused(it.isFocused) }.tvClick(onClick).clickable(onClick=onClick)
         .background(GlassNavBrushRP106(focused,selected),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=if(focused) .36f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
         Canvas(Modifier.size(24.dp)) {
             val ink=Color.White
@@ -550,7 +550,7 @@ private fun SearchNavigationButton(onFocused: (Boolean) -> Unit = {},selected:Bo
 internal fun NavigationTab(text: String,selected: Boolean,onFocused: (Boolean) -> Unit = {},modifier:Modifier=Modifier,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     Box(modifier.height(42.dp).onFocusChanged {focused=it.isFocused;onFocused(it.isFocused)}
-        .focusable().tvClick(onClick).clickable(onClick=onClick)
+        .tvClick(onClick).clickable(onClick=onClick)
         .background(GlassNavBrushRP106(focused,selected),RoundedCornerShape(50))
         .border(1.dp,Color.White.copy(alpha=if(focused) .38f else if(selected) .18f else .06f),RoundedCornerShape(50))
         .padding(horizontal=14.dp),contentAlignment=Alignment.Center) {
@@ -568,7 +568,7 @@ private fun GlassNavBrushRP106(focused:Boolean,selected:Boolean):Brush {
 private fun SettingsNavigationButtonRP106(selected:Boolean,modifier:Modifier=Modifier,onClick:()->Unit) {
     var focused by remember {mutableStateOf(false)}
     Box(modifier.size(46.dp).semantics {contentDescription=tr("Ajustes","Settings")}
-        .onFocusChanged {focused=it.isFocused}.focusable().tvClick(onClick).clickable(onClick=onClick)
+        .onFocusChanged {focused=it.isFocused}.tvClick(onClick).clickable(onClick=onClick)
         .background(GlassNavBrushRP106(focused,selected),RoundedCornerShape(50))
         .border(1.dp,Color.White.copy(alpha=if(focused) .38f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
         Canvas(Modifier.size(24.dp)) {

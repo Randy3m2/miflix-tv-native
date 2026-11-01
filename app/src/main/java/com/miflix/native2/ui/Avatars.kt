@@ -125,7 +125,7 @@ fun AvatarPickerDialog(selected: String?, choose: (String) -> Unit, close: () ->
                             gridItems(visible,key={it.key}) { option ->
                                 var focused by remember(option.key) { mutableStateOf(false) }
                                 Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                                    Column(Modifier.fillMaxWidth().onFocusChanged { focused=it.isFocused }.focusable()
+                                    Column(Modifier.fillMaxWidth().onFocusChanged { focused=it.isFocused }
                                         .tvClick { choose(option.key) }.clickable { choose(option.key) }
                                         .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else if(option.key==selected) Accent else PanelBorder,RoundedCornerShape(14.dp))
                                         .padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally) {

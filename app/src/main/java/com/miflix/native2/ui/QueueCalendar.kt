@@ -437,7 +437,7 @@ internal fun InlineCalendar(state: AppState,modifier: Modifier=Modifier) {
 @Composable
 private fun CalendarDay(number: Int,count: Int,selected: Boolean,modifier: Modifier,height: androidx.compose.ui.unit.Dp=34.dp,logosRP120:List<String> = emptyList(),onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    Box(modifier.height(height).onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
+    Box(modifier.height(height).onFocusChanged { focused=it.isFocused }.tvClick(onClick).clickable(onClick=onClick)
         .background(GlassActionBrushRP108(focused,selected),RoundedCornerShape(7.dp))
         .border(1.dp,if(focused) Accent else if(selected) PanelBorder else Color.Transparent,RoundedCornerShape(7.dp)),contentAlignment=Alignment.Center) {
         Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(2.dp)) {

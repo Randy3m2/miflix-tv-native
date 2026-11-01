@@ -130,7 +130,7 @@ private fun SportsSeasonStatsRP121(league:String) {
                     group.rows.forEach {row ->
                         var focused by remember(row.person.id) {mutableStateOf(false)}
                         Row(Modifier.fillMaxWidth().heightIn(min=48.dp).clip(RoundedCornerShape(10.dp)).background(GlassActionBrushRP108(focused))
-                            .onFocusChanged {focused=it.isFocused}.focusable().tvClick {person=row.person}.clickable {person=row.person}.padding(7.dp),
+                            .onFocusChanged {focused=it.isFocused}.tvClick {person=row.person}.clickable {person=row.person}.padding(7.dp),
                             horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
                             Text(row.rank,color=Muted,fontSize=11.sp,modifier=Modifier.width(15.dp))
                             SportsPortraitRP121(row.person,34.dp)
@@ -199,7 +199,7 @@ private fun SportsPlayersRP121(league:String) {
                     var focused by remember(p.id) {mutableStateOf(false)}
                     Column(Modifier.fillMaxWidth().height(174.dp).clip(RoundedCornerShape(15.dp)).background(GlassActionBrushRP108(focused))
                         .border(if(focused) 2.dp else 1.dp,if(focused) Color(0xCCFFFFFF) else Color(0x1FFFFFFF),RoundedCornerShape(15.dp))
-                        .onFocusChanged {focused=it.isFocused}.focusable().tvClick {person=p}.clickable {person=p}.padding(12.dp),
+                        .onFocusChanged {focused=it.isFocused}.tvClick {person=p}.clickable {person=p}.padding(12.dp),
                         horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(6.dp)) {
                         SportsPortraitRP121(p,80.dp)
                         Text(p.name,color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold,maxLines=2,overflow=TextOverflow.Ellipsis)

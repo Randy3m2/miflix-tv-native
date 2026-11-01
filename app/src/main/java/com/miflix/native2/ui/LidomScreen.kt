@@ -1,6 +1,7 @@
 @file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 
 package com.miflix.native2.ui
+import androidx.compose.foundation.clickable
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.focusable
@@ -115,7 +116,7 @@ internal fun LidomScreen(state:AppState) {
 @Composable
 private fun LidomGameCard(game:LidomGame,onClick:()->Unit) {
     var focused by remember(game.id) {mutableStateOf(false)}
-    Column(Modifier.fillMaxWidth().onFocusChanged {focused=it.isFocused}.focusable().tvClick(onClick)
+    Column(Modifier.fillMaxWidth().onFocusChanged {focused=it.isFocused}.tvClick(onClick).clickable(onClick=onClick)
         .background(GlassActionBrushRP108(focused),RoundedCornerShape(20.dp))
         .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(20.dp))
         .padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {

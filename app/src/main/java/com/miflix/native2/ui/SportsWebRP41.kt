@@ -30,7 +30,7 @@ internal fun HubWebCardRP41(title:String,logo:String,click:()->Unit) {
     var focused by remember {mutableStateOf(false)}
     Column(Modifier.fillMaxWidth().height(194.dp).background(Color(0xFF161616),RoundedCornerShape(13.dp))
         .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(13.dp))
-        .onFocusChanged {focused=it.isFocused}.focusable().tvClick(click).clickable(onClick=click).padding(16.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        .onFocusChanged {focused=it.isFocused}.tvClick(click).clickable(onClick=click).padding(16.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Box(Modifier.weight(1f).fillMaxWidth().background(Color.White,RoundedCornerShape(8.dp)).padding(12.dp),contentAlignment=Alignment.Center) {
             if(resource!=0) Image(painterResource(resource),title,Modifier.fillMaxSize()) else Text(title,color=Color.Black,fontSize=26.sp)
         }

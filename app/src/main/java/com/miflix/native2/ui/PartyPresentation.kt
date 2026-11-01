@@ -107,7 +107,7 @@ internal fun PartyCode(code: String) {
 private fun PartyToggle(title: String,subtitle: String,checked: Boolean,enabled: Boolean,onToggle: () -> Unit) {
     var focused by remember {mutableStateOf(false)}
     val activate: () -> Unit={if(enabled) onToggle()}
-    Row(Modifier.fillMaxWidth().onFocusChanged {focused=it.isFocused}.focusable()
+    Row(Modifier.fillMaxWidth().onFocusChanged {focused=it.isFocused}
         .tvClick(activate).clickable(onClick=activate)
         .background(Color(0xFF0A0A10),RoundedCornerShape(28.dp))
         .border(2.dp,if(focused) Accent else Color.Transparent,RoundedCornerShape(28.dp)).padding(18.dp),
@@ -128,7 +128,7 @@ internal fun PartyMembersOverlay(state: AppState,modifier: Modifier=Modifier,pla
         listOf(com.miflix.native2.data.SocialPerson(state.session?.userId.orEmpty(),state.nickname.ifBlank {state.activeProfile.name},state.activeProfile.avatarValue))
     }
     Row(modifier.semantics {contentDescription=tr("Participantes del party","Party members")}
-        .contentFocusBorder(24.dp).focusable().tvClick(onOpen).clickable(onClick=onOpen).padding(5.dp),
+        .contentFocusBorder(24.dp).tvClick(onOpen).clickable(onClick=onOpen).padding(5.dp),
         horizontalArrangement=Arrangement.spacedBy((-6).dp),verticalAlignment=Alignment.CenterVertically) {
         members.take(5).forEach {member ->
             val avatar=if(member.id==state.session?.userId) state.activeProfile.avatarValue else member.avatar
@@ -222,7 +222,7 @@ internal fun PartyRoomSheet(state: AppState,onCreate: () -> Unit,onRefreshReques
         if(state.session==null) item {Text(tr("Inicia sesión para ver tus amigos.","Sign in to see your friends."),color=Muted,fontSize=13.sp)}
         else if(friends.isEmpty()) item {Text(if(state.friendsTabLoading) tr("Cargando amigos…","Loading friends…") else tr("Aún no tienes amigos agregados.","No friends added yet."),color=Muted,fontSize=13.sp)}
         items(friends,key={"player-friend:${it.id}"}) {friend ->
-            Row(Modifier.fillMaxWidth().contentFocusBorder(16.dp).focusable().tvClick {selectedFriend=friend}.clickable {selectedFriend=friend}
+            Row(Modifier.fillMaxWidth().contentFocusBorder(16.dp).tvClick {selectedFriend=friend}.clickable {selectedFriend=friend}
                 .background(Color(0xFF0A0A10),RoundedCornerShape(16.dp)).padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 ProfileAvatar(Profile(friend.id,friend.nickname,friend.avatar),Modifier.size(38.dp))
                 Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(3.dp)) {

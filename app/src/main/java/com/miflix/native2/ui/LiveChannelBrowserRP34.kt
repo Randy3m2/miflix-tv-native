@@ -416,7 +416,7 @@ internal fun LiveChannelBrowserRP34(state:AppState,initialProvider:String,select
 private fun BrowserCategoryRowRP34(title:String,selected:Boolean,modifier:Modifier,onSelect:()->Unit,source:String="",activateOnly:Boolean=false,onActivate:()->Unit=onSelect) {
     var focused by remember {mutableStateOf(false)}
     Column(modifier.fillMaxWidth().clip(RoundedCornerShape(9.dp)).background(GlassActionBrushRP108(focused,selected))
-        .onFocusChanged {focused=it.isFocused;if(it.isFocused && !activateOnly) onSelect()}.focusable().tvClick(onActivate).clickable(onClick=onActivate).padding(horizontal=12.dp,vertical=12.dp)) {
+        .onFocusChanged {focused=it.isFocused;if(it.isFocused && !activateOnly) onSelect()}.tvClick(onActivate).clickable(onClick=onActivate).padding(horizontal=12.dp,vertical=12.dp)) {
         Text(title,color=if(focused) Color.White else Color.White,fontSize=14.sp,maxLines=2)
         if(source.isNotBlank()) Text(source,color=if(focused) Color(0xFFDDDDDD) else Muted,fontSize=10.sp)
     }
@@ -468,7 +468,7 @@ internal fun LiveFavoriteRP36(state:AppState,request:PlayerRequest,onInteraction
         .border(if(focused) 1.dp else 0.dp,if(focused) Color.White else Color.Transparent,RoundedCornerShape(12.dp))
         .semantics {contentDescription=action;stateDescription=if(favorite) "Favorito" else "Sin marcar"}
         .onFocusChanged {focused=it.isFocused;if(it.isFocused) onInteraction()}
-        .focusable().tvClick(toggle).clickable(onClick=toggle),contentAlignment=Alignment.Center) {
+        .tvClick(toggle).clickable(onClick=toggle),contentAlignment=Alignment.Center) {
         ChannelHeartRP38(favorite)
     }
 }

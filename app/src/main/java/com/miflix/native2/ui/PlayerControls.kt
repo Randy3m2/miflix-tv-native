@@ -103,7 +103,7 @@ internal fun CompactPlayerControls(
             var titleFocused by remember { mutableStateOf(false) }
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             Text(request.item.title,color=if(titleFocused) Color.White else Color.White,fontSize=22.sp,lineHeight=26.sp,maxLines=1,
-                modifier=Modifier.weight(1f,fill=false).onFocusChanged { titleFocused=it.isFocused; if(it.isFocused) onInteraction() }
+                modifier=Modifier.weight(1f,fill=false).tvFocusAnchorRP163("player:title").onFocusChanged { titleFocused=it.isFocused; if(it.isFocused) onInteraction() }
                     .background(GlassActionBrushRP108(titleFocused),RoundedCornerShape(6.dp))
                     .semantics { contentDescription=request.item.title+" · "+tr("Opciones de contenido y Party","Content and Party options") }
                     .clickable { onInteraction(); onMenu("content") }.padding(horizontal=4.dp,vertical=2.dp))
@@ -144,8 +144,9 @@ internal fun CompactPlayerControls(
 @Composable
 private fun PlayerIconButton(icon: String, label: String, modifier: Modifier=Modifier, onInteraction: () -> Unit, onClick: () -> Unit, onLabel: (String) -> Unit = {}, enabled: Boolean=true, onLongClick: (() -> Unit)?=null) {
     var focused by remember { mutableStateOf(false) }
-    Box(modifier.size(44.dp).onFocusChanged { focused=it.isFocused; if(it.isFocused) { onInteraction(); onLabel(label) } }
-        .then(if(onLongClick!=null && enabled) Modifier.tvPlaybackClick({ onInteraction();onClick() },{ onInteraction();onLongClick() }) else Modifier)
+    val focusKeyRP163="player:"+if(icon=="play" || icon=="pause") "play" else icon
+    Box(modifier.size(44.dp).then(if(onLongClick==null) Modifier.tvFocusAnchorRP163(focusKeyRP163) else Modifier).onFocusChanged { focused=it.isFocused; if(it.isFocused) { onInteraction(); onLabel(label) } }
+        .then(if(onLongClick!=null && enabled) Modifier.tvPlaybackClick({ onInteraction();onClick() },{ onInteraction();onLongClick() },focusKeyRP163) else Modifier)
         .background(GlassActionBrushRP108(focused),CircleShape)
         .semantics { contentDescription=label }
         .clickable(enabled=enabled) { onInteraction(); onClick() },contentAlignment=Alignment.Center) {

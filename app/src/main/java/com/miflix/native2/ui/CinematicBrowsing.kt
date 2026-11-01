@@ -154,7 +154,7 @@ private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolea
     val focusInk by animateColorAsState(if(focused) Accent else Color.Transparent,tween(120),label="posterFocusInk")
     val focusScale by animateFloatAsState(if(focused) 1.012f else 1f,tween(120),label="posterFocusScale")
     val cardBring=remember { BringIntoViewRequester() }
-    
+
     // The measured slot expands with its artwork, so neighboring cards are pushed, never covered.
     val baseWidth=if(landscape) 312f else if(simple) 172f else 130f
     val slotWidth by animateFloatAsState(if(expanded) 334f else baseWidth,
@@ -166,7 +166,7 @@ private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolea
     }
     Box(modifier.width(slotWidth.dp).fillMaxHeight().padding(horizontal=6.dp)
         .bringIntoViewRequester(cardBring)
-        .onFocusChanged { focused=it.isFocused; if(it.isFocused) onFocused() }.focusable()
+        .onFocusChanged { focused=it.isFocused; if(it.isFocused) onFocused() }
         .then(if(onLongClick==null) Modifier.tvClick(onClick) else Modifier.tvPlaybackClick(onClick,onLongClick)).clickable(onClick=onClick)) {
         Box(Modifier.fillMaxSize().graphicsLayer {scaleX=focusScale;scaleY=focusScale}
         .border(if(simple) 3.dp else 2.dp,focusInk,RoundedCornerShape(18.dp))
@@ -366,7 +366,7 @@ internal val LocalEasySearchRP80=staticCompositionLocalOf {false}
 private fun SearchKey(label: String,modifier: Modifier=Modifier,microphone:Boolean=false,keyIcon:String?=null,selected:Boolean=false,onClearRP160:(()->Unit)?=null,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     val largeRP80=LocalEasySearchRP80.current
-    Box(modifier.semantics {contentDescription=label}.height(if(largeRP80) 39.dp else 34.dp).onFocusChanged {focused=it.isFocused}.then(if(onClearRP160!=null) Modifier.searchDeleteHoldRP160(focused,onClick,onClearRP160) else Modifier.tvClick(onClick).clickable(onClick=onClick)).focusable()
+    Box(modifier.semantics {contentDescription=label}.height(if(largeRP80) 39.dp else 34.dp).onFocusChanged {focused=it.isFocused}.then(if(onClearRP160!=null) Modifier.tvFocusAnchorRP163().searchDeleteHoldRP160(focused,onClick,onClearRP160).focusable() else Modifier.tvClick(onClick).clickable(onClick=onClick))
         .background(GlassActionBrushRP108(focused,selected),RoundedCornerShape(6.dp))
         .border(if(focused) 2.dp else 1.dp,Color.White.copy(alpha=if(focused) .95f else .10f),RoundedCornerShape(6.dp)).padding(horizontal=4.dp),
         contentAlignment=Alignment.Center) {

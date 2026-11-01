@@ -234,7 +234,7 @@ private fun liveSearchKey(value: String): String = Normalizer.normalize(value.tr
 private fun LiveChannelRow(channel: LiveChannel, number: Int, onClick: () -> Unit, onLongClick: () -> Unit,schedule: @Composable (Color)->Unit = {}) {
     var focused by remember(channel.id) { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().onFocusChanged { focused = it.hasFocus }
-        .tvPlaybackClick(onClick, onLongClick).focusable().clickable(onClick = onClick)
+        .tvPlaybackClick(onClick, onLongClick).clickable(onClick = onClick)
         .background(GlassActionBrushRP108(focused), RoundedCornerShape(14.dp)).padding(12.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
         Text(number.toString().padStart(3, '0'), color = if (focused) Color.White else Color.White,
@@ -256,7 +256,7 @@ private fun LiveChannelRow(channel: LiveChannel, number: Int, onClick: () -> Uni
 @Composable
 internal fun LiveChannelTile(channel: LiveChannel,number: Int,favorite: Boolean,onClick: () -> Unit,onLongClick: () -> Unit) {
     var focused by remember(channel.id) { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().height(176.dp).onFocusChanged { focused=it.isFocused }.focusable()
+    Column(Modifier.fillMaxWidth().height(176.dp).onFocusChanged { focused=it.isFocused }
         .tvPlaybackClick(onClick,onLongClick).clickable(onClick=onClick)
         .background(GlassActionBrushRP108(focused),RoundedCornerShape(14.dp))
         .border(1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(14.dp)).padding(14.dp),

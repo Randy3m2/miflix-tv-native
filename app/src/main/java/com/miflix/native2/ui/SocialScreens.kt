@@ -168,7 +168,7 @@ fun FriendsScreen(state: AppState) {
 @Composable
 private fun FriendTile(friend: FriendActivity,modifier: Modifier,onClick: () -> Unit) {
     var focused by remember(friend.id) { mutableStateOf(false) }
-    Row(modifier.height(112.dp).onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
+    Row(modifier.height(112.dp).onFocusChanged { focused=it.isFocused }.tvClick(onClick).clickable(onClick=onClick)
         .background(GlassActionBrushRP108(focused),RoundedCornerShape(16.dp))
         .border(1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(16.dp)).padding(16.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
@@ -332,7 +332,7 @@ fun NotificationsScreen(state: AppState) {
 @Composable
 private fun FriendPreviewCard(item: com.miflix.native2.data.FriendRecommendation,modifier: Modifier,onClick: () -> Unit) {
     var focused by remember(item.cloud) { mutableStateOf(false) }
-    Column(modifier.onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+    Column(modifier.onFocusChanged { focused=it.isFocused }.tvClick(onClick).clickable(onClick=onClick),verticalArrangement=Arrangement.spacedBy(6.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(2f/3f).clip(RoundedCornerShape(12.dp)).background(Panel).border(1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(12.dp))) {
             coil3.compose.AsyncImage(item.poster,item.title,Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
         }

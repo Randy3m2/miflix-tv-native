@@ -104,7 +104,7 @@ internal fun SettingsTileRC103(title:String,description:String,icon:String,modif
         .semantics {stateDescription=if(checked) tr("Activado","On") else tr("Desactivado","Off")}
         .toggleable(value=checked,role=Role.Switch,onValueChange={onClick()})
     Row(modifier.fillMaxWidth().clip(shape).background(GlassActionBrushRP108(filled))
-        .border(if(active) 2.dp else 1.dp,edge,shape).onFocusChanged {focused=it.isFocused}.hoverable(hoverSource).then(interaction).padding(16.dp),
+        .border(if(active) 2.dp else 1.dp,edge,shape).onFocusChanged {focused=it.isFocused}.hoverable(hoverSource).tvFocusAnchorRP163().then(interaction).padding(16.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(16.dp)) {
         SettingsIconRC103(icon,filled)
         Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {

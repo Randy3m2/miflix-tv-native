@@ -141,7 +141,7 @@ internal fun SharedMomentsContentRP23(state: AppState,close: () -> Unit,modifier
 private fun MomentFriendCard(friend: SocialPerson,enabled: Boolean,onClick: () -> Unit) {
     var focused by remember(friend.id) {mutableStateOf(false)}
     val activate: () -> Unit={if(enabled) onClick()}
-    Row(Modifier.fillMaxWidth().onFocusChanged {focused=it.isFocused}.focusable()
+    Row(Modifier.fillMaxWidth().onFocusChanged {focused=it.isFocused}
         .tvClick(activate).clickable(onClick=activate)
         .background(GlassActionBrushRP108(focused),RoundedCornerShape(18.dp))
         .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(18.dp))

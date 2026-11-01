@@ -128,7 +128,7 @@ private fun LocalFilterSectionRP24(title:String,content:@Composable ColumnScope.
 private fun LocalFilterChoiceRP24(label:String,selected:Boolean,modifier:Modifier=Modifier,onFocused:()->Unit,onClick:()->Unit) {
     var focused by remember {mutableStateOf(false)}
     val active=actionFocusVisibleRP64(focused)
-    Box(modifier.onFocusChanged {focused=it.isFocused;if(it.isFocused) onFocused()}.focusable().tvClick(onClick).clickable(onClick=onClick)
+    Box(modifier.onFocusChanged {focused=it.isFocused;if(it.isFocused) onFocused()}.tvClick(onClick).clickable(onClick=onClick)
         .background(GlassActionBrushRP108(active,selected),RoundedCornerShape(12.dp))
         .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else if(selected) Color(0xFFB0B0B0) else Color(0xFF414141),RoundedCornerShape(12.dp))
         .padding(horizontal=14.dp,vertical=10.dp),contentAlignment=Alignment.Center) {

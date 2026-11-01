@@ -110,7 +110,7 @@ private fun MyListCardRP65(item:MediaSummary,posterHeight:androidx.compose.ui.un
     Box(modifier.height(posterHeight)
         .graphicsLayer {scaleX=scale;scaleY=scale}
         .contentFocusBorder(18.dp)
-        .onFocusChanged {focused=it.isFocused;if(it.isFocused) preview?.invoke(item)}.focusable()
+        .onFocusChanged {focused=it.isFocused;if(it.isFocused) preview?.invoke(item)}
         .tvPlaybackClick(onClick,onLongClick).clickable(onClick=onClick)
         .clip(RoundedCornerShape(18.dp)).background(Color(0xFF1A1A1A))) {
         LoadingArtworkRP58(item.poster ?: item.backdrop,item.title,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)

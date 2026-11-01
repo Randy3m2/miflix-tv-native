@@ -111,7 +111,7 @@ private fun SportsGameCardRP114(game:LiveChannel,playing:Boolean,busy:Boolean,on
     Row(Modifier.fillMaxWidth().height(116.dp).clip(shape)
         .background(GlassActionBrushRP108(active,playing))
         .border(if(active) 2.dp else 1.dp,Color.White.copy(alpha=if(active) .85f else if(playing) .42f else .14f),shape)
-        .onFocusChanged {focused=it.isFocused}.focusable()
+        .onFocusChanged {focused=it.isFocused}
         .tvClick {if(!busy) onClick()}.clickable {if(!busy) onClick()}
         .padding(10.dp),verticalAlignment=Alignment.CenterVertically,
         horizontalArrangement=Arrangement.spacedBy(14.dp)) {

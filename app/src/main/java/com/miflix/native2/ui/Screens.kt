@@ -667,7 +667,7 @@ private fun GenreCard(g: GenreDefinition,modifier: Modifier=Modifier,onClick: ()
     Column(modifier.width(BrowseTileSlotWidth)) {
         Box(Modifier.width(BrowseTileSlotWidth).height(BrowseTileSlotHeight),contentAlignment=Alignment.Center) {
             Box(Modifier.width(BrowseTileWidth).height(BrowseTileHeight).graphicsLayer { scaleX=scale;scaleY=scale }
-                .onFocusChanged { focused=it.isFocused }.focusable().tvClick(onClick).clickable(onClick=onClick)
+                .onFocusChanged { focused=it.isFocused }.tvClick(onClick).clickable(onClick=onClick)
                 .clip(RoundedCornerShape(14.dp)).background(Panel)
                 .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(14.dp))) {
                 if(g.coverUrl.isNotBlank()) AsyncImage(g.coverUrl,g.title,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
@@ -1468,9 +1468,14 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var surfaceFocusedRP34 by remember {mutableStateOf(false)}
     val surfaceFocus = remember { FocusRequester() }
     val playFocus = remember { FocusRequester() }
+    val controlMemoryRP163=LocalTvFocusMemoryRP163.current
+    fun restoreControlRP163():Boolean {
+        val target=controlMemoryRP163?.policy?.last?.let {controlMemoryRP163.targets[it]}
+        return target?.let {runCatching(it).getOrDefault(false)}==true || playFocus.requestFocus()
+    }
     var sportsTargetRP44 by remember(request.playbackId) {mutableStateOf<BrowserChannelRP34?>(null)}
     var playerMenu by remember(request.playbackId) { mutableStateOf<String?>(if(state.livePanelPlaybackRP83==request.playbackId) "channels" else null) }
-    LaunchedEffect(firstFrame,playerMenu,statsOpenRP95) {if(firstFrame && playerMenu==null && !statsOpenRP95) {withFrameNanos {};runCatching {if(controlsVisible) playFocus.requestFocus() else surfaceFocus.requestFocus()} }}
+    LaunchedEffect(firstFrame,playerMenu,statsOpenRP95) {if(firstFrame && playerMenu==null && !statsOpenRP95) {withFrameNanos {};runCatching {if(controlsVisible) restoreControlRP163() else surfaceFocus.requestFocus()} }}
     var resizeMode by remember { mutableStateOf(androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT) }
     var maximized by remember { mutableStateOf(true) }
     var speed by remember(request.playbackId) { mutableStateOf(1f) }
@@ -2074,7 +2079,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
 
     LaunchedEffect(firstFrame,controlsVisible, showEpisodes, showQueue, showPartyActions, showAccessRequests, playerMenu, state.sourceSelection, pauseSynopsis, pauseInfoDismissed, ended, playbackError, mini, statsOpenRP95) {
         if(!statsOpenRP95 && firstFrame && !mini && playbackError==null && controlsVisible && (!pauseSynopsis || pauseInfoDismissed) && !ended && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && playerMenu == null && !quickReactions && state.sourceSelection == null) {
-            withFrameNanos { }; runCatching { playFocus.requestFocus() }
+            withFrameNanos { }; runCatching { restoreControlRP163() }
         }
     }
     LaunchedEffect(pauseSynopsis, pauseInfoDismissed, mini, statsOpenRP95) {
@@ -2091,7 +2096,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     LaunchedEffect(exitArmedAt) { if(exitArmedAt!=0L) { delay(2200);exitArmedAt=0L } }
     fun closeStatsRP95() {
         statsOpenRP95=false;controlsVisible=true;controlInteraction++
-        channelMenuScopeRP34.launch {withFrameNanos {};runCatching {playFocus.requestFocus()}}
+        channelMenuScopeRP34.launch {withFrameNanos {};runCatching {restoreControlRP163()}}
     }
     BackHandler(enabled=!mini) {
         if(statsOpenRP95) closeStatsRP95()
@@ -2312,7 +2317,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         if(playerMenu=="channels") LiveChannelPicker(state,request.liveProvider,select={ req ->
             if(state.partyRole==PartyRole.GUEST) state.error=tr("El host cambia el canal del party","The host changes the party channel")
             else {playerMenu=null;dismissKey=null;state.openLivePlayer(req)}
-        },close={ playerMenu=null;dismissKey=null;controlInteraction++;channelMenuScopeRP34.launch {withFrameNanos {};runCatching {surfaceFocus.requestFocus()}} })
+        },close={ playerMenu=null;dismissKey=null;controlInteraction++;channelMenuScopeRP34.launch {withFrameNanos {};runCatching {restoreControlRP163()}} })
         if(confirmMulti) PlayerMenuDialog(onDismissRequest={ confirmMulti=false }) {
             val first=remember { FocusRequester() }
             LaunchedEffect(Unit) { withFrameNanos { };first.requestFocus() }
@@ -2644,7 +2649,7 @@ private fun CastCard(person: CastMember, state: AppState,compact: Boolean=false)
     var focused by remember { mutableStateOf(false) }
     if(show) ActorCreditsDialog(person, state) { show=false }
     val click = { if(person.id>0) show=true }
-    Column(Modifier.width(if(compact) 92.dp else 138.dp).border(if(focused) 2.dp else 0.dp, Accent, RoundedCornerShape(12.dp)).onFocusChanged { focused=it.isFocused }.focusable().tvClick(click).clickable(onClick=click), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(Modifier.width(if(compact) 92.dp else 138.dp).border(if(focused) 2.dp else 0.dp, Accent, RoundedCornerShape(12.dp)).onFocusChanged { focused=it.isFocused }.tvClick(click).clickable(onClick=click), horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.size(if(compact) 72.dp else 106.dp).clip(RoundedCornerShape(53.dp)).background(Color(0xFF252525)), contentAlignment = Alignment.Center) {
             if (!person.profile.isNullOrBlank()) AsyncImage(person.profile, person.name, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             else Text(person.name.split(" ").take(2).mapNotNull { it.firstOrNull()?.toString() }.joinToString(""), color = Color(0xFFAAAAAF), fontSize = 22.sp, lineHeight=26.sp, fontWeight = FontWeight.Bold)
@@ -2659,7 +2664,7 @@ private fun CastCard(person: CastMember, state: AppState,compact: Boolean=false)
 private fun TrailerCard(trailer: TrailerSummary, onClick: () -> Unit) {
     var focused by remember(trailer.key) { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) 1.012f else 1f, tween(80, easing = LinearOutSlowInEasing), label = "trailerScale")
-    Column(Modifier.width(330.dp).graphicsLayer { scaleX = scale; scaleY = scale }.onFocusChanged { focused = it.isFocused }.focusable().tvClick(onClick).clickable(onClick = onClick)) {
+    Column(Modifier.width(330.dp).graphicsLayer { scaleX = scale; scaleY = scale }.onFocusChanged { focused = it.isFocused }.tvClick(onClick).clickable(onClick = onClick)) {
         Box(Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFF1A1A1A)).border(if (focused) 2.dp else 0.dp, Accent, RoundedCornerShape(12.dp))) {
             AsyncImage(trailer.thumbnail, trailer.name, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             Box(Modifier.fillMaxSize().background(Color(0x33000000)), contentAlignment = Alignment.Center) { Text("▶", color = Color.White, fontSize = 31.sp, lineHeight=37.sp) }
@@ -2675,7 +2680,7 @@ internal fun EpisodeCard(ep: EpisodeSummary, hidden: Boolean, onLongClick: () ->
     Box(Modifier.width(if(largeRP85) 368.dp else 328.dp).height(if(largeRP85) 265.dp else 225.dp),contentAlignment=Alignment.Center) {
         Box(Modifier.width(if(largeRP85) 356.dp else 316.dp).height(if(largeRP85) 253.dp else 213.dp).clip(RoundedCornerShape(14.dp))
             .background(Color(0xFF1B1B1B)).border(if(focused) 2.dp else 0.dp,Color.White,RoundedCornerShape(14.dp))
-            .onFocusChanged {focused=it.isFocused}.focusable().tvPlaybackClick(onClick,onLongClick).clickable(onClick=onClick)) {
+            .onFocusChanged {focused=it.isFocused}.tvPlaybackClick(onClick,onLongClick).clickable(onClick=onClick)) {
             EpisodeArtwork(ep,hidden,Modifier.fillMaxSize())
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x08000000),Color(0x55000000),Color(0xF5000000)))))
             if(watchedRP85) Text(tr("✓ Visto","✓ Watched"),color=Color.White,fontSize=if(largeRP85) 18.sp else 13.sp,
@@ -2822,7 +2827,7 @@ private fun SourceLinkCard(stream: com.miflix.native2.model.StreamChoice,modifie
         }
     }
 
-    Column(modifier.onFocusChanged {focused=it.isFocused}.focusable().tvPlaybackClick(onClick,{rawDetails=true}).clickable(onClick=onClick)
+    Column(modifier.onFocusChanged {focused=it.isFocused}.tvPlaybackClick(onClick,{rawDetails=true}).clickable(onClick=onClick)
         .background(GlassActionBrushRP108(focused,playing),RoundedCornerShape(18.dp))
         .border(if(focused || playing) 2.dp else 1.dp,if(focused || playing) Accent else PanelBorder,RoundedCornerShape(18.dp)).padding(20.dp),
         verticalArrangement=Arrangement.spacedBy(8.dp)) {

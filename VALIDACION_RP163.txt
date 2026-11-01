@@ -1,0 +1,13 @@
+BruniO RP163 TV — base RP162 9a5197d66fba0d82d021b4963e1aacc76541a149
+
+Gradle 8.13, Java 17, Android SDK 36
+:app:testReleaseUnitTest + :mobile:compileReleaseKotlin
+BUILD SUCCESSFUL
+{'tests': 570, 'failures': 0, 'errors': 0, 'skipped': 0}
+
+git diff --check: PASS
+37 archivos de codigo/configuracion/instrucciones verificados contra el arbol compilado.
+Pruebas de politicas de foco: retorno a L, cancelacion por navegacion manual, retorno desde dialogo, OK repetido y release tras perder foco.
+No se generaron APK firmados ni se probo una TV fisica.
+No hay cambios de SQL, Gemini ni configuracion del servidor.
+No se publico nada en GitHub.

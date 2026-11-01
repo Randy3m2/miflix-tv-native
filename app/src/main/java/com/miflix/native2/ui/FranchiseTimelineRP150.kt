@@ -92,7 +92,7 @@ private fun TimelineCardRP150(state:AppState,item:MediaSummary,index:Int,positio
             Box(Modifier.size(28.dp).background(Accent.copy(alpha=.22f),RoundedCornerShape(50)).border(1.dp,Accent,RoundedCornerShape(50)),contentAlignment=Alignment.Center) {Text(if(position==null) "?" else index.toString(),color=Color.White,fontSize=14.sp)}
             Box(Modifier.weight(1f).height(2.dp).background(Accent.copy(alpha=.5f)))
         }
-        Box(Modifier.fillMaxWidth().weight(1f).heightIn(max=240.dp).onFocusChanged {focused=it.isFocused;if(it.isFocused) onSpotlight(art)}.focusable().tvClick(open).clickable(onClick=open).background(Panel,RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp)).border(if(focused) 3.dp else 1.dp,if(focused) Color.White else Color.White.copy(alpha=.1f),RoundedCornerShape(16.dp))) {
+        Box(Modifier.fillMaxWidth().weight(1f).heightIn(max=240.dp).onFocusChanged {focused=it.isFocused;if(it.isFocused) onSpotlight(art)}.tvClick(open).clickable(onClick=open).background(Panel,RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp)).border(if(focused) 3.dp else 1.dp,if(focused) Color.White else Color.White.copy(alpha=.1f),RoundedCornerShape(16.dp))) {
             AsyncImage(art.poster ?: art.backdrop,item.title,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
         }
         Text(art.title,color=Color.White,fontSize=14.sp,maxLines=2,minLines=2)

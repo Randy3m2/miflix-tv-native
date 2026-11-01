@@ -154,7 +154,7 @@ internal fun LiveScoreOverlayRP11(state:AppState) {
             }) {
                 Column(Modifier.fillMaxWidth().height(40.dp)
                     .background(Color(0xE6101010),RoundedCornerShape(36.dp))
-                    .border(if(moving || interacting) 2.dp else 1.dp,if(moving || interacting) Color.White else Color(0xFF444444),RoundedCornerShape(36.dp))
+                    .border(if(moving || interacting) 2.dp else 1.dp,if(moving || interacting) Accent else Color(0xFF444444),RoundedCornerShape(36.dp))
                     .clickable {interacting=true;actions=true}.padding(horizontal=6.dp,vertical=3.dp),
                     horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(1.dp,Alignment.CenterVertically)) {
                     Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)) {
@@ -283,7 +283,7 @@ private fun ScoreLeagueButtonRP17(league:String,selected:Boolean,onClick:()->Uni
     }
     Column(Modifier.onFocusChanged {focused=it.isFocused}.tvClick(onClick).clickable(onClick=onClick)
         .width(88.dp).height(80.dp).background(GlassActionBrushRP108(active),RoundedCornerShape(16.dp))
-        .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else if(selected) Color(0xFFAAAAAA) else Color(0xFF343434),RoundedCornerShape(16.dp))
+        .border(if(focused) 2.dp else 1.dp,if(focused) Accent else if(selected) Color(0xFFAAAAAA) else Color(0xFF343434),RoundedCornerShape(16.dp))
         .padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(6.dp,Alignment.CenterVertically)) {
         Image(painterResource(logo),league,Modifier.width(64.dp).height(36.dp),contentScale=androidx.compose.ui.layout.ContentScale.Fit)
         Text(league,color=if(active) Color.White else if(selected) Color.White else Muted,fontSize=14.sp,lineHeight=16.sp,fontWeight=FontWeight.Bold)

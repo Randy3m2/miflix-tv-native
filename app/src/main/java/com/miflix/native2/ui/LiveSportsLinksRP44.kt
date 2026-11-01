@@ -63,7 +63,7 @@ internal fun LiveSportsLinksRP44(state:AppState,channel:LiveChannel,close:()->Un
                         Column(Modifier.fillMaxWidth().then(if(index==0) Modifier.focusRequester(first) else Modifier)
                             .onFocusChanged {focused=it.isFocused}.tvClick(choose).clickable(onClick=choose)
                             .background(GlassActionBrushRP108(focused),RoundedCornerShape(12.dp))
-                            .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(12.dp))
+                            .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(12.dp))
                             .padding(14.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                             Text("${index+1}. ${stream.name.ifBlank {tr("Fuente","Source")}}",color=Color.White,fontSize=15.sp,fontWeight=FontWeight.Bold)
                             if(stream.title.isNotBlank()) Text(stream.title,color=Muted,fontSize=12.sp,maxLines=4,overflow=TextOverflow.Ellipsis)

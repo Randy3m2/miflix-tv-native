@@ -31,7 +31,7 @@ import androidx.tv.material3.Text
 internal fun ModernMyListScreenRP63(state:AppState,onBack:()->Unit) {
     BackHandler(onBack=onBack)
     val owner="${state.session?.userId}:${state.activeProfile.id}"
-    LaunchedEffect(owner) {runCatching {state.pushCloud()}}
+    LaunchedEffect(owner,state.appForeground) {if(state.appForeground) state.refreshFavoritesRP164()}
     var type by rememberSaveable(owner) {mutableStateOf("all")}
     var order by rememberSaveable(owner) {mutableStateOf("last_added")}
     val filteredIds=state.favorites.filter {it.matches(Regex("^tmdb:(movie|series):[0-9]+$")) && (type=="all" || it.startsWith("tmdb:$type:"))}
@@ -54,15 +54,16 @@ internal fun ModernMyListScreenRP63(state:AppState,onBack:()->Unit) {
                             Text(tr("Mi lista","My List"),color=Color.White,fontSize=29.sp,fontWeight=FontWeight.Bold)
                             Text(state.activeProfile.name+" · ${visible.size} / ${ids.size} "+tr("títulos","titles"),color=Muted,fontSize=12.sp)
                         }
+                        ModernButtonRP63("Trakt",action={state.launch {state.traktImport();state.refreshFavoritesRP164()}})
                         if(state.localExtras.enabled("filters")) ModernButtonRP63(tr("Filtros","Filters"),action={filters=true})
                     }
                     FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                         listOf("all" to tr("Todo","All"),"movie" to tr("Películas","Movies"),"series" to tr("Series","Series")).forEach {(id,label) ->
-                            ModernButtonRP63(label,primary=type==id,action={state.myListLimit=15;type=id})
+                            ModernButtonRP63(label,primary=type==id,action={state.myListLimit=30;type=id})
                         }
                         Spacer(Modifier.width(10.dp))
-                        ModernButtonRP63(tr("Últimos añadidos","Last added"),primary=order=="last_added",action={state.myListLimit=15;order="last_added"})
-                        ModernButtonRP63(tr("Más antiguos","Oldest added"),primary=order=="oldest",action={state.myListLimit=15;order="oldest"})
+                        ModernButtonRP63(tr("Últimos añadidos","Last added"),primary=order=="last_added",action={state.myListLimit=30;order="last_added"})
+                        ModernButtonRP63(tr("Más antiguos","Oldest added"),primary=order=="oldest",action={state.myListLimit=30;order="oldest"})
                     }
                     BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.TopCenter) {
                         val cellWidth=((maxWidth-80.dp)/7).coerceAtLeast(1.dp)
@@ -74,7 +75,7 @@ internal fun ModernMyListScreenRP63(state:AppState,onBack:()->Unit) {
                                 MyListCardRP65(item,posterHeight,Modifier.fillMaxWidth().then(homeReturnFocus("mylist:$owner:${item.cloudId}")),
                                     state.progress[item.cloudId]?.percent,onLongClick={state.titleActions(item)}) {state.launch {state.open(item)}}
                             }
-                            if(titles.isEmpty() && initialLoading) items(minOf(15,ids.size),key={"loading:$it"}) {
+                            if(titles.isEmpty() && initialLoading) items(minOf(30,ids.size),key={"loading:$it"}) {
                                 Box(Modifier.fillMaxWidth().height(posterHeight).clip(RoundedCornerShape(18.dp)).background(Color(0xFF202127)))
                             }
                             item(span={GridItemSpan(maxLineSpan)}) {
@@ -82,13 +83,14 @@ internal fun ModernMyListScreenRP63(state:AppState,onBack:()->Unit) {
                                     if(state.myListLoading) Text(tr("Cargando tu lista…","Loading your list…"),color=Muted)
                                     else {
                                         if(visible.isEmpty()) Text(if(ids.isEmpty()) tr("Guarda tus próximos favoritos aquí.","Save your next favorites here.") else tr("No hay títulos con estos filtros.","No titles match these filters."),color=Muted)
-                                        if(ids.size>state.myListLimit) ModernButtonRP63(tr("Cargar 15 más","Load 15 more"),Modifier.widthIn(max=340.dp).fillMaxWidth(),primary=true,action={state.myListLimit+=15})
+                                        if(ids.size>state.myListLimit) ModernButtonRP63(tr("Cargar 30 más","Load 30 more"),Modifier.widthIn(max=340.dp).fillMaxWidth(),primary=true,action={state.myListLimit+=30})
+                                        if(state.favoritesSyncMessageRP164.isNotBlank()) Text(state.favoritesSyncMessageRP164,color=Muted,fontSize=12.sp)
                                         if(state.myListMessage.isNotBlank()) {
                                             Text(state.myListMessage,color=Muted,fontSize=12.sp)
                                             ModernButtonRP63(tr("Reintentar","Retry"),action={state.launch {state.loadMyListPage(owner,ids)}})
                                         }
                                     }
-                                    ModernButtonRP63(tr("Actualizar lista","Refresh list"),action={state.launch {runCatching {state.pushCloud()}.onFailure {state.myListMessage=it.message.orEmpty()}}})
+                                    ModernButtonRP63(tr("Actualizar lista","Refresh list"),action={state.launch {runCatching {state.refreshFavoritesRP164()}.onFailure {state.myListMessage=it.message.orEmpty()}}})
                                 }
                             }
                         }

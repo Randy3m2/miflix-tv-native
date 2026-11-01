@@ -180,6 +180,8 @@ internal fun MobileSearchRP133(state:AppState) {
 internal fun MobileDetailsRP133(state:AppState) {
     val item=state.selected ?: return
     val detail=state.details
+    var rateOpenRP164 by remember(item.cloudId) {mutableStateOf(false)}
+    if(rateOpenRP164) MobileRatingRP164(state,item) {rateOpenRP164=false}
     val absolute=com.miflix.native2.data.AbsoluteEpisodeRP102.enabled(item.id)
     val context=LocalContext.current
     var friends by remember(item.cloudId) {mutableStateOf<List<com.miflix.native2.data.SocialPerson>>(emptyList())}
@@ -228,6 +230,7 @@ internal fun MobileDetailsRP133(state:AppState) {
                 if(!state.easyModeRP79) MobileDetailActionRP140("link",tr("Fuentes","Sources")) {state.launch {if(item.type=="series") state.episodes.firstOrNull()?.let {state.chooseEpisodeSources(it)} else state.chooseCurrentSources()}}
             }
         }}
+        if(!state.kidsMode) item("rate_rp164") {MobileButtonRP133(tr("Puntuar","Rate")+(state.ratings[item.cloudId]?.let {" · ★ $it/10"} ?: ""),"star",Modifier.fillMaxWidth().padding(horizontal=16.dp)) {rateOpenRP164=true}}
         if(!state.kidsMode) item("download") {
             Column(Modifier.padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 MobileButtonRP133(if(item.type=="series") tr("Descargar temporada seleccionada","Download selected season") else tr("Descargar película","Download movie"),"download",Modifier.fillMaxWidth(),enabled=!state.mobileDownloadBusyRP134 && !state.selectedUpcoming) {

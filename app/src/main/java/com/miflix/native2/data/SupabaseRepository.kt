@@ -150,26 +150,43 @@ class SupabaseRepository(private val url: String, private val key: String) {
         return fav to progress
     }
 
-    suspend fun upsertProfile(session: CloudSession, profileId: String, favorites: Set<String>, progress: Map<String, PlaybackProgress>): Set<String> {
+    suspend fun upsertProfile(session: CloudSession, profileId: String, favorites: Set<String>, progress: Map<String, PlaybackProgress>,favoriteEditsRP164:Map<String,Boolean>?=null): Set<String> {
         syncMutex.lock()
         try {
         val owner = "${session.userId}:$profileId"
-        val baseline = favoriteBaselines[owner] ?: profileState(session, profileId).first
+        val baseline = if(favoriteEditsRP164!=null) emptySet() else favoriteBaselines[owner] ?: profileState(session, profileId).first
         val po = JSONObject()
         progress.forEach { (k, p) ->
             po.put(k, JSONObject().put("percent", p.percent).put("position", p.position / 1000.0).put("duration", p.duration / 1000.0)
                 .put("updatedAt", p.updatedAt).put("season", p.season).put("episode", p.episode))
         }
         val body = JSONObject().put("p_profile", profileId)
-            .put("p_adds", JSONArray((favorites - baseline).toList()))
-            .put("p_removes", JSONArray((baseline - favorites).toList()))
+            .put("p_adds", JSONArray(favoriteEditsRP164?.filterValues {it}?.keys?.toList() ?: (favorites - baseline).toList()))
+            .put("p_removes", JSONArray(favoriteEditsRP164?.filterValues {!it}?.keys?.toList() ?: (baseline - favorites).toList()))
             .put("p_progress", po).toString()
         val result = JSONObject(Http.text("$url/rest/v1/rpc/brunio_sync_profile", "POST", headers(session), body))
-        val array = result.optJSONArray("favorites") ?: JSONArray()
+        val array = result.optJSONArray("favorites") ?: error("Invalid favorites response; local changes are preserved")
         val merged = (0 until array.length()).map { array.getString(it) }.toSet()
         favoriteBaselines[owner] = merged
         return merged
         } finally { syncMutex.unlock() }
+    }
+
+    suspend fun favoriteChangesRP164(session:CloudSession,profile:String,changes:Map<String,Boolean>):Set<String> {
+        syncMutex.lock()
+        try {
+            val body=JSONObject().put("p_profile",profile).put("p_adds",JSONArray(changes.filterValues {it}.keys.toList())).put("p_removes",JSONArray(changes.filterValues {!it}.keys.toList()))
+            val result=JSONObject(Http.text("$url/rest/v1/rpc/brunio_sync_profile","POST",headers(session),body.toString()))
+            val a=result.getJSONArray("favorites")
+            val merged=(0 until a.length()).map {a.getString(it)}.filter(FavoriteSyncRP164::valid).toSet()
+            favoriteBaselines["${session.userId}:$profile"]=merged
+            return merged
+        } finally {syncMutex.unlock()}
+    }
+    suspend fun favoritesRP164(session:CloudSession,profile:String):Set<String> {
+        val state=readRow(session,profile)?.optJSONObject("state") ?: JSONObject()
+        val a=state.optJSONArray("favorites") ?: JSONArray()
+        return (0 until a.length()).map {a.optString(it)}.filter(FavoriteSyncRP164::valid).toSet()
     }
 
     suspend fun createWatchParty(session: CloudSession, party: WatchParty) {

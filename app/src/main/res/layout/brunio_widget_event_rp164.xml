@@ -1,0 +1,7 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/widget_event_row" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="56dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="5dp" android:paddingBottom="5dp">
+ <TextView android:id="@+id/widget_day" android:layout_width="42dp" android:layout_height="44dp" android:background="@drawable/brunio_widget_badge_rp164" android:gravity="center" android:textSize="12sp" android:textStyle="bold" android:textColor="#D3BEFF"/>
+ <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:paddingStart="10dp" android:paddingEnd="2dp">
+  <TextView android:id="@+id/widget_event_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#FFFFFF" android:textSize="13sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end"/>
+  <TextView android:id="@+id/widget_event_time" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#A5A7BA" android:textSize="11sp" android:paddingTop="3dp" android:maxLines="1"/>
+ </LinearLayout>
+</LinearLayout>

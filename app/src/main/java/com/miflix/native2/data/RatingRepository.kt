@@ -12,7 +12,7 @@ class RatingRepository(private val url: String,private val key: String) {
         val result=mutableMapOf<String,Int>()
         var offset=0
         while(true) {
-            val rows=JSONArray(Http.text("$url/rest/v1/miflix_ratings?profile_id=eq.$id&select=cloud_id,score&order=cloud_id.asc&limit=200&offset=$offset",headers=headers(s)))
+            val rows=JSONArray(Http.text("$url/rest/v1/miflix_ratings?user_id=eq.${s.userId}&profile_id=eq.$id&select=cloud_id,score&order=cloud_id.asc&limit=200&offset=$offset",headers=headers(s)))
             for(i in 0 until rows.length()) rows.getJSONObject(i).let { x -> result[x.getString("cloud_id")]=x.getInt("score") }
             if(rows.length()<200) break
             offset+=200

@@ -321,7 +321,7 @@ class AppState(context: Context) {
     var rememberLastProfile by mutableStateOf(rememberedProfileEnabledRP142())
         private set
     init { FocusTheme.argb=focusColor }
-    fun saveFocusColor(value: Int) { focusColor=value;FocusTheme.argb=value;playbackPrefs.edit().putInt("focus_color",value).apply() }
+    fun saveFocusColor(value: Int) { focusColor=value;FocusTheme.argb=value;playbackPrefs.edit().putInt("focus_color",value).commit();launch {flushSettingsRP83()} }
     fun setRememberProfile(value:Boolean) {
         rememberLastProfile=value
         val edit=playbackPrefs.edit().putBoolean("remember_last_profile",value)
@@ -571,6 +571,7 @@ class AppState(context: Context) {
     fun clearNotifications() { notifications.clear(); persistNotices() }
     suspend fun checkNotifications() {
         if(easyModeRP79 || checkingNotices || tmdb.token.isBlank()) return
+        com.miflix.native2.data.ReleaseAlertsRP164.lock.lock()
         checkingNotices = true
         val ownerKey = noticesKey(); val knownOwner = knownKey(); val ids = favorites.toList()
         try {
@@ -589,6 +590,7 @@ class AppState(context: Context) {
                 if(!known.has(id)) known.put(id, release?.id ?: "pending")
                 else if(release != null && known.optString(id) != release.id) {
                     if(existing.none { it.id == release.id }) existing.add(0,release)
+                    com.miflix.native2.data.ReleaseAlertsRP164.notify(appContext,favoriteOwnerRP164(),release)
                     known.put(id,release.id)
                 }
             }
@@ -599,7 +601,7 @@ class AppState(context: Context) {
             val keys=fresh.keys()
             while(keys.hasNext()) { val key=keys.next();if(!known.has(key)) known.put(key,fresh.optString(key)) }
             playbackPrefs.edit().putString(knownOwner,known.toString()).apply(); persistNotices()
-        } finally { checkingNotices = false }
+        } finally { checkingNotices = false;com.miflix.native2.data.ReleaseAlertsRP164.lock.unlock() }
     }
     suspend fun playbackSegments(req: PlayerRequest): PlaybackSegments = runCatching {
         val imdb = tmdb.details(req.item).imdbId ?: return@runCatching PlaybackSegments()
@@ -1734,7 +1736,7 @@ class AppState(context: Context) {
     var activeProfile by mutableStateOf(Profile("default", "Main", primary = true))
     val profiles = mutableStateListOf<Profile>()
     val favorites = mutableStateListOf<String>()
-    var myListLimit by mutableStateOf(15)
+    var myListLimit by mutableStateOf(30)
     var myListLoading by mutableStateOf(false)
     var myListMessage by mutableStateOf("")
     val myListTitles=mutableStateListOf<MediaSummary>()
@@ -1742,7 +1744,7 @@ class AppState(context: Context) {
     private var myListGeneration=0
     private val myListCache=mutableMapOf<String,MediaSummary>()
     suspend fun loadMyListPage(owner: String,ids: List<String>) = coroutineScope {
-        if(myListOwner!=owner) { myListOwner=owner;myListLimit=15;myListCache.clear();myListTitles.clear() }
+        if(myListOwner!=owner) { myListOwner=owner;myListLimit=30;myListCache.clear();myListTitles.clear() }
         val generation=++myListGeneration
         myListLoading=true;myListMessage=""
         val desired=ids.take(myListLimit);val permits=Semaphore(4)
@@ -1752,7 +1754,8 @@ class AppState(context: Context) {
             } } }.awaitAll().filterNotNull()
             if(myListOwner!=owner || generation!=myListGeneration || owner!="${session?.userId}:${activeProfile.id}") return@coroutineScope
             rows.forEach { myListCache[it.cloudId]=it };myListCache.keys.retainAll(favorites.toSet())
-            val visible=if(kidsMode) tmdb.kidsFilter(rows) else rows
+            val ordered=desired.mapNotNull {id->rows.firstOrNull {it.cloudId==id} ?: id.split(':').takeIf {it.size==3}?.let {parts->parts[2].toIntOrNull()?.let {number->MediaSummary(number,parts[1],tr("Título pendiente de cargar","Title waiting to load")+" #$number","",null,null,0.0,"")}}}
+            val visible=if(kidsMode) tmdb.kidsFilter(rows) else ordered
             if(myListOwner!=owner || generation!=myListGeneration || owner!="${session?.userId}:${activeProfile.id}") return@coroutineScope
             myListTitles.clear();myListTitles.addAll(visible)
             if(rows.size<desired.size) myListMessage=tr("Algunos títulos no pudieron cargar.","Some titles could not load.")
@@ -2406,7 +2409,7 @@ class AppState(context: Context) {
         playbackPrefs.edit().putString("selected_profile_rp83:${s.userId}",activeProfile.id).apply()
 
         val (fav, prog) = cloud.profileState(s, activeProfile.id)
-        favorites.clear(); favorites.addAll(fav)
+        applyFavoritesRP164(favoriteOwnerRP164(),fav)
         progress.clear(); progress.putAll(prog)
         easyHomeOwnerRP79=""
         extrasLoaded=false;continueHomeReadyRP129=false
@@ -2440,7 +2443,7 @@ class AppState(context: Context) {
         session?.let {playbackPrefs.edit().putString("selected_profile_rp83:${it.userId}",p.id).apply()}
         session?.let {
             val (fav, prog) = cloud.profileState(it, p.id)
-            favorites.clear(); favorites.addAll(fav)
+            applyFavoritesRP164(favoriteOwnerRP164(),fav)
             progress.clear(); progress.putAll(prog)
         }
         extrasLoaded=false;continueHomeReadyRP129=false
@@ -2555,13 +2558,11 @@ class AppState(context: Context) {
         try {
         val owner = session ?: return
         val profile = activeProfile.id
-        val snapshot = favorites.toSet()
-        val server = cloud.upsertProfile(owner, profile, snapshot, progress.toMap())
-        if (session?.userId == owner.userId && activeProfile.id == profile) {
-            val current = favorites.toSet()
-            val merged = (server + (current - snapshot)) - (snapshot - current)
-            if (merged != current) { favorites.clear(); favorites.addAll(merged) }
-        }
+        val key="${owner.userId}:$profile"
+        val edits=pendingFavoritesRP164(key)
+        val server = cloud.upsertProfile(owner, profile, favorites.toSet(), progress.toMap(),edits)
+        acknowledgeFavoritesRP164(key,edits)
+        if (session?.userId == owner.userId && activeProfile.id == profile) applyFavoritesRP164(key,server)
         } finally { profileSyncMutex.unlock() }
     }
 
@@ -2902,7 +2903,7 @@ class AppState(context: Context) {
     }
 
     fun remindMe(item: MediaSummary) {
-        if(!favorites.contains(item.cloudId)) favorites.add(0,item.cloudId)
+        if(!favorites.contains(item.cloudId)) editFavoriteRP164(item.cloudId,true)
         val key=knownKey()
         val known=org.json.JSONObject(playbackPrefs.getString(key,"{}"))
         if(!known.has(item.cloudId)) known.put(item.cloudId,"pending")
@@ -2921,10 +2922,69 @@ class AppState(context: Context) {
         catch(e: Exception) { if(selected?.cloudId == item.cloudId && currentSeason == season) error=e.message }
     }
 
+    fun configureReleaseAlertsRP164() {
+        com.miflix.native2.data.ReleaseAlertsRP164.configure(appContext,favoriteOwnerRP164(),activeProfile.name,favorites.toList(),tmdb.token,tmdb.language,!kidsMode && session!=null)
+    }
+    var openCalendarWidgetRP164 by mutableStateOf(false)
+    var favoritesSyncMessageRP164 by mutableStateOf("")
+    private var favoriteSaveJobRP164:kotlinx.coroutines.Job?=null
+    private fun favoriteOwnerRP164()="${session?.userId ?: "local"}:${activeProfile.id}"
+    private fun pendingFavoritesRP164(owner:String):Map<String,Boolean> {
+        val j=runCatching {org.json.JSONObject(playbackPrefs.getString("favorites_pending_rp164:$owner","{}"))}.getOrDefault(org.json.JSONObject())
+        return j.keys().asSequence().filter(com.miflix.native2.data.FavoriteSyncRP164::valid).associateWith {j.optBoolean(it)}
+    }
+    private fun acknowledgeFavoritesRP164(owner:String,sent:Map<String,Boolean>) {
+        val left=com.miflix.native2.data.FavoriteSyncRP164.acknowledge(pendingFavoritesRP164(owner),sent)
+        playbackPrefs.edit().putString("favorites_pending_rp164:$owner",org.json.JSONObject(left).toString()).apply()
+    }
+    private fun applyFavoritesRP164(owner:String,server:Collection<String>) {
+        if(owner!=favoriteOwnerRP164()) return
+        val merged=com.miflix.native2.data.FavoriteSyncRP164.merge(server,pendingFavoritesRP164(owner))
+        if(merged!=favorites.toList()) {favorites.clear();favorites.addAll(merged)}
+        playbackPrefs.edit().putString("favorites_snapshot_rp164:$owner",org.json.JSONArray(merged).toString()).apply()
+        configureReleaseAlertsRP164()
+    }
+    private fun editFavoriteRP164(id:String,wanted:Boolean) {
+        if(!com.miflix.native2.data.FavoriteSyncRP164.valid(id)) return
+        val owner=favoriteOwnerRP164()
+        val edits=pendingFavoritesRP164(owner)+ (id to wanted)
+        playbackPrefs.edit().putString("favorites_pending_rp164:$owner",org.json.JSONObject(edits).toString()).apply()
+        if(wanted) {favorites.remove(id);favorites.add(0,id)} else favorites.remove(id)
+        playbackPrefs.edit().putString("favorites_snapshot_rp164:$owner",org.json.JSONArray(favorites.toList()).toString()).apply()
+        configureReleaseAlertsRP164()
+        favoriteSaveJobRP164?.cancel()
+        favoriteSaveJobRP164=appScope.launch {
+            kotlinx.coroutines.delay(250)
+            if(owner!=favoriteOwnerRP164() || session==null) return@launch
+            try {flushFavoriteChangesRP164();favoritesSyncMessageRP164=""} catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {favoritesSyncMessageRP164=tr("Guardado en este dispositivo; sincronización pendiente. Pulsa Actualizar para reintentar.","Saved on this device; sync pending. Tap Refresh to retry.")}
+        }
+    }
+    private suspend fun flushFavoriteChangesRP164() {
+        profileSyncMutex.lock()
+        try {
+            val account=session ?: return
+            val profile=activeProfile.id;val owner="${account.userId}:$profile";val edits=pendingFavoritesRP164(owner)
+            if(edits.isEmpty()) return
+            val server=cloud.favoriteChangesRP164(account,profile,edits)
+            acknowledgeFavoritesRP164(owner,edits);applyFavoritesRP164(owner,server)
+        } finally {profileSyncMutex.unlock()}
+    }
+    suspend fun refreshFavoritesRP164() {
+        val account=session ?: return
+        val profile=activeProfile.id;val owner="${account.userId}:$profile"
+        try {
+            flushFavoriteChangesRP164()
+            profileSyncMutex.lock()
+            try {if(owner==favoriteOwnerRP164()) applyFavoritesRP164(owner,cloud.favoritesRP164(account,profile))} finally {profileSyncMutex.unlock()}
+            if(owner==favoriteOwnerRP164()) favoritesSyncMessageRP164=""
+        } catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {if(owner==favoriteOwnerRP164()) favoritesSyncMessageRP164=tr("No se pudo sincronizar. Tu lista local está conservada.","Could not sync. Your local list is preserved.")}
+    }
     fun toggleFavorite(item: MediaSummary) {
-        if (favorites.contains(item.cloudId)) favorites.remove(item.cloudId) else favorites.add(0,item.cloudId)
+        myListCache[item.cloudId]=item
+        editFavoriteRP164(item.cloudId,item.cloudId !in favorites)
         if(easyModeRP79) saveEasySnapshotRP79()
     }
+
 
     var randomEpisodeCloud by mutableStateOf<String?>(null)
         private set
@@ -3577,7 +3637,7 @@ class AppState(context: Context) {
                 progress[item.cloudId]=progress["${item.cloudId}:s${last.season}e${last.episode}"]!!
                 continueWatching.removeAll {it.cloudId==item.cloudId};kidsContinue.removeAll {it.cloudId==item.cloudId}
             }
-            if(account!=null) cloud.upsertProfile(account,profile,favorites.toSet(),progress.toMap())
+            if(account!=null) cloud.upsertProfile(account,profile,favorites.toSet(),progress.toMap(),emptyMap())
         } finally {profileSyncMutex.unlock()}
     }
 
@@ -3965,16 +4025,18 @@ class AppState(context: Context) {
     }
     suspend fun traktImport() = socialAction {
         val s=session ?: error(tr("Inicia sesión primero","Sign in first"))
+        val importOwner=favoriteOwnerRP164()
         val rows=trakt.call(s,"watchlist").optJSONArray("items") ?: return@socialAction
+        if(importOwner!=favoriteOwnerRP164()) return@socialAction
         for(i in 0 until rows.length()) {
             val row=rows.getJSONObject(i)
             val movie=row.optJSONObject("movie")
             val show=row.optJSONObject("show")
             val media=movie ?: show ?: continue
             val id=media.optJSONObject("ids")?.optInt("tmdb",0) ?: 0
-            if(id>0) { val key="tmdb:${if(movie!=null) "movie" else "series"}:$id"; if(!favorites.contains(key))favorites.add(key) }
+            if(id>0) { val key="tmdb:${if(movie!=null) "movie" else "series"}:$id"; if(!favorites.contains(key))editFavoriteRP164(key,true) }
         }
-        pushCloud(); traktStatus=tr("Lista de Trakt importada a Mi lista","Watchlist imported to My List")
+        flushFavoriteChangesRP164(); traktStatus=tr("Lista de Trakt importada a Mi lista","Watchlist imported to My List")
     }
     suspend fun traktMarkWatched(req: PlayerRequest, position: Long, duration: Long) {
         if(easyModeRP79) return

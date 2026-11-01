@@ -112,7 +112,7 @@ internal fun ModernProfilesScreenRP63(state:AppState,onBack:()->Unit) {
                         Column(Modifier.then(if(p.id==state.profiles.firstOrNull()?.id) Modifier.focusRequester(first) else Modifier)
                             .onFocusChanged {focused=it.isFocused;if(it.isFocused) selectedId=p.id}.tvClick {selectedId=p.id}.clickable {selectedId=p.id}
                             .clip(RoundedCornerShape(16.dp)).background(if(selectedId==p.id) Color(0xB31D1C23) else Color(0x66050505))
-                            .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else if(selectedId==p.id) Accent else ModernBorderRP63,RoundedCornerShape(16.dp)).padding(12.dp),
+                            .border(if(focused) 2.dp else 1.dp,if(focused) Accent else if(selectedId==p.id) Accent else ModernBorderRP63,RoundedCornerShape(16.dp)).padding(12.dp),
                             horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp)) {
                             ProfileAvatar(p,Modifier.size(92.dp))
                             Text(p.name,color=Color.White,fontSize=17.sp,maxLines=1,overflow=TextOverflow.Ellipsis)

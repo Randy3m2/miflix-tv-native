@@ -17,6 +17,14 @@
         android:banner="@drawable/tv_banner"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher">
+        <receiver android:name=".data.BrunioCalendarWidgetRP164" android:label="BruniO · Calendar" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/brunio_calendar_widget_rp164"/>
+        </receiver>
+        <receiver android:name=".data.BrunioUpcomingWidgetRP164" android:label="BruniO · Coming up" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/brunio_upcoming_widget_rp164"/>
+        </receiver>
         <receiver android:name=".data.CalendarReceiverRP120" android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

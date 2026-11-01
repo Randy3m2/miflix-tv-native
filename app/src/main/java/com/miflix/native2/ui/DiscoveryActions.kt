@@ -25,7 +25,7 @@ private fun ActionSurface(modifier:Modifier,onClick:()->Unit,content:@Composable
     val active=actionFocusVisibleRP64(focused)
     Box(modifier.onFocusChanged {focused=it.isFocused}.tvClick(onClick).clickable(onClick=onClick)
         .background(GlassActionBrushRP108(active),RoundedCornerShape(20.dp))
-        .border(2.dp,if(active) Color.White else Accent.copy(alpha=.3f),RoundedCornerShape(20.dp))) {content(active)}
+        .border(2.dp,if(active) Accent else Accent.copy(alpha=.3f),RoundedCornerShape(20.dp))) {content(active)}
 }
 
 @Composable

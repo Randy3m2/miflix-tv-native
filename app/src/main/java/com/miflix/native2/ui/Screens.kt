@@ -137,6 +137,9 @@ internal fun AppShell(state: AppState, screen: Screen, onNavigate: (Screen) -> U
 fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     val simple=state.simpleHome
     var homeFocusKey by androidx.compose.runtime.saveable.rememberSaveable {mutableStateOf<String?>(null)}
+    val returningFromDetailsRP164=remember {homeFocusKey!=null}
+    var restoringHomeRP164 by remember {mutableStateOf(homeFocusKey!=null)}
+    LaunchedEffect(Unit) {delay(2500);restoringHomeRP164=false}
     val homeReturn=remember {HomeReturnFocus(homeFocusKey) {homeFocusKey=it}}
     // If a refreshed catalog removed the old target, release the restoration guard.
     LaunchedEffect(Unit) {delay(1500);homeReturn.pending=null}
@@ -187,9 +190,9 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     fun cancelHeaderWork() {headerWork.forEach {it.cancel()};headerWork.clear()}
 
     LaunchedEffect(discoveryOwner,state.continueWatching.isNotEmpty()) {
-        if(state.continueWatching.isNotEmpty() && homeReturn.pending==null && !startupInteractedRP129) {
+        if(state.continueWatching.isNotEmpty() && !returningFromDetailsRP164 && homeReturn.pending==null && !startupInteractedRP129) {
             withFrameNanos { }
-            if(homeReturn.pending==null && !startupInteractedRP129) {shelfMotion.reset();scroll.scrollToItem(0)}
+            if(!returningFromDetailsRP164 && homeReturn.pending==null && !startupInteractedRP129) {shelfMotion.reset();scroll.scrollToItem(0)}
         }
     }
     val headerShade by remember { derivedStateOf { if(scroll.firstVisibleItemIndex>0) .88f else (scroll.firstVisibleItemScrollOffset/320f).coerceIn(0f,.88f) } }
@@ -202,7 +205,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     val openItem: (MediaSummary) -> Unit={ item -> state.launch { state.open(item) } }
     val openCollection: (CollectionTile) -> Unit={ tile -> state.launch { state.openCollection(tile.id,tile.title) } }
     val returnToTop: () -> Unit={
-        if(homeReturn.pending==null) {
+        if(!restoringHomeRP164 && homeReturn.pending==null) {
             cancelHeaderWork()
             headerWork.add(scope.launch {shelfMotion.reset();scroll.animateScrollToItem(0)})
         }
@@ -813,7 +816,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                             val watching=state.favorites.contains(item.cloudId)
                             FocusButton(if(watching) tr("✓ Te avisaremos","✓ Reminder set") else tr("Avisarme","Notify me"),primary=true,
                                 modifier=Modifier.focusRequester(playFocus).width(220.dp)) {
-                                state.remindMe(item);state.launch { runCatching { state.pushCloud() } }
+                                state.remindMe(item)
                             }
                         } else if (item.type == "movie") {
                             val label = if ((saved?.percent ?: 0.0) in 1.0..95.0) "▶  ${tr("Reanudar","Resume")} ${formatPosition(saved?.position ?: 0)}" else tr("▶  Reproducir","▶  Play")
@@ -827,7 +830,7 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
                             }
                         }
                         FocusButton(if (state.favorites.contains(item.cloudId)) tr("✓ Mi lista","✓ My List") else tr("+ Mi lista","+ My List")) {
-                            state.toggleFavorite(item); state.launch { runCatching { state.pushCloud() } }
+                            state.toggleFavorite(item)
                         }
                         if(item.type=="series" && !state.selectedUpcoming) FocusButton(if(state.randomEpisodeBusy) tr("Eligiendo…","Choosing…") else tr("🎲 Episodio aleatorio","🎲 Random episode")) {
                             state.launch {state.playRandomEpisode(item)}

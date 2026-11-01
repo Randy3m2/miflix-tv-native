@@ -154,7 +154,7 @@ private fun HubTileRP41(board:ImageBitmap,index:Int,label:String,modifier:Modifi
     val scale by animateFloatAsState(if(focused) 1.015f else 1f,label="Live tile focus")
     val xs=listOf(40,534,1029);val ys=listOf(24,355,672)
     Box(modifier.graphicsLayer {scaleX=scale;scaleY=scale;shadowElevation=if(focused) 10.dp.toPx() else 0f;shape=RoundedCornerShape(13.dp)}
-        .clip(RoundedCornerShape(13.dp)).border(if(focused) 2.dp else 1.dp,if(focused) Color.White else Color(0xFF263245),RoundedCornerShape(13.dp))
+        .clip(RoundedCornerShape(13.dp)).border(if(focused) 2.dp else 1.dp,if(focused) Accent else Color(0xFF263245),RoundedCornerShape(13.dp))
         .semantics {contentDescription=label}.onFocusChanged {focused=it.isFocused}.tvClick(click).clickable(onClick=click)) {
         Canvas(Modifier.fillMaxSize()) {
             val sourceY=ys[index/3]+if(index/3==2) 0 else 8
@@ -381,7 +381,7 @@ internal fun HubEventCardRP41(title:String,poster:String?,subtitle:String,onHold
     LaunchedEffect(focused) {if(focused) {withFrameNanos {};bring.bringIntoView()}}
     Column(Modifier.fillMaxWidth().height(194.dp).bringIntoViewRequester(bring)
         .clip(RoundedCornerShape(13.dp)).background(Brush.verticalGradient(listOf(Color(0xFF242424),Color(0xFF101010))))
-        .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(13.dp))
+        .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(13.dp))
         .onFocusChanged {focused=it.isFocused}.tvPlaybackClick(click,onHoldRP48 ?: click).clickable(onClick=click)) {
         Box(Modifier.fillMaxWidth().weight(1f).background(Brush.verticalGradient(listOf(if(logoRP50) Color(0xFF171717) else Color(0xFF17283C),Color.Black))),contentAlignment=Alignment.Center) {
             if(!poster.isNullOrBlank() && !logoFailedRP50) AsyncImage(poster,null,Modifier.fillMaxSize().padding(if(logoRP50) 22.dp else 0.dp),contentScale=if(logoRP50) ContentScale.Fit else ContentScale.Crop,onError={logoFailedRP50=true})
@@ -426,7 +426,7 @@ private fun HubLidomRP41(state:AppState,modifier:Modifier) {
                 val choose={team=game.home;state.lidomTeamId=game.home.id}
                 Column(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(14.dp))
                     .background(Brush.verticalGradient(listOf(Color(0xFF202020),Color(0xFF0D0D0D))))
-                    .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(14.dp))
+                    .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(14.dp))
                     .onFocusChanged {focused=it.isFocused}.tvClick(choose).clickable(onClick=choose).padding(14.dp),
                     horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     Row(Modifier.weight(1f),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
@@ -447,7 +447,7 @@ private fun HubLidomRP41(state:AppState,modifier:Modifier) {
                 val choose={team=club;state.lidomTeamId=club.id}
                 Row(Modifier.fillMaxWidth().height(100.dp).clip(RoundedCornerShape(14.dp))
                     .background(GlassActionBrushRP108(focused))
-                    .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(14.dp))
+                    .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(14.dp))
                     .onFocusChanged {focused=it.isFocused}.tvClick(choose).clickable(onClick=choose).padding(14.dp),
                     verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
                     val logo=context.resources.getIdentifier(club.logo,"drawable",context.packageName)
@@ -466,7 +466,7 @@ internal fun HubCategoryChipRP42(label:String,selected:Boolean,click:()->Unit) {
     var focused by remember {mutableStateOf(false)}
     val active=actionFocusVisibleRP64(focused)
     Row(Modifier.clip(RoundedCornerShape(18.dp)).background(GlassActionBrushRP108(active,selected))
-        .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else if(selected) Color(0xFF727272) else Color(0xFF2A2A2A),RoundedCornerShape(18.dp))
+        .border(if(focused) 2.dp else 1.dp,if(focused) Accent else if(selected) Color(0xFF727272) else Color(0xFF2A2A2A),RoundedCornerShape(18.dp))
         .onFocusChanged {focused=it.isFocused}.tvClick(click).clickable(onClick=click).padding(horizontal=16.dp,vertical=12.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(9.dp)) {
         Canvas(Modifier.size(16.dp)) {

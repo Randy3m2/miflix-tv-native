@@ -47,7 +47,7 @@ internal fun AssistantSearchFieldRP153(value:String,change:(String)->Unit,enable
     } else {
         val activate={if(enabled) editing=true;Unit}
         Box(modifier.focusRequester(fieldFocus).onFocusChanged {focused=it.isFocused}.tvClick(activate).clickable(enabled=enabled,onClick=activate)
-            .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else Color.Transparent,RoundedCornerShape(12.dp)).padding(14.dp)) {
+            .border(if(focused) 2.dp else 1.dp,if(focused) Accent else Color.Transparent,RoundedCornerShape(12.dp)).padding(14.dp)) {
             Text(value.ifBlank {hint},color=if(value.isBlank()) Muted else Color.White,fontSize=18.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
         }
     }

@@ -76,7 +76,7 @@ internal fun CustomChannelsPanelRP45(state:AppState,initialEditRP48:CustomChanne
                             val edit={actionsRP48=channel}
                             Column(Modifier.fillMaxWidth().onFocusChanged {focused=it.isFocused}.tvPlaybackClick(play,edit).clickable(onClick=play)
                                 .background(GlassActionBrushRP108(focused),RoundedCornerShape(12.dp))
-                                .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else PanelBorder,RoundedCornerShape(12.dp)).padding(15.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                                .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(12.dp)).padding(15.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
                                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                                     AsyncImage(channel.logo,channel.name,Modifier.size(48.dp),contentScale=ContentScale.Fit)
                                     Text(CustomChannelsRP45.labelRP50(channel),color=Color.White,fontSize=16.sp,fontWeight=FontWeight.Bold)

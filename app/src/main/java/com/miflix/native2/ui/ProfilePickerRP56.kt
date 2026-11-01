@@ -154,7 +154,7 @@ internal fun ProfilePickerRP56(
                                 .tvClick { if (!picking) onSelect(profile) }
                                 .clickable { if (!picking) onSelect(profile) }
                                 .graphicsLayer { scaleX = scale; scaleY = scale }
-                                .border(if (selected) 1.5.dp else 0.dp, if (selected) Color.White else Color.Transparent,
+                                .border(if (selected) 1.5.dp else 0.dp, if (selected) Accent else Color.Transparent,
                                     RoundedCornerShape(8.dp)).padding(3.dp)) {
                                 ProfileAvatar(profile, Modifier.size(avatarSize))
                             }

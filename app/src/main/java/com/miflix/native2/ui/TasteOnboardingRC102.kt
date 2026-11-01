@@ -143,7 +143,7 @@ private fun TasteChoiceCardRC102(title:String,image:String?,subtitle:String,sele
     val shape=RoundedCornerShape(16.dp)
     Box(Modifier.fillMaxWidth().aspectRatio(if(landscape) 1.65f else 2f/3f).graphicsLayer {scaleX=scale;scaleY=scale}
         .onFocusChanged {focused=it.isFocused}.clip(shape).background(Brush.linearGradient(listOf(Color(0xff26394d),Color(0xff281d35))))
-        .border(if(focused || selected) 3.dp else 1.dp,if(focused) Color.White else if(selected) Accent else Color.White.copy(alpha=.12f),shape)
+        .border(if(focused || selected) 3.dp else 1.dp,if(focused) Accent else if(selected) Accent else Color.White.copy(alpha=.12f),shape)
         .clickable(onClick=onClick)) {
         if(image!=null) AsyncImage(image,contentDescription=title,contentScale=ContentScale.Crop,modifier=Modifier.fillMaxSize())
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color.Black.copy(alpha=.1f),Color.Black.copy(alpha=.95f)))))

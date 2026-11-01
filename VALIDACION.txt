@@ -1,0 +1,4 @@
+RP164: app:compileDebugKotlin + app:testDebugUnitTest + mobile:compileDebugKotlin
+BUILD SUCCESSFUL
+580 pruebas, 0 fallos, 0 errores, 0 omitidas.
+No se han probado dispositivos físicos ni cuenta de producción.

@@ -42,7 +42,7 @@ internal fun StatsTeamButtonRP132(team:ScoreTeamRP11,isSelected:Boolean,modifier
     Box(modifier.height(if(LocalMobileBrunioRP133.current) 46.dp else 30.dp).clip(RoundedCornerShape(7.dp)).onFocusChanged {focused=it.isFocused}
         .semantics {contentDescription=team.name;selected=isSelected}
         .background(GlassActionBrushRP108(focused,isSelected))
-        .border(1.dp,if(focused) Color.White else if(isSelected) Color(0xFF9386AF) else Color(0x445E6878),RoundedCornerShape(7.dp))
+        .border(1.dp,if(focused) Accent else if(isSelected) Color(0xFF9386AF) else Color(0x445E6878),RoundedCornerShape(7.dp))
         .clickable(role=Role.Button,onClick=click).padding(3.dp),contentAlignment=Alignment.Center) {
         StatsTeamLogoRP132(team,Modifier.size(24.dp))
     }

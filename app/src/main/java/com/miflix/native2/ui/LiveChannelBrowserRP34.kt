@@ -434,7 +434,7 @@ private fun BrowserChannelRowRP34(channel:LiveChannel,number:Int,favorite:Boolea
     val bring=remember {BringIntoViewRequester()}
     LaunchedEffect(focused) {if(focused) {withFrameNanos {};bring.bringIntoView()}}
     Row(modifier.fillMaxWidth().bringIntoViewRequester(bring).clip(RoundedCornerShape(8.dp)).background(GlassActionBrushRP108(focused))
-        .border(if(focused) 1.dp else 0.dp,if(focused) Color.White else Color.Transparent,RoundedCornerShape(8.dp))
+        .border(if(focused) 1.dp else 0.dp,if(focused) Accent else Color.Transparent,RoundedCornerShape(8.dp))
         .onFocusChanged {focused=it.isFocused}.tvChannelTimedClickRP54(click,favoriteHold,optionsHold).focusable().padding(horizontal=10.dp,vertical=9.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
         Box(Modifier.size(40.dp),contentAlignment=Alignment.Center) {
@@ -465,7 +465,7 @@ internal fun LiveFavoriteRP36(state:AppState,request:PlayerRequest,onInteraction
     }
     Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp))
         .background(GlassActionBrushRP108(focused))
-        .border(if(focused) 1.dp else 0.dp,if(focused) Color.White else Color.Transparent,RoundedCornerShape(12.dp))
+        .border(if(focused) 1.dp else 0.dp,if(focused) Accent else Color.Transparent,RoundedCornerShape(12.dp))
         .semantics {contentDescription=action;stateDescription=if(favorite) "Favorito" else "Sin marcar"}
         .onFocusChanged {focused=it.isFocused;if(it.isFocused) onInteraction()}
         .tvClick(toggle).clickable(onClick=toggle),contentAlignment=Alignment.Center) {

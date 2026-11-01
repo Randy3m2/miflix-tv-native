@@ -157,7 +157,7 @@ private fun EasyShelfRP79(title:String,rows:List<MediaSummary>,onOpen:(MediaSumm
 private fun EasyCardRP79(item:MediaSummary,modifier:Modifier=Modifier,onOpen:()->Unit) {
     var focused by remember(item.cloudId) {mutableStateOf(false)}
     Column(modifier.clip(RoundedCornerShape(16.dp)).background(GlassActionBrushRP108(focused))
-        .border(if(focused) 3.dp else 1.dp,if(focused) Color.White else Color(0xFF333333),RoundedCornerShape(16.dp))
+        .border(if(focused) 3.dp else 1.dp,if(focused) Accent else Color(0xFF333333),RoundedCornerShape(16.dp))
         .onFocusChanged {focused=it.isFocused}.tvClick(onOpen).clickable(onClick=onOpen)) {
         AsyncImage(item.poster,null,Modifier.fillMaxWidth().height(220.dp).background(Color(0xFF222222)),contentScale=ContentScale.Crop)
         Text(item.title,color=if(focused) Color.White else Color.White,fontSize=20.sp,lineHeight=26.sp,maxLines=2,
@@ -232,7 +232,7 @@ private fun EasyDetailsRP79(state:AppState) {
                     else Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
                         if(!state.selectedUpcoming) FocusButton(tr("Reproducir","Play"),Modifier.focusRequester(playFocus),onFocused={if(it) showHeader()}) {state.launch {state.easyResumeRP79(item)}}
                         FocusButton(if(item.cloudId in state.favorites) tr("Quitar de Mi lista","Remove from My List") else tr("Guardar en Mi lista","Save to My List"),
-                            onFocused={if(it) showHeader()}) {state.toggleFavorite(item);state.launch {state.pushCloud()}}
+                            onFocused={if(it) showHeader()}) {state.toggleFavorite(item)}
                     }
                 }
             }

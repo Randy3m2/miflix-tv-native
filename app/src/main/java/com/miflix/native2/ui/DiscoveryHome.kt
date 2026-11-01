@@ -69,7 +69,7 @@ private fun MoodTile(mood:String,selected:Boolean,modifier:Modifier=Modifier,ima
     Box(modifier.height(100.dp).width(224.dp).graphicsLayer {scaleX=scale;scaleY=scale}
         .onFocusChanged {focused=it.isFocused}.clip(shape)
         .background(Brush.linearGradient(listOf(hue.copy(alpha=.3f),Color(0xff121521))))
-        .border(if(focused || selected) 2.dp else 1.dp,if(focused) Color.White else if(selected) hue else Color.White.copy(alpha=.14f),shape)
+        .border(if(focused || selected) 2.dp else 1.dp,if(focused) Accent else if(selected) hue else Color.White.copy(alpha=.14f),shape)
         .clickable(onClick=onClick)) {
         if(image!=null) AsyncImage(image,contentDescription=moodTitle(mood),contentScale=ContentScale.Crop,modifier=Modifier.fillMaxSize())
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color.Black.copy(alpha=.88f),Color.Black.copy(alpha=.30f)))))

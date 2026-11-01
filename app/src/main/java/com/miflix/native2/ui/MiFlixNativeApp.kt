@@ -111,6 +111,7 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
         }
         val contentReadyRP140=mobileRP133 && state.screen !in listOf(Screen.SPLASH,Screen.PROFILES,Screen.SETTINGS)
         LaunchedEffect(initialContentLinkRP140,contentReadyRP140) {
+            if(contentReadyRP140 && initialContentLinkRP140=="brunio://calendar") {state.openCalendarWidgetRP164=true;state.screen=Screen.FRIENDS;onContentConsumedRP140();return@LaunchedEffect}
             if(contentReadyRP140) com.miflix.native2.data.MobileShareRP140.cloudId(initialContentLinkRP140)?.let {id->
                 try {state.playerRequest=null;state.openRecommendation(id)}
                 catch(e:kotlinx.coroutines.CancellationException) {throw e}
@@ -213,8 +214,8 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
         }
         if(!state.easyModeRP79) LiveScoreOverlayRP11(state)
         }
-        LaunchedEffect(bootstrapped,state.session?.userId,state.activeProfile.id,state.easyModeRP79) {
-            if(bootstrapped && !state.easyModeRP79) runCatching { state.loadRatings() }.onFailure { state.error=it.message }
+        LaunchedEffect(bootstrapped,state.session?.userId,state.activeProfile.id,state.easyModeRP79,state.appForeground,state.screen==Screen.DETAILS) {
+            if(bootstrapped && state.appForeground && !state.easyModeRP79) runCatching { state.loadRatings() }.onFailure { state.error=it.message }
         }
         if(showAssistantRP150 && state.screen==Screen.PLAYER && !guestRP150 && !mobileRP133 && !state.kidsMode) AssistantPlayerOverlayRP159(state) {showAssistantRP150=false;state.assistantQueryRP156=null}
         state.assistantToolRP158?.takeIf {state.assistantEnabledRP155 && !state.kidsMode && !guestRP150}?.let {tool ->AssistantToolPanelRP158(state,tool) {state.assistantToolRP158=null}}

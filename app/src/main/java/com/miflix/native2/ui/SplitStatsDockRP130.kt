@@ -95,7 +95,7 @@ internal fun SplitStatsActionRP130(label:String,click:()->Unit,modifier:Modifier
     var focused by remember {mutableStateOf(false)}
     Box(modifier.height(24.dp).widthIn(min=26.dp).clip(RoundedCornerShape(6.dp))
         .onFocusChanged {focused=it.isFocused}.background(GlassActionBrushRP108(focused,selected))
-        .border(1.dp,if(focused) Color.White else Color(0x445E6878),RoundedCornerShape(6.dp))
+        .border(1.dp,if(focused) Accent else Color(0x445E6878),RoundedCornerShape(6.dp))
         .semantics {contentDescription=description}.clickable(role=Role.Button,onClick=click).padding(horizontal=7.dp),contentAlignment=Alignment.Center) {
         Text(label,color=Color.White,fontSize=textSize.sp,fontWeight=if(focused) FontWeight.Bold else FontWeight.Normal,maxLines=1)
     }

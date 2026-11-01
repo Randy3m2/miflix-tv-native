@@ -29,6 +29,7 @@ import java.time.format.DateTimeFormatter
 @Composable
 internal fun MobileFriendsRP133(state:AppState) {
     var tab by rememberSaveable {mutableStateOf(if(state.screen==Screen.WATCH_PARTY) "Party" else "Friends")}
+    LaunchedEffect(state.openCalendarWidgetRP164) {if(state.openCalendarWidgetRP164) {tab="Calendar";state.openCalendarWidgetRP164=false}}
     var code by rememberSaveable {mutableStateOf("")}
     var nickname by rememberSaveable {mutableStateOf("")}
     var chat by rememberSaveable {mutableStateOf("")}

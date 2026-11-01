@@ -94,9 +94,21 @@ internal fun MobileAppRP133(state:AppState,destination:Screen) {
 @Composable
 private fun MobileMyListRP133(state:AppState) {
     val owner="${state.session?.userId}:${state.activeProfile.id}"
+    val context=androidx.compose.ui.platform.LocalContext.current
+    val permission=androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) {state.configureReleaseAlertsRP164()}
+    LaunchedEffect(owner,state.appForeground) {if(state.appForeground) state.refreshFavoritesRP164()}
     LaunchedEffect(owner,state.favorites.toList(),state.myListLimit) {state.loadMyListPage(owner,state.favorites.toList())}
-    MobileCatalogGridRP133(state,tr("Mi lista","My list"),state.myListTitles,
-        more=if(state.myListLimit<state.favorites.size) ({state.myListLimit+=15}) else null)
+    Column(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            MobileButtonRP133(tr("Actualizar","Refresh"),"refresh",Modifier.weight(1f)) {state.launch {state.refreshFavoritesRP164();state.loadMyListPage(owner,state.favorites.toList())}}
+            MobileButtonRP133("Trakt","list",Modifier.weight(1f)) {state.launch {state.traktImport();state.refreshFavoritesRP164()}}
+            if(!com.miflix.native2.data.ReleaseAlertsRP164.allowed(context)) MobileButtonRP133(tr("Activar avisos","Enable alerts"),"bell",Modifier.weight(1f)) {if(android.os.Build.VERSION.SDK_INT>=33) permission.launch(android.Manifest.permission.POST_NOTIFICATIONS)}
+        }
+        if(state.favoritesSyncMessageRP164.isNotBlank()) Text(state.favoritesSyncMessageRP164,color=Muted,modifier=Modifier.padding(horizontal=16.dp))
+        if(state.myListMessage.isNotBlank()) Text(state.myListMessage,color=Muted,modifier=Modifier.padding(horizontal=16.dp))
+        Box(Modifier.weight(1f)) {MobileCatalogGridRP133(state,tr("Mi lista","My list"),state.myListTitles,
+            more=if(state.myListLimit<state.favorites.size) ({state.myListLimit+=30}) else null)}
+    }
 }
 
 @Composable

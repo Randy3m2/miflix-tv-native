@@ -43,7 +43,7 @@ internal fun AssistantActionRP152(label:String,icon:String?=null,selected:Boolea
     Row(modifier.heightIn(min=42.dp).onFocusChanged {focused=it.isFocused}
         .semantics {contentDescription=label;role=Role.Button}
         .clip(shape).background(if(focused) Color(0xfff0ebff) else if(selected) Color(0xff5e4989) else Color.White.copy(alpha=.055f))
-        .border(if(focused) 2.dp else 1.dp,if(focused) Color.White else if(selected) Color(0xffbf9dff) else Color.White.copy(alpha=.12f),shape)
+        .border(if(focused) 2.dp else 1.dp,if(focused) Accent else if(selected) Color(0xffbf9dff) else Color.White.copy(alpha=.12f),shape)
         .tvClick(onClick).clickable(onClick=onClick).padding(horizontal=15.dp,vertical=10.dp),
         horizontalArrangement=Arrangement.spacedBy(8.dp,Alignment.CenterHorizontally),verticalAlignment=Alignment.CenterVertically) {
         if(icon!=null) MobileIconRP133(icon,tint=if(focused) Color(0xff251d3c) else Color.White)
@@ -60,7 +60,7 @@ internal fun AssistantIdeaCardRP152(state:AppState,idea:AssistantIdeaRP152,image
     Box(Modifier.width(216.dp).height(132.dp).onFocusChanged {focused=it.isFocused}
         .semantics {contentDescription=idea.title();role=Role.Button}.clip(shape)
         .background(Brush.linearGradient(listOf(Color(0xff4c3a71),Color(0xff172738))))
-        .border(if(focused) 3.dp else 1.dp,if(focused) Color.White else Color.White.copy(alpha=.12f),shape)
+        .border(if(focused) 3.dp else 1.dp,if(focused) Accent else Color.White.copy(alpha=.12f),shape)
         .tvClick(onClick).clickable(onClick=onClick)) {
         if(!art.isNullOrBlank()) AsyncImage(art,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Black.copy(alpha=.08f),Color.Black.copy(alpha=.9f)))))
@@ -78,7 +78,7 @@ internal fun AssistantPosterRP152(pick:AssistantPickRP150,modifier:Modifier=Modi
     Column(modifier,verticalArrangement=Arrangement.spacedBy(7.dp)) {
         Box(Modifier.fillMaxWidth().heightIn(max=210.dp).aspectRatio(2f/3f).onFocusChanged {focused=it.isFocused}
             .semantics {contentDescription=pick.item.title;role=Role.Button}.clip(shape).background(Panel)
-            .border(if(focused) 3.dp else 1.dp,if(focused) Color.White else Color.White.copy(alpha=.12f),shape)
+            .border(if(focused) 3.dp else 1.dp,if(focused) Accent else Color.White.copy(alpha=.12f),shape)
             .tvClick(details).clickable(onClick=details)) {
             AsyncImage(pick.item.poster?.takeIf {it.isNotBlank()} ?: pick.item.backdrop,pick.item.title,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
             Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(70.dp).background(Brush.verticalGradient(listOf(Color.Transparent,Color.Black.copy(alpha=.9f)))))

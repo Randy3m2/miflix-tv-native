@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -198,6 +199,7 @@ private fun PlayerGlyph(icon: String, color: Color, modifier: Modifier) {
 private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seekFocus: FocusRequester, playFocus: FocusRequester, onInteraction: () -> Unit, onSeek: (Long) -> Unit,largeRP89:Boolean=false,previewSourceRP151:com.miflix.native2.model.StreamChoice?=null) {
     val previewContextRP151=androidx.compose.ui.platform.LocalContext.current
     val stagedRP151=previewSourceRP151!=null && remember(previewSourceRP151) {scenePreviewEnabledRP151(previewContextRP151)}
+    var previewBarWidthRP164 by remember {mutableIntStateOf(0)}
     var focused by remember {mutableStateOf(false)}
     var dragging by remember {mutableStateOf(false)}
     var preview by remember {mutableStateOf<Long?>(null)}
@@ -208,7 +210,7 @@ private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seek
     val fraction=if(duration>0) (shown.toFloat()/duration).coerceIn(0f,1f) else 0f
     LaunchedEffect(position,dragging) {if(!stagedRP151 && !dragging && preview?.let {kotlin.math.abs(position-it)<1000L}==true) preview=null}
     LaunchedEffect(preview,dragging) {if(!stagedRP151 && preview!=null && !dragging) {kotlinx.coroutines.delay(1500);preview=null} }
-    Box(Modifier.fillMaxWidth().height(if(largeRP89) 52.dp else 30.dp).focusRequester(seekFocus).focusProperties {down=playFocus}
+    Box(Modifier.fillMaxWidth().onSizeChanged {previewBarWidthRP164=it.width}.height(if(largeRP89) 52.dp else 30.dp).focusRequester(seekFocus).focusProperties {down=playFocus}
         .onFocusChanged {focused=it.isFocused;if(it.isFocused) interaction() else if(stagedRP151) preview=null}
         .semantics {contentDescription=playbackTime(shown)+" / "+playbackTime(duration)}
         .onPreviewKeyEvent {event ->
@@ -233,7 +235,7 @@ private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seek
         }) {
         if(stagedRP151 && preview!=null && previewSourceRP151!=null) {
             val popupOffsetRP151=with(androidx.compose.ui.platform.LocalDensity.current) {160.dp.roundToPx()}
-            androidx.compose.ui.window.Popup(alignment=Alignment.TopStart,offset=androidx.compose.ui.unit.IntOffset(0,-popupOffsetRP151),properties=androidx.compose.ui.window.PopupProperties(focusable=false,clippingEnabled=false)) {ScenePreviewRP151(previewSourceRP151,shown)}
+            androidx.compose.ui.window.Popup(alignment=Alignment.TopStart,offset=androidx.compose.ui.unit.IntOffset((previewBarWidthRP164*fraction-with(androidx.compose.ui.platform.LocalDensity.current){105.dp.toPx()}).toInt().coerceIn(0,(previewBarWidthRP164-with(androidx.compose.ui.platform.LocalDensity.current){210.dp.toPx()}).toInt().coerceAtLeast(0)),-popupOffsetRP151),properties=androidx.compose.ui.window.PopupProperties(focusable=false,clippingEnabled=false)) {ScenePreviewRP151(previewSourceRP151,shown)}
         }
         Text(playbackTime(shown)+" / "+playbackTime(duration),color=Color.White,fontSize=if(largeRP89) 19.sp else 12.sp,lineHeight=if(largeRP89) 24.sp else 16.sp,
             modifier=Modifier.align(Alignment.TopEnd).background(Color(0xA0000000),RoundedCornerShape(5.dp)).padding(horizontal=7.dp,vertical=2.dp))

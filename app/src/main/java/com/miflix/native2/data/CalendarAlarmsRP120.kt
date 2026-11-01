@@ -16,6 +16,7 @@ internal object CalendarAlarmsRP120 {
     }
     fun precise(c:Context)=Build.VERSION.SDK_INT<31 || c.getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
     fun schedule(c:Context,owner:String) {
+        BrunioWidgetsRP164.updateAll(c)
         val prefs=c.getSharedPreferences("brunio_calendar_rp120",0);val alarm=c.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val old=prefs.getStringSet("alarms:$owner",emptySet()).orEmpty()
         for(key in old) alarm.cancel(pending(c,owner,key))

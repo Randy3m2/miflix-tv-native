@@ -154,7 +154,7 @@ fun FocusButton(
             .then(if (onLongClick != null) Modifier.tvPlaybackClick(onClick, onLongClick) else Modifier.tvClick(onClick))
             .clickable(onClick = onClick)
             .background(GlassActionBrushRP108(actionFocused,primary,destructive), RoundedCornerShape(50))
-            .border(if (actionFocused) 2.dp else 1.dp, if(actionFocused) Color.White else if(destructive) Color(0xFF78404B) else if(primary) Color(0xFF74608D) else PanelBorder, RoundedCornerShape(50))
+            .border(if (actionFocused) 2.dp else 1.dp, if(actionFocused) Accent else if(destructive) Color(0xFF78404B) else if(primary) Accent.copy(alpha=.55f) else PanelBorder, RoundedCornerShape(50))
             .padding(horizontal = horizontalPadding, vertical = if(LocalSimpleHome.current) 16.dp else 12.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -173,7 +173,7 @@ fun BackIconButton(onClick: () -> Unit) {
     val actionFocused=actionFocusVisibleRP64(focused)
     Box(Modifier.size(44.dp).semantics { contentDescription=tr("Volver","Back") }.onFocusChanged { focused=it.isFocused }.tvClick(onClick)
         .clickable(onClick=onClick).background(GlassActionBrushRP108(actionFocused),RoundedCornerShape(22.dp))
-        .border(if(actionFocused) 2.dp else 1.dp,if(actionFocused) Color.White else Color(0x557D8AA3),RoundedCornerShape(22.dp)),
+        .border(if(actionFocused) 2.dp else 1.dp,if(actionFocused) Accent else Color(0x557D8AA3),RoundedCornerShape(22.dp)),
         contentAlignment=Alignment.Center) {
         Text("‹",color=if(actionFocused) Color.White else Color.White,fontSize=32.sp, lineHeight=38.sp)
     }
@@ -449,7 +449,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
         Box {
         Row(Modifier.focusRequester(profileAnchor).onFocusChanged { profileFocused=it.isFocused }.tvClick { profileMenu=true }.clickable { profileMenu=true }
             .background(GlassActionBrushRP108(profileFocused),androidx.compose.foundation.shape.CircleShape)
-            .border(1.dp,Color.White.copy(alpha=if(profileFocused) .45f else .16f),androidx.compose.foundation.shape.CircleShape).padding(4.dp),
+            .border(1.dp,Accent.copy(alpha=if(profileFocused) 1f else .16f),androidx.compose.foundation.shape.CircleShape).padding(4.dp),
             verticalAlignment=Alignment.CenterVertically) {
             if(profile!=null) ProfileAvatar(profile,Modifier.size(34.dp).clip(androidx.compose.foundation.shape.CircleShape))
             else Box(Modifier.size(34.dp),contentAlignment=Alignment.Center) { Text(profileName.take(1),color=Color.White) }
@@ -510,7 +510,7 @@ private fun NotificationButton(count: Int,modifier:Modifier=Modifier,onClick: ()
     var focused by remember { mutableStateOf(false) }
     Box(modifier.size(46.dp).semantics { contentDescription="${tr("Avisos","Alerts")}: $count" }.onFocusChanged { focused=it.isFocused }.tvClick(onClick).clickable(onClick=onClick)
         .background(GlassNavBrushRP106(focused,false),RoundedCornerShape(50))
-        .border(1.dp,Color.White.copy(alpha=if(focused) .38f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
+        .border(1.dp,Accent.copy(alpha=if(focused) 1f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
         BellIcon(Color.White,Modifier.size(25.dp))
         if(count>0) Text(if(count>9) "9+" else count.toString(),color=if(focused) Color.White else Color.Black,fontSize=10.sp,lineHeight=12.sp,
             modifier=Modifier.align(Alignment.TopEnd).background(if(focused) Color(0xFF292929) else Color(0xFFCCCCCC),RoundedCornerShape(8.dp)).padding(horizontal=4.dp,vertical=2.dp))
@@ -535,7 +535,7 @@ private fun BellIcon(color: Color,modifier: Modifier) {
 private fun SearchNavigationButton(onFocused: (Boolean) -> Unit = {},selected:Boolean=false,modifier:Modifier=Modifier,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     Box(modifier.size(44.dp).semantics { contentDescription=tr("Buscar","Search") }.onFocusChanged { focused=it.isFocused; onFocused(it.isFocused) }.tvClick(onClick).clickable(onClick=onClick)
-        .background(GlassNavBrushRP106(focused,selected),RoundedCornerShape(50)).border(1.dp,Color.White.copy(alpha=if(focused) .36f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
+        .background(GlassNavBrushRP106(focused,selected),RoundedCornerShape(50)).border(1.dp,Accent.copy(alpha=if(focused) 1f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
         Canvas(Modifier.size(24.dp)) {
             val ink=Color.White
             val center=androidx.compose.ui.geometry.Offset(size.width*.4f,size.height*.4f)
@@ -552,7 +552,7 @@ internal fun NavigationTab(text: String,selected: Boolean,onFocused: (Boolean) -
     Box(modifier.height(42.dp).onFocusChanged {focused=it.isFocused;onFocused(it.isFocused)}
         .tvClick(onClick).clickable(onClick=onClick)
         .background(GlassNavBrushRP106(focused,selected),RoundedCornerShape(50))
-        .border(1.dp,Color.White.copy(alpha=if(focused) .38f else if(selected) .18f else .06f),RoundedCornerShape(50))
+        .border(1.dp,Accent.copy(alpha=if(focused) 1f else if(selected) .18f else .06f),RoundedCornerShape(50))
         .padding(horizontal=14.dp),contentAlignment=Alignment.Center) {
         Text(text,color=Color.White.copy(alpha=if(focused || selected) 1f else .76f),fontSize=14.sp,lineHeight=18.sp,fontWeight=if(focused || selected) FontWeight.Bold else FontWeight.Medium,maxLines=1)
     }
@@ -570,7 +570,7 @@ private fun SettingsNavigationButtonRP106(selected:Boolean,modifier:Modifier=Mod
     Box(modifier.size(46.dp).semantics {contentDescription=tr("Ajustes","Settings")}
         .onFocusChanged {focused=it.isFocused}.tvClick(onClick).clickable(onClick=onClick)
         .background(GlassNavBrushRP106(focused,selected),RoundedCornerShape(50))
-        .border(1.dp,Color.White.copy(alpha=if(focused) .38f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
+        .border(1.dp,Accent.copy(alpha=if(focused) 1f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
         Canvas(Modifier.size(24.dp)) {
             val center=androidx.compose.ui.geometry.Offset(size.width/2f,size.height/2f)
             val gear=androidx.compose.ui.graphics.Path()

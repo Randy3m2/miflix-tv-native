@@ -29,7 +29,7 @@ internal class WarmConstructionRP92(private val worker:CoroutineDispatcher,priva
             currentCoroutineContext().ensureActive()
             constructed.set(null)
             result
-        } catch(e:Exception) {
+        } catch(e:Throwable) {
             // Even a cancelled blocking constructor may have produced a resource: release it on its owner.
             withContext(NonCancellable+owner) {constructed.getAndSet(null)?.let {release(it.first)}}
             throw e

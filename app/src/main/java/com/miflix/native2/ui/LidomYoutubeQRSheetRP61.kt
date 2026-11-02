@@ -91,11 +91,11 @@ private fun LidomYoutubePairingRP61(state:AppState,repo:LidomRepository,team:Lid
                                         path.endsWith(".mpd") -> "DASH"
                                         else -> error(tr("Usa un enlace de YouTube, HLS (.m3u8) o DASH (.mpd).","Use a YouTube, HLS (.m3u8) or DASH (.mpd) link."))
                                     }
-                                    val id=repo.sources(team.id).firstOrNull {it.url==url}?.id ?: "qr-source:"+team.id+":"+java.util.UUID.randomUUID().toString()
+                                    val id=if(kind=="YOUTUBE" && LidomRepository.youtubeChannel(url)) (repo.sources(team.id).firstOrNull {it.kind=="YOUTUBE" && LidomRepository.youtubeChannel(it.url)}?.id ?: "qr-youtube-channel:"+team.id) else repo.sources(team.id).firstOrNull {it.url==url}?.id ?: "qr-source:"+team.id+":"+java.util.UUID.randomUUID().toString()
                                     repo.save(LidomSource(id,team.id,name.ifBlank {team.short+" · Live"},kind,url))
                                     true
                                 }.getOrElse {message=it.message.orEmpty();false})
-                                if(accepted.get()) {currentSaved();message=tr("✓ Fuente guardada para este equipo.","✓ Source saved for this team.")}
+                                if(accepted.get()) {currentSaved();message=tr("✓ Canal / fuente actualizada para este equipo.","✓ Channel / source updated for this team.")}
                             }
                         } finally {latch.countDown()}
                     }

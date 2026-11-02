@@ -224,6 +224,8 @@ internal fun CinematicSearchScreen(state: AppState,onBack: () -> Unit,initialAi:
     val resultsFocus=remember {FocusRequester()}
     BackHandler(onBack=onBack)
     fun apply(edit: SearchTextEditor.Edit) {query=edit.text;cursor=edit.cursor;if(!aiMode && !initialAi) {state.searchQuery=query;normalQueryRP160=query}}
+    LaunchedEffect(state.remoteSearchRP167) {state.remoteSearchRP167?.let {entry->aiMode=false;query=entry.second;cursor=query.length;normalQueryRP160=query;state.searchQuery=query;state.remoteSearchRP167=null}}
+
     fun replace(value: String) {apply(SearchTextEditor.replace(value))}
     fun insert(value: String) {apply(SearchTextEditor.insert(query,cursor,value))}
     fun leaveAssistantRP160() {

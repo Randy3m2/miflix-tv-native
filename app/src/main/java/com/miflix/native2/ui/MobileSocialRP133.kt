@@ -154,14 +154,22 @@ internal fun MobileSubscriptionsRP133(state:AppState,initialLeague:String,close:
 }
 
 @Composable
-private fun MobileCalendarRP133(state:AppState) {
+internal fun MobileCalendarRP133(state:AppState) {
     val context=LocalContext.current.applicationContext
     val owner=CalendarStoreRP120.owner(context,state.activeProfile.id)
+    var exportRP167 by remember {mutableStateOf(false)}
+    if(exportRP167) CalendarExportRP167(state) {exportRP167=false}
+
     var month by rememberSaveable {mutableStateOf(YearMonth.now().toString())}
     var day by rememberSaveable {mutableStateOf(LocalDate.now().toString())}
+    LaunchedEffect(state.calendarDateRP167) {state.calendarDateRP167?.let {date->runCatching {LocalDate.parse(date)}.getOrNull()?.let {day=it.toString();month=YearMonth.from(it).toString()};state.calendarDateRP167=null}}
     var events by remember {mutableStateOf<List<SportEventRP120>>(emptyList())}
     var subscriptions by remember {mutableStateOf(false)}
     val revision by CalendarStoreRP120.revision.collectAsState()
+    LaunchedEffect(owner,revision,state.calendarEvents.toList()) {
+        val shared=calendarSharedEntriesRP167(state);CalendarFeedRP167.saveShared(context,owner,shared)
+        state.session?.let {s->if(CalendarFeedRP167.url(context,owner).isNotBlank())runCatching {CalendarFeedRP167.update(context,s,state.activeProfile.id,CalendarIcsRP167.encode(owner,CalendarIcsRP167.localEntries(context,owner)+shared))}}
+    }
     val followed=remember(owner,revision) {CalendarStoreRP120.subscriptions(context,owner)}
     LaunchedEffect(owner,month,revision) {events=withContext(Dispatchers.IO) {CalendarStoreRP120.events(context,owner)}}
     LaunchedEffect(owner) {state.refreshCalendar()}
@@ -205,6 +213,7 @@ private fun MobileCalendarRP133(state:AppState) {
                 withContext(Dispatchers.IO) {CalendarStoreRP120.refresh(context,owner,true,YearMonth.parse(month))}
             }}
         }}
+        item {MobileButtonRP133(tr("Exportar / Suscribirme · ICS","Export / Subscribe · ICS"),"calendar",Modifier.fillMaxWidth()) {exportRP167=true}}
         items(state.calendarEvents.filter {eventLocal(it.starts).startsWith(day)},key={"shared:"+it.id}) {event->
             Column(Modifier.fillMaxWidth().mobileGlassRP133().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Text(event.title,color=Color.White,fontSize=15.sp,fontWeight=FontWeight.Bold)

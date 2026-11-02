@@ -1142,12 +1142,16 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                             SettingsTileRC103(tr("Avisos al iniciar","Warnings at playback start"),tr("Lenguaje, violencia y otras categorías. Se ocultan automáticamente.","Language, violence and other categories. Automatically dismissed."),"lists",checked=state.contentWarningsRP31) {state.saveContentWarningsRP31(!state.contentWarningsRP31)}
                         }
                     }
+                    if(category=="appearance" && BuildConfig.APPLICATION_ID!="com.brunio.mobile") item(key="launcher-rp167") {TvHomeSettingsRP167(state)}
                     if(category=="appearance") item(key="home-order") {SettingsSectionCard {
                         SettingsHeadingRC103(tr("Diseña tu Home","Shape your Home"),tr("Tus filas favoritas, en el lugar que prefieras.","Your favorite rows, right where you want them."))
                         SettingsTileRC103(tr("Orden de filas de Home","Home row order"),tr("Decide qué aparece primero.","Decide what comes first."),"lists") {showHomeOrder=true}
                         SettingsTileRC103(tr("Mostrar u ocultar filas","Show or hide rows"),tr("Elige qué secciones ver en este perfil.","Choose which sections to see in this profile."),"home") {showHomeVisibility=true}
                     }}
 
+                    if(category=="playback" && BuildConfig.APPLICATION_ID!="com.brunio.mobile") item(key="smart-prebuffer-rp167") {
+                        SettingsTileRC103("Smart Prebuffer",tr("Objetivo: 4 segundos / 8 MB del siguiente episodio. Solo TV con memoria, red y decoder suficientes; se omite si el episodio actual necesita búfer.","Target: 4 seconds / 8 MB of the next episode. Only on TVs with sufficient memory, network and decoder capacity; skips when current playback needs buffering."),"play",checked=state.smartPrebufferEnabledRP167) {state.saveSmartPrebufferRP167(!state.smartPrebufferEnabledRP167)}
+                    }
                     if(category=="playback") item(key="previous-live-channel") {
                         SettingsTileRC103(tr("TV en vivo · Canal anterior","Live TV · Previous channel"),tr("Alterna entre los dos últimos canales reproducidos. Historial por perfil durante esta sesión.","Switch between the last two played channels. Per-profile history for this session."),"previous",checked=state.previousLiveChannelEnabled) {state.savePreviousLiveChannelEnabled(!state.previousLiveChannelEnabled)}
                     }
@@ -1537,6 +1541,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var durationMs by remember(request.playbackId) { mutableStateOf(0L) }
     var segments by remember(request.playbackId) { mutableStateOf(PlaybackSegments()) }
     var episodeInfo by remember(request.playbackId) { mutableStateOf<EpisodeSummary?>(null) }
+    var previewDismissedRP167 by remember(request.playbackId) {mutableStateOf(false)}
     var upcoming by remember(request.playbackId) { mutableStateOf<EpisodeSummary?>(null) }
     var nextEpisodeLoadingRP89 by remember(request.playbackId) {mutableStateOf(request.item.type=="series")}
     var nextEpisodeErrorRP89 by remember(request.playbackId) {mutableStateOf(false)}
@@ -1555,6 +1560,20 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             active.playWhenReady=!state.isPlaybackParked(request) && (request.sourceFallbackPlaying ?: true)
         }
         active
+    }
+
+    LaunchedEffect(state.remotePlayerActionRP167) {
+        val command=state.remotePlayerActionRP167 ?: return@LaunchedEffect
+        state.remotePlayerActionRP167=null
+        if(state.watchParty!=null || state.kidsMode || state.playerRequest?.playbackId!=request.playbackId) return@LaunchedEffect
+        when(command.second) {
+            "play_pause" -> if(player.isPlaying) player.pause() else player.play()
+            "seek_back" -> player.seekTo((player.currentPosition-10_000).coerceAtLeast(0))
+            "seek_forward" -> player.seekTo((player.currentPosition+10_000).coerceAtMost(player.duration.takeIf {it>0} ?: Long.MAX_VALUE))
+            "subtitles" -> {controlsVisible=true;playerMenu="subtitles"}
+            "subtitles_toggle" -> player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT,!player.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)).build()
+            "sources" -> if(request.liveProvider=="lidom") state.showLidomSources(request) else if(request.live) {controlsVisible=true;playerMenu=if(request.liveProvider=="sports") "sports_links" else "channels"} else state.playerSources(request,player.currentPosition)
+        }
     }
 
     fun parkCurrentPlayback() {
@@ -1650,6 +1669,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         try {
             while(true) {
                 positionMs=player.currentPosition; durationMs=player.duration.coerceAtLeast(0)
+                if(durationMs-positionMs>5000 && player.bufferedPosition-positionMs<2000)state.stopNextPrebufferRP167(request.playbackId)
                 // Snapshot contains catalog metadata only, never stream URLs or headers.
                 state.localNowPlaying=org.json.JSONObject().put("active",true)
                     .put("cloud",request.item.cloudId).put("title",request.item.title)
@@ -1670,6 +1690,20 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         pauseSynopsis = false
         if(paused && !state.easyModeRP79) { delay(5000); if(!pauseInfoDismissed) pauseSynopsis = true }
     }
+    val nextPrebufferEligibleRP167=state.smartPrebufferEnabledRP167 && state.randomEpisodeCloud!=request.item.cloudId && state.queueEntries.isEmpty() && upcoming!=null && !request.live && request.item.type=="series" && state.autoplayNext && !ended && !paused && durationMs>180_000 && durationMs-positionMs in 1..35_000 && state.appForeground && state.watchParty==null && !LocalMobileBrunioRP133.current
+    var nextPrebufferAttemptedRP167 by remember(request.playbackId) {mutableStateOf(false)}
+    LaunchedEffect(nextPrebufferEligibleRP167,request.playbackId) {
+        if(!nextPrebufferEligibleRP167){if(!ended)state.stopNextPrebufferRP167(request.playbackId);return@LaunchedEffect}
+        if(nextPrebufferAttemptedRP167)return@LaunchedEffect
+        nextPrebufferAttemptedRP167=true
+        // Protect the current stream and scarce hardware decoders before creating one paused warm player.
+        if(player.bufferedPosition-player.currentPosition<5000 || (player.videoFormat?.height ?: 0)>1080)return@LaunchedEffect
+        val mimeRP167=player.videoFormat?.sampleMimeType
+        val supportsTwo=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {runCatching {android.media.MediaCodecList(android.media.MediaCodecList.REGULAR_CODECS).codecInfos.filter {!it.isEncoder && it.supportedTypes.any {t->t==mimeRP167}}.any {it.getCapabilitiesForType(mimeRP167!!).maxSupportedInstances>=2}}.getOrDefault(false)}
+        if(!supportsTwo)return@LaunchedEffect
+        try {kotlinx.coroutines.withTimeoutOrNull(9000) {upcoming?.let {state.prepareNextPrebufferRP167(request,it) {player.playerError==null && player.bufferedPosition-player.currentPosition>=2000}}}} catch(e:kotlinx.coroutines.CancellationException){throw e} catch(_:OutOfMemoryError) {state.stopNextPrebufferRP167(request.playbackId)} catch(_:Exception) {state.stopNextPrebufferRP167(request.playbackId)}
+    }
+    DisposableEffect(request.playbackId) {onDispose {state.stopNextPrebufferRP167(request.playbackId)}}
     val randomMode=!state.easyModeRP79 && state.randomEpisodeCloud==request.item.cloudId && request.item.type=="series"
     val queueNext=if(state.easyModeRP79) null else state.queueEntries.firstOrNull()
     var queueSynopsis by remember(queueNext?.id) { mutableStateOf("") }
@@ -2457,6 +2491,12 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                     player.seekTo(post ?: credits.endMs.coerceAtMost(durationMs))
                 }
             }
+        }
+        if(!mini && state.appForeground && !request.live && request.item.type=="series" && request.momentEndMs<=0 && state.watchParty==null && !randomMode && queueNext==null && !previewDismissedRP167 && !paused && playerMenu==null && !showEpisodes && !showQueue && !showPartyActions && !showAccessRequests && !quickReactions && state.sourceSelection==null && playbackError==null && upcoming!=null && com.miflix.native2.data.NextPreviewPolicyRP167.visible(positionMs,durationMs,segments.outro?.startMs ?: -1,ended)) {
+            NextEpisodePreviewRP167(upcoming!!,request.item.backdrop ?: request.item.poster,com.miflix.native2.data.NextPreviewPolicyRP167.secondsRemaining(positionMs,durationMs),state.autoplayNext,
+                modifier=Modifier.align(Alignment.BottomEnd).padding(start=if(LocalMobileBrunioRP133.current) 12.dp else 30.dp,end=if(LocalMobileBrunioRP133.current) 12.dp else 30.dp,bottom=if(controlsVisible) 150.dp else 36.dp),
+                play={cancelAutoplay=true;previewDismissedRP167=true;state.launch {state.socialAction {state.playNext(request,upcoming!!)}}},
+                episodes={episodesResumeAfterClose=player.isPlaying;player.pause();showEpisodes=true},dismiss={previewDismissedRP167=true})
         }
         if(!state.easyModeRP79 && rateAtEnd) RatingDialog(state,request.item) { rateAtEnd=false; state.launch { recommendations=state.recommendationsFor(request.item) } }
         if(state.easyModeRP79 && ended && state.playbackLoading==null) PlayerMenuDialog(onDismissRequest={cancelAutoplay=true;onClose()}) {

@@ -23,8 +23,8 @@ android {
         manifestPlaceholders = [mobileAppLabel: 'BruniO Mobile']
         minSdk 26
         targetSdk 36
-        versionCode 22270
-        versionName '1.0.8-m9-rp166'
+        versionCode 22271
+        versionName '1.0.8-m9-rp167'
 
         buildConfigField 'String', 'SUPABASE_URL', '"https://iwvhigqxsvvgyzdygiqa.supabase.co"'
         buildConfigField 'String', 'SUPABASE_KEY', '"sb_publishable_TdzEQXtDadVMKhSLVe0ihw_EAQ4iNsd"'
@@ -74,6 +74,7 @@ gradle.taskGraph.whenReady { graph ->
 }
 
 dependencies {
+    implementation 'androidx.tvprovider:tvprovider:1.1.0'
     implementation 'androidx.work:work-runtime-ktx:2.10.1'
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
     implementation 'androidx.core:core:1.17.0'

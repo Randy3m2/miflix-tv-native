@@ -35,7 +35,7 @@ internal object BrunioWidgetsRP164 {
    manager.getAppWidgetIds(ComponentName(c,type)).forEach {render(c,manager,it,type==BrunioCalendarWidgetRP164::class.java)}
   }
  }
- private fun click(c:Context,id:Int)=PendingIntent.getActivity(c,id,Intent(c,MainActivity::class.java).setAction(Intent.ACTION_VIEW).setData(android.net.Uri.parse("brunio://calendar")),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+ private fun click(c:Context,id:Int,date:String?=null)=PendingIntent.getActivity(c,id,Intent(c,MainActivity::class.java).setAction(Intent.ACTION_VIEW).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP).setData(android.net.Uri.parse("brunio://calendar"+(date?.let {"?date=$it"} ?: ""))),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
  fun render(c:Context,manager:AppWidgetManager,id:Int,calendar:Boolean) {
   val owner=owner(c);val events=if(owner.isBlank()) emptyList() else CalendarStoreRP120.events(c,owner)
   val p=c.getSharedPreferences("brunio_release_alerts_rp164",0);val locale=Locale.forLanguageTag(p.getString("language:$owner","en-US").orEmpty());val es=locale.language=="es"
@@ -55,10 +55,10 @@ internal object BrunioWidgetsRP164 {
    row.setTextViewText(R.id.widget_day,day.format(DateTimeFormatter.ofPattern("MMM",locale)).uppercase()+"\n"+day.dayOfMonth)
    row.setTextViewText(R.id.widget_event_title,e.title)
    val time=if(e.timed) Instant.ofEpochMilli(e.starts).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("h:mm a",locale)) else if(es) "Por confirmar" else "Time TBA"
-   row.setTextViewText(R.id.widget_event_time,"${e.league}  ·  $time");row.setOnClickPendingIntent(R.id.widget_event_row,click(c,id));views.addView(R.id.widget_events,row)
+   row.setTextViewText(R.id.widget_event_time,"${e.league}  ·  $time");row.setOnClickPendingIntent(R.id.widget_event_row,click(c,id,e.day()));views.addView(R.id.widget_events,row)
   }
   views.setTextViewText(R.id.widget_footer,if(next.isEmpty()) if(es) "Añade eventos o sigue tus equipos en BruniO" else "Add events or follow teams in BruniO" else if(calendar) (if(es) "Próximo: " else "Next: ")+next.first().title else if(es) "${next.size} eventos · Abrir calendario ›" else "${next.size} events · Open calendar ›")
-  views.setOnClickPendingIntent(R.id.widget_footer,click(c,id));manager.updateAppWidget(id,views)
+  views.setOnClickPendingIntent(R.id.widget_footer,click(c,id,next.firstOrNull()?.day()));manager.updateAppWidget(id,views)
  }
  private fun monthBitmap(today:LocalDate,events:List<SportEventRP120>,locale:Locale):Bitmap {
   val image=Bitmap.createBitmap(672,360,Bitmap.Config.ARGB_8888);val canvas=Canvas(image);val paint=Paint(Paint.ANTI_ALIAS_FLAG);val month=YearMonth.from(today)

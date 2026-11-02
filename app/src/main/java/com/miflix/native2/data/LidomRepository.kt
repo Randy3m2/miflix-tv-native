@@ -38,9 +38,11 @@ internal class LidomRepository(private val context:Context, owner:String) {
         require(source.url.length<=4096 && (source.kind=="TV" || httpUrl(source.url))) {"Enter an HTTP(S) URL."}
         require(source.kind!="TV" || source.url.isBlank()) {"Choose HLS, DASH or YouTube to use a direct URL."}
         if(source.kind=="YOUTUBE") require(youtubeId(source.url)!=null || youtubeChannel(source.url)) {"Use a YouTube video or channel URL."}
+        val previousUrlRP167=sources(source.team).firstOrNull {it.id==source.id}?.url
         val rows=custom().filter {it.id!=source.id}+source
         val array=JSONArray();rows.forEach {s -> array.put(JSONObject().put("id",s.id).put("team",s.team).put("name",s.name).put("kind",s.kind).put("url",s.url).put("reference",s.reference).put("note",s.note).put("aliases",JSONArray(s.aliases)))}
         prefs.edit().putString(prefix+"sources",array.toString()).putStringSet(prefix+"hidden",prefs.getStringSet(prefix+"hidden",emptySet()).orEmpty()-source.id).apply()
+        if(source.kind=="YOUTUBE" && previousUrlRP167!=source.url && last(source.team)==source.id) prefs.edit().remove(prefix+"last:"+source.team).remove(prefix+"video:"+source.team).apply()
     }
     fun delete(source:LidomSource) {prefs.edit().putStringSet(prefix+"hidden",prefs.getStringSet(prefix+"hidden",emptySet()).orEmpty()+source.id).apply()}
     fun favorite(team:String)=team in prefs.getStringSet(prefix+"favorites",emptySet()).orEmpty()

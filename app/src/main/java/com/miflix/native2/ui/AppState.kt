@@ -307,6 +307,9 @@ class AppState(context: Context) {
     var changelogOpen by mutableStateOf(false)
     internal var mobileHomeEntryRP162 by mutableIntStateOf(0)
     @Volatile internal var localNowPlaying: String = "{\"active\":false}"
+    var remoteSearchRP167 by mutableStateOf<Pair<String,String>?>(null)
+    var remotePlayerActionRP167 by mutableStateOf<Pair<String,String>?>(null)
+    var calendarDateRP167 by mutableStateOf<String?>(null)
     var localCastPairing by mutableStateOf(false)
     var socialProfileEditor by mutableStateOf(false)
     var contextTitle by mutableStateOf<MediaSummary?>(null)
@@ -1275,6 +1278,46 @@ class AppState(context: Context) {
     private var sourceWarmupJobRP90:kotlinx.coroutines.Job?=null
     private var sourceWarmupKeyRP90:PlaybackCacheKey?=null
     private data class WarmIdentityRP91(val sources:PlaybackCacheKey,val subtitle:String,val tracksRevision:Int)
+    var smartPrebufferEnabledRP167 by mutableStateOf(playbackPrefs.getBoolean("smart_prebuffer_rp167",true))
+        private set
+    fun saveSmartPrebufferRP167(enabled:Boolean) {smartPrebufferEnabledRP167=enabled;playbackPrefs.edit().putBoolean("smart_prebuffer_rp167",enabled).apply();if(!enabled)smartNextOriginRP167?.let {stopNextPrebufferRP167(it)}}
+    private var smartNextEntryRP167:PreparedVideoRP91?=null
+    private var smartNextOriginRP167:String?=null
+    internal fun stopNextPrebufferRP167(origin:String) {
+        if(smartNextOriginRP167!=origin)return
+        if(playerRequest?.let {preparedMatchRP91(it)}!=null)return
+        smartNextOriginRP167=null
+        if(preparedVideoRP91===smartNextEntryRP167) discardPreparedVideoRP91()
+    }
+    internal suspend fun prepareNextPrebufferRP167(current:PlayerRequest,next:EpisodeSummary,safe:()->Boolean) {
+        if(!smartPrebufferEnabledRP167 || appContext.packageName=="com.brunio.mobile" || easyModeRP79 || kidsMode || watchParty!=null || current.live || playerRequest?.playbackId!=current.playbackId)return
+        val memory=appContext.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager ?: return
+        if(memory.isLowRamDevice || memory.memoryClass<256)return
+        val runtime=Runtime.getRuntime();if(runtime.maxMemory()-(runtime.totalMemory()-runtime.freeMemory())<48L*1024*1024)return
+        val memoryInfo=android.app.ActivityManager.MemoryInfo();memory.getMemoryInfo(memoryInfo)
+        if(memoryInfo.lowMemory || memoryInfo.availMem<128L*1024*1024)return
+        val connectivity=appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
+        if(connectivity?.isActiveNetworkMetered!=false)return
+        val owner=localExtrasScope()
+        fun valid()=smartPrebufferEnabledRP167 && safe() && owner==localExtrasScope() && appForeground && watchParty==null && playerRequest?.playbackId==current.playbackId
+        val imdb=tmdb.details(current.item).imdbId ?: return
+        val streams=resolveCachedSourcesRP90(current.item,imdb,next.season,next.episode)
+        if(!valid())return
+        val chosen=StreamOrdering.best(streams,audioLanguage,0L,0,sourceProviderOrderRP2(),secondaryAudioLanguageRP62,nativeSizeAscendingRP77,nativeSpanishOnlyRP77) ?: return
+        if(chosen.nativeSource!=null || !chosen.url.startsWith("https://") && !chosen.url.startsWith("http://"))return
+        discardPreparedVideoRP91()
+        val request=PlayerRequest(current.item,chosen,next.season,next.episode,0L)
+        val timing=com.miflix.native2.player.SubtitleTiming()
+        val gate=WarmLoadControlRP91(smartRP167=true)
+        val player=createWarmPlaybackRP92(appContext,this,request,timing,gate,::valid)
+        if(!valid()){player.release();return}
+        player.volume=0f;player.playWhenReady=false
+        val entry=PreparedVideoRP91(warmIdentityRP91(current.item,imdb,next.season,next.episode),imdb,request,chosen.url,player,timing,gate,android.os.SystemClock.elapsedRealtime())
+        preparedVideoRP91=entry;smartNextEntryRP167=entry;smartNextOriginRP167=current.playbackId
+        val listener=object:androidx.media3.common.Player.Listener {override fun onPlayerError(error:androidx.media3.common.PlaybackException){if(preparedVideoRP91===entry)discardPreparedVideoRP91()}}
+        entry.listener=listener;player.addListener(listener)
+        entry.expiryJob=appScope.launch {delay(55_000);if(preparedVideoRP91===entry)discardPreparedVideoRP91()}
+    }
     private var preparedVideoRP91:PreparedVideoRP91?=null
     private data class WarmRetryPlanRP92(
         val item:MediaSummary,val imdb:String,val season:Int,val episode:Int,val identity:Any,
@@ -1297,14 +1340,14 @@ class AppState(context: Context) {
     private fun discardPreparedVideoRP91(keepRetry:Boolean=false) {
         if(!keepRetry) {val plan=warmRetryPlanRP92;warmRetryPlanRP92=null;plan?.job?.cancel()}
         val old=preparedVideoRP91 ?: return
-        preparedVideoRP91=null
+        preparedVideoRP91=null;smartNextEntryRP167=null;smartNextOriginRP167=null
         old.expiryJob?.cancel()
         old.listener?.let {old.player.removeListener(it)}
         try {old.player.release()} catch(e:Exception) {LocalCrashRP87.record(appContext,e)}
     }
     private fun preparedMatchRP91(request:PlayerRequest):PreparedVideoRP91? {
         val entry=preparedVideoRP91 ?: return null
-        if(!sourcePrefetchEnabledRP90 || easyModeRP79 || kidsMode || watchParty!=null || request.live || request.momentEndMs>0 ||
+        if((!sourcePrefetchEnabledRP90 && entry!==smartNextEntryRP167) || easyModeRP79 || kidsMode || watchParty!=null || request.live || request.momentEndMs>0 ||
             request.item.cloudId!=entry.request.item.cloudId || request.season!=entry.request.season || request.episode!=entry.request.episode ||
             request.stream.url!=entry.request.stream.url || request.stream.requestHeaders!=entry.request.stream.requestHeaders ||
             entry.identity!=warmIdentityRP91(request.item,entry.imdb,request.season,request.episode) || entry.player.playerError!=null ||
@@ -1315,7 +1358,7 @@ class AppState(context: Context) {
     internal fun takePreparedPlayerRP91(request:PlayerRequest):androidx.media3.exoplayer.ExoPlayer? {
         val entry=preparedMatchRP91(request)
         if(entry==null) {discardPreparedVideoRP91();return null}
-        preparedVideoRP91=null
+        preparedVideoRP91=null;smartNextEntryRP167=null;smartNextOriginRP167=null
         val plan=warmRetryPlanRP92;warmRetryPlanRP92=null;plan?.job?.cancel()
         entry.expiryJob?.cancel()
         entry.listener?.let {entry.player.removeListener(it)}
@@ -4314,6 +4357,7 @@ class AppState(context: Context) {
 }
 
 enum class Screen {
+    CALENDAR,
     SPLASH, HOME, SEARCH, MOVIES, SERIES, COLLECTIONS, OSCARS, COLLECTION_DETAIL, PLATFORM_DETAIL,
     GENRES, GENRE_DETAIL, YEAR_DETAIL, MY_LIST, DOWNLOADS, SETTINGS, PROFILES, WATCH_PARTY, PAIR_DEVICE,
     DETAILS, CUSTOM_FILTER, FRANCHISE, PLAYER, MULTIVIEW, LIVE_TV, LIDOM, FRIENDS, TRAKT, NOTIFICATIONS, DIRECTOR_DETAIL

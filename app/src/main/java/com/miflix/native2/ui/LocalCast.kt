@@ -30,6 +30,8 @@ import kotlinx.coroutines.delay
 /** Receiver exists only after explicitly opening pairing, while BruniO is foregrounded. */
 @Composable
 internal fun LocalCastHost(state: AppState) {
+    val dismissRemoteRP167=LocalAssistantDismissNavigationRP160.current
+    val activityRP167=LocalContext.current.playbackActivity()
     val context=LocalContext.current.applicationContext
     val manager=remember {context.getSystemService(ConnectivityManager::class.java)}
     val main=remember {Handler(Looper.getMainLooper())}
@@ -88,6 +90,26 @@ internal fun LocalCastHost(state: AppState) {
                             }
                         }
                     }
+                    server.setOnConnected {main.post {if(state.appForeground && state.activeProfile.id==owner && state.session?.userId==account)state.localCastPairing=false}}
+                    server.setRemoteCommands {action,value -> main.post {
+                        if(state.appForeground && state.activeProfile.id==owner && state.session?.userId==account && !state.kidsMode && state.watchParty==null) {
+                            when(action) {
+                                "home" -> {dismissRemoteRP167();state.localCastPairing=false;state.sourceSelection=null;state.contextTitle=null;state.miniPlayer=false;state.screen=Screen.HOME}
+                                "text" -> {dismissRemoteRP167();state.localCastPairing=false;state.sourceSelection=null;state.contextTitle=null;state.searchQuery=value;state.remoteSearchRP167=java.util.UUID.randomUUID().toString() to value;state.screen=Screen.SEARCH}
+                                "type" -> {val connection=RemoteWindowsRP167.focus(activityRP167)?.onCreateInputConnection(android.view.inputmethod.EditorInfo());if(connection?.commitText(value,1)!=true)android.widget.Toast.makeText(context,tr("Primero selecciona un campo de texto en la TV.","First select a text field on TV."),android.widget.Toast.LENGTH_SHORT).show()}
+                                "volume_up","volume_down","mute" -> {
+                                    val audio=context.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+                                    audio.adjustStreamVolume(android.media.AudioManager.STREAM_MUSIC,when(action) {"volume_up"->android.media.AudioManager.ADJUST_RAISE;"volume_down"->android.media.AudioManager.ADJUST_LOWER;else->android.media.AudioManager.ADJUST_TOGGLE_MUTE},android.media.AudioManager.FLAG_SHOW_UI)
+                                }
+                                "up","down","left","right","ok","back" -> {
+                                    val code=when(action) {"up"->19;"down"->20;"left"->21;"right"->22;"ok"->23;else->4}
+                                    RemoteWindowsRP167.dispatch(activityRP167,android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN,code))
+                                    RemoteWindowsRP167.dispatch(activityRP167,android.view.KeyEvent(android.view.KeyEvent.ACTION_UP,code))
+                                }
+                                else -> if(state.screen==Screen.PLAYER) state.remotePlayerActionRP167=java.util.UUID.randomUUID().toString() to action
+                            }
+                        }
+                    }}
                     message=""
                 }
             } catch(e: Exception) {message=e.message ?: "Unable to start local receiver"}
@@ -112,6 +134,9 @@ internal fun LocalCastHost(state: AppState) {
                 Text(tr("Conectar teléfono / PC","Connect phone / PC"),color=Color.White,fontSize=24.sp)
                 Text(tr("Solo en la misma red local (Wi-Fi o Ethernet). BruniO debe permanecer abierto. No disponible durante un Party ni en Kids.","Same local network only (Wi-Fi or Ethernet). Keep BruniO open. Unavailable during a Party or in Kids."),color=Muted,fontSize=14.sp)
                 receiver?.let {server ->
+                    Text(tr("Control remoto móvil","Mobile remote control"),color=Color.White,fontSize=19.sp)
+                    Text("IP: "+server.url.removePrefix("http://").substringBefore(":"),color=Color.White,fontSize=18.sp)
+                    Text(tr("Código: ","Code: ")+server.code,color=Accent,fontSize=28.sp)
                     val expired=now>server.pairUntil
                     if(!expired) {
                         QrCode(server.catalogUrl,190.dp)

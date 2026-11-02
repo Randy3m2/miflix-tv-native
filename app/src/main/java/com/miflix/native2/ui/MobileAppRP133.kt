@@ -20,6 +20,8 @@ import com.miflix.native2.R
 
 @Composable
 internal fun MobileAppRP133(state:AppState,destination:Screen) {
+    var remoteRP167 by remember {mutableStateOf(false)}
+    if(remoteRP167) MobileRemoteSheetRP167 {remoteRP167=false}
     val primary=listOf(Screen.HOME,Screen.SEARCH,Screen.LIVE_TV,Screen.FRIENDS,Screen.MY_LIST,Screen.DOWNLOADS)
     val active=when(destination) {
         Screen.DETAILS->state.detailsReturnScreen.name
@@ -42,13 +44,15 @@ internal fun MobileAppRP133(state:AppState,destination:Screen) {
                     }
                 })
             })
-            Text("BruniO",color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
+            Text("BruniO",color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
+            if(!state.kidsMode && !state.easyModeRP79) MobileIconButtonRP133("remote",tr("Control remoto TV","TV remote")) {remoteRP167=true}
             Box(Modifier.size(34.dp).clickable(enabled=!state.easyModeRP79) {state.screen=Screen.PROFILES}) {ProfileAvatar(state.activeProfile,Modifier.fillMaxSize())}
             if(!state.kidsMode && !state.easyModeRP79) MobileIconButtonRP133("bell",tr("Notificaciones","Notifications")) {state.screen=Screen.NOTIFICATIONS}
             if(!state.kidsMode && !state.easyModeRP79) MobileIconButtonRP133("gear",tr("Ajustes","Settings")) {state.screen=Screen.SETTINGS}
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when(destination) {
+                Screen.CALENDAR->MobileCalendarRP133(state)
                 Screen.HOME->MobileHomeRP133(state)
                 Screen.SEARCH->MobileSearchRP133(state)
                 Screen.DETAILS->MobileDetailsRP133(state)

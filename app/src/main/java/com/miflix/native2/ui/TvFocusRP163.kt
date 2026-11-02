@@ -62,6 +62,7 @@ internal fun TvFocusScopeRP163(enabled:Boolean,content:@Composable ()->Unit) {
 /** Pointer clicks select the SAME target as DPAD, rather than leaving its outline behind. */
 internal fun Modifier.tvFocusAnchorRP163(stableKey:String?=null):Modifier=composed {
     if(LocalMobileBrunioRP133.current) return@composed this
+    RemoteDialogInputRP167()
     val requester=remember {FocusRequester()}
     val scope=rememberCoroutineScope()
     val input=LocalInputModeManager.current

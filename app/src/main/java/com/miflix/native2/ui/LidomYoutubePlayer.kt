@@ -116,6 +116,7 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
         } else false
     }
     val playerContent: @Composable () -> Unit = {
+        RemoteDialogInputRP167()
         Column(Modifier.fillMaxSize().background(Color.Black).then(remoteController)) {
             if(preview) {
                 Text(caption,color=Color.White,fontSize=20.sp,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.fillMaxWidth().padding(start=24.dp,end=24.dp,top=10.dp,bottom=4.dp))

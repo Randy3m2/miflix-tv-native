@@ -109,9 +109,18 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
                 state.launch { state.joinWatchParty(initialPartyCode) }
             }
         }
-        val contentReadyRP140=mobileRP133 && state.screen !in listOf(Screen.SPLASH,Screen.PROFILES,Screen.SETTINGS)
+        val tvLinkReadyRP167=!mobileRP133 && state.screen !in listOf(Screen.SPLASH,Screen.PROFILES)
+        LaunchedEffect(initialContentLinkRP140,tvLinkReadyRP167) {
+            if(!tvLinkReadyRP167 || initialContentLinkRP140==null)return@LaunchedEffect
+            val uri=runCatching {android.net.Uri.parse(initialContentLinkRP140)}.getOrNull()
+            if(uri?.scheme=="brunio" && uri.host=="tv-home") {
+                state.screen=if(uri.getQueryParameter("role")=="list") Screen.MY_LIST else Screen.HOME
+                onContentConsumedRP140()
+            } else com.miflix.native2.data.MobileShareRP140.cloudId(initialContentLinkRP140)?.let {id->state.launch {state.socialAction {state.openRecommendation(id)}};onContentConsumedRP140()}
+        }
+        val contentReadyRP140=mobileRP133 && state.screen !in listOf(Screen.SPLASH,Screen.PROFILES) && (state.screen!=Screen.SETTINGS || com.miflix.native2.data.CalendarLinkRP167.matches(initialContentLinkRP140))
         LaunchedEffect(initialContentLinkRP140,contentReadyRP140) {
-            if(contentReadyRP140 && initialContentLinkRP140=="brunio://calendar") {state.openCalendarWidgetRP164=true;state.screen=Screen.FRIENDS;onContentConsumedRP140();return@LaunchedEffect}
+            if(contentReadyRP140 && com.miflix.native2.data.CalendarLinkRP167.matches(initialContentLinkRP140)) {state.miniPlayer=false;state.playerRequest=null;state.calendarDateRP167=com.miflix.native2.data.CalendarLinkRP167.date(initialContentLinkRP140) ?: java.time.LocalDate.now().toString();state.screen=Screen.CALENDAR;onContentConsumedRP140();return@LaunchedEffect}
             if(contentReadyRP140) com.miflix.native2.data.MobileShareRP140.cloudId(initialContentLinkRP140)?.let {id->
                 try {state.playerRequest=null;state.openRecommendation(id)}
                 catch(e:kotlinx.coroutines.CancellationException) {throw e}
@@ -151,12 +160,13 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
         }.pointerInput(Unit) {awaitPointerEventScope {while(true) {awaitPointerEvent(PointerEventPass.Initial);MenuActivity.touch()} }}) {
         navigationState.SaveableStateProvider("${state.session?.userId}:${state.activeProfile.id}:${if(showAssistantRP150 && !guestRP150 && !mobileRP133 && !state.kidsMode) "ASSISTANT:$assistantSequenceRP156" else state.screen.name}") {
         TvFocusScopeRP163(enabled=!mobileRP133 && (state.screen!=Screen.HOME || state.kidsMode || state.easyModeRP79)) {
-        val destination=if(guestRP150 && state.screen in setOf(Screen.SETTINGS,Screen.PROFILES,Screen.FRIENDS,Screen.WATCH_PARTY,Screen.NOTIFICATIONS,Screen.DOWNLOADS,Screen.TRAKT)) Screen.HOME else if(state.easyModeRP79 && !(mobileRP133 && state.screen==Screen.DOWNLOADS) && !com.miflix.native2.data.EasyModePolicyRP79.allowsScreen(state.screen.name)) Screen.HOME else if(state.kidsMode && state.screen !in setOf(Screen.HOME,Screen.SEARCH,Screen.MY_LIST,Screen.DETAILS,Screen.PROFILES,Screen.NOTIFICATIONS,Screen.PLAYER)) Screen.HOME else state.screen
+        val destination=if(guestRP150 && state.screen in setOf(Screen.SETTINGS,Screen.PROFILES,Screen.FRIENDS,Screen.WATCH_PARTY,Screen.NOTIFICATIONS,Screen.DOWNLOADS,Screen.TRAKT)) Screen.HOME else if(state.easyModeRP79 && !(mobileRP133 && state.screen in setOf(Screen.DOWNLOADS,Screen.CALENDAR)) && !com.miflix.native2.data.EasyModePolicyRP79.allowsScreen(state.screen.name)) Screen.HOME else if(state.kidsMode && state.screen !in setOf(Screen.HOME,Screen.SEARCH,Screen.MY_LIST,Screen.DETAILS,Screen.PROFILES,Screen.NOTIFICATIONS,Screen.PLAYER)) Screen.HOME else state.screen
         LaunchedEffect(destination,state.screen) {if(destination!=state.screen) state.screen=destination}
         if(showAssistantRP150 && state.screen!=Screen.PLAYER && !guestRP150 && !mobileRP133 && !state.kidsMode) CinematicSearchScreen(state,{showAssistantRP150=false},initialAi=true)
         else if(mobileRP133) MobileAppRP133(state,destination)
         else if(state.easyModeRP79 && destination!=Screen.PLAYER) EasyScreenRP79(state,destination)
         else when (destination) {
+            Screen.CALENDAR -> FriendsScreen(state)
             Screen.SPLASH -> BruniOSplashScreen()
             Screen.HOME -> if(state.kidsMode) KidsHomeScreen(state) else HomeScreen(state) { state.screen = it }
             Screen.FRIENDS -> FriendsScreen(state)
@@ -280,7 +290,8 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
         if(!state.easyModeRP79 && state.changelogOpen) ChangelogDialog(state) {state.changelogOpen=false}
         if(!mobileRP133) MenuScreensaver(state)
         if(!state.easyModeRP79 && state.socialProfileEditor) SocialSettingsDialog(state) {state.socialProfileEditor=false}
-        if(!state.easyModeRP79) LocalCastHost(state)
+        if(!mobileRP133 && !state.easyModeRP79 && !guestRP150) TvHomeRuntimeRP167(state)
+        if(!state.easyModeRP79 && !mobileRP133) LocalCastHost(state)
         state.contextTitle?.takeUnless {state.easyModeRP79}?.let {title -> if(mobileRP133) MobileTitleActionsRP133(state,title,state.contextContinue) {state.contextTitle=null} else TitleActionsDialog(state,title,state.contextContinue) {state.contextTitle=null} }
         state.sourceSelection?.takeUnless {state.easyModeRP79}?.let { if(mobileRP133) MobileSourcesRP133(state,it) else SourcePickerOverlay(state, it) }
 

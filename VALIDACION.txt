@@ -1,4 +1,12 @@
-RP165 — :app:compileDebugKotlin, :mobile:compileDebugKotlin, :app:testDebugUnitTest
+RP167 — verificación del código entregado
+
+:app:compileDebugKotlin + :mobile:compileDebugKotlin + :app:testDebugUnitTest
 BUILD SUCCESSFUL
-580 pruebas; 0 fallos, 0 errores, 0 omitidas.
-Sin prueba física de TV/mando, transmisiones de LIDOM o cuenta del usuario.
+588 pruebas: 0 fallos, 0 errores, 0 omitidas.
+
+TypeScript: comprobación estricta del servicio ICS, sin emitir.
+Servicio ICS con fetch/Supabase simulados: autenticación, hashes separados de lectura/publicación, lectura sin permiso de escritura, actualización, revocación e invalidación aprobadas. No desplegado en una cuenta real.
+HTTP remoto con socket privado simulado: emparejamiento, rechazo sin token, lista de comandos, texto UTF-8 y deduplicación aprobados. La conexión LAN física no se probó; este entorno no expone una interfaz IPv4 privada para emparejar dispositivos.
+XML del manifest y git diff --check correctos.
+
+No se han probado TV/móvil físicos, ahorro de batería Samsung, decodificadores, streams, launcher ni servidor Supabase real. No se creó APK firmado ni se publicó en GitHub.

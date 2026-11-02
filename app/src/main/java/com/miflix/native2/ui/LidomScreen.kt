@@ -177,7 +177,7 @@ internal fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTea
             FocusButton(if(splitMode) tr("SplitScreen activado · elige una fuente","SplitScreen on · choose a source") else tr("Abrir en SplitScreen","Open in SplitScreen"),primary=splitMode) {splitMode=!splitMode}
         }
         item {
-            FocusButton(tr("+ Fuente por QR","+ Source by QR"),modifier=Modifier.fillMaxWidth()) {showYoutubeQRRP61=true}
+            FocusButton(tr("Actualizar YouTube / fuente por QR","Update YouTube / source by QR"),modifier=Modifier.fillMaxWidth()) {showYoutubeQRRP61=true}
         }
         val sources=savedSourcesRP61
         if(sources.isEmpty()) item {Text(tr("No hay fuentes. Agrega una en configuración.","No sources. Add one in settings."),color=Muted)}

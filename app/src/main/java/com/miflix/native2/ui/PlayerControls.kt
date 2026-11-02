@@ -234,8 +234,8 @@ private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seek
             )
         }) {
         if(stagedRP151 && preview!=null && previewSourceRP151!=null) {
-            val popupOffsetRP151=with(androidx.compose.ui.platform.LocalDensity.current) {160.dp.roundToPx()}
-            androidx.compose.ui.window.Popup(alignment=Alignment.TopStart,offset=androidx.compose.ui.unit.IntOffset((previewBarWidthRP164*fraction-with(androidx.compose.ui.platform.LocalDensity.current){105.dp.toPx()}).toInt().coerceIn(0,(previewBarWidthRP164-with(androidx.compose.ui.platform.LocalDensity.current){210.dp.toPx()}).toInt().coerceAtLeast(0)),-popupOffsetRP151),properties=androidx.compose.ui.window.PopupProperties(focusable=false,clippingEnabled=false)) {ScenePreviewRP151(previewSourceRP151,shown)}
+            val popupOffsetRP151=with(androidx.compose.ui.platform.LocalDensity.current) {185.dp.roundToPx()}
+            androidx.compose.ui.window.Popup(alignment=Alignment.TopStart,offset=androidx.compose.ui.unit.IntOffset((previewBarWidthRP164*fraction-with(androidx.compose.ui.platform.LocalDensity.current){140.dp.toPx()}).toInt().coerceIn(0,(previewBarWidthRP164-with(androidx.compose.ui.platform.LocalDensity.current){280.dp.toPx()}).toInt().coerceAtLeast(0)),-popupOffsetRP151),properties=androidx.compose.ui.window.PopupProperties(focusable=false,clippingEnabled=false)) {ScenePreviewRP151(previewSourceRP151,shown)}
         }
         Text(playbackTime(shown)+" / "+playbackTime(duration),color=Color.White,fontSize=if(largeRP89) 19.sp else 12.sp,lineHeight=if(largeRP89) 24.sp else 16.sp,
             modifier=Modifier.align(Alignment.TopEnd).background(Color(0xA0000000),RoundedCornerShape(5.dp)).padding(horizontal=7.dp,vertical=2.dp))

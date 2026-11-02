@@ -11,6 +11,11 @@ import java.util.concurrent.*;
 /** Foreground-only, private IPv4 LAN receiver. No cloud commands, streams or credentials. */
 public final class LocalCastServer implements AutoCloseable {
     public interface Commands { void send(String cloud, String action, int season, int episode); }
+    public interface RemoteCommands {void remote(String action,String value);}
+    private volatile RemoteCommands remoteCommands;
+    private volatile Runnable onConnected;
+    public void setOnConnected(Runnable callback){onConnected=callback;}
+    public void setRemoteCommands(RemoteCommands commands){remoteCommands=commands;}
     private final Inet4Address address;
     private final int prefix;
     private final ServerSocket server;
@@ -66,11 +71,19 @@ public final class LocalCastServer implements AutoCloseable {
         Map<String,String> form=new HashMap<>();for(String field:new String(bytes,StandardCharsets.UTF_8).split("&")){String[] pair=field.split("=",2);if(pair.length==2)form.put(URLDecoder.decode(pair[0],"UTF-8"),URLDecoder.decode(pair[1],"UTF-8"));}
         if(request[1].equals("/connect")){
             String token=form.containsKey("ticket")?access.connectLink(value(form,"ticket",""),origin,s.getInetAddress().getHostAddress()):access.connect(value(form,"code",""),origin,s.getInetAddress().getHostAddress());
+            if(token!=null && onConnected!=null)onConnected.run();
             reply(s,token==null?403:200,token==null?"{\"ok\":false}":"{\"ok\":true,\"token\":\""+token+"\"}",origin);return;
         }
         String auth=value(h,"authorization","");String token=auth.startsWith("Bearer ")?auth.substring(7):"";
         if(!access.authenticated(token,origin)){reply(s,401,"{\"ok\":false}",origin);return;}
         if(request[1].equals("/status")){reply(s,200,statusJson,origin);return;}
+        if(request[1].equals("/remote")){
+            String action=value(form,"action","");String value=value(form,"value","");String id=value(form,"request","");
+            RemoteCommands remote=remoteCommands;
+            if(remote==null || !RemotePolicyRP167.valid(action,value) || !id.matches("[a-zA-Z0-9-]{8,80}")){reply(s,400,"{}",origin);return;}
+            if(!access.duplicate(token,id))remote.remote(action,value);
+            reply(s,202,"{\"ok\":true,\"accepted\":true}",origin);return;
+        }
         if(request[1].equals("/send")){
             String cloud=value(form,"cloud","");String action=value(form,"action","details");String id=value(form,"request","");
             if(!cloud.matches("tmdb:(movie|series):[1-9][0-9]{0,8}")||!action.matches("details|play")||!id.matches("[a-zA-Z0-9-]{8,80}")){reply(s,400,"{}",origin);return;}

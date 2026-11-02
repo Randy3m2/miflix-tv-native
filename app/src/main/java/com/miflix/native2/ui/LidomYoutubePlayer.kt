@@ -47,13 +47,21 @@ internal fun LidomYoutubeChooser(repo:LidomRepository,source:LidomSource,onPlay:
     }
     PlayerSideSheet(source.name+" · YouTube",close) {
         item {Text(tr("Elige un video o pega su enlace. Un video de archivo no se identifica como un partido en vivo.","Choose a video or paste its link. Archive videos are not labeled as live games."),color=Muted,fontSize=13.sp)}
-        item {FocusButton(tr("Abrir canal / página oficial","Open channel / official page")) {if(!openLidomWebsite(context,source.url.ifBlank {source.reference})) message=tr("No se pudo abrir la página.","Could not open the page.")}}
         item {NativeTextField(url,{url=it},"YouTube video URL",modifier=Modifier.fillMaxWidth())}
         item {FocusButton(tr("Reproducir en BruniO","Play in BruniO"),primary=true) {val id=LidomRepository.youtubeId(url);if(id==null) message=tr("Introduce el enlace de un video de YouTube, no el del canal.","Enter a YouTube video URL, not a channel URL.") else onPlay(id)}}
         if(loading) item {Text(tr("Cargando videos…","Loading videos…"),color=Muted)}
         if(message.isNotBlank()) item {Text(message,color=Muted)}
         items(rows,key={it.id}) {video ->FocusButton(video.title,modifier=Modifier.fillMaxWidth()) {onPlay(video.id)}}
+        item {FocusButton(tr("Abrir canal fuera de BruniO (opcional)","Open channel outside BruniO (optional)")) {if(!openLidomWebsite(context,source.url.ifBlank {source.reference})) message=tr("No se pudo abrir la página.","Could not open the page.")}}
     }
+}
+
+internal fun youtubeMessageRP165(status:String):String = when(status) {
+    "blocked" -> tr("Pulsa Pausa / Reproducir para iniciar el juego aquí.","Press Pause / Play to start the game here.")
+    "error:101","error:150" -> tr("Este canal no permite reproducir este video dentro de otras apps. Elige otra fuente.","This channel does not allow this video inside other apps. Choose another source.")
+    "error:100" -> tr("El video ya no está disponible o es privado.","This video is unavailable or private.")
+    "error:153" -> tr("YouTube no pudo verificar el reproductor. Actualiza Android System WebView y reintenta.","YouTube could not verify the player. Update Android System WebView and retry.")
+    else -> tr("No se pudo iniciar YouTube aquí. Reintenta o elige otra fuente.","YouTube could not start here. Retry or choose another source.")+" ($status)"
 }
 
 private class LidomYoutubeBridge(val callback:(String)->Unit) {
@@ -75,8 +83,11 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
     val latestWorking by rememberUpdatedState(onWorking)
     val latestEnded by rememberUpdatedState(onEnded)
     var recorded by remember(video) {mutableStateOf(false)}
-    LaunchedEffect(video) {
-        kotlinx.coroutines.delay(20000)
+    var fullscreenRP165 by remember(video) {mutableStateOf(false)}
+    var retryRP165 by remember(video) {mutableIntStateOf(0)}
+    androidx.activity.compose.BackHandler(enabled=fullscreenRP165 && !preview) {fullscreenRP165=false}
+    LaunchedEffect(video,retryRP165) {
+        kotlinx.coroutines.delay(30000)
         if(!recorded && status!="blocked" && !status.startsWith("error:")) status="error:0"
     }
     val bridge=remember(video) {LidomYoutubeBridge {value ->status=value;if(value=="playing" && !recorded) {recorded=true;latestWorking()};if(value=="ended") latestEnded?.invoke()}}
@@ -99,21 +110,26 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
                 "pause" ->view?.evaluateJavascript("brunioPlayPause()",null)
             }
             true
+        } else if(!preview && key.keyCode in setOf(android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,android.view.KeyEvent.KEYCODE_MEDIA_PLAY,android.view.KeyEvent.KEYCODE_MEDIA_PAUSE)) {
+            if(key.action==android.view.KeyEvent.ACTION_DOWN && key.repeatCount==0) view?.evaluateJavascript("brunioPlayPause()",null)
+            true
         } else false
     }
     val playerContent: @Composable () -> Unit = {
-        Column(Modifier.fillMaxSize().background(Color.Black).then(if(preview) remoteController else Modifier)) {
+        Column(Modifier.fillMaxSize().background(Color.Black).then(remoteController)) {
             if(preview) {
                 Text(caption,color=Color.White,fontSize=20.sp,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.fillMaxWidth().padding(start=24.dp,end=24.dp,top=10.dp,bottom=4.dp))
-            } else Row(Modifier.fillMaxWidth().padding(10.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+            } else if(!fullscreenRP165) Row(Modifier.fillMaxWidth().padding(10.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                 FocusButton(tr("Volver a fuentes","Back to sources"),onClick=close)
                 FocusButton(tr("Pausa / Reproducir","Pause / Play")) {view?.evaluateJavascript("brunioPlayPause()",null)}
                 FocusButton("−10s") {view?.evaluateJavascript("brunioSeek(-10)",null)}
                 FocusButton("+10s") {view?.evaluateJavascript("brunioSeek(10)",null)}
+                FocusButton(tr("Pantalla completa","Full screen")) {fullscreenRP165=true}
                 FocusButton("YouTube") {openLidomWebsite(context,"https://www.youtube.com/watch?v=$video")}
             }
             if(status.startsWith("error:") || status=="blocked") Row(Modifier.padding(10.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                Text(tr("YouTube no permite reproducir aquí o requiere interacción. ","YouTube playback is blocked here or needs interaction. ")+status,color=Color.White,modifier=Modifier.weight(1f))
+                Text(youtubeMessageRP165(status),color=Color.White,modifier=Modifier.weight(1f))
+                if(!preview) FocusButton(tr("Reintentar","Retry")) {status="";recorded=false;retryRP165++;view?.reload()}
                 if(!preview) FocusButton(tr("Probar otra fuente","Try another source"),onClick=close)
             }
             AndroidView(modifier=Modifier.weight(1f).fillMaxWidth().then(if(preview) Modifier.focusRequester(previewFocus).focusable() else Modifier),factory={c ->
@@ -128,6 +144,7 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
                     settings.allowFileAccess=false;settings.allowContentAccess=false
                     settings.mixedContentMode=android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
                     settings.mediaPlaybackRequiresUserGesture=false
+                    android.webkit.CookieManager.getInstance().setAcceptThirdPartyCookies(this,true)
                     webChromeClient=WebChromeClient()
                     webViewClient=object:WebViewClient() {
                         override fun shouldOverrideUrlLoading(v:WebView,request:WebResourceRequest):Boolean {
@@ -135,7 +152,7 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
                         }
                     }
                     addJavascriptInterface(bridge,"BruniO")
-                    val origin="https://"+c.packageName
+                    val origin="https://"+c.packageName.lowercase(java.util.Locale.ROOT)
                     val html=c.assets.open(if(preview) "discovery_youtube.html" else "lidom_youtube.html").bufferedReader().use {it.readText()}.replace("__VIDEO_ID__",video).replace("__ORIGIN__",origin)
                     loadDataWithBaseURL(origin+"/",html,"text/html","UTF-8",null)
                     view=this

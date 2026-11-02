@@ -93,7 +93,7 @@ internal fun SpotlightRail(
     var active by remember { mutableStateOf(false) }
     var settledId by remember { mutableStateOf<String?>(null) }
     val bring=remember { BringIntoViewRequester() }
-    val railScroll=androidx.compose.foundation.lazy.rememberLazyListState()
+    val railScroll=homeRailStateRP165("spotlight:$shelfKey:$title")
     val firstCard=remember {FocusRequester()}
     val cardFocusRP61=remember {mutableMapOf<String,FocusRequester>()}
     LaunchedEffect(selectedId,active) { settledId=null;if(active && !simple) { delay(3000);settledId=selectedId } }

@@ -822,7 +822,7 @@ class AppState(context: Context) {
     suspend fun loadRatings() {
         val owner=ratingsKey()
         val j=org.json.JSONObject(playbackPrefs.getString(owner,"{}").orEmpty())
-        forYou.clear()
+        if(loadedRatingsOwner!=owner) forYou.clear()
         ratings.clear(); j.keys().forEach { id -> j.optInt(id).takeIf { it in 1..10 }?.let { ratings[id]=it } }
         loadedRatingsOwner=owner
         val cached=ratings.toMap()
@@ -2925,6 +2925,7 @@ class AppState(context: Context) {
     fun configureReleaseAlertsRP164() {
         com.miflix.native2.data.ReleaseAlertsRP164.configure(appContext,favoriteOwnerRP164(),activeProfile.name,favorites.toList(),tmdb.token,tmdb.language,!kidsMode && session!=null)
     }
+    internal val homePositionsRP165=mutableMapOf<String,HomePositionRP165>()
     var openCalendarWidgetRP164 by mutableStateOf(false)
     var favoritesSyncMessageRP164 by mutableStateOf("")
     private var favoriteSaveJobRP164:kotlinx.coroutines.Job?=null

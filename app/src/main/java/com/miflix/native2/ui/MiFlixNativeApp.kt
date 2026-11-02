@@ -150,7 +150,7 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
             } else false
         }.pointerInput(Unit) {awaitPointerEventScope {while(true) {awaitPointerEvent(PointerEventPass.Initial);MenuActivity.touch()} }}) {
         navigationState.SaveableStateProvider("${state.session?.userId}:${state.activeProfile.id}:${if(showAssistantRP150 && !guestRP150 && !mobileRP133 && !state.kidsMode) "ASSISTANT:$assistantSequenceRP156" else state.screen.name}") {
-        TvFocusScopeRP163(enabled=!mobileRP133) {
+        TvFocusScopeRP163(enabled=!mobileRP133 && (state.screen!=Screen.HOME || state.kidsMode || state.easyModeRP79)) {
         val destination=if(guestRP150 && state.screen in setOf(Screen.SETTINGS,Screen.PROFILES,Screen.FRIENDS,Screen.WATCH_PARTY,Screen.NOTIFICATIONS,Screen.DOWNLOADS,Screen.TRAKT)) Screen.HOME else if(state.easyModeRP79 && !(mobileRP133 && state.screen==Screen.DOWNLOADS) && !com.miflix.native2.data.EasyModePolicyRP79.allowsScreen(state.screen.name)) Screen.HOME else if(state.kidsMode && state.screen !in setOf(Screen.HOME,Screen.SEARCH,Screen.MY_LIST,Screen.DETAILS,Screen.PROFILES,Screen.NOTIFICATIONS,Screen.PLAYER)) Screen.HOME else state.screen
         LaunchedEffect(destination,state.screen) {if(destination!=state.screen) state.screen=destination}
         if(showAssistantRP150 && state.screen!=Screen.PLAYER && !guestRP150 && !mobileRP133 && !state.kidsMode) CinematicSearchScreen(state,{showAssistantRP150=false},initialAi=true)

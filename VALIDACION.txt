@@ -1,4 +1,4 @@
-RP164: app:compileDebugKotlin + app:testDebugUnitTest + mobile:compileDebugKotlin
+RP165 — :app:compileDebugKotlin, :mobile:compileDebugKotlin, :app:testDebugUnitTest
 BUILD SUCCESSFUL
-580 pruebas, 0 fallos, 0 errores, 0 omitidas.
-No se han probado dispositivos físicos ni cuenta de producción.
+580 pruebas; 0 fallos, 0 errores, 0 omitidas.
+Sin prueba física de TV/mando, transmisiones de LIDOM o cuenta del usuario.

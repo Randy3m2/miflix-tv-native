@@ -421,8 +421,9 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
         Screen.LIVE_TV to tr("En Vivo","Live"),
         Screen.MY_LIST to tr("Mi lista","My List")
     )).filter {guestExitRP150==null || it.first!=Screen.FRIENDS}
+    val homeRestoringRP165=LocalHomeReturnFocus.current?.pending!=null
     LaunchedEffect(current,owner) {
-        if(claim) {
+        if(claim && !homeRestoringRP165) {
             val index=navItems.indexOfFirst {it.first==current}
             if(index>=0) navScroll.scrollToItem(index)
             withFrameNanos { }

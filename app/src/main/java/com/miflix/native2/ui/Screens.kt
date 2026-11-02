@@ -2,6 +2,8 @@
 
 package com.miflix.native2.ui
 
+import kotlinx.coroutines.flow.first
+
 import android.content.Intent
 import android.net.Uri
 import android.view.View
@@ -136,13 +138,13 @@ internal fun AppShell(state: AppState, screen: Screen, onNavigate: (Screen) -> U
 @Composable
 fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     val simple=state.simpleHome
-    var homeFocusKey by androidx.compose.runtime.saveable.rememberSaveable {mutableStateOf<String?>(null)}
-    val returningFromDetailsRP164=remember {homeFocusKey!=null}
-    var restoringHomeRP164 by remember {mutableStateOf(homeFocusKey!=null)}
-    LaunchedEffect(Unit) {delay(2500);restoringHomeRP164=false}
-    val homeReturn=remember {HomeReturnFocus(homeFocusKey) {homeFocusKey=it}}
+    val positionOwnerRP165="${state.session?.userId}:${state.activeProfile.id}:${state.interfaceLanguage}"
+    val positionRP165=remember(positionOwnerRP165) {state.homePositionsRP165.getOrPut(positionOwnerRP165) {HomePositionRP165()}}
+    var homeFocusKey by androidx.compose.runtime.saveable.rememberSaveable {mutableStateOf(positionRP165.focusKey)}
+    val returningFromDetailsRP164=remember {positionRP165.focusKey!=null || homeFocusKey!=null}
+    val homeReturn=remember(positionRP165) {HomeReturnFocus(positionRP165.focusKey ?: homeFocusKey) {homeFocusKey=it;positionRP165.focusKey=it}}
     // If a refreshed catalog removed the old target, release the restoration guard.
-    LaunchedEffect(Unit) {delay(1500);homeReturn.pending=null}
+
     LaunchedEffect(state.activeProfile.id,state.session?.userId,state.interfaceLanguage) {state.loadFamiliarHome()}
     LaunchedEffect(state.activeProfile.id,state.session?.userId,state.interfaceLanguage) {state.loadHolidayHome()}
     LaunchedEffect(state.activeProfile.id,state.session?.userId,state.interfaceLanguage,state.discoveryHistoryKey) {
@@ -155,8 +157,8 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     LaunchedEffect(state.interfaceLanguage,state.activeProfile.id) {if("comfort_comedies" !in state.hiddenHomeRows) state.loadComfortComedyHome()}
     LaunchedEffect(state.interfaceLanguage) {if("novelas" !in state.hiddenHomeRows) state.loadNovelasHome()}
     val discoveryOwner="${state.session?.userId}:${state.activeProfile.id}:${state.interfaceLanguage}"
-    var discoveryMood by androidx.compose.runtime.saveable.rememberSaveable(discoveryOwner) {mutableStateOf("")}
-    var discoveryRows by remember(discoveryOwner) {mutableStateOf<List<MediaSummary>>(emptyList())}
+    var discoveryMood by androidx.compose.runtime.saveable.rememberSaveable(discoveryOwner) {mutableStateOf(positionRP165.discoveryMood)}
+    var discoveryRows by remember(discoveryOwner) {mutableStateOf(positionRP165.discoveryRows)}
     var discoveryLoading by remember(discoveryOwner) {mutableStateOf(false)}
     var discoveryError by remember(discoveryOwner) {mutableStateOf(false)}
     var discoveryRetry by remember {mutableIntStateOf(0)}
@@ -172,18 +174,29 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     val holiday=if(effectiveMood=="christmas") state.christmasPicks.toList() else if(effectiveMood=="halloween") state.horrorPicks.toList() else emptyList()
     LaunchedEffect(discoveryOwner,effectiveMood,discoveryRetry,state.appForeground) {
         if(!state.appForeground) return@LaunchedEffect
-        discoveryRows=emptyList();discoveryLoading=true;discoveryError=false
-        try {val contextual=state.discoveryRun(effectiveMood);discoveryRows=state.freshDiscoveryRows("mood:$effectiveMood",(if(discoveryMood.isEmpty()) state.forYou+contextual else contextual).distinctBy {it.cloudId})} catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {discoveryError=true} finally {discoveryLoading=false}
+        if(returningFromDetailsRP164 && discoveryRetry==0 && discoveryMood==positionRP165.discoveryMood && discoveryRows.isNotEmpty()) return@LaunchedEffect
+        discoveryLoading=true;discoveryError=false
+        try {val contextual=state.discoveryRun(effectiveMood);discoveryRows=state.freshDiscoveryRows("mood:$effectiveMood",(if(discoveryMood.isEmpty()) state.forYou+contextual else contextual).distinctBy {it.cloudId})} catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {discoveryError=true} finally {positionRP165.discoveryRows=discoveryRows;positionRP165.discoveryMood=discoveryMood;discoveryLoading=false}
     }
     if(showTrailers) DiscoveryTrailers(state,(state.forYou+state.trending+state.movies+state.series).distinctBy {it.cloudId},mood=discoveryMood) {showTrailers=false}
     var startupInteractedRP129 by remember(discoveryOwner) {mutableStateOf(false)}
-    val genreScroll=rememberLazyListState()
+    val genreScroll=positionRP165.rail("genres")
     val firstGenre=remember {FocusRequester()}
-    val scroll=rememberLazyListState()
+    val scroll=positionRP165.vertical
     LaunchedEffect(state.activeProfile.id,state.interfaceLanguage) {if(state.trending.isEmpty()) state.loadHome()}
     val heroFocus=remember { FocusRequester() }
     val contentFocus=remember { FocusRequester() }
     val scope=rememberCoroutineScope()
+    LaunchedEffect(positionRP165) {
+        if(returningFromDetailsRP164) {
+            androidx.compose.runtime.snapshotFlow {scroll.layoutInfo.totalItemsCount}.first {it>0}
+            val target=positionRP165.sectionKeys.indexOf(positionRP165.rowKey)
+            if(target>=0 && scroll.layoutInfo.visibleItemsInfo.none {it.key==positionRP165.rowKey}) {
+                scroll.scrollToItem(target)
+            }
+        }
+    }
+
     val shelfMotion=remember(scroll) {HomeShelfMotion(scope)}
     val verticalAnchorPx=with(androidx.compose.ui.platform.LocalDensity.current) {48.dp.toPx()}
     val headerWork=remember {mutableListOf<kotlinx.coroutines.Job>()}
@@ -204,14 +217,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     }
     val openItem: (MediaSummary) -> Unit={ item -> state.launch { state.open(item) } }
     val openCollection: (CollectionTile) -> Unit={ tile -> state.launch { state.openCollection(tile.id,tile.title) } }
-    val returnToTop: () -> Unit={
-        if(!restoringHomeRP164 && homeReturn.pending==null) {
-            cancelHeaderWork()
-            headerWork.add(scope.launch {shelfMotion.reset();scroll.animateScrollToItem(0)})
-        }
-        Unit
-    }
-    CompositionLocalProvider(LocalSimpleHome provides simple,LocalHomeReturnFocus provides homeReturn,LocalHomeShelfMotion provides shelfMotion,
+    CompositionLocalProvider(LocalHomePositionRP165 provides positionRP165,LocalSimpleHome provides simple,LocalHomeReturnFocus provides homeReturn,LocalHomeShelfMotion provides shelfMotion,
         LocalHomeShelfMore provides {key,title,rows ->
             when(key) {
                 "streaming","franchises_home" -> onNavigate(Screen.COLLECTIONS)
@@ -221,7 +227,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
             }
             Unit
         }) {
-    BoxWithConstraints(Modifier.fillMaxSize().background(Bg).onPreviewKeyEvent {if(it.type==KeyEventType.KeyDown) startupInteractedRP129=true;false}) {
+    BoxWithConstraints(Modifier.fillMaxSize().background(Bg).onPreviewKeyEvent {if(it.type==KeyEventType.KeyDown) {startupInteractedRP129=true;homeReturn.pending=null};false}) {
         val homeHeroHeight=(maxHeight*.5f).coerceIn(228.dp,284.dp)
         BrowsingViewport(state,(state.localRecommendations(state.trending)+state.localRecommendations(state.movies)).firstOrNull {it.type=="movie"},heroHeight=homeHeroHeight,headerInset=84.dp,heroFocus=heroFocus,ranked=(state.localRecommendations(state.trending)+state.localRecommendations(state.movies)).filter {it.type=="movie"}.distinctBy {it.cloudId}.take(10),
             onRandom={if(!state.randomChoosing) state.launch {state.playRandomMovie()}}) {
@@ -376,8 +382,10 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                     SpotlightRail(tr("Próximamente","Coming soon"),(state.localRecommendations(state.comingMovies)+state.localRecommendations(state.comingSeries)).distinctBy { it.cloudId }.take(30),onClick={ state.launch { state.open(it,upcoming=true) } })
                 }
                 val order=com.miflix.native2.data.HomeOrderPolicyRP106.order(state.homeRowOrder)
-                homeSections.filter {it.key !in state.hiddenHomeRows &&
-                    (it.key!="discovery-retry" || "discovery-picks" !in state.hiddenHomeRows)}.sortedWith(compareBy<HomeSection> {order.indexOf(it.key).let {i ->if(i<0) Int.MAX_VALUE else i}}).forEach {section ->
+                val orderedSectionsRP165=homeSections.filter {it.key !in state.hiddenHomeRows &&
+                    (it.key!="discovery-retry" || "discovery-picks" !in state.hiddenHomeRows)}.sortedWith(compareBy<HomeSection> {order.indexOf(it.key).let {i ->if(i<0) Int.MAX_VALUE else i}})
+                positionRP165.sectionKeys=orderedSectionsRP165.map {it.key}
+                orderedSectionsRP165.forEach {section ->
                     val index=shelfIndex++
                     item(key=section.key) {CompositionLocalProvider(LocalHomeShelfKey provides section.key) {HomeShelfFrame(index,scroll,Modifier.fillParentMaxHeight().fillMaxWidth(),section.content)}}
                 }
@@ -385,10 +393,19 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
         }
         } // fixed browse viewport
         Sidebar(Screen.HOME,state.activeProfile.name,onNavigate,state.unreadNoticeCount,state.activeProfile,
-            backgroundAlpha=headerShade,onHeaderFocused=returnToTop,onEditPicture={ state.profilePhotoEditor=state.activeProfile },kids=state.kidsMode,
+            backgroundAlpha=headerShade,onHeaderFocused=null,onEditPicture={ state.profilePhotoEditor=state.activeProfile },kids=state.kidsMode,
             onMoveDown=({
                 cancelHeaderWork()
                 headerWork.add(scope.launch {
+                    if(positionRP165.focusKey!=null) {
+                        homeReturn.pending=positionRP165.focusKey
+                        repeat(4) {androidx.compose.runtime.withFrameNanos { }}
+                        if(homeReturn.pending!=null) {
+                            homeReturn.pending=null
+                            runCatching {contentFocus.requestFocus()}
+                        }
+                        return@launch
+                    }
                     shelfMotion.reset();scroll.scrollToItem(0)
                     for(attempt in 0 until 3) {
                         androidx.compose.runtime.withFrameNanos { }
@@ -479,7 +496,7 @@ private fun MediaRail(
 private fun CollectionRail(title: String, rows: List<CollectionTile>, onClick: (CollectionTile) -> Unit) {
     val more=LocalHomeShelfMore.current
     val shelfKey=LocalHomeShelfKey.current
-    val railScroll=rememberLazyListState()
+    val railScroll=homeRailStateRP165("collection:$shelfKey:$title")
     val firstCard=remember {FocusRequester()}
     var selectedTileRP61 by androidx.compose.runtime.saveable.rememberSaveable(title) {mutableStateOf(rows.firstOrNull()?.id)}
     val tileFocusRP61=remember {mutableMapOf<String,FocusRequester>()}

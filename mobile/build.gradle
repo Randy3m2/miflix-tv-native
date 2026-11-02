@@ -23,8 +23,8 @@ android {
         manifestPlaceholders = [mobileAppLabel: 'BruniO Mobile']
         minSdk 26
         targetSdk 36
-        versionCode 22268
-        versionName '1.0.8-m9-rp164'
+        versionCode 22269
+        versionName '1.0.8-m9-rp165'
 
         buildConfigField 'String', 'SUPABASE_URL', '"https://iwvhigqxsvvgyzdygiqa.supabase.co"'
         buildConfigField 'String', 'SUPABASE_KEY', '"sb_publishable_TdzEQXtDadVMKhSLVe0ihw_EAQ4iNsd"'

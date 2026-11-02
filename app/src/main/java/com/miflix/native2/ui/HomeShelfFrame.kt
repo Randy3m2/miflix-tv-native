@@ -25,7 +25,9 @@ internal val LocalHomeCardRowHeight=staticCompositionLocalOf {188.dp}
 internal fun HomeShelfFrame(@Suppress("UNUSED_PARAMETER") index:Int,@Suppress("UNUSED_PARAMETER") scroll:LazyListState,modifier:Modifier=Modifier,content:@Composable ()->Unit) {
     // Focus moves immediately through Compose's lazy focus search. There is no separate
     // scroll job and no focus request delayed until an animation completes.
-    BoxWithConstraints(modifier.padding(vertical=8.dp).focusGroup()) {
+    val position=LocalHomePositionRP165.current
+    val rowKey=LocalHomeShelfKey.current
+    BoxWithConstraints(modifier.padding(vertical=8.dp).onFocusChanged {if(it.hasFocus) position?.rowKey=rowKey}.focusGroup()) {
         val cardHeight=(maxHeight-64.dp).coerceIn(124.dp,188.dp)
         CompositionLocalProvider(LocalHomeShelfPaging provides true,LocalHomeCardRowHeight provides cardHeight) {content()}
     }

@@ -1,4 +1,6 @@
-# BruniO RP168
+# BruniO RP169
+
+RP169 añade control por voz al remoto móvil y reorganiza el mando con un layout inspirado en controles de TV modernos.
 
 ## Remote móvil
 

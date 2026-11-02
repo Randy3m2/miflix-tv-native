@@ -26,6 +26,10 @@ import kotlinx.coroutines.*
  var scanning by remember {mutableStateOf(false)}
  var devices by remember {mutableStateOf<List<RemoteDiscoveryRP168>>(emptyList())}
  val scope=rememberCoroutineScope()
+ val voiceLauncher=androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) {result ->
+  if(result.resultCode==android.app.Activity.RESULT_OK) result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.trim()?.takeIf {it.isNotBlank()}?.let {heard -> text=heard.take(512); send("text",heard.take(512))}
+ }
+ fun startVoice() {runCatching {voiceLauncher.launch(android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM).putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS,3).putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT,tr("Habla para buscar en la TV","Speak to search on TV")))}.onFailure {error=tr("No se pudo iniciar el micrófono.","Could not start voice input.")}}
  DisposableEffect(Unit) {onDispose {client?.disconnect()}}
  fun send(action:String,value:String="") {if(busy) return;val remote=client ?: return;scope.launch {busy=true;try {remote.send(action,value);error=""} catch(e:CancellationException) {throw e} catch(e:Exception) {error=e.message.orEmpty()} finally {busy=false}}}
  MobileSheetRP133("BruniO Remote",close) {
@@ -47,19 +51,20 @@ import kotlinx.coroutines.*
    } else {
     Text(tr("Conectado a ","Connected to ")+client!!.endpoint.removePrefix("http://"),color=MobileTintRP133)
     Text(tr("Navegación","Navigation"),color=MobileTintRP133,fontSize=14.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
-    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {MobileButtonRP133("←",modifier=Modifier.weight(1f)) {send("back")};MobileButtonRP133("Home","home",Modifier.weight(1f)) {send("home")};MobileButtonRP133("▶ / Ⅱ","play",Modifier.weight(1f)) {send("play_pause")}}
-    Row {Spacer(Modifier.weight(1f));MobileButtonRP133("↑",modifier=Modifier.weight(1f)) {send("up")};Spacer(Modifier.weight(1f))}
-    Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {MobileButtonRP133("←",modifier=Modifier.weight(1f)) {send("left")};MobileButtonRP133("OK",modifier=Modifier.weight(1f),selected=true) {send("ok")};MobileButtonRP133("→",modifier=Modifier.weight(1f)) {send("right")}}
-    Row {Spacer(Modifier.weight(1f));MobileButtonRP133("↓",modifier=Modifier.weight(1f)) {send("down")};Spacer(Modifier.weight(1f))}
+    // Amazon-style circular navigation cluster: directional controls stay together and OK remains central.
+    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center) {MobileButtonRP133("↑",modifier=Modifier.width(86.dp)) {send("up")}}
+    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center) {MobileButtonRP133("←",modifier=Modifier.width(86.dp)) {send("left")};Spacer(Modifier.width(8.dp));MobileButtonRP133("OK",modifier=Modifier.width(96.dp),selected=true) {send("ok")};Spacer(Modifier.width(8.dp));MobileButtonRP133("→",modifier=Modifier.width(86.dp)) {send("right")}}
+    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.Center) {MobileButtonRP133("↓",modifier=Modifier.width(86.dp)) {send("down")}}
+    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {MobileButtonRP133("Back","back",modifier=Modifier.weight(1f)) {send("back")};MobileButtonRP133("Home","home",Modifier.weight(1f)) {send("home")};MobileButtonRP133("▶ / Ⅱ","play",Modifier.weight(1f)) {send("play_pause")}}
     Text(tr("Reproducción y volumen","Playback & volume"),color=MobileTintRP133,fontSize=14.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {MobileButtonRP133("−10s","back",modifier=Modifier.weight(1f)) {send("seek_back")};MobileButtonRP133("+10s","next",modifier=Modifier.weight(1f)) {send("seek_forward")}}
     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {MobileButtonRP133("Vol −",modifier=Modifier.weight(1f)) {send("volume_down")};MobileButtonRP133("Mute",modifier=Modifier.weight(1f)) {send("mute")};MobileButtonRP133("Vol +",modifier=Modifier.weight(1f)) {send("volume_up")}}
     Text(tr("Contenido","Content"),color=MobileTintRP133,fontSize=14.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {MobileButtonRP133(tr("Fuentes","Sources"),"link",Modifier.weight(1f)) {send("sources")};MobileButtonRP133(tr("Subtítulos","Subtitles"),"cc",Modifier.weight(1f)) {send("subtitles")}}
     MobileButtonRP133(tr("Subtítulos ON / OFF","Subtitles ON / OFF"),modifier=Modifier.fillMaxWidth()) {send("subtitles_toggle")}
-    MobileFieldRP133(text,{text=it.take(512)},tr("Escribe para buscar en TV","Type to search on TV"))
-    MobileButtonRP133(tr("Escribir en el campo de TV","Type in focused TV field"),modifier=Modifier.fillMaxWidth(),enabled=text.isNotBlank()) {send("type",text)}
-    MobileButtonRP133(tr("Buscar en TV","Search on TV"),"search",Modifier.fillMaxWidth(),enabled=text.isNotBlank()) {send("text",text)}
+    Text(tr("Búsqueda por voz o teclado","Voice or keyboard search"),color=MobileTintRP133,fontSize=14.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
+    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {MobileFieldRP133(text,{text=it.take(512)},tr("Buscar en TV…","Search on TV…"),modifier=Modifier.weight(1f));MobileIconButtonRP133("mic",tr("Buscar por voz","Voice search"),selected=true) {startVoice()}}
+    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {MobileButtonRP133(tr("Escribir","Type"),"remote",Modifier.weight(1f),enabled=text.isNotBlank()) {send("type",text)};MobileButtonRP133(tr("Buscar","Search"),"search",Modifier.weight(1f),enabled=text.isNotBlank()) {send("text",text)}}
     MobileButtonRP133(tr("Desconectar","Disconnect"),modifier=Modifier.fillMaxWidth()) {client?.disconnect();client=null}
     Text(tr("Fuentes y subtítulos se abren en la TV; elige con las flechas y OK. No disponible en Kids o Watch Party.","Sources and subtitles open on TV; choose with the arrows and OK. Unavailable in Kids or Watch Party."),color=Muted)
    }

@@ -35,10 +35,10 @@ internal class MobileRemoteRP167(address:String) {
  fun disconnect(){token=""}
 }
 
-internal data class RemoteDiscoveryRP168(val address:String,val label:String)
+internal data class RemoteDiscoveryRP169(val address:String,val label:String)
 
-internal object RemoteDiscoveryRP168 {
- suspend fun scan():List<RemoteDiscoveryRP168> = withContext(Dispatchers.IO) {
+internal object RemoteDiscoveryRP169 {
+ suspend fun scan():List<RemoteDiscoveryRP169> = withContext(Dispatchers.IO) {
   val local=NetworkInterface.getNetworkInterfaces().asSequence().flatMap {it.interfaceAddresses.asSequence()}
    .firstOrNull {it.address is Inet4Address && !it.address.isLoopbackAddress && it.address.isSiteLocalAddress}
    ?: return@withContext emptyList()
@@ -46,14 +46,14 @@ internal object RemoteDiscoveryRP168 {
   val parts=ip.split('.')
   if(parts.size!=4)return@withContext emptyList()
   val prefix=parts.take(3).joinToString(".")
-  val found=ConcurrentLinkedQueue<RemoteDiscoveryRP168>()
+  val found=ConcurrentLinkedQueue<RemoteDiscoveryRP169>()
   coroutineScope {
    (1..254).map {last->launch(Dispatchers.IO) {
     val host="$prefix.$last"; if(host==ip)return@launch
     runCatching {
      val c=(URL("http://$host:8765/").openConnection() as HttpURLConnection)
      c.connectTimeout=180;c.readTimeout=220;c.instanceFollowRedirects=false;c.requestMethod="GET"
-     if(c.responseCode==200) {val body=c.inputStream.bufferedReader().use {it.readText().take(256)};if(body.contains("BruniO",true))found.add(RemoteDiscoveryRP168(host,"BruniO TV · $host"))}
+     if(c.responseCode==200) {val body=c.inputStream.bufferedReader().use {it.readText().take(256)};if(body.contains("BruniO",true))found.add(RemoteDiscoveryRP169(host,"BruniO TV · $host"))}
      c.disconnect()
     }
    }}.joinAll()

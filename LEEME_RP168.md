@@ -1,6 +1,6 @@
-# BruniO RP169
+# BruniO RP170
 
-RP169 añade control por voz al remoto móvil y reorganiza el mando con un layout inspirado en controles de TV modernos.
+RP170 corrige el build de RP169, añade nombres únicos para descubrimiento y ordena el callback de voz para compilación Kotlin.
 
 ## Remote móvil
 

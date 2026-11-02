@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 import com.miflix.native2.data.MobileRemoteRP167
-import com.miflix.native2.data.RemoteDiscoveryRP168
+import com.miflix.native2.data.RemoteDiscoveryRP169
 import kotlinx.coroutines.*
 
 @Composable internal fun MobileRemoteSheetRP167(close:()->Unit) {
@@ -24,20 +24,20 @@ import kotlinx.coroutines.*
  var busy by remember {mutableStateOf(false)}
  var error by remember {mutableStateOf("")}
  var scanning by remember {mutableStateOf(false)}
- var devices by remember {mutableStateOf<List<RemoteDiscoveryRP168>>(emptyList())}
+ var devices by remember {mutableStateOf<List<RemoteDiscoveryRP169>>(emptyList())}
  val scope=rememberCoroutineScope()
+ fun send(action:String,value:String="") {if(busy) return;val remote=client ?: return;scope.launch {busy=true;try {remote.send(action,value);error=""} catch(e:CancellationException) {throw e} catch(e:Exception) {error=e.message.orEmpty()} finally {busy=false}}}
  val voiceLauncher=androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) {result ->
   if(result.resultCode==android.app.Activity.RESULT_OK) result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.trim()?.takeIf {it.isNotBlank()}?.let {heard -> text=heard.take(512); send("text",heard.take(512))}
  }
  fun startVoice() {runCatching {voiceLauncher.launch(android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM).putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS,3).putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT,tr("Habla para buscar en la TV","Speak to search on TV")))}.onFailure {error=tr("No se pudo iniciar el micrófono.","Could not start voice input.")}}
  DisposableEffect(Unit) {onDispose {client?.disconnect()}}
- fun send(action:String,value:String="") {if(busy) return;val remote=client ?: return;scope.launch {busy=true;try {remote.send(action,value);error=""} catch(e:CancellationException) {throw e} catch(e:Exception) {error=e.message.orEmpty()} finally {busy=false}}}
  MobileSheetRP133("BruniO Remote",close) {
   Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
    if(client==null) {
     Text(tr("Conecta tu teléfono y la TV a la misma red Wi‑Fi. Puedes escanear la red o escribir la IP manualmente.","Connect your phone and TV to the same Wi‑Fi. Scan the network or enter the IP manually."),color=Muted)
     MobileButtonRP133(if(scanning) tr("Buscando TVs…","Scanning for TVs…") else tr("Escanear TVs cercanas","Scan nearby TVs"),"search",Modifier.fillMaxWidth(),enabled=!scanning) {
-     scope.launch {scanning=true;error="";devices=runCatching {RemoteDiscoveryRP168.scan()}.getOrElse {error=it.message.orEmpty();emptyList()};scanning=false}
+     scope.launch {scanning=true;error="";devices=runCatching {RemoteDiscoveryRP169.scan()}.getOrElse {error=it.message.orEmpty();emptyList()};scanning=false}
     }
     if(devices.isNotEmpty()) {
      Text(tr("TVs encontradas","Discovered TVs"),color=MobileTintRP133,fontSize=14.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)

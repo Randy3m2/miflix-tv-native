@@ -32,7 +32,10 @@ import kotlinx.coroutines.*
   if(result.resultCode==android.app.Activity.RESULT_OK) result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.trim()?.takeIf {it.isNotBlank()}?.let {heard -> text=heard.take(512); send("text",heard.take(512))}
  }
  fun startVoice() {runCatching {voiceLauncher.launch(android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM).putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS,3).putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT,tr("Habla para buscar en la TV","Speak to search on TV")))}.onFailure {error=tr("No se pudo iniciar el micrófono.","Could not start voice input.")}}
- DisposableEffect(Unit) {onDispose {client?.disconnect()}}
+ LaunchedEffect(address) {
+  val savedToken=prefs.getString("token","").orEmpty()
+  if(address.isNotBlank() && savedToken.isNotBlank() && client==null) client=MobileRemoteRP167(address,savedToken)
+ }
  MobileSheetRP133("BruniO Remote",close) {
   Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
    if(client==null) {
@@ -47,7 +50,7 @@ import kotlinx.coroutines.*
     MobileFieldRP133(address,{address=it},tr("IP de la TV · 192.168.1.20","TV IP · 192.168.1.20"))
     MobileFieldRP133(code,{code=it.filter(Char::isDigit).take(6)},tr("Código de 6 dígitos","Six-digit code"),keyboard=androidx.compose.ui.text.input.KeyboardType.Number)
     MobileButtonRP133(if(busy) tr("Conectando…","Connecting…") else tr("Conectar TV","Connect TV"),"remote",Modifier.fillMaxWidth(),enabled=!busy) {
-     scope.launch {busy=true;try {val remote=MobileRemoteRP167(address);remote.connect(code);client=remote;prefs.edit().putString("address",address).apply();error=""} catch(e:CancellationException) {throw e} catch(e:Exception) {error=e.message.orEmpty()} finally {busy=false}}
+     scope.launch {busy=true;try {val remote=MobileRemoteRP167(address);val token=remote.connect(code);client=remote;prefs.edit().putString("address",address).putString("token",token).apply();error=""} catch(e:CancellationException) {throw e} catch(e:Exception) {error=e.message.orEmpty()} finally {busy=false}}
     }
    } else {
     Text(tr("Conectado a ","Connected to ")+client!!.endpoint.removePrefix("http://"),color=MobileTintRP133)
@@ -66,7 +69,7 @@ import kotlinx.coroutines.*
     Text(tr("Búsqueda por voz o teclado","Voice or keyboard search"),color=MobileTintRP133,fontSize=14.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold)
     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {MobileFieldRP133(text,{text=it.take(512)},tr("Buscar en TV…","Search on TV…"),modifier=Modifier.weight(1f));MobileIconButtonRP133("mic",tr("Buscar por voz","Voice search"),selected=true) {startVoice()}}
     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {MobileButtonRP133(tr("Escribir","Type"),"remote",Modifier.weight(1f),enabled=text.isNotBlank()) {send("type",text)};MobileButtonRP133(tr("Buscar","Search"),"search",Modifier.weight(1f),enabled=text.isNotBlank()) {send("text",text)}}
-    MobileButtonRP133(tr("Desconectar","Disconnect"),modifier=Modifier.fillMaxWidth()) {client?.disconnect();client=null}
+    MobileButtonRP133(tr("Desconectar de la TV","Disconnect from TV"),modifier=Modifier.fillMaxWidth()) {client?.disconnect();client=null;prefs.edit().remove("token").apply()}
     Text(tr("Fuentes y subtítulos se abren en la TV; elige con las flechas y OK. No disponible en Kids o Watch Party.","Sources and subtitles open on TV; choose with the arrows and OK. Unavailable in Kids or Watch Party."),color=Muted)
    }
    if(error.isNotBlank()) Text(error,color=Color(0xFFFFB4AB))

@@ -7,9 +7,9 @@ import org.json.JSONObject
 import java.net.*
 import java.util.concurrent.ConcurrentLinkedQueue
 
-internal class MobileRemoteRP167(address:String) {
+internal class MobileRemoteRP167(address:String,initialToken:String="") {
  val endpoint=RemotePolicyRP167.endpoint(address)
- private var token=""
+ private var token=initialToken
  private val mutex=Mutex()
  private suspend fun post(path:String,values:Map<String,String>,authenticated:Boolean=true):JSONObject=withContext(Dispatchers.IO) {
   val connection=URL(endpoint+path).openConnection() as HttpURLConnection
@@ -27,7 +27,7 @@ internal class MobileRemoteRP167(address:String) {
    JSONObject(String(response,Charsets.UTF_8))
   } finally {connection.disconnect()}
  }
- suspend fun connect(code:String)=mutex.withLock {require(code.matches(Regex("[0-9]{6}"))) {"Enter the six-digit code on the TV"};token=post("/connect",mapOf("code" to code),false).getString("token")}
+ suspend fun connect(code:String):String=mutex.withLock {require(code.matches(Regex("[0-9]{6}"))) {"Enter the six-digit code on the TV"};token=post("/connect",mapOf("code" to code),false).getString("token");token}
  suspend fun send(action:String,value:String="")=mutex.withLock {
   require(RemotePolicyRP167.valid(action,value));check(token.isNotBlank())
   post("/remote",mapOf("action" to action,"value" to value,"request" to java.util.UUID.randomUUID().toString()))

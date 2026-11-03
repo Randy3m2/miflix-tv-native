@@ -302,10 +302,10 @@ internal object UpdateNotes {
         "RP167: próximo episodio con imagen, sinopsis y tiempo restante antes de terminar; reproducción o selección de otro episodio dentro del reproductor." to "RP167: next-episode artwork, synopsis and remaining-time preview before the end; play next or choose another episode inside the player.",
         "Control remoto móvil junto a Settings: emparejamiento local por código, navegación, búsqueda, volumen, fuentes y subtítulos. Widget de calendario con apertura directa y fecha del evento." to "Mobile remote next to Settings: local code pairing, navigation, search, volume, sources and subtitles. Calendar widget opens Calendar directly and selects the event date."
     )
-    val rp170Changes=listOf(
-        "RP170: remoto móvil rediseñado con pad central tipo Amazon, escaneo seguro de TVs en la red local y búsqueda por voz que envía el texto automáticamente a la TV." to "RP170: redesigned mobile remote with an Amazon-style center pad, secure local-TV discovery and voice search that sends text automatically to the TV."
+    val rp172Changes=listOf(
+        "RP172: remoto móvil con diseño inspirado en Fire TV, navegación circular, botones por iconos, búsqueda por voz y sesión persistente hasta desconectar manualmente." to "RP172: Fire TV-inspired mobile remote with circular navigation, icon-first controls, voice search and a persistent session until manual disconnect."
     )
-    val changes=rp170Changes
+    val changes=rp172Changes
     val previousChanges=rp166Changes+rp165Changes+rp164Changes+rp163Changes+(if(mobileReleaseRP135) rp162Changes+rp148Changes+mobileRP142Changes+rp141Changes+mobileRP140Changes+mobileRP139Changes+rp134Changes else rp162Changes+rp160Changes+rp159Changes+rp154Changes+rp153Changes+rp152Changes+rp151Changes+rp150Changes+rp149Changes+rp148Changes+rp147Changes+rp146Changes+rp145Changes+rp144Changes+rp143Changes+rp141Changes+rp138Changes+rp137Changes+rp136Changes+rp135Changes+rp134Changes)+rp133Changes+rp132Changes+rp131Changes+rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
         "Menú de amigos: Watch, View Details, Recommendations y Close; detalles abre la ficha sin iniciar reproducción." to "Friend menu: Watch, View Details, Recommendations and Close; details opens the title without starting playback.",
         "Enlaces de Comet y Torrentio con texto ordenado e insignias de Dolby/HDR según sus metadatos." to "Clean Comet and Torrentio link metadata with small Dolby/HDR badges when reported by the source.",

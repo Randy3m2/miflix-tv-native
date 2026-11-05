@@ -35,13 +35,13 @@ class Art(QWidget):
     def setPixmap(self,pix):self.pix=pix;self.update()
     def paintEvent(self,event):
         p=QPainter(self);p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        path=QPainterPath();path.addRoundedRect(QRectF(self.rect()),19,19);p.setClipPath(path);p.fillRect(self.rect(),QColor('#111724'))
+        path=QPainterPath();path.addRoundedRect(QRectF(self.rect()),0 if self.objectName()=='cinematicHero' else 19,0 if self.objectName()=='cinematicHero' else 19);p.setClipPath(path);p.fillRect(self.rect(),QColor('#101010'))
         if not self.pix.isNull():
             scaled=self.pix.scaled(self.size(),Qt.AspectRatioMode.KeepAspectRatioByExpanding,Qt.TransformationMode.SmoothTransformation)
             p.drawPixmap((self.width()-scaled.width())//2,(self.height()-scaled.height())//2,scaled)
         if self.hero:
-            gradient=QLinearGradient(0,0,self.width(),0);gradient.setColorAt(0,QColor(4,9,19,251));gradient.setColorAt(.37,QColor(5,11,22,227));gradient.setColorAt(.72,QColor(5,11,20,83));gradient.setColorAt(1,QColor(4,10,17,12));p.fillRect(self.rect(),gradient)
-            shade=QLinearGradient(0,self.height()*.45,0,self.height());shade.setColorAt(0,QColor(4,8,16,0));shade.setColorAt(1,QColor(4,8,16,195));p.fillRect(self.rect(),shade)
+            gradient=QLinearGradient(0,0,self.width(),0);gradient.setColorAt(0,QColor(8,8,8,240));gradient.setColorAt(.37,QColor(8,8,8,150));gradient.setColorAt(.72,QColor(8,8,8,35));gradient.setColorAt(1,QColor(8,8,8,0));p.fillRect(self.rect(),gradient)
+            shade=QLinearGradient(0,self.height()*.45,0,self.height());shade.setColorAt(0,QColor(4,8,16,0));shade.setColorAt(1,QColor(8,8,8,245));p.fillRect(self.rect(),shade)
         p.end()
 
 class Poster(QPushButton):
@@ -104,29 +104,75 @@ class Starfield(QWidget):
         p=QPainter(self);p.setRenderHint(QPainter.RenderHint.Antialiasing)
         w,h=self.width(),self.height()
         bg=QLinearGradient(0,0,w,h)
-        bg.setColorAt(0,QColor('#050b19'));bg.setColorAt(.46,QColor('#12172d'))
-        bg.setColorAt(1,QColor('#070d1d'))
+        bg.setColorAt(0,QColor('#202a32'));bg.setColorAt(.45,QColor('#080a0c'));bg.setColorAt(1,QColor('#050506'))
         p.fillRect(self.rect(),bg)
-        # A cool violet planet glow above a layered, midnight landscape.
-        halo=QRadialGradient(QPointF(w*.52,h*.30),w*.48)
-        halo.setColorAt(0,QColor(104,90,180,90))
-        halo.setColorAt(1,QColor(40,50,110,0))
-        p.fillRect(self.rect(),halo)
-        p.setPen(Qt.PenStyle.NoPen)
-        radius=min(w*.20,h*.33)
-        planet=QRadialGradient(QPointF(w*.49,h*.26),radius)
-        planet.setColorAt(0,QColor(66,89,155,105))
-        planet.setColorAt(.55,QColor(47,65,119,75))
-        planet.setColorAt(1,QColor(31,42,81,0))
-        p.setBrush(planet)
-        p.drawEllipse(QPointF(w*.49,h*.26),radius,radius)
-        for i in range(130):
-            x=((i*1837+97)%997)/997*w;y=((i*703+31)%997)/997*h*.68
-            c=QColor(195,205,255,38+(i%5)*23)
-            p.setBrush(c);r=0.55+(i%4)*.27;p.drawEllipse(QPointF(x,y),r,r)
-        def mountain(peaks,color):
-            poly=QPolygonF([QPointF(0,h)]+[QPointF(x*w,y*h) for x,y in peaks]+[QPointF(w,h)])
-            p.setBrush(QColor(color));p.drawPolygon(poly)
-        mountain([(0,.72),(.11,.60),(.24,.74),(.38,.56),(.53,.72),(.68,.60),(.78,.68),(.91,.54),(1,.69)],'#17233c')
-        mountain([(0,.81),(.13,.69),(.21,.83),(.34,.67),(.51,.85),(.66,.73),(.78,.82),(.92,.68),(1,.79)],'#0c172b')
         p.end()
+
+class ContinueTile(Poster):
+    """Backdrop, title and progress in one clickable TV-style tile."""
+    def __init__(self,item,progress,parent=None):
+        super().__init__(parent);self.item=item;self.progress=progress or {}
+    def paintEvent(self,event):
+        p=QPainter(self);p.setRenderHint(QPainter.RenderHint.Antialiasing);rect=QRectF(self.rect()).adjusted(2,2,-2,-2);path=QPainterPath();path.addRoundedRect(rect,12,12);p.setClipPath(path);p.fillRect(rect,QColor('#202022'))
+        if not self.pix.isNull():
+            pix=self.pix.scaled(self.size(),Qt.AspectRatioMode.KeepAspectRatioByExpanding,Qt.TransformationMode.SmoothTransformation);p.drawPixmap((self.width()-pix.width())//2,(self.height()-pix.height())//2,pix)
+        shade=QLinearGradient(0,self.height()*.25,0,self.height());shade.setColorAt(0,QColor(0,0,0,0));shade.setColorAt(1,QColor(0,0,0,235));p.fillRect(self.rect(),shade)
+        p.setPen(QColor('white'));font=p.font();font.setBold(True);font.setPixelSize(15);p.setFont(font)
+        name=p.fontMetrics().elidedText(self.item.get('title',''),Qt.TextElideMode.ElideRight,self.width()-28);p.drawText(14,self.height()-30,name)
+        season=self.progress.get('season',0);episode=self.progress.get('episode',0)
+        if season and episode:
+            font.setPixelSize(11);p.setFont(font);p.drawText(14,self.height()-52,'S'+str(season)+'  E'+str(episode))
+        pct=max(0,min(100,float(self.progress.get('percent',0) or 0)));p.fillRect(14,self.height()-13,self.width()-28,3,QColor(255,255,255,65));p.fillRect(14,self.height()-13,int((self.width()-28)*pct/100),3,QColor('white'))
+        p.setClipping(False)
+        if self.underMouse() or self.hasFocus():p.setPen(QPen(QColor('#ffffff'),2));p.drawRoundedRect(rect,12,12)
+        p.end()
+
+class PlatformTile(Poster):
+    hoverRequested=__import__('PySide6.QtCore',fromlist=['Signal']).Signal()
+    def __init__(self,parent=None):
+        super().__init__(parent);self.normal=QPixmap();self.movie=None;self._buffer=None
+    def setPixmap(self,pix):
+        self.normal=pix
+        if not self.underMouse() or self.movie is None:self.pix=pix;self.update()
+    def setAnimation(self,data):
+        from PySide6.QtCore import QBuffer,QIODevice
+        from PySide6.QtGui import QMovie
+        self._buffer=QBuffer(self);self._buffer.setData(QByteArray(data));self._buffer.open(QIODevice.OpenModeFlag.ReadOnly)
+        self.movie=QMovie(self._buffer,QByteArray(),self)
+        if not self.movie.isValid():self.movie=None;return
+        self.movie.frameChanged.connect(lambda _:self.showFrame())
+        if self.underMouse():self.movie.start()
+    def showFrame(self):
+        if self.movie and self.underMouse():self.pix=self.movie.currentPixmap();self.update()
+    def enterEvent(self,event):
+        super().enterEvent(event)
+        if self.movie:self.movie.start()
+        else:self.hoverRequested.emit()
+    def leaveEvent(self,event):
+        if self.movie:self.movie.stop()
+        self.pix=self.normal;self.update();super().leaveEvent(event)
+    def paintEvent(self,event):
+        p=QPainter(self);p.setRenderHint(QPainter.RenderHint.Antialiasing);rect=QRectF(self.rect());clip=QPainterPath();clip.addRoundedRect(rect,12,12);p.setClipPath(clip);p.fillRect(rect,QColor('#171717'))
+        if not self.pix.isNull():
+            image=self.pix.scaled(self.size(),Qt.AspectRatioMode.KeepAspectRatioByExpanding,Qt.TransformationMode.SmoothTransformation);p.drawPixmap((self.width()-image.width())//2,(self.height()-image.height())//2,image)
+        else:
+            p.setPen(QColor('#f5f5f5'));font=p.font();font.setBold(True);font.setPixelSize(22);p.setFont(font);p.drawText(rect,Qt.AlignmentFlag.AlignCenter,self.text())
+        p.setClipping(False)
+        if self.underMouse() or self.hasFocus():p.setPen(QPen(QColor('#ffffff'),2));p.drawRoundedRect(rect.adjusted(1,1,-1,-1),12,12)
+        p.end()
+
+class WhitePill(QPushButton):
+    def paintEvent(self,event):
+        p=QPainter(self);p.setRenderHint(QPainter.RenderHint.Antialiasing);rect=QRectF(self.rect()).adjusted(1,1,-1,-1)
+        p.setPen(Qt.PenStyle.NoPen);p.setBrush(QColor('#dddddf' if self.underMouse() else '#f5f5f5'));p.drawRoundedRect(rect,rect.height()/2,rect.height()/2)
+        p.setPen(QColor('#111111'));font=p.font();font.setPixelSize(14);font.setBold(True);p.setFont(font);p.drawText(rect,Qt.AlignmentFlag.AlignCenter,self.text());p.end()
+    def enterEvent(self,event):self.update();super().enterEvent(event)
+    def leaveEvent(self,event):self.update();super().leaveEvent(event)
+
+class OutlinePill(QPushButton):
+    def paintEvent(self,event):
+        p=QPainter(self);p.setRenderHint(QPainter.RenderHint.Antialiasing);rect=QRectF(self.rect()).adjusted(1,1,-1,-1)
+        p.setBrush(QColor('#202020' if self.underMouse() else '#080808'));p.setPen(QPen(QColor('#777777' if self.underMouse() else '#424247'),1.4));p.drawRoundedRect(rect,rect.height()/2,rect.height()/2)
+        p.setPen(QColor('#eeeeee' if self.underMouse() else '#aeb0b7'));font=p.font();font.setPixelSize(14);font.setBold(True);p.setFont(font);p.drawText(rect,Qt.AlignmentFlag.AlignCenter,self.text());p.end()
+    def enterEvent(self,event):self.update();super().enterEvent(event)
+    def leaveEvent(self,event):self.update();super().leaveEvent(event)

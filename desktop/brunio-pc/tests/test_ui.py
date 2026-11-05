@@ -71,6 +71,33 @@ class UITests(unittest.TestCase):
         bar=rail.scroll.horizontalScrollBar();self.assertGreater(bar.maximum(),0)
         rail.move_by(1);self.assertGreater(bar.value(),0)
         rail.move_by(-1);self.assertEqual(bar.value(),0);rail.close()
+    def test_hover_sidebar_overlays_without_resizing_content(self):
+        self.w.resize(1000,700);self.w.show();self.app.processEvents();self.w.set_sidebar_expanded(False);self.app.processEvents()
+        before=self.w.content.geometry();self.assertEqual(self.w.sidebar.width(),76)
+        self.w.set_sidebar_expanded(True);self.app.processEvents();self.assertEqual(self.w.sidebar.width(),224);self.assertEqual(self.w.content.geometry(),before)
+        self.assertTrue(self.w.nav_buttons['home'].text());self.w.set_sidebar_expanded(False);self.assertEqual(self.w.nav_buttons['home'].text(),'')
+    def test_local_platform_gif_stays_stopped_until_hover(self):
+        from brunio.visuals import PlatformTile
+        from PySide6.QtGui import QMovie
+        tiny_gif=bytes.fromhex('47494638396101000100800000000000ffffff21f90401000000002c00000000010001000002024401003b')
+        tile=PlatformTile();tile.setAnimation(tiny_gif)
+        self.assertIsNotNone(tile.movie);self.assertEqual(tile.movie.state(),QMovie.MovieState.NotRunning)
+    def test_home_hero_does_not_wait_for_slow_shelves(self):
+        import threading
+        started=threading.Event();release=threading.Event()
+        row={'id':8,'type':'movie','cloudId':'tmdb:movie:8','title':'Fixture movie','overview':'','year':'2026','rating':8,'backdrop':'','poster':''}
+        def catalog(path,*args,**kwargs):
+            if path=='/movie/popular':started.set();release.wait(2);return []
+            return [row] if path=='/trending/all/week' else []
+        self.w.client.catalog=catalog;self.w.image=lambda *args,**kwargs:None;self.w.show();self.w.home()
+        try:
+            self.assertTrue(started.wait(1));deadline=time.monotonic()+1
+            while time.monotonic()<deadline:
+                self.app.processEvents();headline=self.w.stack.currentWidget().findChild(QWidget,'heroHeadline')
+                if headline and headline.text()=='Fixture movie':break
+                time.sleep(.01)
+            self.assertIsNotNone(headline);self.assertEqual(headline.text(),'Fixture movie');self.assertFalse(release.is_set())
+        finally:release.set()
     def test_tv_live_hash_matches_kotlin_java(self):
         self.assertEqual(java_hash('abc'),96354);self.assertEqual(java_hash(''),0)
     def test_sidebar_selection_and_small_window_margins(self):

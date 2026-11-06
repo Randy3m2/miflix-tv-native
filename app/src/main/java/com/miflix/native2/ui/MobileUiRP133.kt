@@ -85,7 +85,7 @@ internal fun Modifier.mobileGlassRP133(selected:Boolean=false,radius:Dp=16.dp)=
 
 @Composable
 internal fun MobileButtonRP133(label:String,icon:String?=null,modifier:Modifier=Modifier,selected:Boolean=false,enabled:Boolean=true,click:()->Unit) {
-    Row(modifier.heightIn(min=46.dp).mobileGlassRP133(selected)
+    Row(modifier.heightIn(min=46.dp).mobileGlassRP133(selected, if(ThemeRuntimeRP177.radius<40) 12.dp else 16.dp)
         .semantics {contentDescription=label;role=Role.Button}
         .clickable(enabled=enabled,onClick=click).padding(horizontal=14.dp,vertical=10.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp,Alignment.CenterHorizontally)) {

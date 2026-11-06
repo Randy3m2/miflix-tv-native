@@ -60,18 +60,27 @@ import coil3.compose.AsyncImage
 import com.miflix.native2.model.CollectionTile
 import com.miflix.native2.model.MediaSummary
 
-val Bg = Color(0xFF050505)
-val Panel = Color(0xFF141414)
-val Muted = Color(0xFFAAAAAF)
-val SoftWhite = Color(0xFFF3F3F3)
-internal object FocusTheme {
-    var argb by mutableIntStateOf(0xFFB792FF.toInt())
+internal object ThemeRuntimeRP177 {
+    var background by mutableIntStateOf(0xFF050505.toInt())
+    var panel by mutableIntStateOf(0xFF141414.toInt())
+    var muted by mutableIntStateOf(0xFFAAAAAF.toInt())
+    var focusedPanel by mutableIntStateOf(0xFF242126.toInt())
+    var border by mutableIntStateOf(0xFF303035.toInt())
+    fun apply(preset: com.miflix.native2.data.ThemeStudioPresetRP173) {
+        background=preset.background.toInt(); panel=preset.surface.toInt(); muted=preset.secondary.toInt()
+        focusedPanel=preset.surface.toInt(); border=preset.primary.toInt()
+        FocusTheme.argb=preset.focus.toInt()
+    }
 }
-
+val Bg: Color get() = Color(ThemeRuntimeRP177.background)
+val Panel: Color get() = Color(ThemeRuntimeRP177.panel)
+val Muted: Color get() = Color(ThemeRuntimeRP177.muted)
+val SoftWhite = Color(0xFFF3F3F3)
+internal object FocusTheme { var argb by mutableIntStateOf(0xFFB792FF.toInt()) }
 val Accent: Color get() = Color(FocusTheme.argb)
 val FocusInk: Color get() = if(Accent.luminance()>.179f) Color.Black else Color.White
-val FocusedPanel = Color(0xFF242126)
-val PanelBorder = Color(0xFF303035)
+val FocusedPanel: Color get() = Color(ThemeRuntimeRP177.focusedPanel)
+val PanelBorder: Color get() = Color(ThemeRuntimeRP177.border)
 internal typealias ProfileMenuAction = () -> Unit
 internal val LocalProfileManage=staticCompositionLocalOf<ProfileMenuAction?> {null}
 internal val LocalCastPair=staticCompositionLocalOf<ProfileMenuAction?> {null}

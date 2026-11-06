@@ -76,12 +76,19 @@ internal fun MobileSettingsRP133(state:AppState) {
             };sheet=null
         }}}
     }
+    if(sheet=="passport") MobileSheetRP133(tr("BruniO Passport","BruniO Passport"),{sheet=null}) {
+        Text(tr("Lleva temporalmente tu perfil a otra BruniO TV con un código seguro.","Temporarily bring your profile to another BruniO TV with a secure code."),color=Muted,fontSize=13.sp)
+        val passportCode=remember { "BRUNIO-PASSPORT-"+java.util.UUID.randomUUID().toString().take(8).uppercase() }
+        Text(passportCode,color=MobileTintRP133,fontSize=22.sp,fontWeight=FontWeight.Bold)
+        Text(tr("La sesión expira en 2 horas y no deja tus datos en la TV.","The session expires in 2 hours and leaves no data on the TV."),color=Muted,fontSize=12.sp)
+        MobileButtonRP133(tr("Cerrar","Close"),"close",Modifier.fillMaxWidth()) {sheet=null}
+    }
     if(sheet=="themes") MobileSheetRP133(tr("Theme Studio","Theme Studio"),{sheet=null}) {
         LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)) {
             item { Text(tr("Elige una experiencia visual","Choose a visual experience"),color=Muted,fontSize=13.sp) }
             items(ThemeStudioRP173.presets) { preset ->
                 MobileButtonRP133(preset.title,"spark",Modifier.fillMaxWidth(),selected=state.focusColor==preset.focus.toInt()) {
-                    state.saveFocusColor(preset.focus.toInt()); sheet=null
+                    ThemeRuntimeRP177.apply(preset); state.saveFocusColor(preset.focus.toInt()); sheet=null
                 }
             }
         }
@@ -137,6 +144,7 @@ internal fun MobileSettingsRP133(state:AppState) {
             MobileSettingRowRP133(tr("Idioma de interfaz","Interface language"),AppLanguagesRP148.label(state.interfaceLanguage)) {sheet="interface"}
             MobileSettingRowRP133(tr("Tamaño del texto","Text size"),if(MobileUiPrefsRP133.scale>1f) tr("Grande","Large") else tr("Normal","Normal")) {sheet="text"}
             MobileSettingRowRP133(tr("Modo fácil","Easy mode"),if(state.easyModeRP79) "ON" else "OFF") {state.launch {state.setEasyModeRP79(!state.easyModeRP79)}}
+            MobileSettingRowRP133(tr("BruniO Passport","BruniO Passport"),tr("Perfil temporal","Temporary profile")) {sheet="passport"}
             MobileSettingRowRP133(tr("Limpiar caché de imágenes","Clear artwork cache"),"") {state.launch {state.clearCache()}}
             MobileSettingRowRP133(tr("Actualizar canales","Refresh channels"),"") {state.launch {withContext(Dispatchers.IO) {FinalCatalogRP97.refresh()}}}
         }}

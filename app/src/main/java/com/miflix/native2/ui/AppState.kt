@@ -3161,20 +3161,31 @@ class AppState(context: Context) {
         } finally {mobileDownloadBusyRP134=false}
     }
 
-    suspend fun playTirsoScheduleItemRP177(item: com.miflix.native2.data.TirsoScheduleItemRP174) {
-        val match = searchFlexible(item.playableQuery).firstOrNull { row ->
-            if (item.isMovie) row.type != "series" else row.type == "series"
-        } ?: searchFlexible(item.title).firstOrNull()
-            ?: error(tr("No encontré una fuente para este programa.","I could not find a playable source for this program."))
-        open(match)
-        val loaded = details ?: tmdb.details(match).also { details = it }
-        val imdb = loaded.imdbId ?: error(tr("IMDb ID no disponible","IMDb ID unavailable"))
-        if (item.isMovie || match.type != "series") {
-            playResolved(match, imdb, 0, 0, resumeOverride = 0L)
-        } else {
-            val episode = Regex("Episode\\s+(\\d+)", RegexOption.IGNORE_CASE).find(item.title)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
-            playResolved(match, imdb, 1, episode, resumeOverride = 0L)
+    private val tirsoVerifiedRP180 = mutableMapOf<String, Triple<MediaSummary, String, Int>>()
+    suspend fun verifyTirsoItemRP180(item: com.miflix.native2.data.TirsoScheduleItemRP174): Boolean {
+        val key=localExtrasScope()+":"+item.id
+        val episode=if(item.isMovie) 0 else Regex("Episode\\s+(\\d+)",RegexOption.IGNORE_CASE).find(item.title)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
+        val candidates=searchFlexible(item.playableQuery).filter { if(item.isMovie) it.type=="movie" else it.type=="series" }.take(3)
+        for(candidate in candidates) {
+            try {
+                val imdb=tmdb.details(candidate).imdbId ?: continue
+                val sources=resolvePlaybackSources(candidate,imdb,if(item.isMovie) 0 else 1,episode)
+                if(sources.isNotEmpty()) {
+                    tirsoVerifiedRP180[key]=Triple(candidate,imdb,episode)
+                    return true
+                }
+            } catch(e:CancellationException) {throw e} catch(_:Exception) {}
         }
+        tirsoVerifiedRP180.remove(key)
+        return false
+    }
+    suspend fun playTirsoScheduleItemRP177(item: com.miflix.native2.data.TirsoScheduleItemRP174) {
+        val key=localExtrasScope()+":"+item.id
+        if(!verifyTirsoItemRP180(item)) error(tr("Este programa no tiene enlaces disponibles.","No sources are currently available for this program."))
+        val target=tirsoVerifiedRP180[key] ?: return
+        selected=target.first
+        details=tmdb.details(target.first)
+        playResolved(target.first,target.second,if(item.isMovie) 0 else 1,target.third,resumeOverride=0L)
     }
 
     suspend fun playMovie(fromStart: Boolean=false) {

@@ -44,7 +44,30 @@ internal fun MobileLiveRP133(state:AppState,select:((PlayerRequest)->Unit)?=null
     }
 }
 
-@Composable\nprivate fun MobileTirso247RP174(state:AppState) {\n    val schedule=remember { Tirso247ScheduleRP174.today() }\n    val current=remember { Tirso247ScheduleRP174.current() }\n    Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(10.dp)) {\n        Column(Modifier.padding(horizontal=16.dp).mobileGlassRP133().padding(16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {\n            Text(Tirso247ScheduleRP174.channelName,color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)\n            Text(tr("Programación diaria · fuentes de BruniO","Daily schedule · BruniO sources"),color=Muted,fontSize=12.sp)\n            Text(if(current==null) tr("Sin programa activo","No active program") else "Ahora: "+current.title,color=MobileTintRP133,fontSize=15.sp,fontWeight=FontWeight.Bold)\n        }\n        LazyColumn(contentPadding=PaddingValues(horizontal=16.dp,vertical=4.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {\n            items(schedule,key={it.id}) { item ->\n                val hour=item.startMinute/60\n                val minute=(item.startMinute%60).toString().padStart(2,'0')\n                Row(Modifier.fillMaxWidth().mobileGlassRP133(item.id==current?.id).padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {\n                    Text(String.format("%02d:%s",hour,minute),color=MobileTintRP133,fontSize=14.sp,fontWeight=FontWeight.Bold,modifier=Modifier.width(52.dp))\n                    Column(Modifier.weight(1f)) { Text(item.title,color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold,maxLines=2,overflow=TextOverflow.Ellipsis); Text(item.franchise,color=Muted,fontSize=11.sp) }\n                    MobileButtonRP133(tr("Buscar","Find"),"search") { state.searchQuery=item.playableQuery; state.screen=Screen.SEARCH }\n                }\n            }\n        }\n    }\n}\n@Composable
+@Composable
+private fun MobileTirso247RP174(state:AppState) {
+    val schedule=remember { Tirso247ScheduleRP174.today() }
+    val current=remember { Tirso247ScheduleRP174.current() }
+    Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.padding(horizontal=16.dp).mobileGlassRP133().padding(16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+            Text(Tirso247ScheduleRP174.channelName,color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
+            Text(tr("Programación diaria · fuentes de BruniO","Daily schedule · BruniO sources"),color=Muted,fontSize=12.sp)
+            Text(if(current==null) tr("Sin programa activo","No active program") else "Ahora: "+current.title,color=MobileTintRP133,fontSize=15.sp,fontWeight=FontWeight.Bold)
+        }
+        LazyColumn(contentPadding=PaddingValues(horizontal=16.dp,vertical=4.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            items(schedule,key={it.id}) { item ->
+                val hour=item.startMinute/60
+                val minute=(item.startMinute%60).toString().padStart(2,'0')
+                Row(Modifier.fillMaxWidth().mobileGlassRP133(item.id==current?.id).padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                    Text(String.format("%02d:%s",hour,minute),color=MobileTintRP133,fontSize=14.sp,fontWeight=FontWeight.Bold,modifier=Modifier.width(52.dp))
+                    Column(Modifier.weight(1f)) { Text(item.title,color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold,maxLines=2,overflow=TextOverflow.Ellipsis); Text(item.franchise,color=Muted,fontSize=11.sp) }
+                    MobileButtonRP133(tr("Buscar","Find"),"search") { state.searchQuery=item.playableQuery; state.screen=Screen.SEARCH }
+                }
+            }
+        }
+    }
+}
+@Composable
 internal fun MobileChannelsRP133(state:AppState,select:((PlayerRequest)->Unit)?=null) {
     val context=LocalContext.current
     val owner=CustomChannelsRP45.owner(state)

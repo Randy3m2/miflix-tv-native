@@ -3161,6 +3161,22 @@ class AppState(context: Context) {
         } finally {mobileDownloadBusyRP134=false}
     }
 
+    suspend fun playTirsoScheduleItemRP177(item: com.miflix.native2.data.TirsoScheduleItemRP174) {
+        val match = searchFlexible(item.playableQuery).firstOrNull { row ->
+            if (item.isMovie) row.type != "series" else row.type == "series"
+        } ?: searchFlexible(item.title).firstOrNull()
+            ?: error(tr("No encontré una fuente para este programa.","I could not find a playable source for this program."))
+        open(match)
+        val loaded = details ?: tmdb.details(match).also { details = it }
+        val imdb = loaded.imdbId ?: error(tr("IMDb ID no disponible","IMDb ID unavailable"))
+        if (item.isMovie || match.type != "series") {
+            playResolved(match, imdb, 0, 0, resumeOverride = 0L)
+        } else {
+            val episode = Regex("Episode\\s+(\\d+)", RegexOption.IGNORE_CASE).find(item.title)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
+            playResolved(match, imdb, 1, episode, resumeOverride = 0L)
+        }
+    }
+
     suspend fun playMovie(fromStart: Boolean=false) {
         val item = selected ?: return
         if(!rapidPlaybackRP87.accept("${localExtrasScope()}:playMovie:${item.cloudId}:$fromStart",android.os.SystemClock.uptimeMillis())) return

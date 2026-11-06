@@ -61,7 +61,7 @@ private fun MobileTirso247RP174(state:AppState) {
                 Row(Modifier.fillMaxWidth().mobileGlassRP133(item.id==current?.id).padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                     Text(String.format("%02d:%s",hour,minute),color=MobileTintRP133,fontSize=14.sp,fontWeight=FontWeight.Bold,modifier=Modifier.width(52.dp))
                     Column(Modifier.weight(1f)) { Text(item.title,color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold,maxLines=2,overflow=TextOverflow.Ellipsis); Text(item.franchise,color=Muted,fontSize=11.sp) }
-                    MobileButtonRP133(tr("Reproducir","Play"),"play") { state.searchQuery=item.playableQuery; state.screen=Screen.SEARCH }
+                    MobileButtonRP133(tr("Reproducir","Play"),"play") { state.launch { runCatching { state.playTirsoScheduleItemRP177(item) }.onFailure { state.error=it.message } } }
                 }
             }
         }

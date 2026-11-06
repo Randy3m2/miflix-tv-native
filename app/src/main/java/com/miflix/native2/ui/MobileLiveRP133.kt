@@ -58,8 +58,10 @@ private fun MobileTirso247RP174(state:AppState) {
             items(schedule,key={it.id}) { item ->
                 val hour=item.startMinute/60
                 val minute=(item.startMinute%60).toString().padStart(2,'0')
+                val period=if(hour<12) "AM" else "PM"
+                val displayHour=if(hour%12==0) 12 else hour%12
                 Row(Modifier.fillMaxWidth().mobileGlassRP133(item.id==current?.id).padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                    Text(String.format("%02d:%s",hour,minute),color=MobileTintRP133,fontSize=14.sp,fontWeight=FontWeight.Bold,modifier=Modifier.width(52.dp))
+                    Text(String.format("%d:%s %s",displayHour,minute,period),color=MobileTintRP133,fontSize=14.sp,fontWeight=FontWeight.Bold,modifier=Modifier.width(52.dp))
                     Column(Modifier.weight(1f)) { Text(item.title,color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold,maxLines=2,overflow=TextOverflow.Ellipsis); Text(item.franchise,color=Muted,fontSize=11.sp) }
                     MobileButtonRP133(tr("Reproducir","Play"),"play") { state.launch { runCatching { state.playTirsoScheduleItemRP177(item) }.onFailure { state.error=it.message } } }
                 }

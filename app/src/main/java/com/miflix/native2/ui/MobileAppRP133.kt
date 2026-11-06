@@ -125,10 +125,13 @@ private fun MobilePlatformRP133(state:AppState) {
 
 @Composable
 private fun MobileFranchiseRP133(state:AppState) {
+    var timeline by rememberSaveable(state.franchiseBrand) { mutableStateOf(false) }
+    if (timeline) { FranchiseTimelineRP150(state) { timeline=false }; return }
     Column {
         Row(Modifier.padding(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             if(com.miflix.native2.data.FranchiseCatalogRP29.supportsMovies(state.franchiseBrand)) MobileButtonRP133(tr("Películas","Movies"),selected=state.franchiseType=="movie") {state.launch {state.loadFranchise("movie")}}
             MobileButtonRP133(tr("Series","Series"),selected=state.franchiseType=="series") {state.launch {state.loadFranchise("series")}}
+            MobileButtonRP133(tr("Historia","Story order"),"timeline") { timeline=true }
         }
         Box(Modifier.weight(1f)) {MobileCatalogGridRP133(state,com.miflix.native2.data.FranchiseCatalogRP29.title(state.franchiseBrand),state.franchiseItems,if(state.franchiseMore) ({state.launch {state.loadFranchise(state.franchiseType,true)}}) else null)}
     }

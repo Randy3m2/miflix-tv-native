@@ -1228,7 +1228,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                             Text(tr("Paletas cinematográficas que mantienen la navegación actual.","Cinematic palettes that preserve the existing navigation."),color=Muted,fontSize=13.sp)
                             FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                                 ThemeStudioRP173.presets.forEach { preset ->
-                                    FocusButton("● ${preset.title}",primary=state.focusColor==preset.focus.toInt()) {state.saveFocusColor(preset.focus.toInt())}
+                                    FocusButton("● ${preset.title}",primary=state.focusColor==preset.focus.toInt()) {ThemeRuntimeRP177.apply(preset); state.saveFocusColor(preset.focus.toInt())}
                                 }
                             }
                         }

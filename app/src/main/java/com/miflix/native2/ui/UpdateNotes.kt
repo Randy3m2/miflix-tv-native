@@ -305,7 +305,10 @@ internal object UpdateNotes {
     val rp172Changes=listOf(
         "RP172: remoto móvil con diseño inspirado en Fire TV, navegación circular, botones por iconos, búsqueda por voz y sesión persistente hasta desconectar manualmente." to "RP172: Fire TV-inspired mobile remote with circular navigation, icon-first controls, voice search and a persistent session until manual disconnect."
     )
-    val rp173Changes=listOf(\n        "RP173: Theme Studio con 32 presets cinematográficos y gaming; Universal Cast por capacidades para BruniO TV, DLNA y Roku sin asumir push genérico." to "RP173: Theme Studio with 32 cinematic and gaming presets; capability-based Universal Cast for BruniO TV, DLNA and Roku without assuming generic push."\n    )\n    val changes=rp173Changes
+    val rp173Changes=listOf(
+        "RP173: Theme Studio con 32 presets cinematográficos y gaming; Universal Cast por capacidades para BruniO TV, DLNA y Roku sin asumir push genérico." to "RP173: Theme Studio with 32 cinematic and gaming presets; capability-based Universal Cast for BruniO TV, DLNA and Roku without assuming generic push."
+    )
+    val changes=rp173Changes
     val previousChanges=rp172Changes+rp166Changes+rp165Changes+rp164Changes+rp163Changes+(if(mobileReleaseRP135) rp162Changes+rp148Changes+mobileRP142Changes+rp141Changes+mobileRP140Changes+mobileRP139Changes+rp134Changes else rp162Changes+rp160Changes+rp159Changes+rp154Changes+rp153Changes+rp152Changes+rp151Changes+rp150Changes+rp149Changes+rp148Changes+rp147Changes+rp146Changes+rp145Changes+rp144Changes+rp143Changes+rp141Changes+rp138Changes+rp137Changes+rp136Changes+rp135Changes+rp134Changes)+rp133Changes+rp132Changes+rp131Changes+rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
         "Menú de amigos: Watch, View Details, Recommendations y Close; detalles abre la ficha sin iniciar reproducción." to "Friend menu: Watch, View Details, Recommendations and Close; details opens the title without starting playback.",
         "Enlaces de Comet y Torrentio con texto ordenado e insignias de Dolby/HDR según sus metadatos." to "Clean Comet and Torrentio link metadata with small Dolby/HDR badges when reported by the source.",

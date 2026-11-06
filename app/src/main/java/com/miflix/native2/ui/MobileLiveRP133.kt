@@ -46,14 +46,24 @@ internal fun MobileLiveRP133(state:AppState,select:((PlayerRequest)->Unit)?=null
 
 @Composable
 private fun MobileTirso247RP174(state:AppState) {
-    val schedule=remember { Tirso247ScheduleRP174.today() }
-    val current=remember { Tirso247ScheduleRP174.current() }
+    val schedule=remember(state.localExtrasScope()) { mutableStateListOf<TirsoScheduleItemRP174>() }
+    var checking by remember { mutableStateOf(true) }
+    LaunchedEffect(state.localExtrasScope()) {
+        checking=true
+        try {
+            for(entry in Tirso247ScheduleRP174.today()) {
+                if(state.verifyTirsoItemRP180(entry)) schedule.add(entry)
+            }
+        } finally { checking=false }
+    }
+    val current=schedule.firstOrNull { it.id==Tirso247ScheduleRP174.current()?.id }
     Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
         Column(Modifier.padding(horizontal=16.dp).mobileGlassRP133().padding(16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
             Text(Tirso247ScheduleRP174.channelName,color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
             Text(tr("Programación diaria · fuentes de BruniO","Daily schedule · BruniO sources"),color=Muted,fontSize=12.sp)
             Text(if(current==null) tr("Sin programa activo","No active program") else "Ahora: "+current.title,color=MobileTintRP133,fontSize=15.sp,fontWeight=FontWeight.Bold)
         }
+        if(checking) Text(tr("Comprobando enlaces disponibles…","Checking available sources…"),color=Muted,modifier=Modifier.padding(horizontal=16.dp))
         LazyColumn(contentPadding=PaddingValues(horizontal=16.dp,vertical=4.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             items(schedule,key={it.id}) { item ->
                 val hour=item.startMinute/60

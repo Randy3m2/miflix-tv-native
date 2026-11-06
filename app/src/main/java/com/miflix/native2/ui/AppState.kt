@@ -323,8 +323,8 @@ class AppState(context: Context) {
     }
     var rememberLastProfile by mutableStateOf(rememberedProfileEnabledRP142())
         private set
-    init { FocusTheme.argb=focusColor }
-    fun saveFocusColor(value: Int) { focusColor=value;FocusTheme.argb=value;playbackPrefs.edit().putInt("focus_color",value).commit();launch {flushSettingsRP83()} }
+    init { ThemeStudioRP173.presets.firstOrNull { it.focus.toInt()==focusColor }?.let { ThemeRuntimeRP177.apply(it) } ?: run { FocusTheme.argb=focusColor } }
+    fun saveFocusColor(value: Int) { focusColor=value;ThemeStudioRP173.presets.firstOrNull { it.focus.toInt()==value }?.let { ThemeRuntimeRP177.apply(it) } ?: run { FocusTheme.argb=value };playbackPrefs.edit().putInt("focus_color",value).commit();launch {flushSettingsRP83()} }
     fun setRememberProfile(value:Boolean) {
         rememberLastProfile=value
         val edit=playbackPrefs.edit().putBoolean("remember_last_profile",value)

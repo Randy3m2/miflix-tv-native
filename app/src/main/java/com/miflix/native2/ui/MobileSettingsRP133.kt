@@ -76,6 +76,16 @@ internal fun MobileSettingsRP133(state:AppState) {
             };sheet=null
         }}}
     }
+    if(sheet=="themes") MobileSheetRP133(tr("Theme Studio","Theme Studio"),{sheet=null}) {
+        LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            item { Text(tr("Elige una experiencia visual","Choose a visual experience"),color=Muted,fontSize=13.sp) }
+            items(ThemeStudioRP173.presets) { preset ->
+                MobileButtonRP133(preset.title,"spark",Modifier.fillMaxWidth(),selected=state.focusColor==preset.focus.toInt()) {
+                    state.saveFocusColor(preset.focus.toInt()); sheet=null
+                }
+            }
+        }
+    }
     if(sheet=="torbox") MobileSheetRP133("BruniO + TorBox",{sheet=null;key=""}) {
         Text(tr("La clave se guarda con tu configuración existente. No la compartas.","Your key uses the existing secure settings flow. Do not share it."),color=Muted,fontSize=13.sp)
         MobileFieldRP133(key,{key=it},"API key",password=true)
@@ -122,6 +132,8 @@ internal fun MobileSettingsRP133(state:AppState) {
             MobileSettingRowRP133("BruniO + TorBox",if(state.nativeSourceEnabled) "ON" else "OFF") {sheet="torbox"}
         }}
         item {MobileSettingsCardRP133(tr("Experiencia","Experience")) {
+            MobileSettingRowRP133(tr("Theme Studio","Theme Studio"),tr("32 presets","32 presets")) {sheet="themes"}
+
             MobileSettingRowRP133(tr("Idioma de interfaz","Interface language"),AppLanguagesRP148.label(state.interfaceLanguage)) {sheet="interface"}
             MobileSettingRowRP133(tr("Tamaño del texto","Text size"),if(MobileUiPrefsRP133.scale>1f) tr("Grande","Large") else tr("Normal","Normal")) {sheet="text"}
             MobileSettingRowRP133(tr("Modo fácil","Easy mode"),if(state.easyModeRP79) "ON" else "OFF") {state.launch {state.setEasyModeRP79(!state.easyModeRP79)}}

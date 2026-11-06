@@ -78,6 +78,7 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.miflix.native2.BuildConfig
 import com.miflix.native2.data.LiveChannel
+import com.miflix.native2.data.ThemeStudioRP173
 import com.miflix.native2.model.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -1221,6 +1222,13 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                             FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
                                 listOf(0xFFFFFFFF.toInt() to "White",0xFFB792FF.toInt() to "Purple",0xFF65BFFF.toInt() to "Blue",0xFF66E6A0.toInt() to "Green",0xFFFFBB66.toInt() to "Amber",0xFFFF8FB6.toInt() to "Rose").forEach {(color,label) ->
                                     FocusButton("● $label",primary=state.focusColor==color) {state.saveFocusColor(color)}
+                                }
+                            }
+                            Text(tr("Theme Studio","Theme Studio"),color=Color.White,fontSize=20.sp,fontWeight=FontWeight.Bold)
+                            Text(tr("Paletas cinematográficas que mantienen la navegación actual.","Cinematic palettes that preserve the existing navigation."),color=Muted,fontSize=13.sp)
+                            FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                                ThemeStudioRP173.presets.forEach { preset ->
+                                    FocusButton("● ${preset.title}",primary=state.focusColor==preset.focus.toInt()) {state.saveFocusColor(preset.focus.toInt())}
                                 }
                             }
                         }

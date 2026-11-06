@@ -34,8 +34,22 @@ object Tirso247ScheduleRP174 {
         }
         val hero = if (seed % 2 == 0) "DC Movies & Series" else "Marvel Movies & Series"
         add("${dayKey}-hero", "${hero} Spotlight", hero, 22*60, 120, hero)
-        val genre = movieGenres[(seed/7)%movieGenres.size]
-        add("${dayKey}-movie", "Tirso Movie Night · ${genre}", "Movie", 0, 120, "movie ${genre}", true)
+        val films=listOf("Interstellar","The Matrix","Inception","Jurassic Park","The Dark Knight","Superman","Spider-Man","Iron Man","Guardians of the Galaxy","Back to the Future","The Truman Show","Shrek","Finding Nemo","The Lord of the Rings: The Fellowship of the Ring","The Mummy","John Wick","The Conjuring","Scream","Arrival","Knives Out","The Grand Budapest Hotel","Mad Max: Fury Road","Coco","Ratatouille")
+        val shows=listOf("Friends","Breaking Bad","The Office","Avatar: The Last Airbender","The Simpsons","Stranger Things","Batman: The Animated Series","Justice League","One Piece","Attack on Titan")
+        val film=films[seed%films.size]
+        add("${dayKey}-movie",film,"Movie",0,120,film,true)
+        repeat(4) { i ->
+            val title=shows[(seed+i)%shows.size]
+            add("${dayKey}-variety-${i}","${title} · Episode ${(seed+i)%12+1}",title,10*60+i*30,30,title)
+        }
+        repeat(3) { i ->
+            val title=films[(seed+i*5+1)%films.size]
+            add("${dayKey}-film-${i}",title,"Movie",2*60+i*120,120,title,true)
+        }
+        repeat(3) { i ->
+            val title=films[(seed+i*7+4)%films.size]
+            add("${dayKey}-afternoon-${i}",title,"Movie",12*60+i*120,120,title,true)
+        }
         return result.sortedBy { it.startMinute }
     }
     fun today(calendar: Calendar = Calendar.getInstance()) = forDay(calendar.get(Calendar.YEAR),calendar.get(Calendar.DAY_OF_YEAR))

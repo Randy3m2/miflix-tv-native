@@ -320,8 +320,11 @@ internal object UpdateNotes {
     val rp176Changes=listOf(
         "RP176: Offline Watch Party por hotspot y Browser Watch Party con salas temporales, sincronización y permisos." to "RP176: Offline Watch Party over hotspot and Browser Watch Party with temporary rooms, synchronization and permissions."
     )
-    val changes=rp177Changes
-    val previousChanges=rp176Changes+rp175Changes+rp174Changes+rp173Changes+rp172Changes+rp166Changes+rp165Changes+rp164Changes+rp163Changes+(if(mobileReleaseRP135) rp162Changes+rp148Changes+mobileRP142Changes+rp141Changes+mobileRP140Changes+mobileRP139Changes+rp134Changes else rp162Changes+rp160Changes+rp159Changes+rp154Changes+rp153Changes+rp152Changes+rp151Changes+rp150Changes+rp149Changes+rp148Changes+rp147Changes+rp146Changes+rp145Changes+rp144Changes+rp143Changes+rp141Changes+rp138Changes+rp137Changes+rp136Changes+rp135Changes+rp134Changes)+rp133Changes+rp132Changes+rp131Changes+rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
+    val rp178Changes=listOf(
+        "RP178: reproducción directa de Tirso 24/7, horas AM/PM, temas con formas específicas y cronología de franquicias completa en móvil." to "RP178: direct Tirso 24/7 playback, AM/PM times, theme-specific shapes and full franchise chronology on mobile."
+    )
+    val changes=rp178Changes
+    val previousChanges=rp177Changes+rp176Changes+rp175Changes+rp174Changes+rp173Changes+rp172Changes+rp166Changes+rp165Changes+rp164Changes+rp163Changes+(if(mobileReleaseRP135) rp162Changes+rp148Changes+mobileRP142Changes+rp141Changes+mobileRP140Changes+mobileRP139Changes+rp134Changes else rp162Changes+rp160Changes+rp159Changes+rp154Changes+rp153Changes+rp152Changes+rp151Changes+rp150Changes+rp149Changes+rp148Changes+rp147Changes+rp146Changes+rp145Changes+rp144Changes+rp143Changes+rp141Changes+rp138Changes+rp137Changes+rp136Changes+rp135Changes+rp134Changes)+rp133Changes+rp132Changes+rp131Changes+rp130Changes+rp129Changes+rp128Changes+rp127Changes+rp126Changes+rp125Changes+rp124Changes+rc59Changes+legacyChanges+rc62Changes+listOf(
         "Menú de amigos: Watch, View Details, Recommendations y Close; detalles abre la ficha sin iniciar reproducción." to "Friend menu: Watch, View Details, Recommendations and Close; details opens the title without starting playback.",
         "Enlaces de Comet y Torrentio con texto ordenado e insignias de Dolby/HDR según sus metadatos." to "Clean Comet and Torrentio link metadata with small Dolby/HDR badges when reported by the source.",
         "Envío local a TV por Wi-Fi, con enlace y código de conexión; sin reproducción web." to "Send titles to TV over local Wi-Fi with a connection link and code; no web playback.",

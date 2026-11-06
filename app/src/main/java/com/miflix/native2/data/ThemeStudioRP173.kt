@@ -16,6 +16,7 @@ data class ThemeStudioPresetRP173(
 
 object ThemeStudioRP173 {
     val presets: List<ThemeStudioPresetRP173> = listOf(
+        ThemeStudioPresetRP173("venom", "Venom", 0xFFE21C2A, 0xFF9CC9E8, 0xFF020508, 0xFF0A141B, 0xFFFF3344, "symbiote black, wet steel and crimson", "symbiote"),
         ThemeStudioPresetRP173("god_of_war", "God of War", 0xFFB92B35, 0xFF9FC7E6, 0xFF080A0D, 0xFF1A1D22, 0xFFCF3D49, "stone, snow and battle-worn metal", "snow"),
         ThemeStudioPresetRP173("horizon_zero_dawn", "Horizon Zero Dawn", 0xFF19C8C5, 0xFFF28C35, 0xFF071214, 0xFF142529, 0xFF47E2E5, "post-apocalyptic wilderness and machines", "hologram"),
         ThemeStudioPresetRP173("the_last_of_us", "The Last of Us", 0xFF89945A, 0xFF9B7754, 0xFF090B09, 0xFF1B201A, 0xFFC0A45E, "overgrown cities and survival", "dust"),

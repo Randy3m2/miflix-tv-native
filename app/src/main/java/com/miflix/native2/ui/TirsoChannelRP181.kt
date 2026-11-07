@@ -89,10 +89,13 @@ private fun ColumnScope.TirsoGuideContentRP181(state:AppState,mobile:Boolean) {
     val current=Tirso247ScheduleRP174.current(calendar)
     LaunchedEffect(owner,retry,dayKey) {
         checking=true;rows.clear();scanned=0
+        rows.addAll(schedule.filter {entry->state.tirsoTargetRP181(entry)?.let {System.currentTimeMillis()-it.checkedAt<20*60*1000L}==true})
         try {
             val ordered=schedule.sortedBy {if(it.id==current?.id) -1 else it.startMinute}
             for(entry in ordered) {
-                if(withTimeoutOrNull(45_000) {state.verifyTirsoItemRP180(entry)}==true) rows.add(entry)
+                if(withTimeoutOrNull(30_000) {state.verifyTirsoItemRP180(entry)}==true) {
+                    if(rows.none {it.id==entry.id}) rows.add(entry)
+                } else rows.removeAll {it.id==entry.id}
                 scanned++
             }
         } finally {checking=false}

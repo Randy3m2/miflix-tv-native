@@ -55,15 +55,17 @@ object UniversalCastPlannerRP173 {
         }
         val mimeOk = c.acceptedMimeTypes.isEmpty() || media.mimeType in c.acceptedMimeTypes
         val protocolOk = c.acceptedProtocols.isEmpty() || media.protocol in c.acceptedProtocols
-        if (mimeOk && protocolOk && (!media.isLive || c.supportsLive)) return CastPlan.Direct(target)
         if (c.destination == CastDestinationKind.ROKU_MEDIA_PLAYER) {
+            if(!mimeOk || !protocolOk) return CastPlan.Unsupported("This Roku path does not accept the source format")
             // Roku Media Player browses a DLNA MediaServer. It is never reported
             // as direct playback when the content is not advertised as compatible.
             if (media.protocol == CastProtocol.HLS && !c.supportsHls) {
                 return CastPlan.Unsupported("This Roku path has not verified HLS playback")
             }
+            if(media.isLive && !c.supportsLive) return CastPlan.Unsupported("Live playback on this Roku path has not been verified")
             return CastPlan.RokuMediaPlayer(target)
         }
+        if (mimeOk && protocolOk && (!media.isLive || c.supportsLive)) return CastPlan.Direct(target)
         return CastPlan.Unsupported("The receiver does not advertise a compatible format")
     }
 }

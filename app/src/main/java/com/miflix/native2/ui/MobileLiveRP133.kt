@@ -60,6 +60,8 @@ internal fun MobileChannelsRP133(state:AppState,select:((PlayerRequest)->Unit)?=
     var initialCategory by remember {mutableStateOf(true)}
     LaunchedEffect(category,query) {if(initialCategory) initialCategory=false else {count=10;scroll.scrollToItem(0)}}
     var options by remember {mutableStateOf<CustomChannelRP45?>(null)}
+    var rokuRequest by remember {mutableStateOf<PlayerRequest?>(null)}
+    rokuRequest?.let {request->RokuCastSheetRP182(request) {rokuRequest=null}}
     LaunchedEffect(owner,revision,favoriteRevision) {
         val snapshot=withContext(Dispatchers.IO) {CustomChannelsRP45.list(context,owner,true) to LiveLibrary.favorites(context,state)}
         channels=snapshot.first;favorites=snapshot.second
@@ -79,6 +81,7 @@ internal fun MobileChannelsRP133(state:AppState,select:((PlayerRequest)->Unit)?=
     }
     options?.let {channel->MobileSheetRP133(channel.name,{options=null}) {
         MobileButtonRP133(tr("Reproducir","Play"),"play",Modifier.fillMaxWidth()) {options=null;tune(channel)}
+        MobileButtonRP133("Roku Media Player","cast",Modifier.fillMaxWidth()) {options=null;rokuRequest=CustomChannelsRP45.request(channel)}
         MobileButtonRP133(tr("Favorito","Favorite"),"heart",Modifier.fillMaxWidth(),selected=channel.id in favoriteIds) {LiveLibrary.toggle(context,state,CustomChannelsRP45.provider,LiveChannel(channel.id,"tv",channel.name,channel.logo,channel.category,channel.number))}
         MobileButtonRP133(tr("Eliminar canal","Remove channel"),"close",Modifier.fillMaxWidth()) {state.launch {withContext(Dispatchers.IO) {CustomChannelsRP45.remove(context,owner,channel.id)};options=null}}
     }}

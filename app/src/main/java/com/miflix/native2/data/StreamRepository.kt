@@ -108,7 +108,35 @@ class StreamRepository internal constructor(initialManifestUrl:String,
         }
     }
 
-    private suspend fun resolveOne(manifest: String, index:Int, imdbId: String, type: String, season: Int, episode: Int): List<StreamChoice> = coroutineScope {
+    /** Availability probe: two providers at a time, stop at the first accepted direct source. */
+    internal suspend fun firstSourceRP182(imdbId:String,type:String,season:Int=0,episode:Int=0,
+        movieYear:String?=null,maxBytes:Long=0,movieTitle:String?=null):List<StreamChoice> {
+        for(batch in manifests().withIndex().toList().chunked(2)) {
+            val result=coroutineScope {
+                val channel=kotlinx.coroutines.channels.Channel<List<StreamChoice>>(2)
+                val jobs=batch.map {entry->async(kotlinx.coroutines.Dispatchers.Default) {
+                    val rows=try {
+                        resolveOne(entry.value,entry.index,imdbId,type,season,episode,maxAccepted=1,timeoutMs=4000,
+                            accept={StreamFilters.allowed(it,type,movieYear,maxBytes,movieTitle)})
+                    } catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {emptyList()}
+                    channel.send(rows)
+                }}
+                try {
+                    var found=emptyList<StreamChoice>()
+                    for(index in jobs.indices) {
+                        val rows=channel.receive()
+                        if(rows.isNotEmpty()) {found=rows;break}
+                    }
+                    found
+                } finally {jobs.forEach {it.cancel()};channel.cancel()}
+            }
+            if(result.isNotEmpty()) return result
+        }
+        return emptyList()
+    }
+
+    private suspend fun resolveOne(manifest: String, index:Int, imdbId: String, type: String, season: Int, episode: Int,
+        maxAccepted:Int=Int.MAX_VALUE,timeoutMs:Int=8000,accept:(StreamChoice)->Boolean={true}): List<StreamChoice> = coroutineScope {
         val base = manifest.removeSuffix("/manifest.json")
         val stremioType = if (type == "series") "series" else "movie"
         val mediaId = if (stremioType == "series") "$imdbId:$season:$episode" else imdbId
@@ -116,13 +144,13 @@ class StreamRepository internal constructor(initialManifestUrl:String,
         if(metadata[manifest]?.streams==false) return@coroutineScope emptyList()
         // Metadata must not add a second sequential wait before the stream request.
         val manifestInfo=async {info(manifest)}
-        val streamResponse=async {JSONObject(fetch("$base/stream/$stremioType/$mediaId.json",8000))}
+        val streamResponse=async {JSONObject(fetch("$base/stream/$stremioType/$mediaId.json",timeoutMs))}
         val json=streamResponse.await()
         if(!manifestInfo.await().streams) return@coroutineScope emptyList()
         val addonName = label(manifest,index)
         val a = json.optJSONArray("streams") ?: return@coroutineScope emptyList()
         val context=kotlinx.coroutines.currentCoroutineContext()
-        torrentCounts[manifest]=(0 until a.length()).count {i ->
+        torrentCounts[manifest]=if(maxAccepted!=Int.MAX_VALUE) 0 else (0 until a.length()).count {i ->
             if(i%32==0) context.ensureActive()
             val row=a.optJSONObject(i)
             row!=null && row.optString("url").let {url ->
@@ -130,7 +158,7 @@ class StreamRepository internal constructor(initialManifestUrl:String,
                     (row.optString("infoHash").isNotBlank() || url.startsWith("magnet:"))
             }
         }
-        (0 until a.length()).mapNotNull { i ->
+        (0 until a.length()).asSequence().mapNotNull { i ->
             if(i%32==0) context.ensureActive()
             val s = a.optJSONObject(i) ?: return@mapNotNull null
             val rawUrl=s.optString("url").trim()
@@ -171,7 +199,7 @@ class StreamRepository internal constructor(initialManifestUrl:String,
                 sourceAddonHost = runCatching {URI(manifest).host.orEmpty().lowercase(java.util.Locale.ROOT)}.getOrDefault(""),
                 audioLanguages = audioLanguages
             )
-        }
+        }.filter(accept).take(maxAccepted).toList()
     }
 
     private fun normalizeLang(raw: String): String {

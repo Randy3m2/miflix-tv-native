@@ -3166,15 +3166,16 @@ class AppState(context: Context) {
         val episodeTitle:String,val sources:List<StreamChoice>,val checkedAt:Long,
     )
     private val tirsoVerifiedRP180=linkedMapOf<String,TirsoTargetRP181>()
+    private val tirsoSeasonsRP182=linkedMapOf<String,Pair<Long,List<EpisodeSummary>>>()
     private val tirsoLockRP181=kotlinx.coroutines.sync.Mutex()
     private fun tirsoKeyRP181(item:com.miflix.native2.data.TirsoScheduleItemRP174)=
-        localExtrasScope()+":"+audioLanguage+":"+streamRepo.manifests().hashCode()+":"+item.id
+        localExtrasScope()+":"+audioLanguage+":"+streamSizeBytes+":"+nativeOnlyRP75+":"+nativeSpanishOnlyRP77+":"+nativeSourceEnabled+":"+streamRepo.manifests().hashCode()+":"+item.id
     internal fun tirsoTargetRP181(item:com.miflix.native2.data.TirsoScheduleItemRP174)=tirsoVerifiedRP180[tirsoKeyRP181(item)]
     suspend fun verifyTirsoItemRP180(item:com.miflix.native2.data.TirsoScheduleItemRP174):Boolean {
         tirsoLockRP181.lock()
         try {
             val key=tirsoKeyRP181(item)
-            tirsoVerifiedRP180[key]?.takeIf {System.currentTimeMillis()-it.checkedAt<5*60*1000L}?.let {return true}
+            tirsoVerifiedRP180[key]?.takeIf {System.currentTimeMillis()-it.checkedAt<20*60*1000L}?.let {return true}
             val candidate=if(item.tmdbId>0) tmdb.byCloudId("tmdb:${if(item.isMovie) "movie" else "series"}:${item.tmdbId}")
                 else searchFlexible(item.playableQuery).firstOrNull {if(item.isMovie) it.type=="movie" else it.type=="series"}
             if(candidate==null) return false
@@ -3186,15 +3187,25 @@ class AppState(context: Context) {
                     ?: Regex("Episode\\s+(\\d+)",RegexOption.IGNORE_CASE).find(item.title)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
                 var found:EpisodeSummary?=null
                 for(number in 1..detail.seasonCount) {
-                    val episodes=tmdb.season(candidate.id,number).sortedBy {it.absoluteEpisodeRP102.takeIf {n->n>0} ?: it.episode}
+                    val seasonKey="${tmdb.language}:${candidate.id}:$number"
+                    val episodes=tirsoSeasonsRP182[seasonKey]?.takeIf {System.currentTimeMillis()-it.first<6*60*60*1000L}?.second
+                        ?: tmdb.season(candidate.id,number).sortedBy {it.absoluteEpisodeRP102.takeIf {n->n>0} ?: it.episode}.also {rows ->
+                            if(tirsoSeasonsRP182.size>=64) tirsoSeasonsRP182.remove(tirsoSeasonsRP182.keys.first())
+                            tirsoSeasonsRP182[seasonKey]=System.currentTimeMillis() to rows
+                        }
                     if(remaining<=episodes.size) {found=episodes[remaining-1];break}
                     remaining-=episodes.size
                 }
                 val row=found ?: return false
                 season=row.season;episode=row.episode;title=row.title
             }
-            val sources=resolvePlaybackSources(candidate,imdb,season,episode)
-                .filter {it.url.isNotBlank() || it.nativeSource!=null}
+            val coordinates=providerEpisodeRP107(candidate,season,episode)
+            val account=session?.userId
+            val nativeEnabled=account!=null && nativeStore.enabled(account)
+            val sources=if(nativeEnabled && nativeOnlyRP75) resolvePlaybackSources(candidate,imdb,season,episode).take(1)
+                else (if(easyModeRP79) easyStreamsRP79 else streamRepo).firstSourceRP182(
+                    imdb,candidate.type,coordinates.first,coordinates.second,candidate.year,streamSizeBytes,candidate.title)
+                    .ifEmpty {if(nativeEnabled) resolvePlaybackSources(candidate,imdb,season,episode).take(1) else emptyList()}
             if(sources.isEmpty()) {tirsoVerifiedRP180.remove(key);return false}
             if(tirsoVerifiedRP180.size>=48) tirsoVerifiedRP180.remove(tirsoVerifiedRP180.keys.first())
             tirsoVerifiedRP180[key]=TirsoTargetRP181(candidate,detail,season,episode,title,sources,System.currentTimeMillis())

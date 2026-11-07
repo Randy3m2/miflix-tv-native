@@ -16,6 +16,14 @@ data class ThemeStudioPresetRP173(
 
 object ThemeStudioRP173 {
     val presets: List<ThemeStudioPresetRP173> = listOf(
+        ThemeStudioPresetRP173("default","Default · BruniO",0xFFB792FF,0xFFAAAAAF,0xFF050505,0xFF141414,0xFFB792FF,"Original BruniO appearance"),
+        ThemeStudioPresetRP173("halloween","Halloween",0xFFFF8A24,0xFFB18AE8,0xFF0D0812,0xFF24152A,0xFFFFAC47,"pumpkins, moonlight and bats"),
+        ThemeStudioPresetRP173("summer","Summer",0xFFFFC354,0xFF62DCE0,0xFF07191F,0xFF123039,0xFFFFCF76,"sunshine and ocean waves"),
+        ThemeStudioPresetRP173("christmas","Christmas",0xFFD24953,0xFFB9D5B0,0xFF071410,0xFF142B23,0xFFFFCE82,"evergreen, warm lights and snow"),
+        ThemeStudioPresetRP173("spring","Spring",0xFFDD8DB8,0xFFA8D49B,0xFF11151B,0xFF252A30,0xFFF2B5D4,"blossoms and fresh leaves"),
+        ThemeStudioPresetRP173("nba","NBA",0xFF3E8DDD,0xFFE6A76E,0xFF080E1C,0xFF18283D,0xFF73BBFF,"basketball court and arena light"),
+        ThemeStudioPresetRP173("mlb","MLB",0xFFDF5960,0xFFA4C4E3,0xFF080F1B,0xFF18283A,0xFFF18A8F,"baseball diamond and red stitching"),
+        ThemeStudioPresetRP173("spider_man","Spider-Man",0xFFDC3C4D,0xFF82B5E2,0xFF080D1B,0xFF17243A,0xFFFF6676,"webs and city rooftops"),
         ThemeStudioPresetRP173("venom", "Venom", 0xFFE21C2A, 0xFF9CC9E8, 0xFF020508, 0xFF0A141B, 0xFFFF3344, "symbiote black, wet steel and crimson", "symbiote"),
         ThemeStudioPresetRP173("god_of_war", "God of War", 0xFFB92B35, 0xFF9FC7E6, 0xFF080A0D, 0xFF1A1D22, 0xFFCF3D49, "stone, snow and battle-worn metal", "snow"),
         ThemeStudioPresetRP173("horizon_zero_dawn", "Horizon Zero Dawn", 0xFF19C8C5, 0xFFF28C35, 0xFF071214, 0xFF142529, 0xFF47E2E5, "post-apocalyptic wilderness and machines", "hologram"),

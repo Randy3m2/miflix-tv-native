@@ -920,6 +920,10 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
     var helpIndex by remember(category) { mutableStateOf(-1) }
     var visualHelp by remember(category) {mutableStateOf<SettingsHelpRC103?>(null)}
     val settingsScroll=rememberScrollState()
+    var showThemeStudioRP182 by remember {mutableStateOf(false)}
+    var showAccentRP182 by remember {mutableStateOf(false)}
+    if(showThemeStudioRP182) ThemeStudioTvRP182(state) {showThemeStudioRP182=false}
+    if(showAccentRP182) AccentColorTvRP182(state) {showAccentRP182=false}
     var settingsViewportRP129 by remember {mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)}
     LaunchedEffect(category) { settingsScroll.scrollTo(0) }
 
@@ -986,7 +990,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
     }
     AppShell(state, Screen.SETTINGS, { state.screen = it }) {
         SocialBackdrop()
-        CompositionLocalProvider(LocalSettingsViewportRP129 provides settingsViewportRP129,LocalSettingsHelpRC103 provides {visualHelp=it},LocalBringIntoViewSpec provides SettingsBringRP138) {
+        CompositionLocalProvider(LocalSettingsViewportRP129 provides (if(category=="appearance") null else settingsViewportRP129),LocalSettingsHelpRC103 provides {visualHelp=it},LocalBringIntoViewSpec provides SettingsBringRP138) {
         Column(Modifier.fillMaxSize().padding(horizontal=34.dp)) {
             Text(tr("Configuración","Settings"),color=Color.White,fontSize=34.sp,lineHeight=41.sp,fontWeight=FontWeight.Black,
                 modifier=Modifier.padding(top=24.dp))
@@ -1209,28 +1213,13 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                         }
                     }
                     if(category=="appearance") item(key="focus-theme") {
-                        SettingsSectionCard {
-                            Text(tr("Colores de la app","Color themes"),color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
-                            Text(tr("Elige el color del selector y los contornos.","Choose your focus and outline color."),color=Muted)
-                            var customColor by remember {mutableStateOf("#B792FF")}
-                            NativeTextField(customColor,{customColor=it.take(7)},tr("Color personalizado · #RRGGBB","Custom color · #RRGGBB"))
-                            FocusButton(tr("Aplicar color","Apply color")) {
-                                if(customColor.matches(Regex("#[0-9a-fA-F]{6}"))) state.saveFocusColor(android.graphics.Color.parseColor(customColor))
-                                else state.error=tr("Usa # y seis dígitos hexadecimales.","Use # followed by six hexadecimal digits.")
-                            }
-
-                            FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-                                listOf(0xFFFFFFFF.toInt() to "White",0xFFB792FF.toInt() to "Purple",0xFF65BFFF.toInt() to "Blue",0xFF66E6A0.toInt() to "Green",0xFFFFBB66.toInt() to "Amber",0xFFFF8FB6.toInt() to "Rose").forEach {(color,label) ->
-                                    FocusButton("● $label",primary=state.focusColor==color) {state.saveFocusColor(color)}
-                                }
-                            }
-                            Text(tr("Theme Studio","Theme Studio"),color=Color.White,fontSize=20.sp,fontWeight=FontWeight.Bold)
-                            Text(tr("Paletas cinematográficas que mantienen la navegación actual.","Cinematic palettes that preserve the existing navigation."),color=Muted,fontSize=13.sp)
-                            FlowRow(horizontalArrangement=Arrangement.spacedBy(10.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                                ThemeStudioRP173.presets.forEach { preset ->
-                                    FocusButton("● ${preset.title}",primary=state.focusColor==preset.focus.toInt()) {ThemeRuntimeRP177.apply(preset); state.saveFocusColor(preset.focus.toInt())}
-                                }
-                            }
+                        SettingsSectionCard(onFocused={
+                            visualHelp=null;helpTitle="Theme Studio";helpDescription=tr("Temas con símbolos propios y decoración discreta.","Themes with their own symbols and restrained decoration.");helpIndex=-1
+                        }) {
+                            Text("Theme Studio",color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
+                            Text(ThemeStudioRP173.presets.firstOrNull {it.id==ThemeRuntimeRP177.id}?.title ?: "BruniO",color=Accent)
+                            FocusButton(tr("Explorar temas","Browse themes")) {showThemeStudioRP182=true}
+                            FocusButton(tr("Personalizar color del selector","Customize focus color")) {showAccentRP182=true}
                         }
                     }
                     if(category=="account") item(key="remember-profile") {

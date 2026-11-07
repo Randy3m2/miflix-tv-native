@@ -42,9 +42,11 @@ internal fun MobilePlayerControlsRP133(request:PlayerRequest,paused:Boolean,posi
     onStats:()->Unit,onInfo:()->Unit,onPip:()->Unit,onResize:()->Unit,onOverlayChangedRP139:(Boolean)->Unit={}) {
     val context=LocalContext.current
     var more by remember(request.playbackId) {mutableStateOf(false)}
+    var roku by remember(request.playbackId) {mutableStateOf(false)}
+    if(roku) RokuCastSheetRP182(request) {roku=false}
     val latestOverlayRP139 by rememberUpdatedState(onOverlayChangedRP139)
-    DisposableEffect(request.playbackId,more) {
-        val notify=latestOverlayRP139;notify(more)
+    DisposableEffect(request.playbackId,more,roku) {
+        val notify=latestOverlayRP139;notify(more || roku)
         onDispose {notify(false)}
     }
     LaunchedEffect(more) {while(more) {onInteraction();delay(1000)}}
@@ -80,7 +82,7 @@ internal fun MobilePlayerControlsRP133(request:PlayerRequest,paused:Boolean,posi
             MobileIconButtonRP133("back",tr("Volver","Back")) {action(onClose)}
             Text(request.item.title,color=Color.White,fontSize=16.sp,fontWeight=FontWeight.SemiBold,maxLines=1,
                 overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
-            MobileIconButtonRP133("cast",tr("Transmitir pantalla","Cast screen")) {action {openMobileCastRP140(context)}}
+            MobileIconButtonRP133("cast","Roku Media Player") {action {roku=true}}
             MobileIconButtonRP133("more",tr("Más opciones","More options")) {action {more=true}}
         }
         Row(Modifier.align(Alignment.Center),horizontalArrangement=Arrangement.spacedBy(32.dp),verticalAlignment=Alignment.CenterVertically) {

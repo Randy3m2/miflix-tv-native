@@ -71,13 +71,14 @@ internal object ThemeRuntimeRP177 {
     var radius by mutableIntStateOf(50)
     fun restore(value:Int) {
         val preset=com.miflix.native2.data.ThemeStudioRP173.presets.firstOrNull {it.focus.toInt()==value}
-        if(preset!=null) apply(preset) else {
+        if(preset!=null && preset.id!="default") apply(preset) else {
             id="";background=0xFF050505.toInt();panel=0xFF141414.toInt()
             muted=0xFFAAAAAF.toInt();focusedPanel=0xFF242126.toInt();border=0xFF303035.toInt()
             radius=50;secondary=value;FocusTheme.argb=value
         }
     }
     fun apply(preset: com.miflix.native2.data.ThemeStudioPresetRP173) {
+        if(preset.id=="default") {restore(preset.focus.toInt());return}
         id=preset.id; secondary=preset.secondary.toInt()
         background=preset.background.toInt(); panel=preset.surface.toInt(); muted=preset.secondary.toInt()
         focusedPanel=preset.surface.toInt(); border=preset.primary.toInt()
@@ -175,18 +176,21 @@ fun FocusButton(
 
             .then(if (onLongClick != null) Modifier.tvPlaybackClick(onClick, onLongClick) else Modifier.tvClick(onClick))
             .clickable(onClick = onClick)
-            .background(GlassActionBrushRP108(actionFocused,primary,destructive), themeShapeRP181())
-            .border(if (actionFocused) 2.dp else 1.dp, if(actionFocused) Accent else if(destructive) Color(0xFF78404B) else if(primary) Accent.copy(alpha=.55f) else PanelBorder, themeShapeRP181())
+            .background(GlassActionBrushRP108(actionFocused,primary,destructive), themeShapeRP181(50.dp))
+            .border(if (actionFocused) 2.dp else 1.dp, if(actionFocused) Accent else if(destructive) Color(0xFF78404B) else if(primary) Accent.copy(alpha=.55f) else PanelBorder, themeShapeRP181(50.dp))
             .themeOrnamentRP181()
             .padding(horizontal = horizontalPadding, vertical = if(LocalSimpleHome.current) 16.dp else 12.dp),
         contentAlignment = Alignment.Center
     ) {
+        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(9.dp)) {
+        if(ThemeRuntimeRP177.id.isNotBlank()) ThemeEmblemRP182()
         Text(
             text,
             color = if(actionFocused) Color.White else if(destructive) Color(0xFFFFB9C3) else Color.White,
             fontSize = if(LocalSimpleHome.current) 20.sp else 15.sp, lineHeight=if(LocalSimpleHome.current) 25.sp else 20.sp,
             fontWeight = FontWeight.Bold, maxLines=1, overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis
         )
+        }
     }
 }
 

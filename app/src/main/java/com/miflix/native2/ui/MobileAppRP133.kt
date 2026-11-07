@@ -32,7 +32,7 @@ internal fun MobileAppRP133(state:AppState,destination:Screen) {
     BackHandler(destination !in listOf(Screen.HOME,Screen.PLAYER,Screen.MULTIVIEW)) {
         state.screen=if(destination==Screen.DETAILS) state.detailsReturnScreen else Screen.HOME
     }
-    Column(Modifier.fillMaxSize().themeBackdropRP181().safeDrawingPadding()) {
+    Column(Modifier.fillMaxSize().themeBackdropRP181(mobile=true).safeDrawingPadding()) {
         if(destination !in listOf(Screen.DETAILS,Screen.PLAYER,Screen.MULTIVIEW)) Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
             if(destination !in primary) MobileIconButtonRP133("back",tr("Volver","Back")) {state.screen=Screen.HOME}
             val latestState by rememberUpdatedState(state)
@@ -77,7 +77,7 @@ internal fun MobileAppRP133(state:AppState,destination:Screen) {
                 else->MobileSettingsRP133(state)
             }
         }
-        if(destination !in listOf(Screen.PLAYER,Screen.MULTIVIEW)) Row(Modifier.fillMaxWidth().background(MobilePanelRP133.copy(alpha=.95f)).padding(vertical=5.dp),horizontalArrangement=Arrangement.SpaceEvenly) {
+        if(destination !in listOf(Screen.PLAYER,Screen.MULTIVIEW)) Row(Modifier.fillMaxWidth().background(if(ThemeRuntimeRP177.id.isBlank()) Color(0xF00C0E14) else MobilePanelRP133.copy(alpha=.95f)).padding(vertical=5.dp),horizontalArrangement=Arrangement.SpaceEvenly) {
             val tabs=listOf(Triple(Screen.HOME,"home",tr("Inicio","Home")),Triple(Screen.SEARCH,"search",tr("Buscar","Search")),Triple(Screen.LIVE_TV,"live",tr("En vivo","Live")),Triple(Screen.FRIENDS,"friends",tr("Amigos","Friends")),Triple(Screen.MY_LIST,"list",tr("Mi lista","My list")),Triple(Screen.DOWNLOADS,"download",tr("Descargas","Downloads")))
             tabs.filter {(!state.kidsMode || it.first !in listOf(Screen.LIVE_TV,Screen.FRIENDS,Screen.DOWNLOADS)) && (!state.easyModeRP79 || it.first!=Screen.FRIENDS)}.forEach {(screen,icon,title)->
                 val selected=active==screen.name

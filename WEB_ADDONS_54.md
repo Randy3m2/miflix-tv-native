@@ -1,5 +1,9 @@
 # Web add-on settings — shell 54
 
+## Shell 55 fix: newly registered accounts
+
+Saving initializes a missing __account__ record with an authenticated insert. Existing account data continues to use optimistic PATCH; nullable timestamps use IS NULL. Concurrent inserts use ignore-duplicates, never overwrite another device's account. Existing profiles/settings are preserved, including legacy profiles loaded by the web app. Regression checks now cover missing records, missing state, nullable timestamps, accounts with no profiles and concurrent account creation. No migration or APK update is needed. Live authenticated-account verification remains pending.
+
 Open Menu → Add-ons after signing in. Paste the configured HTTPS manifest.json URL supplied by the provider (stremio:// installation links are converted to HTTPS). Add, replace, move up or remove entries, then explicitly Save to my account. Closing without saving discards changes. Private URLs are masked and are not written to browser storage, DOM links, notifications or logs. Provider configuration remains on the provider's own website; this screen saves its installation link, without claiming to validate its availability or credentials.
 
 Uses the existing authenticated miflix_user_state __account__.privateSetup record and existing RLS. No SQL migration, new Edge Function or APK build is required. Saves preserve profiles, metadata tokens and unrelated account settings. The editor checks for concurrent add-on changes and uses updated_at as an optimistic-write condition. Sync/reopen TV or mobile to read the account changes; this does not introduce background polling or immediate push.

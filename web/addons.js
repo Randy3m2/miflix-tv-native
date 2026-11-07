@@ -13,10 +13,17 @@ async function saveWebAddons(owner,urls,expected){
  const normalized=[...new Set(urls.map(addonURL))];
  if(normalized.length>50)throw Error(words('Maximum 50 add-ons.','Máximo 50 add-ons.'));
  const path=addonAccountPath(owner),rows=await api(path+'&select=state,updated_at');
- const row=rows?.[0];if(!row?.updated_at)throw Error(words('Create your account profiles in BruniO first.','Crea primero tus perfiles en BruniO.'));
- if(expected&&JSON.stringify(accountAddons(row.state||{}))!==JSON.stringify(expected))throw Error('Account configuration changed');
- const state={...row.state,privateSetup:{...row.state.privateSetup,addonManifests:normalized,torrentioManifest:normalized[0]||''},updatedAt:Date.now()};
- const saved=await api(path+'&updated_at=eq.'+encodeURIComponent(row.updated_at),'PATCH',{state,updated_at:new Date().toISOString()},true,{Prefer:'return=representation'});
+ const row=rows?.[0],previous=row?.state||{};
+ if(expected&&JSON.stringify(accountAddons(previous))!==JSON.stringify(expected))throw Error('Account configuration changed');
+ const state={...previous,privateSetup:{...previous.privateSetup,addonManifests:normalized,torrentioManifest:normalized[0]||''},updatedAt:Date.now()};
+ // A newly registered user may not have an __account__ row yet. Preserve
+ // profiles already loaded from this account's legacy per-profile rows.
+ if(!Array.isArray(state.profiles))state.profiles=typeof profiles!=='undefined'&&Array.isArray(profiles)?profiles.map(p=>({...p})):[];
+ if(session?.user.id!==owner)throw Error(t('La cuenta cambió'));
+ const timestamp=new Date().toISOString();
+ const saved=row
+  ?await api(path+(row.updated_at==null?'&updated_at=is.null':'&updated_at=eq.'+encodeURIComponent(row.updated_at)),'PATCH',{state,updated_at:timestamp},true,{Prefer:'return=representation'})
+  :await api('/rest/v1/miflix_user_state?on_conflict=user_id,profile_id','POST',{user_id:owner,profile_id:'__account__',state,updated_at:timestamp},true,{Prefer:'resolution=ignore-duplicates,return=representation'});
  if(!Array.isArray(saved)||saved.length!==1)throw Error(words('Your account changed on another device. Try saving again.','Tu cuenta cambió en otro dispositivo. Intenta guardar de nuevo.'));
  return normalized;
 }

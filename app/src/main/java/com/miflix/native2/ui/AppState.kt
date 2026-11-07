@@ -258,7 +258,7 @@ class AppState(context: Context) {
         if(body.has("tastePrompt")) saveTasteSetupPrompt(body.getBoolean("tastePrompt"))
         savePreviousLiveChannelEnabled(body.optBoolean("previousLiveChannel",true))
         saveSubtitleStyle(body.getInt("subtitleColor"),body.getDouble("subtitleScale").toFloat())
-        focusColor=body.getInt("focusColor");FocusTheme.argb=focusColor;playbackPrefs.edit().putInt("focus_color",focusColor).apply()
+        focusColor=body.getInt("focusColor");ThemeRuntimeRP177.restore(focusColor);playbackPrefs.edit().putInt("focus_color",focusColor).apply()
         restoreCustomFilterRC100()
         if(reloadHome) setInterfaceLanguage(body.getString("interface")) else {
             playbackPrefs.edit().putString(interfaceLanguageKey(),body.getString("interface")).apply()
@@ -323,8 +323,8 @@ class AppState(context: Context) {
     }
     var rememberLastProfile by mutableStateOf(rememberedProfileEnabledRP142())
         private set
-    init { ThemeStudioRP173.presets.firstOrNull { it.focus.toInt()==focusColor }?.let { ThemeRuntimeRP177.apply(it) } ?: run { FocusTheme.argb=focusColor } }
-    fun saveFocusColor(value: Int) { focusColor=value;ThemeStudioRP173.presets.firstOrNull { it.focus.toInt()==value }?.let { ThemeRuntimeRP177.apply(it) } ?: run { FocusTheme.argb=value };playbackPrefs.edit().putInt("focus_color",value).commit();launch {flushSettingsRP83()} }
+    init { ThemeRuntimeRP177.restore(focusColor) }
+    fun saveFocusColor(value: Int) { focusColor=value;ThemeRuntimeRP177.restore(value);playbackPrefs.edit().putInt("focus_color",value).commit();launch {flushSettingsRP83()} }
     fun setRememberProfile(value:Boolean) {
         rememberLastProfile=value
         val edit=playbackPrefs.edit().putBoolean("remember_last_profile",value)
@@ -3161,31 +3161,56 @@ class AppState(context: Context) {
         } finally {mobileDownloadBusyRP134=false}
     }
 
-    private val tirsoVerifiedRP180 = mutableMapOf<String, Triple<MediaSummary, String, Int>>()
-    suspend fun verifyTirsoItemRP180(item: com.miflix.native2.data.TirsoScheduleItemRP174): Boolean {
-        val key=localExtrasScope()+":"+item.id
-        val episode=if(item.isMovie) 0 else Regex("Episode\\s+(\\d+)",RegexOption.IGNORE_CASE).find(item.title)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
-        val candidates=searchFlexible(item.playableQuery).filter { if(item.isMovie) it.type=="movie" else it.type=="series" }.take(3)
-        for(candidate in candidates) {
-            try {
-                val imdb=tmdb.details(candidate).imdbId ?: continue
-                val sources=resolvePlaybackSources(candidate,imdb,if(item.isMovie) 0 else 1,episode)
-                if(sources.isNotEmpty()) {
-                    tirsoVerifiedRP180[key]=Triple(candidate,imdb,episode)
-                    return true
+    internal data class TirsoTargetRP181(
+        val item:MediaSummary,val detail:MediaDetails,val season:Int,val episode:Int,
+        val episodeTitle:String,val sources:List<StreamChoice>,val checkedAt:Long,
+    )
+    private val tirsoVerifiedRP180=linkedMapOf<String,TirsoTargetRP181>()
+    private val tirsoLockRP181=kotlinx.coroutines.sync.Mutex()
+    private fun tirsoKeyRP181(item:com.miflix.native2.data.TirsoScheduleItemRP174)=
+        localExtrasScope()+":"+audioLanguage+":"+streamRepo.manifests().hashCode()+":"+item.id
+    internal fun tirsoTargetRP181(item:com.miflix.native2.data.TirsoScheduleItemRP174)=tirsoVerifiedRP180[tirsoKeyRP181(item)]
+    suspend fun verifyTirsoItemRP180(item:com.miflix.native2.data.TirsoScheduleItemRP174):Boolean {
+        tirsoLockRP181.lock()
+        try {
+            val key=tirsoKeyRP181(item)
+            tirsoVerifiedRP180[key]?.takeIf {System.currentTimeMillis()-it.checkedAt<5*60*1000L}?.let {return true}
+            val candidate=if(item.tmdbId>0) tmdb.byCloudId("tmdb:${if(item.isMovie) "movie" else "series"}:${item.tmdbId}")
+                else searchFlexible(item.playableQuery).firstOrNull {if(item.isMovie) it.type=="movie" else it.type=="series"}
+            if(candidate==null) return false
+            val detail=tmdb.details(candidate)
+            val imdb=detail.imdbId ?: return false
+            var season=0;var episode=0;var title=""
+            if(!item.isMovie) {
+                var remaining=item.episodeOrdinal.takeIf {it>0}
+                    ?: Regex("Episode\\s+(\\d+)",RegexOption.IGNORE_CASE).find(item.title)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: 1
+                var found:EpisodeSummary?=null
+                for(number in 1..detail.seasonCount) {
+                    val episodes=tmdb.season(candidate.id,number).sortedBy {it.absoluteEpisodeRP102.takeIf {n->n>0} ?: it.episode}
+                    if(remaining<=episodes.size) {found=episodes[remaining-1];break}
+                    remaining-=episodes.size
                 }
-            } catch(e:CancellationException) {throw e} catch(_:Exception) {}
-        }
-        tirsoVerifiedRP180.remove(key)
-        return false
+                val row=found ?: return false
+                season=row.season;episode=row.episode;title=row.title
+            }
+            val sources=resolvePlaybackSources(candidate,imdb,season,episode)
+                .filter {it.url.isNotBlank() || it.nativeSource!=null}
+            if(sources.isEmpty()) {tirsoVerifiedRP180.remove(key);return false}
+            if(tirsoVerifiedRP180.size>=48) tirsoVerifiedRP180.remove(tirsoVerifiedRP180.keys.first())
+            tirsoVerifiedRP180[key]=TirsoTargetRP181(candidate,detail,season,episode,title,sources,System.currentTimeMillis())
+            return true
+        } catch(e:CancellationException) {throw e} catch(_:Exception) {return false}
+        finally {tirsoLockRP181.unlock()}
     }
-    suspend fun playTirsoScheduleItemRP177(item: com.miflix.native2.data.TirsoScheduleItemRP174) {
-        val key=localExtrasScope()+":"+item.id
+    suspend fun playTirsoScheduleItemRP177(item:com.miflix.native2.data.TirsoScheduleItemRP174) {
+        require(!kidsMode && partyRole!=PartyRole.GUEST) {tr("Elige un perfil normal para abrir este canal.","Use a regular profile to open this channel.")}
         if(!verifyTirsoItemRP180(item)) error(tr("Este programa no tiene enlaces disponibles.","No sources are currently available for this program."))
-        val target=tirsoVerifiedRP180[key] ?: return
-        selected=target.first
-        details=tmdb.details(target.first)
-        playResolved(target.first,target.second,if(item.isMovie) 0 else 1,target.third,resumeOverride=0L)
+        val target=tirsoTargetRP181(item) ?: return
+        selected=target.item;details=target.detail
+        detailsReturnScreen=Screen.LIVE_TV
+        playResolved(target.item,target.detail.imdbId!!,target.season,target.episode,resumeOverride=0L,onStarted={request ->
+            playerRequest=request.copy(returnScreen=Screen.LIVE_TV)
+        })
     }
 
     suspend fun playMovie(fromStart: Boolean=false) {

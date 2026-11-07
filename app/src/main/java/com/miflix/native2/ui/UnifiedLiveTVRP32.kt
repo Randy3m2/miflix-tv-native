@@ -157,6 +157,9 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
         val searchNames=remember(rows) {rows.associate {it.key to IptvPlaylist.searchKey(it.channel.name)}}
         val visible=remember(rows,query,searchNames) {val q=IptvPlaylist.searchKey(query);rows.filter {q.isBlank() || searchNames[it.key].orEmpty().contains(q) || it.channel.number.toString()==query.trim()}}
         LazyVerticalGrid(GridCells.Adaptive(210.dp),modifier=Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(start=4.dp,end=4.dp,top=6.dp,bottom=48.dp)) {
+            if(!state.kidsMode && state.partyRole!=PartyRole.GUEST && (query.isBlank() || "Tirso 24/7".contains(query,true))) item(key="tirso-247",span={GridItemSpan(maxLineSpan)}) {
+                TirsoChannelRP181(state,mobile=false)
+            }
             items(visible,key={it.key}) {entry ->
                 if(entry.provider==CustomChannelsRP45.provider) HubEventCardRP41(entry.channel.number.takeIf {it>0}?.let {"$it · ${entry.channel.name}"} ?: entry.channel.name,entry.channel.poster,tr("EN VIVO · Mantén OK: opciones","LIVE · Hold OK: options"),onHoldRP48={customManageRP48=CustomChannelsRP45.findRP48(context,ownerRP46,entry.channel.id)},logoRP50=true) {openChannel(entry)}
                 else LiveChannelTile(entry.channel,entry.channel.number.takeIf {it>0} ?: (rows.indexOf(entry)+1),false,{openChannel(entry)}) {LiveLibrary.toggle(context,state,entry.provider,entry.channel)}

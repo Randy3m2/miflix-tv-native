@@ -27,9 +27,9 @@ import coil3.compose.AsyncImage
 import com.miflix.native2.model.MediaSummary
 
 internal val LocalMobileBrunioRP133=staticCompositionLocalOf {false}
-internal val MobileBgRP133=Color(0xFF080A0F)
-internal val MobileTintRP133=Color(0xFF9F82F5)
-internal val MobilePanelRP133=Color(0xFF141821)
+internal val MobileBgRP133:Color get()=if(ThemeRuntimeRP177.id.isBlank()) Color(0xFF080A0F) else Bg
+internal val MobileTintRP133:Color get()=if(ThemeRuntimeRP177.id.isBlank()) Color(0xFF9F82F5) else Accent
+internal val MobilePanelRP133:Color get()=if(ThemeRuntimeRP177.id.isBlank()) Color(0xFF141821) else Panel
 private val mobilePathsRP133=mapOf(
     "home" to "M3 10L12 3L21 10V21H15V14H9V21H3Z",
     "search" to "M21 21L16 16M18 10A8 8 0 1 1 2 10A8 8 0 1 1 18 10",
@@ -78,10 +78,7 @@ internal fun MobileIconRP133(name:String,modifier:Modifier=Modifier,tint:Color=C
 }
 
 internal fun Modifier.mobileGlassRP133(selected:Boolean=false,radius:Dp=16.dp)=
-    clip(RoundedCornerShape(radius)).background(Brush.verticalGradient(listOf(
-        if(selected) Color(0xFF51436F) else Color(0xFF222733),
-        if(selected) Color(0xFF242039) else Color(0xFF10141B))))
-        .border(1.dp,if(selected) MobileTintRP133 else Color(0xFF353C49),RoundedCornerShape(radius))
+    themeSurfaceRP181(selected,radius)
 
 @Composable
 internal fun MobileButtonRP133(label:String,icon:String?=null,modifier:Modifier=Modifier,selected:Boolean=false,enabled:Boolean=true,click:()->Unit) {

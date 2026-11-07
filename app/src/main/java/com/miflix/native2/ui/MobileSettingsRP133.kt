@@ -85,7 +85,13 @@ internal fun MobileSettingsRP133(state:AppState) {
     }
     if(sheet=="themes") MobileSheetRP133(tr("Theme Studio","Theme Studio"),{sheet=null}) {
         LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp)) {
-            item { Text(tr("Elige una experiencia visual","Choose a visual experience"),color=Muted,fontSize=13.sp) }
+            item {
+                Column(Modifier.fillMaxWidth().mobileGlassRP133(true).padding(16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    Text(tr("Vista previa del tema activo","Active theme preview"),color=MobileTintRP133,fontSize=16.sp)
+                    Text(ThemeStudioRP173.presets.firstOrNull {it.id==ThemeRuntimeRP177.id}?.title ?: "BruniO",color=Color.White)
+                    MobileButtonRP133(tr("Reproducir","Play"),"play",selected=true) {}
+                }
+            }
             items(ThemeStudioRP173.presets) { preset ->
                 MobileButtonRP133(preset.title,"spark",Modifier.fillMaxWidth(),selected=state.focusColor==preset.focus.toInt()) {
                     ThemeRuntimeRP177.apply(preset); state.saveFocusColor(preset.focus.toInt()); sheet=null
@@ -139,7 +145,7 @@ internal fun MobileSettingsRP133(state:AppState) {
             MobileSettingRowRP133("BruniO + TorBox",if(state.nativeSourceEnabled) "ON" else "OFF") {sheet="torbox"}
         }}
         item {MobileSettingsCardRP133(tr("Experiencia","Experience")) {
-            MobileSettingRowRP133(tr("Theme Studio","Theme Studio"),tr("32 presets","32 presets")) {sheet="themes"}
+            MobileSettingRowRP133("Theme Studio",ThemeStudioRP173.presets.firstOrNull {it.id==ThemeRuntimeRP177.id}?.title ?: "${ThemeStudioRP173.presets.size} presets") {sheet="themes"}
 
             MobileSettingRowRP133(tr("Idioma de interfaz","Interface language"),AppLanguagesRP148.label(state.interfaceLanguage)) {sheet="interface"}
             MobileSettingRowRP133(tr("Tamaño del texto","Text size"),if(MobileUiPrefsRP133.scale>1f) tr("Grande","Large") else tr("Normal","Normal")) {sheet="text"}

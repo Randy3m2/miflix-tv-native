@@ -36,49 +36,14 @@ internal fun MobileLiveRP133(state:AppState,select:((PlayerRequest)->Unit)?=null
 
     Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         LazyRow(contentPadding=PaddingValues(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            items(listOf("TV","Tirso 24/7","NBA","MLB","F1","LIDOM","Others")) {key->MobileButtonRP133(if(key=="TV") "Live TV" else if(key=="F1") "F1 · MotoGP" else key,selected=league==key) {league=key}}
+            items(listOf("TV","NBA","MLB","F1","LIDOM","Others")) {key->MobileButtonRP133(if(key=="TV") "Live TV" else if(key=="F1") "F1 · MotoGP" else key,selected=league==key) {league=key}}
         }
         if(league=="TV") MobileChannelsRP133(state,select)
-        else if(league=="Tirso 24/7") MobileTirso247RP174(state)
+        else if(league=="Tirso 24/7") MobileChannelsRP133(state,select)
         else MobileSportsRP133(state,league,select)
     }
 }
 
-@Composable
-private fun MobileTirso247RP174(state:AppState) {
-    val schedule=remember(state.localExtrasScope()) { mutableStateListOf<TirsoScheduleItemRP174>() }
-    var checking by remember { mutableStateOf(true) }
-    LaunchedEffect(state.localExtrasScope()) {
-        checking=true
-        try {
-            for(entry in Tirso247ScheduleRP174.today()) {
-                if(state.verifyTirsoItemRP180(entry)) schedule.add(entry)
-            }
-        } finally { checking=false }
-    }
-    val current=schedule.firstOrNull { it.id==Tirso247ScheduleRP174.current()?.id }
-    Column(Modifier.fillMaxSize(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-        Column(Modifier.padding(horizontal=16.dp).mobileGlassRP133().padding(16.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-            Text(Tirso247ScheduleRP174.channelName,color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
-            Text(tr("Programación diaria · fuentes de BruniO","Daily schedule · BruniO sources"),color=Muted,fontSize=12.sp)
-            Text(if(current==null) tr("Sin programa activo","No active program") else "Ahora: "+current.title,color=MobileTintRP133,fontSize=15.sp,fontWeight=FontWeight.Bold)
-        }
-        if(checking) Text(tr("Comprobando enlaces disponibles…","Checking available sources…"),color=Muted,modifier=Modifier.padding(horizontal=16.dp))
-        LazyColumn(contentPadding=PaddingValues(horizontal=16.dp,vertical=4.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-            items(schedule,key={it.id}) { item ->
-                val hour=item.startMinute/60
-                val minute=(item.startMinute%60).toString().padStart(2,'0')
-                val period=if(hour<12) "AM" else "PM"
-                val displayHour=if(hour%12==0) 12 else hour%12
-                Row(Modifier.fillMaxWidth().mobileGlassRP133(item.id==current?.id).padding(12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                    Text(String.format("%d:%s %s",displayHour,minute,period),color=MobileTintRP133,fontSize=14.sp,fontWeight=FontWeight.Bold,modifier=Modifier.width(52.dp))
-                    Column(Modifier.weight(1f)) { Text(item.title,color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold,maxLines=2,overflow=TextOverflow.Ellipsis); Text(item.franchise,color=Muted,fontSize=11.sp) }
-                    MobileButtonRP133(tr("Reproducir","Play"),"play") { state.launch { runCatching { state.playTirsoScheduleItemRP177(item) }.onFailure { state.error=it.message } } }
-                }
-            }
-        }
-    }
-}
 @Composable
 internal fun MobileChannelsRP133(state:AppState,select:((PlayerRequest)->Unit)?=null) {
     val context=LocalContext.current
@@ -125,6 +90,9 @@ internal fun MobileChannelsRP133(state:AppState,select:((PlayerRequest)->Unit)?=
             }
         }
         LazyColumn(Modifier.weight(1f),state=scroll,contentPadding=PaddingValues(horizontal=16.dp,vertical=6.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+            if(select==null && (query.isBlank() || "Tirso 24/7".contains(query,true))) item(key="tirso-247") {
+                TirsoChannelRP181(state,mobile=true)
+            }
             items(visible.take(count),key={it.id}) {channel->
                 Row(Modifier.fillMaxWidth().mobileGlassRP133(state.playerRequest?.liveChannelId==channel.id)
                     .combinedClickable(onClick={tune(channel)},onLongClick={options=channel}).padding(12.dp),

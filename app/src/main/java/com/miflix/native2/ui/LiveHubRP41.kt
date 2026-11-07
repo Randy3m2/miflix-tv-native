@@ -76,7 +76,7 @@ internal fun LiveHubRP41(state:AppState) {
     }
     fun back() {changeSectionRP46(if(section=="nauta-source") "others" else "hub")}
     BackHandler {if(section!="hub") back() else state.screen=Screen.HOME}
-    Column(Modifier.fillMaxSize().background(Color.Black).padding(horizontal=14.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxSize().themeBackdropRP181().padding(horizontal=14.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Sidebar(Screen.LIVE_TV,state.activeProfile.name,{state.screen=it},state.unreadNoticeCount,state.activeProfile,
             onMoveDown={runCatching {contentFocusRP44.requestFocus()};Unit},onEditPicture={state.profilePhotoEditor=state.activeProfile},kids=state.kidsMode)
         Column(Modifier.weight(1f).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)) {

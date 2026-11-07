@@ -24,34 +24,23 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.tv.material3.Text
 import com.miflix.native2.data.ThemeStudioRP173
-import com.miflix.native2.data.ThemeDetailsRP182
 
 /** Bounded pages avoid a giant focus group being scrolled by two reveal mechanisms. */
 @Composable
 internal fun ThemeStudioTvRP182(state:AppState,close:()->Unit) {
-    var group by remember {mutableStateOf("all")}
-    var page by remember(group) {mutableIntStateOf(0)}
-    val choices=ThemeStudioRP173.presets.filter {when(group) {
-        "seasonal"->it.id in ThemeDetailsRP182.seasonal
-        "sports"->it.id in ThemeDetailsRP182.sports
-        else->true
-    }}
+    var page by remember {mutableIntStateOf(0)}
+    val choices=ThemeStudioRP173.presets
     val pages=(choices.size+5)/6
     val first=remember {FocusRequester()}
-    LaunchedEffect(group,page) {withFrameNanos {};runCatching {first.requestFocus()}}
+    LaunchedEffect(page) {withFrameNanos {};runCatching {first.requestFocus()}}
     Dialog(close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Column(Modifier.fillMaxWidth(.92f).fillMaxHeight(.92f).background(Bg,RoundedCornerShape(20.dp)).padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Theme Studio",color=Color.White,fontSize=26.sp,fontWeight=FontWeight.Bold)
-                    Text(tr("Elige un tema. Los detalles dejan espacio a tus títulos.","Choose a theme. Decorative details leave room for your titles."),color=Muted,fontSize=13.sp)
+                    Text(tr("Colores suaves, botones limpios y espacio para tus historias.","Soft colors, clean buttons and room for your stories."),color=Muted,fontSize=13.sp)
                 }
                 FocusButton("×",onClick=close)
-            }
-            Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                listOf("all" to tr("Todos","All"),"seasonal" to tr("Temporadas","Seasonal"),"sports" to tr("Deportes","Sports")).forEach {(id,label)->
-                    FocusButton(label,primary=group==id) {group=id}
-                }
             }
             val active=ThemeStudioRP173.presets.firstOrNull {it.id==ThemeRuntimeRP177.id}
             Text(tr("Activo: ","Active: ")+(active?.title ?: "BruniO"),color=Accent,fontSize=15.sp)
@@ -68,11 +57,9 @@ internal fun ThemeStudioTvRP182(state:AppState,close:()->Unit) {
                         .background(Brush.verticalGradient(listOf(Color(preset.surface),Color(preset.background))),shape)
                         .border(if(focused) 3.dp else 1.dp,if(focused || selected) Color(preset.focus) else Color(preset.primary).copy(alpha=.6f),shape)
                         .padding(10.dp),verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                        Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                            ThemeEmblemRP182(preset.id,Modifier.size(24.dp),Color(preset.secondary))
-                            Text(preset.title.substringBefore(" — "),color=Color.White,fontSize=15.sp,fontWeight=FontWeight.Bold,maxLines=2,modifier=Modifier.weight(1f))
-                        }
-                        Text(ThemeDetailsRP182.forId(preset.id)?.symbol.orEmpty(),color=Color(preset.secondary),fontSize=11.sp,maxLines=1)
+                        ThemeSwatchRP185(preset,Modifier.fillMaxWidth().weight(1f))
+                        Text(preset.title,color=Color.White,fontSize=15.sp,fontWeight=FontWeight.Bold,maxLines=1)
+                        Text(tr(preset.atmosphere.substringBefore(" · "),preset.atmosphere.substringAfter(" · ")),color=Color(preset.secondary),fontSize=11.sp,maxLines=1)
                     }
                 }
             }

@@ -70,11 +70,12 @@ internal object ThemeRuntimeRP177 {
     var border by mutableIntStateOf(0xFF303035.toInt())
     var radius by mutableIntStateOf(50)
     fun restore(value:Int) {
-        val preset=com.miflix.native2.data.ThemeStudioRP173.presets.firstOrNull {it.focus.toInt()==value}
+        val color=com.miflix.native2.data.ThemeStudioRP173.normalizeFocus(value)
+        val preset=com.miflix.native2.data.ThemeStudioRP173.presets.firstOrNull {it.focus.toInt()==color}
         if(preset!=null && preset.id!="default") apply(preset) else {
             id="";background=0xFF050505.toInt();panel=0xFF141414.toInt()
             muted=0xFFAAAAAF.toInt();focusedPanel=0xFF242126.toInt();border=0xFF303035.toInt()
-            radius=50;secondary=value;FocusTheme.argb=value
+            radius=50;secondary=color;FocusTheme.argb=color
         }
     }
     fun apply(preset: com.miflix.native2.data.ThemeStudioPresetRP173) {
@@ -82,7 +83,7 @@ internal object ThemeRuntimeRP177 {
         id=preset.id; secondary=preset.secondary.toInt()
         background=preset.background.toInt(); panel=preset.surface.toInt(); muted=preset.secondary.toInt()
         focusedPanel=preset.surface.toInt(); border=preset.primary.toInt()
-        radius=when(preset.id) { "venom" -> 34; "god_of_war", "batman", "halo", "cyberpunk_2077" -> 10; "friends", "dragon_ball" -> 50; else -> 22 }
+        radius=com.miflix.native2.data.ThemeStudioRP173.cornerRadius(preset.id)
         FocusTheme.argb=preset.focus.toInt()
     }
 }
@@ -166,6 +167,7 @@ fun FocusButton(
 ) {
     var focused by remember { mutableStateOf(false) }
     val actionFocused=actionFocusVisibleRP64(focused)
+    val actionShape=themeShapeRP181(if(ThemeRuntimeRP177.id.isBlank()) 50.dp else 16.dp)
     Box(
         modifier
 
@@ -176,14 +178,13 @@ fun FocusButton(
 
             .then(if (onLongClick != null) Modifier.tvPlaybackClick(onClick, onLongClick) else Modifier.tvClick(onClick))
             .clickable(onClick = onClick)
-            .background(GlassActionBrushRP108(actionFocused,primary,destructive), themeShapeRP181(50.dp))
-            .border(if (actionFocused) 2.dp else 1.dp, if(actionFocused) Accent else if(destructive) Color(0xFF78404B) else if(primary) Accent.copy(alpha=.55f) else PanelBorder, themeShapeRP181(50.dp))
+            .background(GlassActionBrushRP108(actionFocused,primary,destructive), actionShape)
+            .border(if (actionFocused) 2.dp else 1.dp, if(actionFocused) Accent else if(destructive) Color(0xFF78404B) else if(primary) Accent.copy(alpha=.55f) else PanelBorder, actionShape)
             .themeOrnamentRP181()
             .padding(horizontal = horizontalPadding, vertical = if(LocalSimpleHome.current) 16.dp else 12.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(9.dp)) {
-        if(ThemeRuntimeRP177.id.isNotBlank()) ThemeEmblemRP182()
         Text(
             text,
             color = if(actionFocused) Color.White else if(destructive) Color(0xFFFFB9C3) else Color.White,

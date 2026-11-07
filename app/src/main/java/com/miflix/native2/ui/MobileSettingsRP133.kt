@@ -93,8 +93,11 @@ internal fun MobileSettingsRP133(state:AppState) {
                 }
             }
             items(ThemeStudioRP173.presets) { preset ->
-                MobileButtonRP133(preset.title,"spark",Modifier.fillMaxWidth(),selected=state.focusColor==preset.focus.toInt()) {
-                    ThemeRuntimeRP177.apply(preset); state.saveFocusColor(preset.focus.toInt()); sheet=null
+                Column(Modifier.fillMaxWidth().padding(vertical=4.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                    ThemeSwatchRP185(preset,Modifier.fillMaxWidth().height(68.dp))
+                    MobileButtonRP133(preset.title,modifier=Modifier.fillMaxWidth(),selected=ThemeRuntimeRP177.id==preset.id || (preset.id=="default" && ThemeRuntimeRP177.id.isBlank())) {
+                        state.saveFocusColor(preset.focus.toInt()); sheet=null
+                    }
                 }
             }
         }

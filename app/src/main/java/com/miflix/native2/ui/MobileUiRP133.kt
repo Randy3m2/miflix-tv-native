@@ -87,7 +87,10 @@ internal fun MobileButtonRP133(label:String,icon:String?=null,modifier:Modifier=
         .clickable(enabled=enabled,onClick=click).padding(horizontal=14.dp,vertical=10.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp,Alignment.CenterHorizontally)) {
         if(icon!=null) MobileIconRP133(icon,tint=if(enabled) Color.White else Muted)
-        Text(label,color=if(enabled) Color.White else Muted,fontSize=14.sp,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f,fill=false))
+        // Chips in horizontal scrolling rows have unbounded width. A weighted
+        // label receives no space there; measure the functional text naturally
+        // before allocating space to the optional theme decoration.
+        Text(label,color=if(enabled) Color.White else Muted,fontSize=14.sp,fontWeight=FontWeight.SemiBold,maxLines=1,overflow=TextOverflow.Ellipsis)
         if(ThemeRuntimeRP177.id.isNotBlank()) ThemeEmblemRP182(modifier=Modifier.size(16.dp))
     }
 }

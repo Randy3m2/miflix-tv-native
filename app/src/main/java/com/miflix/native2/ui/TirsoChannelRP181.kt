@@ -21,7 +21,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Calendar
 
 @Composable
-internal fun TirsoChannelRP181(state:AppState,mobile:Boolean,modifier:Modifier=Modifier) {
+internal fun TirsoChannelRP181(state:AppState,mobile:Boolean,modifier:Modifier=Modifier,compactTv:Boolean=false) {
     val owner=state.localExtrasScope()
     var now by remember(owner) {mutableStateOf(Tirso247ScheduleRP174.current())}
     var guide by remember {mutableStateOf(false)}
@@ -35,7 +35,21 @@ internal fun TirsoChannelRP181(state:AppState,mobile:Boolean,modifier:Modifier=M
         try {ready=now?.let {withTimeoutOrNull(45_000) {state.verifyTirsoItemRP180(it)}}==true}
         finally {checking=false}
     }
-    Column(modifier.fillMaxWidth().themeSurfaceRP181().padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+    if(!mobile && compactTv) {
+        // Use the same fixed-size, single-focus tile as surrounding channels.
+        // A tall full-span program panel can exceed the grid's TV viewport.
+        val current=now
+        val target=current?.let {if(ready) state.tirsoTargetRP181(it) else null}
+        val title=when {playing->tr("Abriendo…","Opening…");checking->tr("Comprobando programa…","Checking program…");ready->current?.title.orEmpty();else->tr("Sin enlaces disponibles","No sources available")}
+        val time=current?.let {Tirso247ScheduleRP174.clock(it.startMinute)+" – "+Tirso247ScheduleRP174.clock(it.endMinute)}.orEmpty()
+        HubEventCardRP41("Tirso 24/7 · $title",target?.item?.backdrop,
+            time+" · "+tr("Mantén OK: guía","Hold OK: guide"),onHoldRP48={guide=true}) {
+            if(ready && !playing) {
+                playing=true
+                state.launch {try {Tirso247ScheduleRP174.current()?.let {state.playTirsoScheduleItemRP177(it)}} finally {playing=false}}
+            } else if(!playing) guide=true
+        }
+    } else Column(modifier.fillMaxWidth().themeSurfaceRP181().padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Text("TIRSO 24/7",color=Accent,fontSize=18.sp,fontWeight=FontWeight.Bold)
         val current=now
         val target=current?.let {if(ready) state.tirsoTargetRP181(it) else null}

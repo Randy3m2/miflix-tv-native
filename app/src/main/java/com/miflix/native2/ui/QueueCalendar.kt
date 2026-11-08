@@ -44,7 +44,7 @@ import java.util.Locale
 import java.util.TimeZone
 
 @Composable
-fun SkipIntroDialog(onSkip: () -> Unit,close: () -> Unit) {
+fun SkipIntroDialog(progress:Float,onSkip: () -> Unit,close: () -> Unit) {
     val first=remember { FocusRequester() }
     Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         val view=LocalView.current
@@ -54,7 +54,7 @@ fun SkipIntroDialog(onSkip: () -> Unit,close: () -> Unit) {
         }
         LaunchedEffect(Unit) { withFrameNanos { };first.requestFocus() }
         Box(Modifier.fillMaxSize().background(Color.Transparent)) {
-            FocusButton(tr("Saltar introducción","Skip Intro"),modifier=Modifier.align(Alignment.BottomEnd).padding(end=30.dp,bottom=100.dp).focusRequester(first)) { onSkip() }
+            SegmentSkipButtonRP191(tr("Saltar introducción","Skip Intro"),progress,modifier=Modifier.align(Alignment.BottomEnd).padding(end=30.dp,bottom=100.dp).focusRequester(first),onSkip=onSkip)
         }
     }
 }

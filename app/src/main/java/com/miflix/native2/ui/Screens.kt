@@ -2484,8 +2484,8 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             val intro = segments.intro?.takeIf { it.endMs <= durationMs && positionMs >= it.startMs && positionMs < it.endMs }
             val credits = segments.outro?.takeIf { it.startMs < durationMs && positionMs >= it.startMs && positionMs < it.endMs }
             if(intro != null || credits != null) Box(Modifier.align(Alignment.BottomEnd).padding(end=30.dp,bottom=100.dp)) {
-                if(intro != null && !introDismissed) SkipIntroDialog({ introDismissed=true;player.seekTo(intro.endMs) }) { introDismissed=true }
-                else if(credits != null) FocusButton(if(postSceneRP151!=null && positionMs<postSceneRP151.startMs) tr("Ir a escena poscréditos","Go to post-credits scene") else tr("Saltar créditos","Skip Credits"),primary=true) {
+                if(intro != null && !introDismissed) SkipIntroDialog(com.miflix.native2.data.SkipFillPolicyRP191.fraction(positionMs,intro.startMs,intro.endMs),{ introDismissed=true;player.seekTo(intro.endMs) }) { introDismissed=true }
+                else if(credits != null) SegmentSkipButtonRP191(if(postSceneRP151!=null && positionMs<postSceneRP151.startMs) tr("Ir a escena poscréditos","Go to post-credits scene") else tr("Saltar créditos","Skip Credits"),com.miflix.native2.data.SkipFillPolicyRP191.fraction(positionMs,credits.startMs,credits.endMs.coerceAtMost(durationMs))) {
                     val post = segments.postCredits?.startMs?.takeIf { it > positionMs && it < durationMs }
                     player.seekTo(post ?: credits.endMs.coerceAtMost(durationMs))
                 }

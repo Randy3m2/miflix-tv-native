@@ -102,4 +102,16 @@ public class RokuDlnaServerRP182Test {
             HttpURLConnection c=(HttpURLConnection)new URL(s.mediaUrl()).openConnection();assertEquals(415,c.getResponseCode());assertEquals("DRM is unsupported",text(c));
         } finally {origin.stop(0);}
     }
+    @Test public void mediaKeepsServingAfterDiscoveryClientDisconnects() throws Exception {
+        HttpServer origin=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
+        origin.createContext("/movie.mp4",exchange->{byte[] bytes="receiver-media".getBytes(StandardCharsets.UTF_8);exchange.getResponseHeaders().set("Content-Type","video/mp4");exchange.sendResponseHeaders(200,bytes.length);exchange.getResponseBody().write(bytes);});origin.start();
+        try(RokuDlnaServerRP182 s=server("http://127.0.0.1:"+origin.getAddress().getPort()+"/movie.mp4","video/mp4",Collections.emptyMap())) {
+            HttpURLConnection discovery=(HttpURLConnection)new URL(s.location()+"/device.xml").openConnection();
+            assertTrue(text(discovery).contains("MediaServer"));discovery.disconnect();
+            for(int i=0;i<2;i++) {
+                HttpURLConnection receiver=(HttpURLConnection)new URL(s.mediaUrl()).openConnection();
+                assertEquals("receiver-media",text(receiver));receiver.disconnect();
+            }
+        } finally {origin.stop(0);}
+    }
 }

@@ -48,6 +48,7 @@ class RokuCastServiceRP182:Service() {
     private val scope=CoroutineScope(SupervisorJob()+Dispatchers.IO)
     private var work:Job?=null
     private var multicast:WifiManager.MulticastLock?=null
+    private var wifiAwake:WifiManager.WifiLock?=null
     private var awake:android.os.PowerManager.WakeLock?=null
     override fun onBind(intent:Intent?):IBinder?=null
     override fun onCreate() {
@@ -56,17 +57,23 @@ class RokuCastServiceRP182:Service() {
         manager.createNotificationChannel(NotificationChannel("brunio_roku","Roku local sharing",NotificationManager.IMPORTANCE_LOW))
         val stop=PendingIntent.getService(this,182,Intent(this,RokuCastServiceRP182::class.java).setAction("stop"),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val notification=Notification.Builder(this,"brunio_roku").setSmallIcon(android.R.drawable.stat_sys_upload)
-            .setContentTitle("BruniO · Roku Media Player").setContentText("Local sharing is active. Open BruniO Mobile on your Roku.")
+            .setContentTitle("BruniO · Roku Media Player").setContentText("Sharing continues while you use other apps. Keep Wi-Fi connected.")
             .setOngoing(true).addAction(Notification.Action.Builder(null,"Stop sharing",stop).build()).build()
         startForeground(182,notification)
         awake=getSystemService(android.os.PowerManager::class.java).newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK,"brunio:roku-sharing").apply {acquire()}
     }
     override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int {
         if(intent?.action=="stop") {stopSelf();return START_NOT_STICKY}
-        val media=RokuCastRP182.pending ?: run {stopSelf();return START_NOT_STICKY}
+        val media=RokuCastRP182.pending ?: run {
+            // An empty repeat start must not tear down an existing receiver session.
+            if(RokuCastRP182.server==null && work?.isActive!=true) stopSelf(startId)
+            return START_NOT_STICKY
+        }
         RokuCastRP182.pending=null
-        work?.cancel()
+        val previous=work
+        previous?.cancel()
         work=scope.launch {
+            previous?.join()
             var candidate:RokuDlnaServerRP182?=null
             try {
                 RokuCastRP182.server?.close();RokuCastRP182.server=null
@@ -80,6 +87,12 @@ class RokuCastServiceRP182:Service() {
                     val wifi=applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
                     multicast=wifi.createMulticastLock("brunio-roku").apply {setReferenceCounted(false);acquire()}
                 }
+                if(caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) && wifiAwake==null) {
+                    val wifi=applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+                    @Suppress("DEPRECATION")
+                    val lock=wifi.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF,"brunio-sharing-network")
+                    lock.setReferenceCounted(false);lock.acquire();wifiAwake=lock
+                }
                 candidate=RokuDlnaServerRP182(endpoint.address as Inet4Address,endpoint.prefixLength,media)
                 ensureActive()
                 RokuCastRP182.server=candidate
@@ -87,7 +100,9 @@ class RokuCastServiceRP182:Service() {
                 candidate=null
                 while(isActive) {
                     delay(3000)
-                    val stillOnNetwork=cm.activeNetwork==network && cm.getLinkProperties(network)?.linkAddresses?.any {it.address==endpoint.address}==true
+                    // The phone's default network may change (for example VPN or
+                    // mobile data) while the receiver's Wi-Fi remains reachable.
+                    val stillOnNetwork=cm.getNetworkCapabilities(network)!=null && cm.getLinkProperties(network)?.linkAddresses?.any {it.address==endpoint.address}==true
                     if(!stillOnNetwork) {
                         RokuCastRP182.server?.close();RokuCastRP182.server=null
                         RokuCastRP182.status.value=RokuCastRP182.Status(message="Wi-Fi changed. Connect both devices and start sharing again.")
@@ -104,6 +119,7 @@ class RokuCastServiceRP182:Service() {
     override fun onDestroy() {
         scope.cancel();RokuCastRP182.server?.close();RokuCastRP182.server=null;RokuCastRP182.pending=null
         multicast?.let {if(it.isHeld) it.release()};multicast=null
+        wifiAwake?.let {if(it.isHeld) it.release()};wifiAwake=null
         awake?.let {if(it.isHeld) it.release()};awake=null
         val current=RokuCastRP182.status.value
         RokuCastRP182.status.value=if(current.sharing || current.busy) RokuCastRP182.Status(message="Sharing stopped") else current

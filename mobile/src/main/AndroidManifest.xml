@@ -22,7 +22,7 @@
         android:banner="@drawable/tv_banner"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher">
-        <service android:name=".data.RokuCastServiceRP182" android:exported="false" android:foregroundServiceType="connectedDevice" />
+        <service android:name=".data.RokuCastServiceRP182" android:exported="false" android:foregroundServiceType="connectedDevice" android:stopWithTask="false" />
         <receiver android:name=".data.BrunioCalendarWidgetRP164" android:label="BruniO · Calendar" android:exported="true">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/brunio_calendar_widget_rp164"/>

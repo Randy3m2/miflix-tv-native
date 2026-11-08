@@ -27,7 +27,7 @@ internal fun RokuCastSheetRP182(request:PlayerRequest,close:()->Unit) {
         if(status.title.isNotBlank()) item {Text(status.title,color=MobileTintRP133,fontSize=14.sp)}
         if(status.message.isNotBlank()) item {Text(status.message,color=Muted,fontSize=13.sp)}
         if(message.isNotBlank()) item {Text(message,color=Muted,fontSize=13.sp)}
-        item {Text(tr("Puedes cerrar este panel: compartir continúa hasta detenerlo desde aquí o desde la notificación. El teléfono debe permanecer conectado a la red.","You can close this panel: sharing continues until stopped here or from the notification. Keep the phone connected to the network."),color=Muted,fontSize=12.sp)}
+        item {Text(tr("Puedes cambiar de app o bloquear el celular: el servicio sigue compartiendo en segundo plano. No necesitas instalar BruniO en la TV; Roku Media Player recibe el contenido. Mantén el Wi-Fi encendido. Detén la sesión desde aquí o la notificación. Forzar el cierre de BruniO o apagar el celular sí interrumpe este servidor local.","You can switch apps or lock the phone: the service keeps sharing in the background. The TV does not need BruniO installed; Roku Media Player receives the content. Keep Wi-Fi enabled. Stop the session here or from the notification. Force-stopping BruniO or turning off the phone interrupts this local server."),color=Muted,fontSize=12.sp)}
         }
         if(status.sharing) {
             MobileButtonRP133(tr("Dejar de compartir","Stop sharing"),"close",Modifier.fillMaxWidth()) {RokuCastRP182.stop(context)}

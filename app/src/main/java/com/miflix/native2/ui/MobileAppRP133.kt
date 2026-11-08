@@ -32,7 +32,7 @@ internal fun MobileAppRP133(state:AppState,destination:Screen) {
     BackHandler(destination !in listOf(Screen.HOME,Screen.PLAYER,Screen.MULTIVIEW)) {
         state.screen=if(destination==Screen.DETAILS) state.detailsReturnScreen else Screen.HOME
     }
-    Column(Modifier.fillMaxSize().themeBackdropRP181(mobile=true).safeDrawingPadding()) {
+    Column(Modifier.fillMaxSize().themePageRP186(mobile=true).safeDrawingPadding()) {
         if(destination !in listOf(Screen.DETAILS,Screen.PLAYER,Screen.MULTIVIEW)) Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
             if(destination !in primary) MobileIconButtonRP133("back",tr("Volver","Back")) {state.screen=Screen.HOME}
             val latestState by rememberUpdatedState(state)

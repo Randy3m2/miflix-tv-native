@@ -44,7 +44,7 @@ internal fun StandingsScreenRP120(initialLeagueRP121:String="NBA",embeddedRP121:
     }
     LaunchedEffect(groupIndex,league,season) {scroll.scrollToItem(0)}
     val contentRP121:@Composable ()->Unit = {
-        Column(Modifier.fillMaxSize().background(Bg).padding(if(embeddedRP121) 0.dp else 28.dp),verticalArrangement=Arrangement.spacedBy(if(embeddedRP121) 5.dp else 12.dp)) {
+        Column(Modifier.fillMaxSize().then(if(embeddedRP121) Modifier.themePageRP186() else Modifier.background(Bg)).padding(if(embeddedRP121) 0.dp else 28.dp),verticalArrangement=Arrangement.spacedBy(if(embeddedRP121) 5.dp else 12.dp)) {
             if(!embeddedRP121) Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                 Text(tr("Tabla de posiciones","Standings"),color=Color.White,fontSize=26.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
                 if(!embeddedRP121) FocusButton("×",horizontalPadding=16.dp, onClick=close)

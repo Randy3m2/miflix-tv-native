@@ -38,7 +38,7 @@ val PartyEmojis = listOf("😂", "❤️", "🔥", "😱", "👏", "🍿")
 @Composable
 fun SocialBackdrop() {
     // A solid dark surface avoids decoding a full-screen bitmap and applying a color matrix.
-    Box(Modifier.fillMaxSize().background(Bg))
+    Box(Modifier.fillMaxSize().themePageRP186())
 }
 
 @Composable
@@ -241,7 +241,7 @@ fun TraktScreen(state: AppState) {
         }
     }
     BackHandler { state.screen=Screen.SETTINGS }
-    LazyColumn(Modifier.fillMaxSize().background(Bg).padding(35.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
+    LazyColumn(Modifier.fillMaxSize().themePageRP186().padding(35.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
         item { Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {Text("Trakt",color=Color.White,fontSize=30.sp, lineHeight=36.sp); Text(state.traktStatus,color=Muted)} }
         item {
             Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -288,7 +288,7 @@ fun NotificationsScreen(state: AppState) {
     }
     BackHandler { state.screen = Screen.HOME }
     val contentFocus=remember { FocusRequester() }
-    Column(Modifier.fillMaxSize().background(Bg)) {
+    Column(Modifier.fillMaxSize().themePageRP186()) {
         Sidebar(Screen.NOTIFICATIONS,state.activeProfile.name,{state.screen=it},state.unreadNoticeCount,state.activeProfile,onMoveDown={ contentFocus.requestFocus(); Unit })
         LazyColumn(Modifier.weight(1f).padding(horizontal=34.dp).focusRequester(contentFocus).focusGroup(),contentPadding=PaddingValues(top=24.dp,bottom=40.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             item {

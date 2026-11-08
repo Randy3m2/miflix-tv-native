@@ -127,7 +127,7 @@ internal val StreamingTiles = listOf(
 @Composable
 internal fun AppShell(state: AppState, screen: Screen, onNavigate: (Screen) -> Unit, content: @Composable BoxScope.() -> Unit) {
     val contentFocus=remember { FocusRequester() }
-    Column(Modifier.fillMaxSize().background(Bg)) {
+    Column(Modifier.fillMaxSize().themePageRP186()) {
         if(state.easyModeRP79) EasyNavigationRP79(state,onMoveDown={contentFocus.requestFocus()})
         else Sidebar(screen, state.activeProfile.name, onNavigate, state.unreadNoticeCount, state.activeProfile,
             onMoveDown={ contentFocus.requestFocus(); Unit },onEditPicture={ state.profilePhotoEditor=state.activeProfile },kids=state.kidsMode)
@@ -228,7 +228,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
             }
             Unit
         }) {
-    BoxWithConstraints(Modifier.fillMaxSize().background(Bg).onPreviewKeyEvent {if(it.type==KeyEventType.KeyDown) {startupInteractedRP129=true;homeReturn.pending=null};false}) {
+    BoxWithConstraints(Modifier.fillMaxSize().themePageRP186().onPreviewKeyEvent {if(it.type==KeyEventType.KeyDown) {startupInteractedRP129=true;homeReturn.pending=null};false}) {
         val homeHeroHeight=(maxHeight*.5f).coerceIn(228.dp,284.dp)
         BrowsingViewport(state,(state.localRecommendations(state.trending)+state.localRecommendations(state.movies)).firstOrNull {it.type=="movie"},heroHeight=homeHeroHeight,headerInset=84.dp,heroFocus=heroFocus,ranked=(state.localRecommendations(state.trending)+state.localRecommendations(state.movies)).filter {it.type=="movie"}.distinctBy {it.cloudId}.take(10),
             onRandom={if(!state.randomChoosing) state.launch {state.playRandomMovie()}}) {

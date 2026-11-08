@@ -4,6 +4,11 @@ import java.net.URI
 
 internal object UpdatePolicy {
     const val MAX_BYTES=400L*1024*1024
+    fun metadataApiUrl(value:String):Boolean = runCatching {
+        val u=URI(value)
+        u.scheme=="https" && u.host.equals("api.github.com",true) && u.userInfo==null && u.port==-1 &&
+            u.path in setOf("/repos/Randy3m2/miflix-tv-native/releases/tags/mobile-latest","/repos/Randy3m2/miflix-tv-native/releases/tags/native-latest")
+    }.getOrDefault(false)
     fun newer(candidate: String,current: String): Boolean {
         fun parts(value: String)=Regex("^(\\d+)\\.(\\d+)\\.(\\d+)(?:-rc(\\d+))?$").matchEntire(value.trim())
         val a=parts(candidate) ?: return false

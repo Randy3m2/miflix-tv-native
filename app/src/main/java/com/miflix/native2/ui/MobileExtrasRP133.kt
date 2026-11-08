@@ -110,6 +110,7 @@ internal fun MobileUpdateRP133(state:AppState,close:()->Unit) {
             state.updateChecking->tr("Buscando actualizaciones…","Checking for updates…")
             state.updateDownloading->tr("Descargando…","Downloading…")
             state.downloadedUpdate!=null->tr("Lista para instalar","Ready to install")
+            state.updateCheckFailed->tr("No se pudo comprobar. Reintenta en unos minutos.","Couldn't check. Retry in a few minutes.")
             state.updateInfo?.isNewer==true->tr("Disponible: ","Available: ")+state.updateInfo?.version
             state.error!=null->tr("No se pudo comprobar. Puedes reintentar.","Couldn't check. You can retry.")
             else->tr("BruniO está al día","BruniO is up to date")

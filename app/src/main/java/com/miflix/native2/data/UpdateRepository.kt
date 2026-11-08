@@ -14,47 +14,44 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
 
 class UpdateRepository {
-    private val mobileRP133=com.miflix.native2.BuildConfig.APPLICATION_ID.startsWith("com.brunio.mobile")
-    private val channelRP133=if(mobileRP133) "mobile-latest" else "native-latest"
-    private val assetRP133=if(mobileRP133) "BruniO-Mobile.apk" else "MiFlix-TV-Native.apk"
-    private val releaseApi="https://api.github.com/repos/Randy3m2/miflix-tv-native/releases/tags/$channelRP133"
-    private val fallbackApk="https://github.com/Randy3m2/miflix-tv-native/releases/download/$channelRP133/$assetRP133"
+    @Suppress("UNUSED_PARAMETER")
+    suspend fun check(currentVersion:String,currentCode:Int):UpdateInfo =
+        UpdateMetadataRP187(com.miflix.native2.BuildConfig.APPLICATION_ID,::metadataText).check(currentCode)
 
-    suspend fun check(currentVersion: String,currentCode: Int): UpdateInfo {
-        val j=JSONObject(Http.text(releaseApi,headers=mapOf("User-Agent" to "BruniO-TV","Cache-Control" to "no-cache")))
-        val assets=j.optJSONArray("assets")
-        val manifest=(0 until (assets?.length() ?: 0)).mapNotNull { assets?.optJSONObject(it) }
-            .firstOrNull { it.optString("name")=="update.json" }
-        if(manifest!=null) {
-            val url=manifest.getString("browser_download_url")
-            require(UpdatePolicy.releaseUrl(url)) { "Invalid update metadata URL" }
-            val meta=JSONObject(Http.text(url+"?check="+System.currentTimeMillis(),headers=mapOf("Cache-Control" to "no-cache")))
-            val code=meta.getInt("versionCode"); val download=meta.getString("downloadUrl")
-            val digest=meta.getString("sha256").lowercase(java.util.Locale.ROOT);val size=meta.getLong("sizeBytes")
-            require(UpdatePolicy.releaseUrl(download) && Regex("[a-f0-9]{64}").matches(digest) && size in 1..UpdatePolicy.MAX_BYTES) { "Invalid update metadata" }
-            return UpdateInfo(meta.getString("version"),download,code>currentCode,code,digest,size)
-        }
-        // Legacy releases can still be checked, but never treat an older RC as an update.
-        val version=Regex("Current version:\\s*([^\\s]+)",RegexOption.IGNORE_CASE)
-            .find(j.optString("body"))?.groupValues?.getOrNull(1) ?: currentVersion
-        return UpdateInfo(version,fallbackApk,UpdatePolicy.newer(version,currentVersion))
+    private suspend fun metadataText(url:String):String = withContext(Dispatchers.IO) {
+        currentCoroutineContext().ensureActive()
+        val fresh=url+(if(url.contains('?')) "&" else "?")+"check="+System.currentTimeMillis()
+        val c=connection(fresh,metadata=true)
+        try {
+            c.inputStream.use {input ->
+                val output=java.io.ByteArrayOutputStream()
+                val bytes=ByteArray(8192)
+                while(true) {
+                    currentCoroutineContext().ensureActive()
+                    val count=input.read(bytes);if(count<0) break
+                    require(output.size()+count<=256*1024) {"Update metadata is too large"}
+                    output.write(bytes,0,count)
+                }
+                output.toString("UTF-8")
+            }
+        } finally {c.disconnect()}
     }
 
-    private fun connection(initial: String): HttpURLConnection {
+    private fun connection(initial:String,metadata:Boolean=false):HttpURLConnection {
         var url=initial
         repeat(6) {
-            require(UpdatePolicy.downloadHost(url)) { "Untrusted download destination" }
+            require(UpdatePolicy.downloadHost(url) || (metadata && UpdatePolicy.metadataApiUrl(url))) { "Untrusted download destination" }
             val c=URL(url).openConnection() as HttpURLConnection
             c.instanceFollowRedirects=false;c.connectTimeout=15000;c.readTimeout=20000
             c.setRequestProperty("User-Agent","BruniO-TV");c.setRequestProperty("Accept-Encoding","identity")
-            val code=c.responseCode
+            if(metadata) {c.setRequestProperty("Accept","application/json");c.setRequestProperty("Cache-Control","no-cache")}
+            val code=try {c.responseCode} catch(e:Exception) {c.disconnect();throw e}
             if(code in listOf(301,302,303,307,308)) {
                 val next=c.getHeaderField("Location");c.disconnect()
                 require(!next.isNullOrBlank()) { "Missing download redirect" }

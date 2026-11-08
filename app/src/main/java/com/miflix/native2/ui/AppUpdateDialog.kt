@@ -50,7 +50,7 @@ fun AppUpdateDialog(state:AppState,close:()->Unit) {
         state.updateDownloading ->tr("Preparando tu actualización","Getting your update ready")
         state.updateChecking ->tr("Buscando novedades…","Checking for something new…")
         ready ->tr("Todo listo para instalar","Ready to install")
-        state.error!=null ->tr("No pudimos completar la actualización","We couldn't complete the update")
+        state.error!=null || state.updateCheckFailed ->tr("No pudimos completar la actualización","We couldn't complete the update")
         info?.isNewer==true ->tr("Hay una nueva versión","A new version is available")
         info!=null ->tr("BruniO está al día","BruniO is up to date")
         else ->tr("Tu próxima versión de BruniO","Your next BruniO update")
@@ -77,7 +77,7 @@ fun AppUpdateDialog(state:AppState,close:()->Unit) {
                                 ready ->tr("La descarga se verificó. Android te pedirá confirmar la instalación.","The download was verified. Android will ask you to confirm installation.")
                                 info?.isNewer==true ->tr("Disponible · ","Available · ")+info.version
                                 state.updateChecking ->tr("Comprobando la versión disponible.","Looking up the available release.")
-                                info!=null && state.error==null ->tr("Ya tienes la versión más reciente disponible para este dispositivo.","You have the latest available release for this device.")
+                                info!=null && state.error==null && !state.updateCheckFailed ->tr("Ya tienes la versión más reciente disponible para este dispositivo.","You have the latest available release for this device.")
                                 else ->tr("Vuelve a comprobar cuando lo desees.","Check again whenever you're ready.")
                             },color=Muted,fontSize=14.sp,lineHeight=20.sp)
                             if(state.updateDownloading) {

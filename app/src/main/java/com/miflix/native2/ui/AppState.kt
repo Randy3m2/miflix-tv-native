@@ -2138,6 +2138,7 @@ class AppState(context: Context) {
     var updateTotal by mutableStateOf(0L)
     var downloadedUpdate by mutableStateOf<java.io.File?>(null)
     var updateStatus by mutableStateOf("")
+    var updateCheckFailed by mutableStateOf(false)
     private var updateDownloadJob: kotlinx.coroutines.Job?=null
     var updateChecking by mutableStateOf(false)
 
@@ -4192,12 +4193,16 @@ class AppState(context: Context) {
 
     suspend fun checkForUpdates() {
         if(updateChecking || updateDownloading) return
-        updateChecking=true;error=null;updateStatus=""
+        updateChecking=true;updateCheckFailed=false;error=null;updateStatus=""
         try {
             val found=updates.check(BuildConfig.VERSION_NAME,BuildConfig.VERSION_CODE)
             if(updateInfo?.sha256!=found.sha256) downloadedUpdate=null
             updateInfo=found
-        } catch(e: CancellationException) { throw e } catch(e: Exception) { error="${tr("Falló la búsqueda de actualizaciones","Update check failed")}: ${e.message}" } finally { updateChecking=false }
+        } catch(e: CancellationException) { throw e } catch(e: Exception) {
+            updateCheckFailed=true
+            error=tr("No se pudo consultar la actualización. El servicio puede estar temporalmente no disponible. Reintenta en unos minutos o descarga el APK oficial desde GitHub.","Could not check for updates. The service may be temporarily unavailable. Retry shortly or download the official APK from GitHub.")
+            updateStatus=error.orEmpty()
+        } finally { updateChecking=false }
     }
     fun downloadUpdate() {
         val info=updateInfo?.takeIf { it.isNewer } ?: return

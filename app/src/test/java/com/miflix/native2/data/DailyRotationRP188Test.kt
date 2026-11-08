@@ -48,8 +48,24 @@ class DailyRotationRP188Test {
         try {repo.load("a",rows,{throw CancellationException()},{});fail("Must cancel")} catch(_:CancellationException) {}
         assertTrue(repo.load("a",rows,{true},{}).isNotEmpty())
     }
-    @Test fun newRowFollowsContinueWhileAnExplicitSavedPositionIsPreserved() {
-        assertEquals(listOf("continue","daily_rotation","streaming"),DailyRotationPolicyRP188.homeOrder(listOf("streaming","continue")))
-        assertEquals(listOf("continue","streaming","daily_rotation"),DailyRotationPolicyRP188.homeOrder(listOf("streaming","daily_rotation")))
+    @Test fun rotationMovesToFifthShelfAndContinueStaysFirst() {
+        assertEquals(listOf("continue","streaming","genres","movies","daily_rotation","series"),DailyRotationPolicyRP188.homeOrder(listOf("daily_rotation","streaming","genres","movies","series")))
+        assertEquals(listOf("continue","streaming","daily_rotation"),DailyRotationPolicyRP188.homeOrder(listOf("streaming")))
+    }
+    @Test fun interruptedLoadingReusesVerifiedCardsAndResumesUncheckedSources()=runBlocking {
+        val repo=DailyRotationRepositoryRP188();val rows=DailyRotationPolicyRP188.candidates(2026,312)
+        val probes=mutableListOf<String>()
+        try {repo.load("a",rows,{probes.add(it.id);true},{throw CancellationException()});fail("Must cancel")} catch(_:CancellationException) {}
+        val found=mutableListOf<String>()
+        val result=repo.load("a",rows,{probes.add(it.id);true},{found.add(it.id)})
+        assertEquals(8,result.size);assertEquals(8,probes.size)
+        assertEquals(probes.distinct(),probes);assertEquals(result.map {it.id},found)
+    }
+    @Test fun interruptionAfterEighthResultCannotPublishANinthCard()=runBlocking {
+        val repo=DailyRotationRepositoryRP188();val rows=DailyRotationPolicyRP188.candidates(2026,312)
+        var found=0
+        try {repo.load("a",rows,{true},{if(++found==8) throw CancellationException()});fail("Must cancel")} catch(_:CancellationException) {}
+        val result=repo.load("a",rows,{fail("Must not recheck");false},{})
+        assertEquals(8,result.size)
     }
 }

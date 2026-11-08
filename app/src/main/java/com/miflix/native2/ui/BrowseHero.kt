@@ -62,7 +62,7 @@ private fun FocusedBrowseHero(state: AppState,pending: State<MediaSummary?>,fall
     val item=shown
     val compact=heroFocus!=null
     val veryCompact=compact && height<250.dp
-    val canvas=if(state.screen==Screen.HOME) Color(0xFF050505) else Bg
+    val canvas=if(state.screen in setOf(Screen.HOME,Screen.MY_LIST,Screen.DETAILS)) Color(0xFF050505) else Bg
     Box(Modifier.fillMaxWidth().height(height).background(canvas)) {
         if(item!=null) {
             Crossfade(item.backdrop ?: item.poster,modifier=Modifier.align(Alignment.CenterEnd).fillMaxHeight().fillMaxWidth(.75f),animationSpec=tween(140),label="browseBackdrop") {image ->

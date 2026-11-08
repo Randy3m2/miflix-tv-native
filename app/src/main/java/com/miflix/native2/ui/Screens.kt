@@ -383,7 +383,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 if(!simple && (state.localRecommendations(state.comingMovies).isNotEmpty() || state.localRecommendations(state.comingSeries).isNotEmpty())) shelf(key="coming_soon_home") {
                     SpotlightRail(tr("Próximamente","Coming soon"),(state.localRecommendations(state.comingMovies)+state.localRecommendations(state.comingSeries)).distinctBy { it.cloudId }.take(30),onClick={ state.launch { state.open(it,upcoming=true) } })
                 }
-                val order=com.miflix.native2.data.DailyRotationPolicyRP188.homeOrder(state.homeRowOrder)
+                val order=com.miflix.native2.data.DailyRotationPolicyRP188.homeOrder(state.homeRowOrder+homeSections.map {it.key})
                 val orderedSectionsRP165=homeSections.filter {it.key !in state.hiddenHomeRows &&
                     (it.key!="discovery-retry" || "discovery-picks" !in state.hiddenHomeRows)}.sortedWith(compareBy<HomeSection> {order.indexOf(it.key).let {i ->if(i<0) Int.MAX_VALUE else i}})
                 positionRP165.sectionKeys=orderedSectionsRP165.map {it.key}
@@ -789,12 +789,13 @@ fun DetailsScreen(state: AppState, onBack: () -> Unit) {
     }
 
     AppShell(state,state.detailsReturnScreen,{ state.screen=it }) {
-    Box(Modifier.fillMaxSize().background(Bg).clipToBounds().graphicsLayer {
+    val detailCanvasRP189=Color(0xFF050505)
+    Box(Modifier.fillMaxSize().background(detailCanvasRP189).clipToBounds().graphicsLayer {
         alpha=.65f+.35f*entrance.value
         translationY=(1f-entrance.value)*6.dp.toPx()
     }) {
         AsyncImage(item.backdrop, null, Modifier.fillMaxWidth().height(430.dp).align(Alignment.TopCenter), contentScale = ContentScale.Crop)
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x22000000), Color(0x66000000), Bg), startY = 150f)))
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0x22000000), Color(0x66000000), detailCanvasRP189), startY = 150f)))
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xF7050505), Color(0xA8050505), Color.Transparent), endX = 980f)))
 
         CompositionLocalProvider(LocalBringIntoViewSpec provides object : BringIntoViewSpec {

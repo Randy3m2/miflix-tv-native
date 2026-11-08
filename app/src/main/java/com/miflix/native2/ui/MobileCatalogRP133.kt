@@ -95,7 +95,6 @@ internal fun MobileHomeRP133(state:AppState) {
                 }
             }
         }
-        if(!kids) item("daily-rotation") {DailyRotationRowRP188(state,mobile=true,filter=filter)}
         if(!kids && !state.easyModeRP79) item("platforms") {
             Column(verticalArrangement=Arrangement.spacedBy(9.dp)) {
                 Text(tr("Tus plataformas","Your platforms"),color=Color.White,fontSize=19.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(horizontal=16.dp))
@@ -111,9 +110,13 @@ internal fun MobileHomeRP133(state:AppState) {
                 }
             }
         }
-        items(rows.take(more).filter {filtered(it.second).isNotEmpty()},key={it.first}) {(title,items)->
-            MobileRailRP133(state,title,filtered(items),topTen=title.startsWith("Top 10"))
+        val visibleRowsRP189=rows.take(more).filter {filtered(it.second).isNotEmpty()}
+        val beforeDailyRP189=if(!kids && !state.easyModeRP79) 2 else 3
+        visibleRowsRP189.forEachIndexed {index,(title,items)->
+            if(!kids && index==beforeDailyRP189) item("daily-rotation") {DailyRotationRowRP188(state,mobile=true,filter=filter)}
+            item(title) {MobileRailRP133(state,title,filtered(items),topTen=title.startsWith("Top 10"))}
         }
+        if(!kids && visibleRowsRP189.size<=beforeDailyRP189) item("daily-rotation") {DailyRotationRowRP188(state,mobile=true,filter=filter)}
         if(!kids && !state.easyModeRP79) item("franchises") {
             Column(Modifier.padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                 Text(tr("Franquicias","Franchises"),color=Color.White,fontSize=19.sp,fontWeight=FontWeight.Bold)
@@ -206,7 +209,7 @@ internal fun MobileDetailsRP133(state:AppState) {
     LazyColumn(contentPadding=PaddingValues(bottom=24.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
         item("art") {Box(Modifier.fillMaxWidth().height(330.dp)) {
             AsyncImage(item.backdrop ?: item.poster,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
-            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,MobileBgRP133))))
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0xFF080A0F)))))
             MobileIconButtonRP133("back",tr("Volver","Back"),Modifier.align(Alignment.TopStart).padding(16.dp)) {state.screen=state.detailsReturnScreen}
             if(friends.isNotEmpty()) MobileButtonRP133(friends.size.toString()+" "+tr("ya la vieron","watched"),"friends",Modifier.align(Alignment.TopEnd).padding(16.dp)) {friendsOpen=true}
             Text(item.title,color=Color.White,fontSize=32.sp,lineHeight=36.sp,fontWeight=FontWeight.Bold,modifier=Modifier.align(Alignment.BottomStart).padding(horizontal=16.dp),maxLines=3)

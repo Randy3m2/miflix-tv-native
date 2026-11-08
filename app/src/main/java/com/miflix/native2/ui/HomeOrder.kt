@@ -13,10 +13,10 @@ import androidx.tv.material3.Text
 internal data class HomeSection(val key:String,val content:@Composable ()->Unit)
 internal val HomeRows=listOf(
     "continue" to "Continue Watching",
-    "daily_rotation" to "Daily rotation",
     "local_lists" to "My local lists",
     "discovery-controls" to "Mood selector",
     "discovery-picks" to "Mood picks",
+    "daily_rotation" to "Daily rotation",
     "streaming" to "Streaming",
     "genres_home" to "Browse by genre",
     "comfort_comedies" to "Comfort comedies",

@@ -1,6 +1,10 @@
 package com.miflix.native2.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -32,7 +36,7 @@ internal fun DailyRotationRowRP188(state:AppState,mobile:Boolean=false,filter:St
     var opening by remember(key) {mutableStateOf(false)}
     LaunchedEffect(key,retry,opening,state.appForeground) {
         if(opening || !state.appForeground) return@LaunchedEffect
-        loading=true;rows.clear()
+        loading=true
         try {
             val candidates=DailyRotationPolicyRP188.candidates(year,day).filter {filter.isBlank() || (if(it.isMovie) "movie" else "series")==filter}
             state.dailyRotationRP188.load(key,candidates,{state.verifyTirsoItemRP180(it)}) {entry->
@@ -51,16 +55,28 @@ internal fun DailyRotationRowRP188(state:AppState,mobile:Boolean=false,filter:St
             try {state.socialAction {state.playTirsoScheduleItemRP177(entry,Screen.HOME)}} finally {opening=false}
         }}
     }
+    val entryFocus=remember(key) {FocusRequester()}
+    var placeholderFocused by remember(key) {mutableStateOf(false)}
+    LaunchedEffect(rows.isNotEmpty()) {
+        if(rows.isNotEmpty() && placeholderFocused && !mobile) {
+            withFrameNanos { };runCatching {entryFocus.requestFocus()}
+        }
+    }
+    val railHeight=if(mobile) 240.dp else if(LocalHomeShelfPaging.current) LocalHomeCardRowHeight.current+40.dp else 302.dp
+    Box(Modifier.fillMaxWidth().height(railHeight).focusRequester(entryFocus).focusGroup()) {
     if(rows.isNotEmpty()) {
         if(mobile) MobileRailRP133(state,title,rows.map {it.second},onSelectRP188=play)
         else SpotlightRail(title,rows.map {it.second},showTitle=true,onClick=play)
     } else Column(Modifier.fillMaxWidth().padding(horizontal=if(mobile) 16.dp else 40.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
         Text(title,color=Color.White,fontSize=if(mobile) 19.sp else 24.sp,fontWeight=FontWeight.Bold)
         Text(if(loading) tr("Preparando la selección de hoy…","Preparing today's selection…") else tr("No encontramos enlaces para la selección de hoy. Revisa tus add-ons o reintenta.","No sources were found for today's selection. Check your add-ons or retry."),color=Muted,fontSize=14.sp)
+        if(loading && !mobile) FocusButton(tr("Comprobando enlaces…","Checking sources…"),modifier=Modifier.onFocusChanged {if(it.isFocused || rows.isEmpty()) placeholderFocused=it.isFocused}) { }
         if(!loading) {
-            val again={state.dailyRotationRP188.invalidate(key);retry++;Unit}
+            val again={state.dailyRotationRP188.invalidate(key);rows.clear();retry++;Unit}
             if(mobile) MobileButtonRP133(tr("Reintentar","Retry"),click=again)
-            else FocusButton(tr("Reintentar","Retry"),onClick=again)
+            else FocusButton(tr("Reintentar","Retry"),modifier=Modifier.onFocusChanged {if(it.isFocused || rows.isEmpty()) placeholderFocused=it.isFocused},onClick=again)
         }
     }
+}
+
 }

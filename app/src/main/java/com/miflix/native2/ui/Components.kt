@@ -61,14 +61,40 @@ import com.miflix.native2.model.CollectionTile
 import com.miflix.native2.model.MediaSummary
 
 internal object ThemeRuntimeRP177 {
-    var id by mutableStateOf("")
-    var secondary by mutableIntStateOf(0xFF9F82F5.toInt())
-    var background by mutableIntStateOf(0xFF050505.toInt())
-    var panel by mutableIntStateOf(0xFF141414.toInt())
-    var muted by mutableIntStateOf(0xFFAAAAAF.toInt())
-    var focusedPanel by mutableIntStateOf(0xFF242126.toInt())
-    var border by mutableIntStateOf(0xFF303035.toInt())
-    var radius by mutableIntStateOf(50)
+    // Read the current route without overwriting the saved theme or changing it on Back.
+    var originalPageRP189:()->Boolean={false}
+    private var savedId by mutableStateOf("")
+    var id:String
+        get()=if(originalPageRP189()) "" else savedId
+        set(value) {savedId=value}
+    private var savedSecondary by mutableIntStateOf(0xFF9F82F5.toInt())
+    var secondary:Int
+        get()=if(originalPageRP189()) 0xFFB792FF.toInt() else savedSecondary
+        set(value) {savedSecondary=value}
+    private var savedBackground by mutableIntStateOf(0xFF050505.toInt())
+    var background:Int
+        get()=if(originalPageRP189()) 0xFF050505.toInt() else savedBackground
+        set(value) {savedBackground=value}
+    private var savedPanel by mutableIntStateOf(0xFF141414.toInt())
+    var panel:Int
+        get()=if(originalPageRP189()) 0xFF141414.toInt() else savedPanel
+        set(value) {savedPanel=value}
+    private var savedMuted by mutableIntStateOf(0xFFAAAAAF.toInt())
+    var muted:Int
+        get()=if(originalPageRP189()) 0xFFAAAAAF.toInt() else savedMuted
+        set(value) {savedMuted=value}
+    private var savedFocusedPanel by mutableIntStateOf(0xFF242126.toInt())
+    var focusedPanel:Int
+        get()=if(originalPageRP189()) 0xFF242126.toInt() else savedFocusedPanel
+        set(value) {savedFocusedPanel=value}
+    private var savedBorder by mutableIntStateOf(0xFF303035.toInt())
+    var border:Int
+        get()=if(originalPageRP189()) 0xFF303035.toInt() else savedBorder
+        set(value) {savedBorder=value}
+    private var savedRadius by mutableIntStateOf(50)
+    var radius:Int
+        get()=if(originalPageRP189()) 50 else savedRadius
+        set(value) {savedRadius=value}
     fun restore(value:Int) {
         val color=com.miflix.native2.data.ThemeStudioRP173.normalizeFocus(value)
         val preset=com.miflix.native2.data.ThemeStudioRP173.presets.firstOrNull {it.focus.toInt()==color}
@@ -91,7 +117,12 @@ val Bg: Color get() = Color(ThemeRuntimeRP177.background)
 val Panel: Color get() = Color(ThemeRuntimeRP177.panel)
 val Muted: Color get() = Color(ThemeRuntimeRP177.muted)
 val SoftWhite = Color(0xFFF3F3F3)
-internal object FocusTheme { var argb by mutableIntStateOf(0xFFB792FF.toInt()) }
+internal object FocusTheme {
+    private var savedArgb by mutableIntStateOf(0xFFB792FF.toInt())
+    var argb:Int
+        get()=if(ThemeRuntimeRP177.originalPageRP189()) 0xFFB792FF.toInt() else savedArgb
+        set(value) {savedArgb=value}
+}
 val Accent: Color get() = Color(FocusTheme.argb)
 val FocusInk: Color get() = if(Accent.luminance()>.179f) Color.Black else Color.White
 val FocusedPanel: Color get() = Color(ThemeRuntimeRP177.focusedPanel)

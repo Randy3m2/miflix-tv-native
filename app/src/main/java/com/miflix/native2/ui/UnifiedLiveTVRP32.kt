@@ -34,7 +34,6 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
     val ownerRP46="${state.session?.userId ?: "local"}:${state.activeProfile.id}"
     val context=LocalContext.current
     val customRevisionRP48 by CustomChannelsRP45.changesRP48.collectAsState()
-    var showM3URP61 by remember(ownerRP46) {mutableStateOf(false)}
     var customManageRP48 by remember(ownerRP46) {mutableStateOf<CustomChannelRP45?>(null)}
     val repo=remember {LiveRepository()}
     val scope=rememberCoroutineScope()
@@ -144,30 +143,28 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
             finally {if(stamp==generation) busy=false}
         }
     }
-    Column(modifier.fillMaxWidth().padding(top=12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+    Column(modifier.fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(10.dp)) {
         Text(tr("CATEGORÍAS","CATEGORIES"),color=Muted)
         LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp),contentPadding=PaddingValues(horizontal=4.dp,vertical=4.dp)) {
             items(groups,key={it.key}) {g ->HubCategoryChipRP42(g.category.name,selected==g.key) {selected=g.key}}
         }
         NativeTextField(query,{query=it;state.liveSearch=it},tr("Buscar canales","Search channels"),modifier=Modifier.fillMaxWidth())
-        if(!state.kidsMode && state.partyRole!=PartyRole.GUEST) FocusButton(tr("+ Añadir lista M3U por QR","+ Add M3U playlist by QR")) {showM3URP61=true}
         if(busy) Text(tr("Cargando canales…","Loading channels…"),color=Color.White)
         if(message.isNotBlank()) Text(message,color=Color.White)
         if(!busy && groups.isEmpty()) FocusButton(tr("Reintentar","Retry")) {retry++}
         val searchNames=remember(rows) {rows.associate {it.key to IptvPlaylist.searchKey(it.channel.name)}}
         val visible=remember(rows,query,searchNames) {val q=IptvPlaylist.searchKey(query);rows.filter {q.isBlank() || searchNames[it.key].orEmpty().contains(q) || it.channel.number.toString()==query.trim()}}
-        LazyVerticalGrid(GridCells.Adaptive(210.dp),modifier=Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(start=4.dp,end=4.dp,top=6.dp,bottom=48.dp)) {
-            if(!state.kidsMode && state.partyRole!=PartyRole.GUEST && (query.isBlank() || "Tirso 24/7".contains(query,true))) item(key="tirso-247") {
-                TirsoChannelRP181(state,mobile=false,compactTv=true)
-            }
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+        val channelHeightRP188=(maxHeight-24.dp).coerceIn(150.dp,194.dp)
+        LazyVerticalGrid(GridCells.Adaptive(210.dp),modifier=Modifier.fillMaxSize(),horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(start=6.dp,end=6.dp,top=6.dp,bottom=18.dp)) {
             items(visible,key={it.key}) {entry ->
-                if(entry.provider==CustomChannelsRP45.provider) HubEventCardRP41(entry.channel.number.takeIf {it>0}?.let {"$it · ${entry.channel.name}"} ?: entry.channel.name,entry.channel.poster,tr("EN VIVO · Mantén OK: opciones","LIVE · Hold OK: options"),onHoldRP48={customManageRP48=CustomChannelsRP45.findRP48(context,ownerRP46,entry.channel.id)},logoRP50=true) {openChannel(entry)}
+                if(entry.provider==CustomChannelsRP45.provider) HubEventCardRP41(entry.channel.number.takeIf {it>0}?.let {"$it · ${entry.channel.name}"} ?: entry.channel.name,entry.channel.poster,tr("EN VIVO · Mantén OK: opciones","LIVE · Hold OK: options"),onHoldRP48={customManageRP48=CustomChannelsRP45.findRP48(context,ownerRP46,entry.channel.id)},logoRP50=true,cardHeightRP188=channelHeightRP188) {openChannel(entry)}
                 else LiveChannelTile(entry.channel,entry.channel.number.takeIf {it>0} ?: (rows.indexOf(entry)+1),false,{openChannel(entry)}) {LiveLibrary.toggle(context,state,entry.provider,entry.channel)}
             }
             if(more && !busy) item(span={GridItemSpan(maxLineSpan)}) {FocusButton(tr("Cargar más canales","Load more channels")) {scope.launch {page(false)}}}
         }
+        }
     }
-    if(showM3URP61) M3UListsPanelRP61(state) {showM3URP61=false}
     if(links.isNotEmpty()) Dialog(onDismissRequest={links=emptyList();chosen=null},properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Column(Modifier.fillMaxSize().background(Bg).padding(30.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Text(chosen?.channel?.name.orEmpty(),color=Color.White)

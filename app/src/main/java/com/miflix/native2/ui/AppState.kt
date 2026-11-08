@@ -3162,6 +3162,7 @@ class AppState(context: Context) {
         } finally {mobileDownloadBusyRP134=false}
     }
 
+    internal val dailyRotationRP188=com.miflix.native2.data.DailyRotationRepositoryRP188()
     internal data class TirsoTargetRP181(
         val item:MediaSummary,val detail:MediaDetails,val season:Int,val episode:Int,
         val episodeTitle:String,val sources:List<StreamChoice>,val checkedAt:Long,
@@ -3173,6 +3174,8 @@ class AppState(context: Context) {
         localExtrasScope()+":"+audioLanguage+":"+streamSizeBytes+":"+nativeOnlyRP75+":"+nativeSpanishOnlyRP77+":"+nativeSourceEnabled+":"+streamRepo.manifests().hashCode()+":"+item.id
     internal fun tirsoTargetRP181(item:com.miflix.native2.data.TirsoScheduleItemRP174)=tirsoVerifiedRP180[tirsoKeyRP181(item)]
     suspend fun verifyTirsoItemRP180(item:com.miflix.native2.data.TirsoScheduleItemRP174):Boolean {
+        // A background row probe must not delay Play on an already verified card.
+        tirsoVerifiedRP180[tirsoKeyRP181(item)]?.takeIf {System.currentTimeMillis()-it.checkedAt<20*60*1000L}?.let {return true}
         tirsoLockRP181.lock()
         try {
             val key=tirsoKeyRP181(item)
@@ -3214,14 +3217,14 @@ class AppState(context: Context) {
         } catch(e:CancellationException) {throw e} catch(_:Exception) {return false}
         finally {tirsoLockRP181.unlock()}
     }
-    suspend fun playTirsoScheduleItemRP177(item:com.miflix.native2.data.TirsoScheduleItemRP174) {
+    suspend fun playTirsoScheduleItemRP177(item:com.miflix.native2.data.TirsoScheduleItemRP174,returnTo:Screen=Screen.HOME) {
         require(!kidsMode && partyRole!=PartyRole.GUEST) {tr("Elige un perfil normal para abrir este canal.","Use a regular profile to open this channel.")}
         if(!verifyTirsoItemRP180(item)) error(tr("Este programa no tiene enlaces disponibles.","No sources are currently available for this program."))
         val target=tirsoTargetRP181(item) ?: return
         selected=target.item;details=target.detail
-        detailsReturnScreen=Screen.LIVE_TV
+        detailsReturnScreen=returnTo
         playResolved(target.item,target.detail.imdbId!!,target.season,target.episode,resumeOverride=0L,onStarted={request ->
-            playerRequest=request.copy(returnScreen=Screen.LIVE_TV)
+            playerRequest=request.copy(returnScreen=returnTo)
         })
     }
 

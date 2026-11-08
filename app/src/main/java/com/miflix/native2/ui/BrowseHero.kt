@@ -62,14 +62,15 @@ private fun FocusedBrowseHero(state: AppState,pending: State<MediaSummary?>,fall
     val item=shown
     val compact=heroFocus!=null
     val veryCompact=compact && height<250.dp
-    Box(Modifier.fillMaxWidth().height(height).background(Bg)) {
+    val canvas=if(state.screen==Screen.HOME) Color(0xFF050505) else Bg
+    Box(Modifier.fillMaxWidth().height(height).background(canvas)) {
         if(item!=null) {
             Crossfade(item.backdrop ?: item.poster,modifier=Modifier.align(Alignment.CenterEnd).fillMaxHeight().fillMaxWidth(.75f),animationSpec=tween(140),label="browseBackdrop") {image ->
                 AsyncImage(image,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
             }
-            Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(if(headerInset>0.dp) 150.dp else 60.dp).background(Brush.verticalGradient(listOf(Bg,Color.Transparent))))
-            Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Bg,Bg.copy(alpha=.92f),Color.Transparent))))
-            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Bg))))
+            Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(if(headerInset>0.dp) 150.dp else 60.dp).background(Brush.verticalGradient(listOf(canvas,Color.Transparent))))
+            Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(canvas,canvas.copy(alpha=.92f),Color.Transparent))))
+            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,canvas))))
             Column(Modifier.align(Alignment.TopStart).fillMaxHeight().padding(start=40.dp,end=22.dp,top=headerInset+8.dp,bottom=if(compact) 10.dp else 12.dp).fillMaxWidth(.65f),verticalArrangement=Arrangement.spacedBy(if(compact) 5.dp else 7.dp)) {
                 Box(Modifier.fillMaxWidth().height(if(veryCompact) 36.dp else if(compact) 52.dp else if(height>=200.dp) 64.dp else 44.dp),contentAlignment=Alignment.CenterStart) {
                     if(logo!=null) AsyncImage(logo,item.title,Modifier.widthIn(max=280.dp).fillMaxHeight(),contentScale=ContentScale.Fit)

@@ -13,6 +13,7 @@ internal fun HomeRowVisibilityRC99(state:AppState,close:()->Unit) {
         "discovery-controls" to tr("Elige tu ánimo · Dazzle Me","Pick your vibe · Dazzle Me"),
         "discovery-picks" to tr("Tu ánimo · Tu selección","Your Mood · Your Picks"),
         "continue" to tr("Seguir viendo","Continue Watching"),
+        "daily_rotation" to tr("Rotación diaria","Daily rotation"),
         "streaming" to tr("Plataformas","Streaming"),
         "novelas" to tr("Novelas que atrapan","Telenovelas to fall for"),
         "genres_home" to tr("Explorar por género","Browse by genre"),

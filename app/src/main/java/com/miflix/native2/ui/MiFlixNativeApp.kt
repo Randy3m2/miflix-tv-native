@@ -147,7 +147,11 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
         }
         val scoreShortcut=remember(state.activeProfile.id,state.session?.userId,state.screen,state.appForeground) {ScorePinShortcutRP15()}
         val navigationState=androidx.compose.runtime.saveable.rememberSaveableStateHolder()
-        Box(Modifier.fillMaxSize().then(if(state.screen in listOf(Screen.PLAYER,Screen.MULTIVIEW)) Modifier.background(Color.Black) else Modifier.themeStageRP186(mobileRP133)).onPreviewKeyEvent {
+        Box(Modifier.fillMaxSize().then(when(state.screen) {
+            Screen.PLAYER,Screen.MULTIVIEW->Modifier.background(Color.Black)
+            Screen.HOME->Modifier.background(if(mobileRP133) Color(0xFF080A0F) else Color(0xFF050505))
+            else->Modifier.themeStageRP186(mobileRP133)
+        }).onPreviewKeyEvent {
             MenuActivity.touch()
             if(it.nativeKeyEvent.action==android.view.KeyEvent.ACTION_DOWN && it.nativeKeyEvent.keyCode!=android.view.KeyEvent.KEYCODE_BACK) homeExitArmedAt=0L
             val key=it.nativeKeyEvent

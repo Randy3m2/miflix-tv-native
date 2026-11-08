@@ -93,9 +93,6 @@ internal fun MobileChannelsRP133(state:AppState,select:((PlayerRequest)->Unit)?=
             }
         }
         LazyColumn(Modifier.weight(1f),state=scroll,contentPadding=PaddingValues(horizontal=16.dp,vertical=6.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-            if(select==null && (query.isBlank() || "Tirso 24/7".contains(query,true))) item(key="tirso-247") {
-                TirsoChannelRP181(state,mobile=true)
-            }
             items(visible.take(count),key={it.id}) {channel->
                 Row(Modifier.fillMaxWidth().mobileGlassRP133(state.playerRequest?.liveChannelId==channel.id)
                     .combinedClickable(onClick={tune(channel)},onLongClick={options=channel}).padding(12.dp),

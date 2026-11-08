@@ -279,6 +279,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                         progressFor={ state.progress[it.cloudId]?.percent },onLongClick={state.titleActions(it,true)},onClick=openItem)
                     }
                 }
+                if(!state.kidsMode) shelf(key="daily_rotation") {DailyRotationRowRP188(state)}
                 shelf(key="streaming") { CollectionRail(tr("Plataformas","Streaming"),StreamingTiles,openCollection) }
                 shelf(key="genres_home") { Column {
                     Row(Modifier.fillMaxWidth().padding(start=40.dp,end=40.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -382,7 +383,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 if(!simple && (state.localRecommendations(state.comingMovies).isNotEmpty() || state.localRecommendations(state.comingSeries).isNotEmpty())) shelf(key="coming_soon_home") {
                     SpotlightRail(tr("Próximamente","Coming soon"),(state.localRecommendations(state.comingMovies)+state.localRecommendations(state.comingSeries)).distinctBy { it.cloudId }.take(30),onClick={ state.launch { state.open(it,upcoming=true) } })
                 }
-                val order=com.miflix.native2.data.HomeOrderPolicyRP106.order(state.homeRowOrder)
+                val order=com.miflix.native2.data.DailyRotationPolicyRP188.homeOrder(state.homeRowOrder)
                 val orderedSectionsRP165=homeSections.filter {it.key !in state.hiddenHomeRows &&
                     (it.key!="discovery-retry" || "discovery-picks" !in state.hiddenHomeRows)}.sortedWith(compareBy<HomeSection> {order.indexOf(it.key).let {i ->if(i<0) Int.MAX_VALUE else i}})
                 positionRP165.sectionKeys=orderedSectionsRP165.map {it.key}

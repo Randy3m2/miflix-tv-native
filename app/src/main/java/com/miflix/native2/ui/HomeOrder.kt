@@ -13,6 +13,7 @@ import androidx.tv.material3.Text
 internal data class HomeSection(val key:String,val content:@Composable ()->Unit)
 internal val HomeRows=listOf(
     "continue" to "Continue Watching",
+    "daily_rotation" to "Daily rotation",
     "local_lists" to "My local lists",
     "discovery-controls" to "Mood selector",
     "discovery-picks" to "Mood picks",
@@ -49,7 +50,7 @@ internal val HomeRows=listOf(
 @Composable
 internal fun HomeOrderDialog(state:AppState,close:()->Unit) {
     val default=HomeRows.map {it.first}
-    var order by remember {mutableStateOf(com.miflix.native2.data.HomeOrderPolicyRP106.order(state.homeRowOrder+default).filter {it in default})}
+    var order by remember {mutableStateOf(com.miflix.native2.data.DailyRotationPolicyRP188.homeOrder(state.homeRowOrder+default).filter {it in default})}
     PlayerSideSheet(tr("Orden de Home","Home row order"),close) {
         item {CinemaBanner("BRUNIO · HOME STUDIO",tr("Tu Home, a tu manera","Your Home, your way"),tr("Pon primero lo que más disfrutas.","Put what you love first."))}
         item {Text(tr("Mueve las filas. Los cambios se guardan solo para este perfil y dispositivo.","Move rows. Changes are saved for this profile on this device."),color=Muted)}

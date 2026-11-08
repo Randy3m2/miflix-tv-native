@@ -25,6 +25,15 @@ class ThemePaletteRP185Test {
             assertTrue(ThemeStudioRP173.cornerRadius(preset.id) in 10..24)
         }
     }
+    @Test fun mutedTextKeepsContrastEvenOverMaximumPhotoHighlights() {
+        for(preset in ThemeStudioRP173.presets.filter {it.id!="default" && it.id!="nba_gsw"}) {
+            var worst=mix(preset.background,preset.focus,.09)
+            worst=mix(worst,preset.secondary,if(preset.id=="christmas") .065 else .035)
+            worst=mix(worst,0xFFFFFFFF,ThemePhotoPolicyRP188.photoAlpha.toDouble())
+            worst=mix(worst,0xFF000000,ThemePhotoPolicyRP188.shadeAlpha.toDouble())
+            assertTrue(preset.id+" photo text contrast",contrast(preset.secondary,worst)>=4.5)
+        }
+    }
     private fun mix(a:Long,b:Long,f:Double):Long {
         var result=0xFF000000L
         for(shift in listOf(0,8,16)) result=result or ((((a shr shift and 255)*(1-f)+(b shr shift and 255)*f).toLong()) shl shift)

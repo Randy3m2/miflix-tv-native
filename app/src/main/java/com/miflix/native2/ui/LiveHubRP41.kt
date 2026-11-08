@@ -61,6 +61,8 @@ internal fun LiveHubRP41(state:AppState) {
     var section by remember(owner) {mutableStateOf(if(state.assistantLiveEntryRP158!=null) "tv" else if(state.assistantLeagueRP156!=null) when(state.assistantLeagueRP156) {"MLB"->"baseball";"LIDOM"->"lidom";"F1"->"f1";else->"basketball"} else if(state.normalLiveEntryRP85) "hub" else LiveHubMemoryRP46.section(owner).let {if(it in listOf("nuvio","nauta-source")) "others" else it})}
     var customChannelsRP45 by remember(owner) {mutableStateOf(false)}
     var configuring by remember {mutableStateOf(false)}
+    var otherSettingsRP188 by remember(owner) {mutableStateOf(false)}
+    var m3uSettingsRP188 by remember(owner) {mutableStateOf(false)}
     var sportsQrRP71 by remember {mutableStateOf(false)}
     var revision by remember {mutableIntStateOf(0)}
     val first=remember {FocusRequester()}
@@ -76,19 +78,17 @@ internal fun LiveHubRP41(state:AppState) {
     }
     fun back() {changeSectionRP46(if(section=="nauta-source") "others" else "hub")}
     BackHandler {if(section!="hub") back() else state.screen=Screen.HOME}
-    Column(Modifier.fillMaxSize().themePageRP186().padding(horizontal=14.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxSize().themePageRP186(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Sidebar(Screen.LIVE_TV,state.activeProfile.name,{state.screen=it},state.unreadNoticeCount,state.activeProfile,
             onMoveDown={runCatching {contentFocusRP44.requestFocus()};Unit},onEditPicture={state.profilePhotoEditor=state.activeProfile},kids=state.kidsMode)
-        Column(Modifier.weight(1f).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal=20.dp,vertical=8.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         if(section!="hub") Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
             FocusButton("‹",horizontalPadding=14.dp) {if(section=="hub") state.screen=Screen.HOME else back()}
             if(section in listOf("f1","lidom")) EventLogoRP120(CalendarSourcesRP120.logo(if(section=="f1") "F1" else "LIDOM"),section,Modifier.size(34.dp))
             if(section=="f1") EventLogoRP120(CalendarSourcesRP120.logo("MOTOGP"),"MotoGP",Modifier.size(42.dp))
             Text(if(section=="hub") tr("En Vivo","Live") else when(section) {"basketball"->"NBA · Basketball";"baseball"->"MLB · Baseball";"football"->"NFL · American Football";"soccer"->tr("Fútbol","Football");"f1"->"F1 · MotoGP";"lidom"->"LIDOM";"tv"->tr("Canales de TV","TV Channels");"nauta-source"->"Nauta Source";else->"Others"},color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
             if(section=="others") {
-                FocusButton(tr("Marcadores en vivo","Live scores")) {state.showLiveScoresRP11=true}
-                FocusButton(tr("Mis canales","My channels")) {customChannelsRP45=true}
-                FocusButton(tr("Configurar deportes","Sports settings")) {configuring=true}
+                FocusButton(tr("Ajustes","Settings")) {otherSettingsRP188=true}
             }
         }
         if(section=="hub") {
@@ -128,6 +128,15 @@ internal fun LiveHubRP41(state:AppState) {
         else key(section,revision) {HubSportsRP41(state,section,Modifier.weight(1f).focusRequester(contentFocusRP44).focusGroup()) {changeSectionRP46("nauta-source")}}
     }
     }
+    if(otherSettingsRP188) PlayerSideSheet(tr("Otros · ajustes","Others · settings"),{otherSettingsRP188=false}) {
+        item {FocusButton(tr("Marcadores en vivo","Live scores")) {otherSettingsRP188=false;state.showLiveScoresRP11=true}}
+        item {FocusButton(tr("Mis canales","My channels")) {otherSettingsRP188=false;customChannelsRP45=true}}
+        item {FocusButton(tr("Configurar deportes","Sports settings")) {otherSettingsRP188=false;configuring=true}}
+        if(!state.kidsMode && state.partyRole!=com.miflix.native2.model.PartyRole.GUEST) item {
+            FocusButton(tr("Listas M3U · URL o QR","M3U playlists · URL or QR")) {otherSettingsRP188=false;m3uSettingsRP188=true}
+        }
+    }
+    if(m3uSettingsRP188) M3UListsPanelRP61(state) {m3uSettingsRP188=false}
     if(customChannelsRP45) CustomChannelsPanelRP45(state) {customChannelsRP45=false}
     if(configuring) {
         var manifest by remember {mutableStateOf(state.calendarLiveManifest("sports"))}
@@ -374,12 +383,12 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,dayRP1
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-internal fun HubEventCardRP41(title:String,poster:String?,subtitle:String,onHoldRP48:(()->Unit)?=null,logoRP50:Boolean=false,sportLogoRP138:String="",click:()->Unit) {
+internal fun HubEventCardRP41(title:String,poster:String?,subtitle:String,onHoldRP48:(()->Unit)?=null,logoRP50:Boolean=false,sportLogoRP138:String="",cardHeightRP188:androidx.compose.ui.unit.Dp=194.dp,click:()->Unit) {
     var logoFailedRP50 by remember(poster) {mutableStateOf(false)}
     var focused by remember(title) {mutableStateOf(false)}
     val bring=remember {BringIntoViewRequester()}
     LaunchedEffect(focused) {if(focused) {withFrameNanos {};bring.bringIntoView()}}
-    Column(Modifier.fillMaxWidth().height(194.dp).bringIntoViewRequester(bring)
+    Column(Modifier.fillMaxWidth().height(cardHeightRP188).bringIntoViewRequester(bring)
         .clip(RoundedCornerShape(13.dp)).background(Brush.verticalGradient(listOf(Color(0xFF242424),Color(0xFF101010))))
         .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(13.dp))
         .onFocusChanged {focused=it.isFocused}.tvPlaybackClick(click,onHoldRP48 ?: click).clickable(onClick=click)) {
@@ -389,7 +398,7 @@ internal fun HubEventCardRP41(title:String,poster:String?,subtitle:String,onHold
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color(0x80000000)))))
             if(sportLogoRP138.isNotBlank()) EventLogoRP120(sportLogoRP138,"MotoGP",Modifier.align(Alignment.TopStart).padding(8.dp).size(58.dp))
         }
-        Text(title,color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(horizontal=12.dp,vertical=6.dp))
+        Text(title,color=Color.White,fontSize=14.sp,lineHeight=18.sp,fontWeight=FontWeight.Bold,maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(horizontal=12.dp,vertical=6.dp).then(if(logoRP50) Modifier.heightIn(min=36.dp) else Modifier))
         if(subtitle.isNotBlank()) Text(subtitle,color=Muted,fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.padding(start=12.dp,end=12.dp,bottom=8.dp))
     }
 }

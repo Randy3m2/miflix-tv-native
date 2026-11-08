@@ -26,13 +26,13 @@ import com.miflix.native2.model.*
 import kotlinx.coroutines.*
 
 @Composable
-internal fun MobileRailRP133(state:AppState,title:String,rows:List<MediaSummary>,landscape:Boolean=false,topTen:Boolean=false) {
+internal fun MobileRailRP133(state:AppState,title:String,rows:List<MediaSummary>,landscape:Boolean=false,topTen:Boolean=false,onSelectRP188:((MediaSummary)->Unit)?=null) {
     if(rows.isEmpty()) return
     Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
         Text(title,color=Color.White,fontSize=19.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(horizontal=16.dp))
         LazyRow(contentPadding=PaddingValues(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
             itemsIndexed(if(topTen) rows.take(10) else rows,key={_,it->it.cloudId}) {index,item->
-                MobilePosterRP133(state,item,landscape=landscape,rank=if(topTen) index+1 else null)
+                MobilePosterRP133(state,item,landscape=landscape,rank=if(topTen) index+1 else null,onSelectRP188=onSelectRP188)
             }
         }
     }
@@ -95,6 +95,7 @@ internal fun MobileHomeRP133(state:AppState) {
                 }
             }
         }
+        if(!kids) item("daily-rotation") {DailyRotationRowRP188(state,mobile=true,filter=filter)}
         if(!kids && !state.easyModeRP79) item("platforms") {
             Column(verticalArrangement=Arrangement.spacedBy(9.dp)) {
                 Text(tr("Tus plataformas","Your platforms"),color=Color.White,fontSize=19.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(horizontal=16.dp))

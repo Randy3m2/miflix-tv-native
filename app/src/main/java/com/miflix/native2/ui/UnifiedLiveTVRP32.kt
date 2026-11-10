@@ -154,12 +154,13 @@ internal fun UnifiedLiveTVRP32(state:AppState,modifier:Modifier=Modifier) {
         if(!busy && groups.isEmpty()) FocusButton(tr("Reintentar","Retry")) {retry++}
         val searchNames=remember(rows) {rows.associate {it.key to IptvPlaylist.searchKey(it.channel.name)}}
         val visible=remember(rows,query,searchNames) {val q=IptvPlaylist.searchKey(query);rows.filter {q.isBlank() || searchNames[it.key].orEmpty().contains(q) || it.channel.number.toString()==query.trim()}}
+        val channelNumbersRP192 = remember(rows) { rows.withIndex().associate { (index, entry) -> entry.key to (index + 1) } }
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
         val channelHeightRP188=(maxHeight-24.dp).coerceIn(150.dp,194.dp)
         LazyVerticalGrid(GridCells.Adaptive(210.dp),modifier=Modifier.fillMaxSize(),horizontalArrangement=Arrangement.spacedBy(14.dp),verticalArrangement=Arrangement.spacedBy(14.dp),contentPadding=PaddingValues(start=6.dp,end=6.dp,top=6.dp,bottom=18.dp)) {
             items(visible,key={it.key}) {entry ->
                 if(entry.provider==CustomChannelsRP45.provider) HubEventCardRP41(entry.channel.number.takeIf {it>0}?.let {"$it · ${entry.channel.name}"} ?: entry.channel.name,entry.channel.poster,tr("EN VIVO · Mantén OK: opciones","LIVE · Hold OK: options"),onHoldRP48={customManageRP48=CustomChannelsRP45.findRP48(context,ownerRP46,entry.channel.id)},logoRP50=true,cardHeightRP188=channelHeightRP188) {openChannel(entry)}
-                else LiveChannelTile(entry.channel,entry.channel.number.takeIf {it>0} ?: (rows.indexOf(entry)+1),false,{openChannel(entry)}) {LiveLibrary.toggle(context,state,entry.provider,entry.channel)}
+                else LiveChannelTile(entry.channel,entry.channel.number.takeIf {it>0} ?: channelNumbersRP192.getValue(entry.key),false,{openChannel(entry)}) {LiveLibrary.toggle(context,state,entry.provider,entry.channel)}
             }
             if(more && !busy) item(span={GridItemSpan(maxLineSpan)}) {FocusButton(tr("Cargar más canales","Load more channels")) {scope.launch {page(false)}}}
         }

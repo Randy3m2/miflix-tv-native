@@ -2,6 +2,10 @@ name: Build MiFlix Native TV APK
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'app/build.gradle'
 
 permissions:
   contents: write

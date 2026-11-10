@@ -6,6 +6,8 @@ on:
     branches: [main]
     paths:
       - 'mobile/build.gradle'
+      - 'app/src/main/java/com/miflix/native2/ui/UpdateNotes.kt'
+      - '.github/workflows/build-brunio-mobile-apk.yml'
 
 permissions:
   contents: write

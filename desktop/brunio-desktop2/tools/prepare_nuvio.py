@@ -174,6 +174,10 @@ def patch_brunioplayer_explicit_autosync(destination: Path) -> None:
         "playerController?.setSubtitleUri(url) // BruniO: regular selection stays regular")
 
     modal = root / "features/player/SubtitleModal.kt"
+    # Reuse the upstream action style for native visual fidelity.
+    replace_exact(modal,
+        "import com.nuvio.app.core.ui.nuvio\\n",
+        "import com.nuvio.app.core.ui.nuvio\\nimport com.nuvio.app.core.ui.NuvioPrimaryButton\\n")
     replace_exact(modal,
         "    onAutoSyncCapture: () -> Unit,\n",
         "    onExplicitAutoSync: () -> Unit,\n    onAutoSyncCapture: () -> Unit,\n")
@@ -190,8 +194,8 @@ def patch_brunioplayer_explicit_autosync(destination: Path) -> None:
                                     .verticalScroll(rememberScrollState()),
                             ) {
                                 if (effectiveSelectedAddonSubtitle != null) {
-                                    PlayerDialogButton(
-                                        label = "Autosync · Detect timing",
+                                    NuvioPrimaryButton(
+                                        text = "Autosync · Detect timing",
                                         onClick = onExplicitAutoSync,
                                     )
                                 }

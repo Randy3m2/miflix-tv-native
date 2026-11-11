@@ -218,6 +218,32 @@ class AppState(context: Context) {
     }
     internal val localExtras=LocalExtrasRC100(context.getSharedPreferences("brunio_local_extras",Context.MODE_PRIVATE))
     internal fun localExtrasScope()=ratingsKey()
+    private val collectionsSyncMutexRP204=Mutex()
+    /** RP204: event-only cloud collections. No periodic checks.
+     * Read ONCE at launch/profile switch; write ONCE per debounced user edit.
+     * On the first ever sync, locally saved collections migrate to cloud.
+     */
+    internal suspend fun syncCustomCollectionsRP204(edited:Boolean=false) {
+        val actor=session ?: return
+        val profile=activeProfile.id
+        val scope=localExtrasScope()
+        collectionsSyncMutexRP204.withLock {
+            val stamp=localExtras.collectionStamp(scope)
+            val payload=if(edited && stamp>0) org.json.JSONArray(localExtras.lists(scope)) else null
+            var (remote,remoteStamp)=cloud.syncCustomCollectionsRP204(actor,profile,payload,stamp)
+            if(!edited && stamp>0 && remoteStamp==0L && localExtras.lists(scope).isNotEmpty()) {
+                // One-time migration of collections previously stored only on device.
+                val migration=cloud.syncCustomCollectionsRP204(
+                    actor,profile,org.json.JSONArray(localExtras.lists(scope)),stamp
+                )
+                remote=migration.first
+                remoteStamp=migration.second
+            }
+            if(session?.userId==actor.userId && activeProfile.id==profile && remoteStamp>stamp) {
+                localExtras.applyCloudCollections(scope,remote,remoteStamp)
+            }
+        }
+    }
     internal fun localRecommendations(rows:List<MediaSummary>)=rows.filterNot {localExtras.hidden(ratingsKey(),it.cloudId)}
     internal fun exportLocalBackupRC100():org.json.JSONObject=org.json.JSONObject()
         .put("brunioLocalBackup",100).put("extras",localExtras.export(ratingsKey()))

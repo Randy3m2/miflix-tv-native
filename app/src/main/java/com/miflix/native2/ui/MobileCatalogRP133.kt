@@ -189,6 +189,8 @@ internal fun MobileDetailsRP133(state:AppState) {
     val absolute=com.miflix.native2.data.AbsoluteEpisodeRP102.enabled(item.id)
     val context=LocalContext.current
     var friends by remember(item.cloudId) {mutableStateOf<List<com.miflix.native2.data.SocialPerson>>(emptyList())}
+    var addCollectionRP204 by remember(item.cloudId) {mutableStateOf(false)}
+    if(addCollectionRP204) MobileCollectionsRP204(state,adding=item) {addCollectionRP204=false}
     var friendsOpen by remember {mutableStateOf(false)}
     var episodeMenu by remember {mutableStateOf<EpisodeSummary?>(null)}
     var castPersonRP141 by remember(item.cloudId) {mutableStateOf<CastMember?>(null)}
@@ -222,6 +224,7 @@ internal fun MobileDetailsRP133(state:AppState) {
             MobileButtonRP133(tr("Reproducir","Play"),"play",Modifier.fillMaxWidth(),selected=true,enabled=!state.selectedUpcoming) {state.launch {
                 if(item.type=="series") state.episodes.firstOrNull {it.season==(resume?.season ?: 1) && it.episode==(resume?.episode ?: 1)}?.let {state.playEpisode(it)} ?: state.playSeriesFromStart() else state.playMovie()
             }}
+            MobileButtonRP133(tr("Añadir a colección personalizada","Add to custom collection"),"list",Modifier.fillMaxWidth()) {addCollectionRP204=true}
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly) {
                 MobileDetailActionRP140(if(item.cloudId in state.favorites) "check" else "plus",tr("Mi lista","My list"),selected=item.cloudId in state.favorites) {state.toggleFavorite(item)}
                 MobileDetailActionRP140("share",tr("Compartir","Share")) {shareMobileRP140(context,item,detail?.imdbId)}

@@ -24,6 +24,19 @@ class SupabaseRepository(private val url: String, private val key: String) {
         if (session != null) put("Authorization", "Bearer ${session.accessToken}")
     }
 
+    /** RP204: one authenticated, RLS-protected request per sync cycle. */
+    suspend fun syncCustomCollectionsRP204(
+        session:CloudSession, profile:String, local:JSONArray?, timestamp:Long
+    ):Pair<JSONArray,Long> {
+        val payload=JSONObject().put("p_profile",profile).put("p_updated_at",timestamp)
+        if(local!=null) payload.put("p_collections",local)
+        val response=JSONObject(Http.text(
+            "$url/rest/v1/rpc/brunio_collections_sync_rp204",
+            "POST",headers(session),payload.toString()
+        ))
+        return (response.optJSONArray("collections") ?: JSONArray()) to response.optLong("updatedAt",0L)
+    }
+
     suspend fun login(email: String, password: String): CloudSession {
         val body = JSONObject().put("email", email).put("password", password).toString()
         val j = JSONObject(Http.text("$url/auth/v1/token?grant_type=password", "POST", headers(), body))

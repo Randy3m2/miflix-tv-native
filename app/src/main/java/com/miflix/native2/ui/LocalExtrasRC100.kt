@@ -12,6 +12,18 @@ import java.util.UUID
 internal class LocalExtrasRC100(private val prefs:SharedPreferences) {
     var revision by mutableIntStateOf(0)
         private set
+    var collectionsRevision by mutableIntStateOf(0)
+        private set
+    private fun collectionStampKey(scope:String)="collections_updated:$scope"
+    fun collectionStamp(scope:String):Long {
+        val stored=prefs.getLong(collectionStampKey(scope),0L)
+        return if(stored==0L && lists(scope).isNotEmpty()) 1L else stored
+    }
+    private fun touchedCollections(scope:String) {
+        prefs.edit().putLong(collectionStampKey(scope),maxOf(System.currentTimeMillis(),collectionStamp(scope)+1)).apply()
+        collectionsRevision++
+    }
+
     fun enabled(key:String):Boolean {revision;return prefs.getBoolean("enabled:$key",false)}
     fun enable(key:String,value:Boolean) {
         require(key in flags);prefs.edit().putBoolean("enabled:$key",value).apply();revision++
@@ -27,11 +39,52 @@ internal class LocalExtrasRC100(private val prefs:SharedPreferences) {
         val title=name.trim().take(60);require(title.isNotEmpty());require(lists(scope).size<100)
         val id=UUID.randomUUID().toString()
         mutate(scope) {val a=it.optJSONArray("lists") ?: JSONArray();a.put(JSONObject().put("id",id).put("name",title).put("items",JSONArray()));it.put("lists",a)}
+        touchedCollections(scope)
         return id
     }
     fun renameList(scope:String,id:String,name:String) {require(name.trim().isNotEmpty());editList(scope,id) {it.put("name",name.trim().take(60))}}
-    private fun editList(scope:String,id:String,change:(JSONObject)->Unit) {mutate(scope) {body -> val a=body.optJSONArray("lists") ?: JSONArray();for(i in 0 until a.length()) if(a.getJSONObject(i).optString("id")==id) change(a.getJSONObject(i));body.put("lists",a)}}
-    fun deleteList(scope:String,id:String) {mutate(scope) {it.put("lists",JSONArray(lists(scope).filter {row -> row.optString("id")!=id}))}}
+    private fun editList(scope:String,id:String,change:(JSONObject)->Unit) {mutate(scope) {body -> val a=body.optJSONArray("lists") ?: JSONArray();for(i in 0 until a.length()) if(a.getJSONObject(i).optString("id")==id) change(a.getJSONObject(i));body.put("lists",a)};touchedCollections(scope)}
+    fun deleteList(scope:String,id:String) {mutate(scope) {it.put("lists",JSONArray(lists(scope).filter {row -> row.optString("id")!=id}))};touchedCollections(scope)}
+    /** Stable manual order shared by TV and Mobile. No collection data is lost. */
+    fun moveList(scope:String,id:String,delta:Int) {
+        val rows=lists(scope).toMutableList()
+        val current=rows.indexOfFirst {it.optString("id")==id}
+        val other=current+delta
+        if(current<0 || other !in rows.indices) return
+        java.util.Collections.swap(rows,current,other)
+        mutate(scope) {it.put("lists",JSONArray(rows))}
+        touchedCollections(scope)
+    }
+    fun moveListItem(scope:String,id:String,cloud:String,delta:Int) {
+        var changed=false
+        editList(scope,id) {row->
+            val arr=row.optJSONArray("items") ?: JSONArray()
+            val rows=(0 until arr.length()).mapNotNull {arr.optJSONObject(it)}.toMutableList()
+            val current=rows.indexOfFirst {it.optString("cloud")==cloud}
+            val other=current+delta
+            if(current>=0 && other in rows.indices) {
+                java.util.Collections.swap(rows,current,other)
+                row.put("items",JSONArray(rows))
+                changed=true
+            }
+        }
+    }
+    /** Replace only collections, leaving hidden titles, filters and playback preferences intact. */
+    fun applyCloudCollections(scope:String,remote:JSONArray,stamp:Long) {
+        require(remote.length()<=100 && stamp>=0L)
+        val ids=mutableSetOf<String>()
+        for(i in 0 until remote.length()) {
+            val row=remote.getJSONObject(i)
+            require(row.getString("id").isNotBlank() && ids.add(row.getString("id")))
+            require(row.getString("name").length in 1..60)
+            val items=row.getJSONArray("items")
+            require(items.length()<=1000)
+            for(j in 0 until items.length()) decode(items.getJSONObject(j))
+        }
+        mutate(scope) {it.put("lists",JSONArray(remote.toString()))}
+        prefs.edit().putLong(collectionStampKey(scope),stamp).apply()
+        // Remote data updates the UI via revision; do not mark as a new local edit.
+    }
     fun listItems(row:JSONObject):List<MediaSummary> {
         val a=row.optJSONArray("items") ?: JSONArray()
         return (0 until a.length()).mapNotNull {runCatching {decode(a.getJSONObject(it))}.getOrNull()}

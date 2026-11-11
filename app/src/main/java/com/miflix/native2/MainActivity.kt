@@ -17,6 +17,7 @@ class MainActivity : ComponentActivity() {
     private var contentLinkRP140 by mutableStateOf<String?>(null)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.miflix.native2.data.BrunioImageCacheRP204.install(applicationContext)
         com.miflix.native2.data.CrashReportRP135.install(applicationContext)
         // Covers an old launcher task left over from versions before singleTask.
         if(!isTaskRoot && intent?.action==Intent.ACTION_MAIN &&

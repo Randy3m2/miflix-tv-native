@@ -102,6 +102,33 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
         LaunchedEffect(state.session?.userId,state.activeProfile.id,state.appForeground,calendarSubscriptionsRP134) {
             if(state.appForeground) try {state.syncCalendarSubscriptionsRP134()} catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) { }
         }
+        // RP204: event-driven only — NO timer, NO background polling.
+        // One read at app start / account or profile switch; no foreground polling.
+        // A local edit sends one debounced update (multiple quick reorders
+        // coalesce into a single Supabase RPC), just like an event notification.
+        val collectionsOwnerRP204="${state.session?.userId}:${state.activeProfile.id}"
+        var lastLocalEditRP204 by remember(collectionsOwnerRP204) {
+            mutableIntStateOf(state.localExtras.collectionsRevision)
+        }
+        LaunchedEffect(bootstrapped,collectionsOwnerRP204) {
+            if(bootstrapped && state.session!=null && !guestRP150) {
+                try {state.syncCustomCollectionsRP204()}
+                catch(e:kotlinx.coroutines.CancellationException) {throw e}
+                catch(_:Exception) { /* Local collections remain available offline. */ }
+            }
+        }
+        LaunchedEffect(bootstrapped,collectionsOwnerRP204,state.localExtras.collectionsRevision) {
+            val current=state.localExtras.collectionsRevision
+            if(current!=lastLocalEditRP204) {
+                lastLocalEditRP204=current
+                if(bootstrapped && state.session!=null && !guestRP150) {
+                    delay(1500) // debounce several rapid sort changes into one write
+                    try {state.syncCustomCollectionsRP204(edited=true)}
+                    catch(e:kotlinx.coroutines.CancellationException) {throw e}
+                    catch(_:Exception) { /* Offline: local order stays saved. */ }
+                }
+            }
+        }
         CalendarRuntimeRP120("${state.session?.userId ?: "local"}:${state.activeProfile.id}",state.activeProfile.name,state.appForeground)
         LaunchedEffect(bootstrapped, initialPartyCode,state.easyModeRP79) {
             if (bootstrapped && !state.easyModeRP79 && !initialPartyCode.isNullOrBlank() && consumedPartyRP150!=initialPartyCode) {

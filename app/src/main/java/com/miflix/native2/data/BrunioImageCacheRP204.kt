@@ -9,6 +9,7 @@ import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
 import java.util.LinkedHashMap
+import okio.Path.Companion.toPath
 
 /**
  * RP204: one Coil loader for TV and Mobile. Limits RAM on smaller TV boxes;
@@ -26,11 +27,10 @@ object BrunioImageCacheRP204 {
                 }
                 .diskCache {
                     DiskCache.Builder()
-                        .directory(app.cacheDir.resolve("brunio_images"))
+                        .directory(app.cacheDir.resolve("brunio_images").absolutePath.toPath())
                         .maxSizeBytes(if(lowRam) 70L*1024*1024 else 150L*1024*1024)
                         .build()
                 }
-                .memoryCacheMaxSizePercentWhileInBackground(0.30)
                 .build()
         }
     }

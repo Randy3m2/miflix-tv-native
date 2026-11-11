@@ -180,6 +180,13 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
         discoveryLoading=true;discoveryError=false
         try {val contextual=state.discoveryRun(effectiveMood);discoveryRows=state.freshDiscoveryRows("mood:$effectiveMood",(if(discoveryMood.isEmpty()) state.forYou+contextual else contextual).distinctBy {it.cloudId})} catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {discoveryError=true} finally {positionRP165.discoveryRows=discoveryRows;positionRP165.discoveryMood=discoveryMood;discoveryLoading=false}
     }
+    // RP200: one shared overlay for all Home posters, never a player per card.
+    var posterDwellRP200 by remember(discoveryOwner) {mutableStateOf<MediaSummary?>(null)}
+    val activePosterRP200=remember(discoveryOwner) {mutableStateOf<String?>(null)}
+    if(posterDwellRP200!=null) {
+        val selected=posterDwellRP200!!
+        TitleTrailerRP31(state,selected) {posterDwellRP200=null}
+    }
     if(showTrailers) DiscoveryTrailers(state,(state.forYou+state.trending+state.movies+state.series).distinctBy {it.cloudId},mood=discoveryMood) {showTrailers=false}
     if(showAmbientRP199) AmbientCinemaRP199(
         titles=(state.forYou+state.trending+state.movies+state.series),
@@ -229,7 +236,25 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     }
     val openItem: (MediaSummary) -> Unit={ item -> state.launch { state.open(item) } }
     val openCollection: (CollectionTile) -> Unit={ tile -> state.launch { state.openCollection(tile.id,tile.title) } }
-    CompositionLocalProvider(LocalHomePositionRP165 provides positionRP165,LocalSimpleHome provides simple,LocalHomeReturnFocus provides homeReturn,LocalHomeShelfMotion provides shelfMotion,
+    CompositionLocalProvider(
+        LocalPosterFocusRP200 provides {item:MediaSummary,focused:Boolean ->
+            if(focused) activePosterRP200.value=item.cloudId
+            else if(activePosterRP200.value==item.cloudId) activePosterRP200.value=null
+        },
+        LocalPosterDwellTrailerRP200 provides { item:MediaSummary ->
+            if(!state.kidsMode && state.appForeground && !state.discoveryPreviewActive && activePosterRP200.value==item.cloudId) {
+                state.launch {
+                    // Metadata lookup is cancellable by focus changes; absent trailers never open a dialog.
+                    val available=try {state.tmdb.previewTrailers(item).any {it.site.equals("YouTube",true) && it.key.isNotBlank()}}
+                        catch(e:kotlinx.coroutines.CancellationException) {throw e}
+                        catch(_:Exception) {false}
+                    if(available && activePosterRP200.value==item.cloudId &&
+                        state.screen==Screen.HOME && state.appForeground && !state.discoveryPreviewActive)
+                        posterDwellRP200=item
+                }
+            }
+        },
+        LocalHomePositionRP165 provides positionRP165,LocalSimpleHome provides simple,LocalHomeReturnFocus provides homeReturn,LocalHomeShelfMotion provides shelfMotion,
         LocalHomeShelfMore provides {key,title,rows ->
             when(key) {
                 "streaming","franchises_home" -> onNavigate(Screen.COLLECTIONS)

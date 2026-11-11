@@ -24,7 +24,7 @@ internal fun TitleTrailerRP31(state:AppState,item:MediaSummary,close:()->Unit) {
         finally {loading=false}
     }
     val current=trailer
-    if(current!=null) LidomYoutubePlayer(current.key,onWorking={},close=close,preview=true,caption=item.title)
+    if(current!=null) NativeYoutubeRP200(current.key,caption=item.title,close=close,preview=true)
     else PlayerMenuDialog(onDismissRequest=close) {
         Column(Modifier.widthIn(max=520.dp).background(Color(0xFF101010)).padding(26.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
             Text(item.title,color=Color.White)

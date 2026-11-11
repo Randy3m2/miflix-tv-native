@@ -1,13 +1,7 @@
 package com.miflix.native2.ui
 
-import android.annotation.SuppressLint
-import android.os.Handler
-import android.os.Looper
-import android.webkit.JavascriptInterface
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import android.webkit.WebChromeClient
-import android.webkit.WebResourceRequest
+import androidx.annotation.OptIn
+import android.view.View
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,89 +18,81 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.MergingMediaSource
+import androidx.media3.ui.PlayerView
 import androidx.tv.material3.Text
 import com.miflix.native2.data.LidomRepository
+import com.miflix.native2.data.rp200.YoutubeChunkedDataSourceFactory
+import kotlinx.coroutines.CancellationException
 
-private class SplitYoutubeBridgeRP9(val report:(String)->Unit) {
-    var active=true
-    @JavascriptInterface fun error(code:Int) {
-        Handler(Looper.getMainLooper()).post {if(active) report("YouTube · $code")}
-    }
-}
-
-@SuppressLint("SetJavaScriptEnabled")
+/** RP200: native LIDOM Multiview tile; no embedded YouTube iframe. */
+@OptIn(UnstableApi::class)
 @Composable
 internal fun LidomSplitYoutubeTileRP9(req:PlayerRequest,audible:Boolean,modifier:Modifier,click:()->Unit) {
     val context=LocalContext.current
     val video=LidomRepository.youtubeId(req.stream.url)
-    var web by remember(req.playbackId) {mutableStateOf<WebView?>(null)}
-    var focused by remember {mutableStateOf(false)}
+    var focused by remember(req.playbackId) {mutableStateOf(false)}
     var message by remember(req.playbackId) {mutableStateOf("")}
-    val bridge=remember(req.playbackId) {SplitYoutubeBridgeRP9 {message=it}}
+    var ready by remember(req.playbackId) {mutableStateOf(false)}
+    val player=remember(req.playbackId) {ExoPlayer.Builder(context.applicationContext).build()}
     val lifecycle=context.playbackActivity()?.lifecycle
-    val active=lifecycle?.currentState?.isAtLeast(Lifecycle.State.STARTED)!=false
-    val latestSound by rememberUpdatedState(audible)
-    DisposableEffect(web,lifecycle) {
-        val view=web
-        val observer=LifecycleEventObserver {_,event ->
-            if(event==Lifecycle.Event.ON_STOP) {
-                view?.evaluateJavascript("brunioState(false,false)",null);view?.onPause()
-            } else if(event==Lifecycle.Event.ON_START) {
-                view?.onResume();view?.evaluateJavascript("brunioState($latestSound,true)",null)
+    val running=lifecycle?.currentState?.isAtLeast(Lifecycle.State.STARTED)!=false
+    val readyState by rememberUpdatedState(ready)
+    LaunchedEffect(video) {
+        if(video==null) {message=tr("Enlace de YouTube inválido","Invalid YouTube URL");return@LaunchedEffect}
+        message="";ready=false
+        try {
+            val source=NativeTrailerResolverRP200.get(video)
+            if(source==null) {message=tr("No se pudo resolver el directo","Live stream unavailable");return@LaunchedEffect}
+            val factory=DefaultMediaSourceFactory(YoutubeChunkedDataSourceFactory())
+            if(!source.audioUrl.isNullOrBlank()) {
+                player.setMediaSource(MergingMediaSource(
+                    factory.createMediaSource(MediaItem.fromUri(source.videoUrl)),
+                    factory.createMediaSource(MediaItem.fromUri(source.audioUrl))
+                ))
+            } else player.setMediaSource(factory.createMediaSource(MediaItem.fromUri(source.videoUrl)))
+            player.prepare();ready=true
+        } catch(e:CancellationException) {throw e}
+          catch(_:Exception) {message=tr("No se pudo reproducir el directo","Could not play live stream")}
+    }
+    LaunchedEffect(audible,running,ready) {
+        player.volume=if(audible) 1f else 0f
+        player.playWhenReady=running && ready
+    }
+    DisposableEffect(player) {
+        val listener=object:Player.Listener {
+            override fun onPlayerError(cause:PlaybackException) {
+                message=tr("No se pudo reproducir el directo","Could not play live stream")
             }
+        }
+        player.addListener(listener)
+        onDispose {player.removeListener(listener)}
+    }
+    DisposableEffect(lifecycle,player) {
+        val observer=LifecycleEventObserver {_,event ->
+            if(event==Lifecycle.Event.ON_STOP) player.playWhenReady=false
+            else if(event==Lifecycle.Event.ON_START && readyState) player.playWhenReady=true
         }
         lifecycle?.addObserver(observer)
-        onDispose {lifecycle?.removeObserver(observer)}
-    }
-    DisposableEffect(req.playbackId) {
-        onDispose {
-            bridge.active=false
-            web?.let {v ->
-                v.evaluateJavascript("brunioState(false,false)",null)
-                v.stopLoading();v.removeJavascriptInterface("BruniOSplit");v.onPause();v.destroy()
-            }
-            web=null
-        }
+        onDispose {lifecycle?.removeObserver(observer);player.release()}
     }
     Box(modifier.onFocusChanged {focused=it.hasFocus}.tvClick(click).focusable()
         .border(if(focused) 3.dp else 1.dp,if(focused) Accent else Color(0xFF444444))
         .padding(4.dp).background(Color.Black)) {
-        if(video!=null) AndroidView(factory={c ->
-            WebView(c).apply {
-                setBackgroundColor(android.graphics.Color.BLACK)
-                isFocusable=false;isFocusableInTouchMode=false
-                settings.javaScriptEnabled=true;settings.domStorageEnabled=true
-                settings.allowFileAccess=false;settings.allowContentAccess=false
-                settings.mixedContentMode=android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
-                settings.mediaPlaybackRequiresUserGesture=false
-                webChromeClient=WebChromeClient()
-                webViewClient=object:WebViewClient() {
-                    override fun shouldOverrideUrlLoading(view:WebView,request:WebResourceRequest)=request.isForMainFrame
-                }
-                addJavascriptInterface(bridge,"BruniOSplit")
-                val origin="https://"+c.packageName
-                val html="""<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>
-                html,body,#player{margin:0;width:100%;height:100%;background:black;overflow:hidden}
-                </style></head><body><div id="player"></div><script>
-                var p=null,ready=false,sound=$audible,playing=$active;
-                function brunioState(s,a){sound=s;playing=a;if(!ready)return;
-                if(sound)p.unMute();else p.mute();if(playing)p.playVideo();else p.pauseVideo();}
-                function onYouTubeIframeAPIReady(){p=new YT.Player('player',{width:'100%',height:'100%',videoId:'$video',
-                playerVars:{autoplay:0,controls:1,playsinline:1,origin:'$origin'},
-                events:{onReady:function(){ready=true;brunioState(sound,playing);},
-                onError:function(e){BruniOSplit.error(e.data);},
-                onAutoplayBlocked:function(){BruniOSplit.error(0);}}});}
-                </script><script src="https://www.youtube.com/iframe_api"></script></body></html>"""
-                loadDataWithBaseURL(origin+"/",html,"text/html","UTF-8",null)
-                web=this
-            }
-        },update={it.evaluateJavascript("brunioState($audible,$active)",null)},modifier=Modifier.fillMaxSize())
-        // Keep remote focus on the tile; OK opens the shared multiview controls.
+        AndroidView(
+            factory={c->PlayerView(c).apply {useController=false;this.player=player;resizeMode=androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT}},
+            modifier=Modifier.fillMaxSize()
+        )
         Box(Modifier.fillMaxSize().clickable(onClick=click))
         Text((if(audible) "♫  " else "")+req.item.title,color=Color.White,fontSize=15.sp,
             modifier=Modifier.align(Alignment.BottomStart).background(Color(0xB0000000)).padding(8.dp))
-        if(message.isNotBlank() || video==null) Text(
-            tr("No se pudo reproducir YouTube. OK para elegir otra fuente.","YouTube could not play. Press OK to choose another source.")+" "+message,
+        if(message.isNotBlank()) Text(message+" · "+tr("OK para elegir otra fuente","OK to choose another source"),
             color=Color.White,modifier=Modifier.align(Alignment.Center).background(Color.Black).padding(12.dp))
     }
 }

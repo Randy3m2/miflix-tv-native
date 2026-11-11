@@ -2,6 +2,12 @@ name: Build MiFlix Native TV APK
 
 on:
   workflow_dispatch:
+    inputs:
+      test_only:
+        description: 'RP200 test build only: do not publish release or change native-latest'
+        required: true
+        type: boolean
+        default: true
   push:
     branches: [main]
     paths:
@@ -90,6 +96,7 @@ jobs:
             update.json
 
       - name: Publish versioned release
+        if: ${{ !inputs.test_only && github.ref == 'refs/heads/main' }}
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ steps.prepare.outputs.version }}
@@ -100,6 +107,7 @@ jobs:
           gh release upload "$TAG" "${RELEASE_APK}" update.json --clobber
 
       - name: Update permanent latest channel
+        if: ${{ !inputs.test_only && github.ref == 'refs/heads/main' }}
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_VERSION: ${{ steps.prepare.outputs.version }}

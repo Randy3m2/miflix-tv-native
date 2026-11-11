@@ -78,10 +78,10 @@ internal fun headphoneAudioProcessor(stereoOutput: () -> Boolean): AudioProcesso
 
 @UnstableApi
 @Suppress("DEPRECATION")
-internal fun headphoneAwareAudioSink(context: Context): AudioSink {
+internal fun headphoneAwareAudioSink(context: Context,captureRP206:SubtitleAutoSyncRP206?=null): AudioSink {
     val processor = headphoneAudioProcessor { hasHeadphoneOutput(context) }
     val sink = DefaultAudioSink.Builder(context).setEnableFloatOutput(false)
-        .setEnableAudioTrackPlaybackParams(false).setAudioProcessors(arrayOf(processor)).build()
+        .setEnableAudioTrackPlaybackParams(false).setAudioProcessors(if(captureRP206!=null) arrayOf(processor,SubtitleVoiceTapRP206(captureRP206)) else arrayOf(processor)).build()
     return object : ForwardingAudioSink(sink) {
         override fun supportsFormat(format: Format): Boolean =
             getFormatSupport(format) != AudioSink.SINK_FORMAT_UNSUPPORTED

@@ -17,8 +17,9 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.unit.IntOffset
-import kotlin.math.roundToInt
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -484,9 +485,8 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
     val targetRP195=navBoundsRP195[highlightedRP195]
     val targetXRP195=(targetRP195?.first ?: navOriginRP195)-navOriginRP195
     val targetWRP195=targetRP195?.second ?: 0f
-    val pillXRP195 by animateFloatAsState(targetXRP195,tween(175,easing=LinearOutSlowInEasing),label="navPillXRP195")
-    val pillWRP195 by animateFloatAsState(targetWRP195,tween(175,easing=LinearOutSlowInEasing),label="navPillWidthRP195")
-    val navDensityRP195=LocalDensity.current
+    val pillXRP195=animateFloatAsState(targetXRP195,tween(175,easing=LinearOutSlowInEasing),label="navPillXRP195")
+    val pillWRP195=animateFloatAsState(targetWRP195,tween(175,easing=LinearOutSlowInEasing),label="navPillWidthRP195")
     fun navigateHeader(destination:Screen) {dismissAssistantRP160();HeaderNavigationRP108.policy.navigate(owner,destination.name);onNavigate(destination)}
     val navItems=(if(kids) listOf(Screen.HOME to "Kids",Screen.SEARCH to tr("Buscar","Search"),Screen.MY_LIST to tr("Mi lista","My List")) else listOf(
         Screen.HOME to tr("Inicio","Home"),
@@ -553,16 +553,20 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
         }
         }
         } // symmetric profile slot
-        Box(Modifier.weight(1f).height(52.dp).onGloballyPositioned {navOriginRP195=it.positionInRoot().x}) {
-            if(targetWRP195>1f) {
-                Box(Modifier
-                    .offset { IntOffset(pillXRP195.roundToInt(),0) }
-                    .align(Alignment.CenterStart)
-                    .width(with(navDensityRP195) {pillWRP195.toDp()})
-                    .height(38.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(Color(0xFFF3F3F3)))
-            }
+        // RP196: paint the sliding indicator within the existing 52dp nav slot.
+        // Draw phase animation cannot change measurement, parent height or Home layout.
+        Box(Modifier.weight(1f).height(52.dp)
+            .onGloballyPositioned {navOriginRP195=it.positionInRoot().x}
+            .drawBehind {
+                val x=pillXRP195.value
+                val w=pillWRP195.value
+                if(w>1f) drawRoundRect(
+                    color=Color(0xFFF3F3F3),
+                    topLeft=Offset(x,(size.height-38.dp.toPx())/2f),
+                    size=Size(w,38.dp.toPx()),
+                    cornerRadius=androidx.compose.ui.geometry.CornerRadius(19.dp.toPx())
+                )
+            }) {
             androidx.compose.foundation.lazy.LazyRow(Modifier.fillMaxSize(),
                 state=navScroll,verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp,Alignment.CenterHorizontally),
                 contentPadding=PaddingValues(horizontal=4.dp,vertical=6.dp)) {

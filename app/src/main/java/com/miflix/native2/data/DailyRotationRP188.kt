@@ -20,6 +20,33 @@ internal object DailyRotationPolicyRP188 {
             }
         }.take(maxProbes)
     }
+    /** RP203: candidates across upcoming schedules, without previously displayed titles.
+     * Uses catalog IDs (not schedule entry IDs), preventing the same movie on later dates.
+     * A finite catalog eventually runs out; in that case we show no repeats instead of
+     * silently recycling films. Returning on the same date is handled by persisted history.
+     */
+    fun unseenCandidates(year:Int,day:Int,seen:Set<String>,filter:String=""):List<TirsoScheduleItemRP174> {
+        val calendar=java.util.GregorianCalendar().apply {
+            clear()
+            set(java.util.Calendar.YEAR,year)
+            set(java.util.Calendar.DAY_OF_YEAR,day)
+        }
+        val unique=LinkedHashMap<String,TirsoScheduleItemRP174>()
+        repeat(42) {offset ->
+            val date=calendar.clone() as java.util.Calendar
+            date.add(java.util.Calendar.DAY_OF_YEAR,offset)
+            val candidates=candidates(date.get(java.util.Calendar.YEAR),date.get(java.util.Calendar.DAY_OF_YEAR))
+            candidates.forEach {entry ->
+                val identity=identity(entry)
+                if(identity !in seen && (filter.isBlank() || if(entry.isMovie) filter=="movie" else filter=="series"))
+                    unique.putIfAbsent(identity,entry)
+            }
+        }
+        return unique.values.toList()
+    }
+    fun identity(entry:TirsoScheduleItemRP174):String=
+        (if(entry.isMovie) "movie:" else "series:")+entry.tmdbId
+
     fun homeOrder(saved:List<String>):List<String> {
         val order=HomeOrderPolicyRP106.order(saved).toMutableList()
         order.remove(rowKey)

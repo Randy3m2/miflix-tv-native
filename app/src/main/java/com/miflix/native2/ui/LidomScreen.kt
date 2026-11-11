@@ -231,7 +231,7 @@ internal fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTea
         if(onSplitSelect!=null || splitMode) play(source,com.miflix.native2.model.StreamChoice("YouTube","https://www.youtube.com/watch?v=$id",source.name,addonName="LIDOM"))
         else video=LidomYoutubeSelection(team.id,source.id,id)
     },close={youtube=null})}
-    video?.let {playing -> LidomYoutubePlayer(playing.video,onWorking={repo.working(team.id,playing.source,playing.video)},close={video=null})}
+    video?.let {playing -> NativeYoutubeRP200(playing.video,caption=team.name+" · LIVE",onWorking={repo.working(team.id,playing.source,playing.video)},close={video=null},preview=false)}
 }
 
 @Composable

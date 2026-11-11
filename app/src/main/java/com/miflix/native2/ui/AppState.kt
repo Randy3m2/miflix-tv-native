@@ -300,25 +300,58 @@ class AppState(context: Context) {
     fun flushCinemaStats()=cinemaStats.flush()
     fun cinemaReport()=cinemaStats.snapshot(ratingsKey())
     private var homeOrderRevision by mutableIntStateOf(0)
+    var homeEditRevisionRP205 by mutableIntStateOf(0)
+        private set
+    private fun homeStampKeyRP205()="home_sync_stamp_rp205:${ratingsKey()}"
+    internal fun homeStampRP205():Long {
+        val saved=playbackPrefs.getLong(homeStampKeyRP205(),0L)
+        return if(saved==0L && (savedHomeOrderRP158().isNotEmpty() ||
+            playbackPrefs.contains("hidden_home_rows:${ratingsKey()}"))) 1L else saved
+    }
+    private fun markHomeEditedRP205() {
+        playbackPrefs.edit().putLong(homeStampKeyRP205(),maxOf(System.currentTimeMillis(),homeStampRP205()+1)).apply()
+        homeEditRevisionRP205++
+    }
+    internal fun homeSettingsRP205():org.json.JSONObject=org.json.JSONObject()
+        .put("order",org.json.JSONArray(savedHomeOrderRP158()))
+        .put("hidden",org.json.JSONArray(hiddenHomeRows.toList()))
+    internal fun applyHomeSettingsRP205(body:org.json.JSONObject,stamp:Long) {
+        val order=body.optJSONArray("order") ?: org.json.JSONArray()
+        val hidden=body.optJSONArray("hidden") ?: org.json.JSONArray()
+        val allowed=HomeRows.map {it.first}.toSet()
+        val keys=(0 until order.length()).map {order.optString(it)}.filter {it in allowed}.distinct()
+        val hiddenKeys=(0 until hidden.length()).map {hidden.optString(it)}.filter {it in allowed}.toSet()
+        playbackPrefs.edit()
+            .putString("home_order:${ratingsKey()}",org.json.JSONArray(keys).toString())
+            .putStringSet("hidden_home_rows:${ratingsKey()}",hiddenKeys)
+            .putLong(homeStampKeyRP205(),stamp)
+            .putBoolean("live_favorites_enabled_rp205:${ratingsKey()}","live_favorites" !in hiddenKeys).apply()
+        homeOrderRevision++ // UI redraw, not a new cloud edit.
+    }
     val homeRowOrder:List<String> get() {homeOrderRevision;val a=runCatching {org.json.JSONArray(playbackPrefs.getString("home_order:${ratingsKey()}","[]"))}.getOrDefault(org.json.JSONArray());val keys=(0 until a.length()).map {a.getString(it)}.distinct().toMutableList()
         if(keys.isNotEmpty() && "novelas" !in keys) {val anchor=listOf("genres_home","streaming","continue").firstOrNull {it in keys};keys.add(if(anchor!=null) keys.indexOf(anchor)+1 else 0,"novelas")};if(keys.isNotEmpty() && "comfort_comedies" !in keys) {val anchor=listOf("genres_home","streaming","continue").firstOrNull {it in keys};keys.add(if(anchor!=null) keys.indexOf(anchor)+1 else 0,"comfort_comedies")};assistantHomeEpochRP158;return com.miflix.native2.data.AssistantLocalRP158.seasonalOrder(keys,com.miflix.native2.data.AssistantLocalRP158.event(appContext,localExtrasScope()),java.time.LocalDate.now())}
     internal fun savedHomeOrderRP158():List<String> = runCatching {val a=org.json.JSONArray(playbackPrefs.getString("home_order:${ratingsKey()}","[]"));(0 until a.length()).map {a.getString(it)}}.getOrDefault(emptyList())
-    fun saveHomeRowOrder(keys:List<String>) {playbackPrefs.edit().putString("home_order:${ratingsKey()}",org.json.JSONArray(keys.distinct()).toString()).apply();homeOrderRevision++}
+    fun saveHomeRowOrder(keys:List<String>) {playbackPrefs.edit().putString("home_order:${ratingsKey()}",org.json.JSONArray(keys.distinct()).toString()).apply();homeOrderRevision++;markHomeEditedRP205()}
 
     val hiddenHomeRows:Set<String> get() {
         homeOrderRevision
         assistantHomeEpochRP158
         val hidden=playbackPrefs.getStringSet("hidden_home_rows:${ratingsKey()}",emptySet()).orEmpty().toSet()
-        return if(com.miflix.native2.data.AssistantLocalRP158.event(appContext,localExtrasScope()) && java.time.LocalDate.now().monthValue==10) hidden-setOf("horror_movies","seasonal") else hidden
+        val configured=if(playbackPrefs.getBoolean("live_favorites_enabled_rp205:${ratingsKey()}",false)) hidden else hidden+"live_favorites"
+        return if(com.miflix.native2.data.AssistantLocalRP158.event(appContext,localExtrasScope()) && java.time.LocalDate.now().monthValue==10) configured-setOf("horror_movies","seasonal") else configured
     }
     fun setHomeRowVisible(key:String,visible:Boolean) {
         val hidden=hiddenHomeRows
-        playbackPrefs.edit().putStringSet("hidden_home_rows:${ratingsKey()}",if(visible) hidden-key else hidden+key).apply()
+        val edit=playbackPrefs.edit().putStringSet("hidden_home_rows:${ratingsKey()}",if(visible) hidden-key else hidden+key)
+        if(key=="live_favorites") edit.putBoolean("live_favorites_enabled_rp205:${ratingsKey()}",visible)
+        edit.apply()
         homeOrderRevision++
+        markHomeEditedRP205()
     }
     fun restoreHomeRows() {
-        playbackPrefs.edit().remove("hidden_home_rows:${ratingsKey()}").apply()
+        playbackPrefs.edit().remove("hidden_home_rows:${ratingsKey()}").putBoolean("live_favorites_enabled_rp205:${ratingsKey()}",false).apply()
         homeOrderRevision++
+        markHomeEditedRP205()
     }
 
     var hiddenAvatars by mutableStateOf(playbackPrefs.getStringSet("hidden_avatars",emptySet()).orEmpty().toSet())

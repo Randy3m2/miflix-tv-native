@@ -269,7 +269,7 @@ fun MediaCard(
     var focused by remember(item.cloudId) { mutableStateOf(false) }
     val dwellTrailerRP200=LocalPosterDwellTrailerRP200.current
     val latestDwellRP200 by rememberUpdatedState(dwellTrailerRP200)
-    LaunchedEffect(item.cloudId,focused,dwellTrailerRP200) {
+    LaunchedEffect(item.cloudId,focused) {
         if(focused && dwellTrailerRP200!=null) {
             kotlinx.coroutines.delay(7500L)
             if(focused) latestDwellRP200?.invoke(item)

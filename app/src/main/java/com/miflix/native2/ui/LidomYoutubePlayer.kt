@@ -136,7 +136,8 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
                 if(!preview) FocusButton(tr("Reintentar","Retry")) {status="";recorded=false;retryRP165++;view?.reload()}
                 if(!preview) FocusButton(tr("Probar otra fuente","Try another source"),onClick=close)
             }
-            AndroidView(modifier=Modifier.weight(1f).fillMaxWidth().then(if(preview) Modifier.focusRequester(previewFocus).focusable() else Modifier),factory={c ->
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+            AndroidView(modifier=Modifier.fillMaxSize().then(if(preview) Modifier.focusRequester(previewFocus).focusable() else Modifier),factory={c ->
                 val frame=android.widget.FrameLayout(c)
                 val web=WebView(c).apply {
                     layoutParams=android.widget.FrameLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT,android.view.ViewGroup.LayoutParams.MATCH_PARENT)
@@ -164,6 +165,11 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
                 frame.addView(web)
                 frame
             })
+            // Cover the iframe setup phase so YouTube metadata does not flash before playback.
+            if(preview && status!="playing") Box(Modifier.fillMaxSize().background(Color.Black),contentAlignment=androidx.compose.ui.Alignment.Center) {
+                Text(if(status.startsWith("error:")) tr("Tráiler no disponible","Trailer unavailable") else tr("Preparando tráiler…","Preparing trailer…"),color=Color.White.copy(alpha=.7f),fontSize=15.sp)
+            }
+            }
             if(!preview && !fullscreenRP165) Row(Modifier.fillMaxWidth().padding(10.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                 FocusButton(tr("Volver a fuentes","Back to sources"),onClick=close)
                 FocusButton(tr("Pausa / Reproducir","Pause / Play")) {view?.evaluateJavascript("brunioPlayPause()",null)}

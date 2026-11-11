@@ -7,6 +7,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -23,12 +24,22 @@ import java.util.Calendar
 internal fun DailyRotationRowRP188(state:AppState,mobile:Boolean=false,filter:String="") {
     if(state.kidsMode || state.partyRole==PartyRole.GUEST) return
     val owner=state.localExtrasScope()
+    val context=LocalContext.current
+    val rotationPrefs=remember(context) {context.getSharedPreferences("rp203_daily_rotation_history",android.content.Context.MODE_PRIVATE)}
     var calendar by remember(owner) {mutableStateOf(Calendar.getInstance())}
     LaunchedEffect(owner,state.appForeground) {
         calendar=Calendar.getInstance()
         while(state.appForeground) {delay(60_000);calendar=Calendar.getInstance()}
     }
     val year=calendar.get(Calendar.YEAR);val day=calendar.get(Calendar.DAY_OF_YEAR)
+    val historyKey=remember(owner,filter) {"used:"+owner+":"+filter}
+    val todayKey=remember(owner,year,day,filter) {"today:"+owner+":"+year+":"+day+":"+filter}
+    // The same day's selection can be reopened; exclude only previous days' picks.
+    val seenPrior=remember(owner,year,day,filter) {
+        val all=rotationPrefs.getStringSet(historyKey,emptySet()).orEmpty()
+        val todays=rotationPrefs.getStringSet(todayKey,emptySet()).orEmpty()
+        all-todays
+    }
     val key=listOf(owner,year,day,filter,state.interfaceLanguage,state.audioLanguage,state.streamSizeLimitGb,state.easyModeRP79,state.nativeOnlyRP75,state.nativeSpanishOnlyRP77,state.nativeSourceEnabled,state.addonManifests.toList().hashCode()).joinToString(":")
     val rows=remember(key) {mutableStateListOf<Pair<TirsoScheduleItemRP174,MediaSummary>>()}
     var loading by remember(key) {mutableStateOf(true)}
@@ -38,12 +49,17 @@ internal fun DailyRotationRowRP188(state:AppState,mobile:Boolean=false,filter:St
         if(opening || !state.appForeground) return@LaunchedEffect
         loading=true
         try {
-            val candidates=DailyRotationPolicyRP188.candidates(year,day).filter {filter.isBlank() || (if(it.isMovie) "movie" else "series")==filter}
+            val candidates=DailyRotationPolicyRP188.unseenCandidates(year,day,seenPrior,filter).take(36)
             state.dailyRotationRP188.load(key,candidates,{state.verifyTirsoItemRP180(it)}) {entry->
                 val target=state.tirsoTargetRP181(entry)
-                if(target!=null && rows.none {it.first.id==entry.id}) {
+                if(target!=null && rows.none {DailyRotationPolicyRP188.identity(it.first)==DailyRotationPolicyRP188.identity(entry)}) {
                     val title=target.item.title+if(target.season>0) " · S${target.season} E${target.episode}" else ""
                     rows.add(entry to target.item.copy(title=title))
+                    val identity=DailyRotationPolicyRP188.identity(entry)
+                    rotationPrefs.edit()
+                        .putStringSet(historyKey,rotationPrefs.getStringSet(historyKey,emptySet()).orEmpty()+identity)
+                        .putStringSet(todayKey,rotationPrefs.getStringSet(todayKey,emptySet()).orEmpty()+identity)
+                        .apply()
                 }
             }
         } finally {loading=false}

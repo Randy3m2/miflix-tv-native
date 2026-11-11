@@ -8,7 +8,6 @@ import coil3.imageLoader
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import coil3.request.ImageRequest
-import coil3.request.Disposable
 import java.util.LinkedHashMap
 
 /**

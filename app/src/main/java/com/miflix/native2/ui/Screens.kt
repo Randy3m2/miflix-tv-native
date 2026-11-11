@@ -183,6 +183,8 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     var startupInteractedRP129 by remember(discoveryOwner) {mutableStateOf(false)}
     val genreScroll=positionRP165.rail("genres")
     val firstGenre=remember {FocusRequester()}
+    // RP198: stable focus anchors for vertical rows; never reset Home on D-pad navigation.
+    val rowFocusRP198=remember(positionRP165) {mutableMapOf<String,FocusRequester>()}
     val scroll=positionRP165.vertical
     LaunchedEffect(state.activeProfile.id,state.interfaceLanguage) {if(state.trending.isEmpty()) state.loadHome()}
     val heroFocus=remember { FocusRequester() }
@@ -404,7 +406,33 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 positionRP165.sectionKeys=orderedSectionsRP165.map {it.key}
                 orderedSectionsRP165.forEach {section ->
                     val index=shelfIndex++
-                    item(key=section.key) {CompositionLocalProvider(LocalHomeShelfKey provides section.key) {HomeShelfFrame(index,scroll,Modifier.fillParentMaxHeight().fillMaxWidth(),section.content)}}
+                    val focusTargetRP198=rowFocusRP198.getOrPut(section.key) {FocusRequester()}
+                    item(key=section.key) {
+                        CompositionLocalProvider(LocalHomeShelfKey provides section.key) {
+                            HomeShelfFrame(index,scroll,
+                                Modifier.fillParentMaxHeight().fillMaxWidth()
+                                    .focusRequester(focusTargetRP198)
+                                    .onPreviewKeyEvent {event ->
+                                        if(section.key!="streaming" || event.type!=KeyEventType.KeyDown ||
+                                            event.nativeKeyEvent.keyCode!=android.view.KeyEvent.KEYCODE_DPAD_UP ||
+                                            event.nativeKeyEvent.repeatCount!=0) false
+                                        else {
+                                            val previousIndex=positionRP165.sectionKeys.indexOf(section.key)-1
+                                            val previousKey=positionRP165.sectionKeys.getOrNull(previousIndex)
+                                            val previousFocus=previousKey?.let {rowFocusRP198[it]}
+                                            if(previousIndex>=0 && previousFocus!=null) {
+                                                scope.launch {
+                                                    scroll.scrollToItem(previousIndex)
+                                                    withFrameNanos { }
+                                                    runCatching {previousFocus.requestFocus()}
+                                                }
+                                                true
+                                            } else false
+                                        }
+                                    },
+                                section.content)
+                        }
+                    }
                 }
             }
         }
@@ -412,22 +440,20 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
         Sidebar(Screen.HOME,state.activeProfile.name,onNavigate,state.unreadNoticeCount,state.activeProfile,
             backgroundAlpha=headerShade,onHeaderFocused=null,onEditPicture={ state.profilePhotoEditor=state.activeProfile },kids=state.kidsMode,
             onMoveDown=({
+                // RP198: exit header toward the visible shelf; preserve scroll and row memory.
                 cancelHeaderWork()
                 headerWork.add(scope.launch {
-                    if(positionRP165.focusKey!=null) {
-                        homeReturn.pending=positionRP165.focusKey
-                        repeat(4) {androidx.compose.runtime.withFrameNanos { }}
-                        if(homeReturn.pending!=null) {
-                            homeReturn.pending=null
-                            runCatching {contentFocus.requestFocus()}
-                        }
-                        return@launch
-                    }
-                    shelfMotion.reset();scroll.scrollToItem(0)
-                    for(attempt in 0 until 3) {
-                        androidx.compose.runtime.withFrameNanos { }
-                        val target=if(state.localRecommendations(state.trending).isNotEmpty()) heroFocus else contentFocus
-                        if(runCatching {target.requestFocus()}.getOrDefault(false)) break
+                    withFrameNanos { }
+                    val selectedRow=positionRP165.rowKey
+                    val visible=scroll.layoutInfo.visibleItemsInfo.any {it.key==selectedRow}
+                    val target=if(visible) rowFocusRP198[selectedRow] else null
+                    val resolved=target?.let {runCatching {it.requestFocus()}.getOrDefault(false)} ?: false
+                    if(!resolved) {
+                        if(scroll.firstVisibleItemIndex==0 &&
+                            state.localRecommendations(state.trending).isNotEmpty()) {
+                            if(!runCatching {heroFocus.requestFocus()}.getOrDefault(false))
+                                runCatching {contentFocus.requestFocus()}
+                        } else runCatching {contentFocus.requestFocus()}
                     }
                 })
                 Unit

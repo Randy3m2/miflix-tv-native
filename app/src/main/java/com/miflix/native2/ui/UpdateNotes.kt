@@ -414,7 +414,7 @@ internal object UpdateNotes {
         "RP205: Explore y Elige tu vibe con tarjetas más espaciosas y filas uniformes; configuración sincronizable por evento, sin consultas periódicas (requiere SQL RP205)." to "RP205: improved Explore and Pick Your Vibe layout, optional live favorites, and event-driven Home settings sync without polling (requires RP205 SQL)."
     )
     val rp206Changes=listOf(
-        "RP206: botón Autosync opcional en subtítulos (TV y móvil). Analiza localmente audio PCM y marcas SRT/VTT solo al pulsarlo; aplica ajustes únicamente con alta confianza y mantiene sincronización manual y normal sin cambios." to "RP206: optional Autosync button in TV/Mobile subtitles. Analyzes local PCM activity and SRT/VTT timestamps only when pressed; applies only high-confidence corrections, leaving normal and manual timing intact.",
+        "RP206: botón Autosync opcional en subtítulos (TV y móvil). Analiza localmente audio PCM y marcas SRT/VTT solo al pulsarlo; aplica ajustes únicamente con alta confianza y mantiene sincronización manual y normal sin cambios." to "RP206: optional on-demand Autosync in TV/Mobile subtitles; compares local PCM audio activity to SRT/VTT timestamps with conservative confidence gating; manual and normal timing remain unchanged.",
         "RP206: pistas integradas o audio no analizable conservan el timing anterior; ningún análisis se envía a Supabase." to "RP206: embedded subtitle or unavailable audio analysis leave timing unchanged; no audio analysis is sent to Supabase."
     )
     val changes=rp206Changes

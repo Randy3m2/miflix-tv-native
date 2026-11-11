@@ -23,7 +23,7 @@ android {
         minSdk 23
         targetSdk 36
         versionCode 22339
-        versionName '2.0.0-rp200-dev'
+        versionName '2.0.0-rp200'
 
         buildConfigField 'String', 'SUPABASE_URL', '"https://iwvhigqxsvvgyzdygiqa.supabase.co"'
         buildConfigField 'String', 'SUPABASE_KEY', '"sb_publishable_TdzEQXtDadVMKhSLVe0ihw_EAQ4iNsd"'

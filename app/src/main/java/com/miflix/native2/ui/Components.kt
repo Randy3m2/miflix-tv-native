@@ -204,7 +204,9 @@ fun FocusButton(
     val actionFocused=actionFocusVisibleRP64(focused)
     val actionShape=themeShapeRP181(if(ThemeRuntimeRP177.id.isBlank()) 50.dp else 16.dp)
     val focusScale by animateFloatAsState(if(actionFocused) 1.024f else 1f,tween(115),label="actionFocusScaleRP193")
-    val borderTone by animateColorAsState(if(actionFocused) Accent else if(destructive) Color(0xFF78404B) else if(primary) Accent.copy(alpha=.55f) else PanelBorder,tween(115),label="actionBorderRP193")
+    val borderTone by animateColorAsState(if(actionFocused) Color.White else if(destructive) Color(0xFF78404B) else if(primary) Accent.copy(alpha=.55f) else PanelBorder,tween(115),label="actionBorderRP193")
+    val focusFillRP197 by animateColorAsState(if(actionFocused) Color(0xFFF5F5F5) else Color.Transparent,tween(125),label="actionWhiteFillRP197")
+    val textToneRP197 by animateColorAsState(if(actionFocused) Color(0xFF161616) else if(destructive) Color(0xFFFFB9C3) else Color.White,tween(125),label="actionTextRP197")
     Box(
         modifier
             .graphicsLayer { scaleX=focusScale; scaleY=focusScale }
@@ -215,16 +217,17 @@ fun FocusButton(
 
             .then(if (onLongClick != null) Modifier.tvPlaybackClick(onClick, onLongClick) else Modifier.tvClick(onClick))
             .clickable(onClick = onClick)
-            .background(GlassActionBrushRP108(actionFocused,primary,destructive), actionShape)
-            .border(if (actionFocused) 2.dp else 1.dp, borderTone, actionShape)
-            .themeOrnamentRP181()
+            .background(GlassActionBrushRP108(false,primary,destructive),actionShape)
+            .background(focusFillRP197,actionShape)
+            .border(if (actionFocused) 2.dp else 1.dp,borderTone,actionShape)
+            .then(if(actionFocused) Modifier else Modifier.themeOrnamentRP181())
             .padding(horizontal = horizontalPadding, vertical = if(LocalSimpleHome.current) 16.dp else 12.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(9.dp)) {
         Text(
             text,
-            color = if(actionFocused) Color.White else if(destructive) Color(0xFFFFB9C3) else Color.White,
+            color = textToneRP197,
             fontSize = if(LocalSimpleHome.current) 20.sp else 15.sp, lineHeight=if(LocalSimpleHome.current) 25.sp else 20.sp,
             fontWeight = FontWeight.Bold, maxLines=1, overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis
         )
@@ -236,11 +239,13 @@ fun FocusButton(
 fun BackIconButton(onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     val actionFocused=actionFocusVisibleRP64(focused)
+    val focusFillRP197 by animateColorAsState(if(actionFocused) Color(0xFFF5F5F5) else Color.Transparent,tween(125),label="backFillRP197")
     Box(Modifier.size(44.dp).semantics { contentDescription=tr("Volver","Back") }.onFocusChanged { focused=it.isFocused }.tvClick(onClick)
-        .clickable(onClick=onClick).background(GlassActionBrushRP108(actionFocused),RoundedCornerShape(22.dp))
+        .clickable(onClick=onClick).background(GlassActionBrushRP108(false),RoundedCornerShape(22.dp))
+        .background(focusFillRP197,RoundedCornerShape(22.dp))
         .border(if(actionFocused) 2.dp else 1.dp,if(actionFocused) Accent else Color(0x557D8AA3),RoundedCornerShape(22.dp)),
         contentAlignment=Alignment.Center) {
-        Text("‹",color=if(actionFocused) Color.White else Color.White,fontSize=32.sp, lineHeight=38.sp)
+        Text("‹",color=if(actionFocused) Color(0xFF161616) else Color.White,fontSize=32.sp, lineHeight=38.sp)
     }
 }
 
@@ -605,11 +610,13 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
 @Composable
 private fun NotificationButton(count: Int,modifier:Modifier=Modifier,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
+    val focusFillRP197 by animateColorAsState(if(focused) Color(0xFFF5F5F5) else Color.Transparent,tween(125),label="alertFillRP197")
     val focusScaleRP194 by animateFloatAsState(if(focused) 1.055f else 1f,tween(110),label="alertNavScale")
     Box(modifier.size(40.dp).graphicsLayer { scaleX=focusScaleRP194;scaleY=focusScaleRP194 }.semantics { contentDescription="${tr("Avisos","Alerts")}: $count" }.onFocusChanged { focused=it.isFocused }.tvClick(onClick).clickable(onClick=onClick)
-        .background(GlassNavBrushRP106(focused,false),RoundedCornerShape(50))
+        .background(GlassNavBrushRP106(false,false),RoundedCornerShape(50))
+        .background(focusFillRP197,RoundedCornerShape(50))
         .border(1.dp,Accent.copy(alpha=if(focused) 1f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
-        BellIcon(Color.White,Modifier.size(25.dp))
+        BellIcon(if(focused) Color(0xFF161616) else Color.White,Modifier.size(25.dp))
         if(count>0) Text(if(count>9) "9+" else count.toString(),color=if(focused) Color.White else Color.Black,fontSize=10.sp,lineHeight=12.sp,
             modifier=Modifier.align(Alignment.TopEnd).background(if(focused) Color(0xFF292929) else Color(0xFFCCCCCC),RoundedCornerShape(8.dp)).padding(horizontal=4.dp,vertical=2.dp))
     }
@@ -632,12 +639,14 @@ private fun BellIcon(color: Color,modifier: Modifier) {
 @Composable
 private fun SearchNavigationButton(onFocused: (Boolean) -> Unit = {},selected:Boolean=false,modifier:Modifier=Modifier,sharedHighlightRP195:Boolean=false,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
+    val focusFillRP197 by animateColorAsState(if(focused && !sharedHighlightRP195) Color(0xFFF5F5F5) else Color.Transparent,tween(125),label="searchFillRP197")
     val focusScaleRP194 by animateFloatAsState(if(focused) 1.055f else 1f,tween(110),label="searchNavScale")
     Box(modifier.size(40.dp).graphicsLayer { val scale=if(sharedHighlightRP195) 1f else focusScaleRP194;scaleX=scale;scaleY=scale }.semantics { contentDescription=tr("Buscar","Search") }.onFocusChanged { focused=it.isFocused; onFocused(it.isFocused) }.tvClick(onClick).clickable(onClick=onClick)
-        .background(if(sharedHighlightRP195) Brush.verticalGradient(listOf(Color.Transparent,Color.Transparent)) else GlassNavBrushRP106(focused,selected),RoundedCornerShape(50))
+        .background(if(sharedHighlightRP195) Brush.verticalGradient(listOf(Color.Transparent,Color.Transparent)) else GlassNavBrushRP106(false,selected),RoundedCornerShape(50))
+        .background(focusFillRP197,RoundedCornerShape(50))
         .border(1.dp,if(sharedHighlightRP195) Color.Transparent else Accent.copy(alpha=if(focused) 1f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
         Canvas(Modifier.size(24.dp)) {
-            val ink=if(sharedHighlightRP195 && selected) Color(0xFF171717) else Color.White
+            val ink=if((sharedHighlightRP195 && selected) || (focused && !sharedHighlightRP195)) Color(0xFF171717) else Color.White
             val center=androidx.compose.ui.geometry.Offset(size.width*.4f,size.height*.4f)
             drawCircle(ink,size.width*.29f,center,style=androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
             drawLine(ink,androidx.compose.ui.geometry.Offset(size.width*.62f,size.height*.62f),
@@ -669,10 +678,12 @@ private fun GlassNavBrushRP106(focused:Boolean,selected:Boolean):Brush {
 @Composable
 private fun SettingsNavigationButtonRP106(selected:Boolean,modifier:Modifier=Modifier,onClick:()->Unit) {
     var focused by remember {mutableStateOf(false)}
+    val focusFillRP197 by animateColorAsState(if(focused) Color(0xFFF5F5F5) else Color.Transparent,tween(125),label="settingsFillRP197")
     val focusScaleRP194 by animateFloatAsState(if(focused) 1.055f else 1f,tween(110),label="settingsNavScale")
     Box(modifier.size(40.dp).graphicsLayer { scaleX=focusScaleRP194;scaleY=focusScaleRP194 }.semantics {contentDescription=tr("Ajustes","Settings")}
         .onFocusChanged {focused=it.isFocused}.tvClick(onClick).clickable(onClick=onClick)
-        .background(GlassNavBrushRP106(focused,selected),RoundedCornerShape(50))
+        .background(GlassNavBrushRP106(false,selected),RoundedCornerShape(50))
+        .background(focusFillRP197,RoundedCornerShape(50))
         .border(1.dp,Accent.copy(alpha=if(focused) 1f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
         Canvas(Modifier.size(24.dp)) {
             val center=androidx.compose.ui.geometry.Offset(size.width/2f,size.height/2f)
@@ -685,8 +696,8 @@ private fun SettingsNavigationButtonRP106(selected:Boolean,modifier:Modifier=Mod
                 if(index==0) gear.moveTo(x,y) else gear.lineTo(x,y)
             }
             gear.close()
-            drawPath(gear,Color.White,style=androidx.compose.ui.graphics.drawscope.Stroke(1.6.dp.toPx()))
-            drawCircle(Color.White,size.minDimension*.13f,center,style=androidx.compose.ui.graphics.drawscope.Stroke(1.6.dp.toPx()))
+            drawPath(gear,if(focused) Color(0xFF161616) else Color.White,style=androidx.compose.ui.graphics.drawscope.Stroke(1.6.dp.toPx()))
+            drawCircle(if(focused) Color(0xFF161616) else Color.White,size.minDimension*.13f,center,style=androidx.compose.ui.graphics.drawscope.Stroke(1.6.dp.toPx()))
         }
     }
 }

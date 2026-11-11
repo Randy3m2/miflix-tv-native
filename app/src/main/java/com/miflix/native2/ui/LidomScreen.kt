@@ -162,6 +162,15 @@ internal fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTea
     val scope=rememberCoroutineScope();var busy by remember {mutableStateOf(false)};var error by remember {mutableStateOf("")}
     var youtube by remember {mutableStateOf<LidomSource?>(null)}
     var video by remember {mutableStateOf<LidomYoutubeSelection?>(null)}
+    var liveCheckRP200 by remember(team.id) {mutableStateOf(true)}
+    var liveFoundRP200 by remember(team.id) {mutableStateOf<Pair<LidomSource,LidomVideo>?>(null)}
+    var liveRefreshRP200 by remember(team.id) {mutableIntStateOf(0)}
+    LaunchedEffect(team.id,liveRefreshRP200,sourceRevisionRP61) {
+        liveCheckRP200=true
+        liveFoundRP200=try {repo.verifiedLive(team.id)}
+            catch(e:CancellationException) {throw e} catch(_:Exception) {null}
+        finally {liveCheckRP200=false}
+    }
     fun play(source:LidomSource,stream:com.miflix.native2.model.StreamChoice) {
         state.lidomTeamId=team.id;state.lidomShowSources=false
         val item=MediaSummary(team.mlb,"live",team.name+" · "+source.name,tr("Transmisión seleccionada por el usuario. La programación puede variar.","User-selected broadcast. Programming may vary."),null,null,0.0,"LIDOM")
@@ -172,7 +181,18 @@ internal fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTea
         close()
     }
     PlayerSideSheet(team.name+" · "+tr("Fuentes","Sources"),close) {
-        item {Text(tr("YouTube primero, luego televisión. Ninguna fuente se presenta como un partido en vivo sin comprobarlo.","YouTube first, then TV. A channel listing does not confirm a live game broadcast."),color=Muted,fontSize=13.sp)}
+        item {Text(tr("Buscamos primero un directo confirmado del equipo seleccionado. Si no existe, conservamos tus fuentes manuales.","We first search for a confirmed live video from the selected team's channel; manual sources remain available."),color=Muted,fontSize=13.sp)}
+        item {
+            if(liveCheckRP200) Text(tr("Buscando directo del equipo…","Checking team live stream…"),color=Muted)
+            else if(liveFoundRP200!=null) {
+                val match=liveFoundRP200!!
+                FocusButton("● LIVE · "+match.second.title,modifier=Modifier.fillMaxWidth(),primary=true) {
+                    if(onSplitSelect!=null || splitMode) play(match.first,com.miflix.native2.model.StreamChoice("YouTube LIVE","https://www.youtube.com/watch?v=${match.second.id}",match.first.name,addonName="LIDOM"))
+                    else video=LidomYoutubeSelection(team.id,match.first.id,match.second.id)
+                }
+            } else Text(tr("Sin directo verificado ahora mismo. Puedes elegir una fuente manualmente.","No verified live video right now. Choose a source manually."),color=Muted,fontSize=13.sp)
+        }
+        item {FocusButton(tr("Volver a buscar LIVE","Refresh LIVE search")) {liveRefreshRP200++}}
         if(onSplitSelect==null) item {
             FocusButton(if(splitMode) tr("SplitScreen activado · elige una fuente","SplitScreen on · choose a source") else tr("Abrir en SplitScreen","Open in SplitScreen"),primary=splitMode) {splitMode=!splitMode}
         }

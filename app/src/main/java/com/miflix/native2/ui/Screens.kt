@@ -249,19 +249,21 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 if(state.localExtras.enabled("lists")) shelf(key="local_lists") {
                     LocalListsHomeRC104(state) {id ->initialLocalList=id;showLocalLists=true}
                 }
+                shelf(key="explore-shortcuts") {
+                    ExploreShortcutsRP194(
+                        loading=discoveryLoading || state.randomChoosing,
+                        onTrailers={showTrailers=true},
+                        onSurprise={if(!discoveryLoading && !state.randomChoosing) {if(state.localRecommendations(discoveryRows).isEmpty()) state.error=tr("La selección aún no está disponible. Elige otro ánimo o reintenta.","Picks are not available yet. Choose another mood or retry.") else state.launch {state.surpriseDiscovery(state.localRecommendations(discoveryRows))}}},
+                        onCinema={showCinemaHub=true},
+                        onCollections={onNavigate(Screen.COLLECTIONS)},
+                        onOscars={onNavigate(Screen.OSCARS)}
+                    )
+                }
                 shelf(key="mood-selector") {
                     MoodSelectorRowRP193(
                         discoveryMood,
                         onMood={discoveryMood=it;discoveryRetry++},
                         art=state.moodArtworkRC102()
-                    )
-                }
-                shelf(key="discovery-controls") {
-                    DiscoveryActionsRP193(
-                        discoveryLoading || state.randomChoosing,
-                        onTrailers={showTrailers=true},
-                        onTools={showCinemaHub=true},
-                        onSurprise={if(!discoveryLoading && !state.randomChoosing) {if(state.localRecommendations(discoveryRows).isEmpty()) state.error=tr("La selección aún no está disponible. Elige otro ánimo o reintenta.","Picks are not available yet. Choose another mood or retry.") else state.launch {state.surpriseDiscovery(state.localRecommendations(discoveryRows))}}}
                     )
                 }
                 if(state.localRecommendations(discoveryRows).isNotEmpty()) shelf(key="discovery-picks") {
@@ -294,8 +296,6 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 shelf(key="genres_home") { Column {
                     Row(Modifier.fillMaxWidth().padding(start=40.dp,end=40.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                         Text(tr("Explora por género","Browse by genre"),color=Color.White,fontSize=22.sp,lineHeight=27.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
-                        FocusButton(tr("Colecciones","Collections")) {onNavigate(Screen.COLLECTIONS)}
-                        FocusButton("Oscars") {onNavigate(Screen.OSCARS)}
                     }
                     HomeHorizontalRail {
                     LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=32.dp).clipToBounds().smoothHorizontalDpad().firstCardOnDown(genreScroll,firstGenre),state=genreScroll,contentPadding=PaddingValues(horizontal=8.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
@@ -393,7 +393,12 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 if(!simple && (state.localRecommendations(state.comingMovies).isNotEmpty() || state.localRecommendations(state.comingSeries).isNotEmpty())) shelf(key="coming_soon_home") {
                     SpotlightRail(tr("Próximamente","Coming soon"),(state.localRecommendations(state.comingMovies)+state.localRecommendations(state.comingSeries)).distinctBy { it.cloudId }.take(30),onClick={ state.launch { state.open(it,upcoming=true) } })
                 }
-                val order=com.miflix.native2.data.DailyRotationPolicyRP188.homeOrder(state.homeRowOrder+homeSections.map {it.key})
+                // RP194: migrate RP193's missing Mood key into the visible Home order.
+                // New visual shortcuts and Mood stay near the top even for older saved orders.
+                val homeOrderRP194=(listOf("continue","explore-shortcuts","mood-selector")+
+                    state.homeRowOrder.filterNot {it=="discovery-controls"}+
+                    homeSections.map {it.key}).distinct()
+                val order=com.miflix.native2.data.DailyRotationPolicyRP188.homeOrder(homeOrderRP194)
                 val orderedSectionsRP165=homeSections.filter {it.key !in state.hiddenHomeRows &&
                     (it.key!="discovery-retry" || "discovery-picks" !in state.hiddenHomeRows)}.sortedWith(compareBy<HomeSection> {order.indexOf(it.key).let {i ->if(i<0) Int.MAX_VALUE else i}})
                 positionRP165.sectionKeys=orderedSectionsRP165.map {it.key}

@@ -169,6 +169,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     var initialLocalList by remember(discoveryOwner) {mutableStateOf<String?>(null)}
     if(showLocalLists && state.localExtras.enabled("lists")) LocalListsRC100(state,null,initialListId=initialLocalList) {showLocalLists=false}
     var showTrailers by remember(discoveryOwner) {mutableStateOf(false)}
+    var showAmbientRP199 by remember(discoveryOwner) {mutableStateOf(false)}
     val clock=remember(state.appForeground) {java.util.Calendar.getInstance()}
     val contextualMood=remember(clock) {com.miflix.native2.data.DiscoveryMood.context(clock.get(java.util.Calendar.HOUR_OF_DAY),clock.get(java.util.Calendar.MONTH)+1,clock.get(java.util.Calendar.DAY_OF_MONTH),clock.get(java.util.Calendar.DAY_OF_WEEK) in setOf(java.util.Calendar.SATURDAY,java.util.Calendar.SUNDAY))}
     val effectiveMood=discoveryMood.ifEmpty {contextualMood}
@@ -180,6 +181,11 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
         try {val contextual=state.discoveryRun(effectiveMood);discoveryRows=state.freshDiscoveryRows("mood:$effectiveMood",(if(discoveryMood.isEmpty()) state.forYou+contextual else contextual).distinctBy {it.cloudId})} catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {discoveryError=true} finally {positionRP165.discoveryRows=discoveryRows;positionRP165.discoveryMood=discoveryMood;discoveryLoading=false}
     }
     if(showTrailers) DiscoveryTrailers(state,(state.forYou+state.trending+state.movies+state.series).distinctBy {it.cloudId},mood=discoveryMood) {showTrailers=false}
+    if(showAmbientRP199) AmbientCinemaRP199(
+        titles=(state.forYou+state.trending+state.movies+state.series),
+        onClose={showAmbientRP199=false},
+        onDetails={item->showAmbientRP199=false;state.launch {state.open(item)}}
+    )
     var startupInteractedRP129 by remember(discoveryOwner) {mutableStateOf(false)}
     val genreScroll=positionRP165.rail("genres")
     val firstGenre=remember {FocusRequester()}
@@ -205,10 +211,13 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     val headerWork=remember {mutableListOf<kotlinx.coroutines.Job>()}
     fun cancelHeaderWork() {headerWork.forEach {it.cancel()};headerWork.clear()}
 
+    // RP199: never silently teleport to the first shelf when Continue Watching arrives.
+    // A content refresh must not override the user's current D-pad row or scroll position.
     LaunchedEffect(discoveryOwner,state.continueWatching.isNotEmpty()) {
-        if(state.continueWatching.isNotEmpty() && !returningFromDetailsRP164 && homeReturn.pending==null && !startupInteractedRP129) {
-            withFrameNanos { }
-            if(!returningFromDetailsRP164 && homeReturn.pending==null && !startupInteractedRP129) {shelfMotion.reset();scroll.scrollToItem(0)}
+        if(state.continueWatching.isNotEmpty() && !returningFromDetailsRP164 &&
+           homeReturn.pending==null && !startupInteractedRP129 &&
+           scroll.firstVisibleItemIndex==0 && scroll.firstVisibleItemScrollOffset==0) {
+            // Already at top; intentionally no scroll or focus mutation.
         }
     }
     val headerShade by remember { derivedStateOf { if(scroll.firstVisibleItemIndex>0) .88f else (scroll.firstVisibleItemScrollOffset/320f).coerceIn(0f,.88f) } }
@@ -258,7 +267,8 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                         onSurprise={if(!discoveryLoading && !state.randomChoosing) {if(state.localRecommendations(discoveryRows).isEmpty()) state.error=tr("La selección aún no está disponible. Elige otro ánimo o reintenta.","Picks are not available yet. Choose another mood or retry.") else state.launch {state.surpriseDiscovery(state.localRecommendations(discoveryRows))}}},
                         onCinema={showCinemaHub=true},
                         onCollections={onNavigate(Screen.COLLECTIONS)},
-                        onOscars={onNavigate(Screen.OSCARS)}
+                        onOscars={onNavigate(Screen.OSCARS)},
+                        onAmbient={showAmbientRP199=true}
                     )
                 }
                 shelf(key="mood-selector") {

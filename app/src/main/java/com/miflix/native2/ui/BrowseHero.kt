@@ -46,8 +46,13 @@ private fun FocusedBrowseHero(state: AppState,pending: State<MediaSummary?>,fall
     var logo by remember {mutableStateOf<String?>(null)}
     var rankIndex by remember(ranked.map {it.cloudId}) {mutableIntStateOf(0)}
     var heroFocused by remember {mutableStateOf(false)}
-    LaunchedEffect(ranked.map {it.cloudId}) {
-        while(ranked.isNotEmpty()) {delay(6500);if(pending.value==null && !heroFocused) rankIndex=(rankIndex+1)%ranked.size}
+    LaunchedEffect(ranked.map {it.cloudId},state.appForeground) {
+        // RP199: never run hero timers while app is backgrounded or a trailer dialog is open.
+        while(ranked.size>1 && state.appForeground && !state.discoveryPreviewActive) {
+            delay(6500)
+            if(state.appForeground && !state.discoveryPreviewActive &&
+                pending.value==null && !heroFocused) rankIndex=(rankIndex+1)%ranked.size
+        }
     }
     val candidate=pending.value ?: ranked.getOrNull(rankIndex) ?: fallback
     LaunchedEffect(candidate?.cloudId,state.interfaceLanguage) {

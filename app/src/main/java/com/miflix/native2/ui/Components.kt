@@ -204,7 +204,9 @@ fun FocusButton(
     val actionFocused=actionFocusVisibleRP64(focused)
     val actionShape=themeShapeRP181(if(ThemeRuntimeRP177.id.isBlank()) 50.dp else 16.dp)
     val focusScale by animateFloatAsState(if(actionFocused) 1.024f else 1f,tween(115),label="actionFocusScaleRP193")
-    val borderTone by animateColorAsState(if(actionFocused) Accent else if(destructive) Color(0xFF78404B) else if(primary) Accent.copy(alpha=.55f) else PanelBorder,tween(115),label="actionBorderRP193")
+    val borderTone by animateColorAsState(if(actionFocused) Color.White else if(destructive) Color(0xFF78404B) else if(primary) Accent.copy(alpha=.55f) else PanelBorder,tween(115),label="actionBorderRP193")
+    val focusFillRP197 by animateColorAsState(if(actionFocused) Color(0xFFF5F5F5) else Color.Transparent,tween(125),label="actionWhiteFillRP197")
+    val textToneRP197 by animateColorAsState(if(actionFocused) Color(0xFF161616) else if(destructive) Color(0xFFFFB9C3) else Color.White,tween(125),label="actionTextRP197")
     Box(
         modifier
             .graphicsLayer { scaleX=focusScale; scaleY=focusScale }
@@ -215,16 +217,17 @@ fun FocusButton(
 
             .then(if (onLongClick != null) Modifier.tvPlaybackClick(onClick, onLongClick) else Modifier.tvClick(onClick))
             .clickable(onClick = onClick)
-            .background(GlassActionBrushRP108(actionFocused,primary,destructive), actionShape)
-            .border(if (actionFocused) 2.dp else 1.dp, borderTone, actionShape)
-            .themeOrnamentRP181()
+            .background(GlassActionBrushRP108(false,primary,destructive),actionShape)
+            .background(focusFillRP197,actionShape)
+            .border(if (actionFocused) 2.dp else 1.dp,borderTone,actionShape)
+            .then(if(actionFocused) Modifier else Modifier.themeOrnamentRP181())
             .padding(horizontal = horizontalPadding, vertical = if(LocalSimpleHome.current) 16.dp else 12.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(9.dp)) {
         Text(
             text,
-            color = if(actionFocused) Color.White else if(destructive) Color(0xFFFFB9C3) else Color.White,
+            color = textToneRP197,
             fontSize = if(LocalSimpleHome.current) 20.sp else 15.sp, lineHeight=if(LocalSimpleHome.current) 25.sp else 20.sp,
             fontWeight = FontWeight.Bold, maxLines=1, overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis
         )

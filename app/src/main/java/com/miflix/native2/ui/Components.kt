@@ -491,8 +491,12 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
     val iconTargetRP198=highlightedRP195==Screen.NOTIFICATIONS || highlightedRP195==Screen.SETTINGS
     val targetXRP195=(targetRP195?.first ?: navOriginRP195)-navOriginRP195
     val targetWRP195=if(iconTargetRP198) 0f else targetRP195?.second ?: 0f
-    val pillXRP195=animateFloatAsState(targetXRP195,tween(175,easing=LinearOutSlowInEasing),label="navPillXRP195")
-    val pillWRP195=animateFloatAsState(targetWRP195,tween(175,easing=LinearOutSlowInEasing),label="navPillWidthRP195")
+    // RP200: icon destinations must not animate a sliding pill across the last nav gap.
+    // Keep the icon\'s own focus fill; jump the shared indicator directly to its final position.
+    val navIconInstantRP200=highlightedRP195==Screen.NOTIFICATIONS || highlightedRP195==Screen.SETTINGS || current==Screen.NOTIFICATIONS
+    val navMotionRP200:androidx.compose.animation.core.AnimationSpec<Float> = if(navIconInstantRP200) androidx.compose.animation.core.snap() else tween(175,easing=LinearOutSlowInEasing)
+    val pillXRP195=animateFloatAsState(targetXRP195,navMotionRP200,label="navPillXRP195")
+    val pillWRP195=animateFloatAsState(targetWRP195,navMotionRP200,label="navPillWidthRP195")
     fun navigateHeader(destination:Screen) {dismissAssistantRP160();HeaderNavigationRP108.policy.navigate(owner,destination.name);onNavigate(destination)}
     val navItems=(if(kids) listOf(Screen.HOME to "Kids",Screen.SEARCH to tr("Buscar","Search"),Screen.MY_LIST to tr("Mi lista","My List")) else listOf(
         Screen.HOME to tr("Inicio","Home"),

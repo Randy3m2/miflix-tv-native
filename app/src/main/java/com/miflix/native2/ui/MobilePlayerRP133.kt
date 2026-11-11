@@ -131,7 +131,8 @@ private fun MobileSeekRP133(position:Long,duration:Long,interact:()->Unit,seek:(
 @Composable
 internal fun MobileTracksRP133(menu:String,player:Player,tracks:Tracks,speed:Float,onSpeed:(Float)->Unit,
     external:List<SubtitleChoice>,loading:Boolean,onExternal:(SubtitleChoice)->Unit,spanishOnly:Boolean,
-    series:Boolean,party:Boolean,onEpisodes:()->Unit,onParty:()->Unit,onTiming:()->Unit,close:()->Unit) {
+    series:Boolean,party:Boolean,onEpisodes:()->Unit,onParty:()->Unit,onTiming:()->Unit,
+    onAutoSyncRP206:()->Unit,autoSyncBusyRP206:Boolean,autoSyncStatusRP206:String,close:()->Unit) {
     var tab by remember {mutableStateOf(if(menu=="subtitles") "subtitles" else if(menu=="audio") "audio" else "content")}
     MobileSheetRP133(tr("Audio y subtítulos","Audio & subtitles"),close) {
         LazyRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -147,6 +148,20 @@ internal fun MobileTracksRP133(menu:String,player:Player,tracks:Tracks,speed:Flo
             } else {
                 val type=if(tab=="audio") C.TRACK_TYPE_AUDIO else C.TRACK_TYPE_TEXT
                 if(type==C.TRACK_TYPE_TEXT) item {MobileButtonRP133(tr("Desactivados","Off"),modifier=Modifier.fillMaxWidth()) {player.trackSelectionParameters=player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(type,true).build();close()}}
+                if(type==C.TRACK_TYPE_TEXT) item {
+                    MobileButtonRP133(if(autoSyncBusyRP206) tr("Autosync · Analizando…","Autosync · Analyzing…")
+                        else tr("Autosync · Detectar retraso","Autosync · Detect delay"),
+                        "cc",Modifier.fillMaxWidth(),enabled=!autoSyncBusyRP206) {onAutoSyncRP206()}
+                }
+                if(type==C.TRACK_TYPE_TEXT && autoSyncStatusRP206.isNotBlank()) item {
+                    Text(autoSyncStatusRP206,color=Muted,fontSize=13.sp)
+                }
+                if(type==C.TRACK_TYPE_TEXT) item {
+                    MobileButtonRP133(tr("Sincronización manual","Manual subtitle timing"),"cc",Modifier.fillMaxWidth()) {
+                        close();onTiming()
+                    }
+                }
+
                 tracks.groups.filter {it.type==type}.forEach {group->
                     for(index in 0 until group.length) {
                         val format=group.getTrackFormat(index)

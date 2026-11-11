@@ -9,6 +9,7 @@ import androidx.media3.exoplayer.text.TextOutput
 
 /** Positive delay means later subtitles. Audio/video clocks are never changed. */
 class SubtitleTiming {
+    val autoSyncRP206=SubtitleAutoSyncRP206()
     @Volatile var delayMs: Long = 0
     fun positionUs(position: Long): Long = position - delayMs.coerceIn(-30000L,30000L)*1000L
 }
@@ -17,7 +18,7 @@ class SubtitleTiming {
 class TimedTextRenderers(context: Context, private val timing: SubtitleTiming) : DefaultRenderersFactory(context) {
     override fun buildAudioSink(context: Context, enableFloatOutput: Boolean,
         enableAudioOutputPlaybackParams: Boolean): androidx.media3.exoplayer.audio.AudioSink =
-        headphoneAwareAudioSink(context)
+        headphoneAwareAudioSink(context,timing.autoSyncRP206)
 
     override fun buildTextRenderers(context: Context, output: TextOutput, outputLooper: Looper,
         extensionRendererMode: Int, out: ArrayList<Renderer>) {

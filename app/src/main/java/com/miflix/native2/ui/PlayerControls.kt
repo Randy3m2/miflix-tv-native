@@ -249,9 +249,9 @@ private fun PlayerSeekBar(position: Long, duration: Long, enabled: Boolean, seek
 
 @Composable
 internal fun PlayerOptionsDialog(menu: String, player: Player, tracks: Tracks, speed: Float,
-    onSpeed: (Float) -> Unit, externalSubtitles: List<SubtitleChoice>, subtitleLoading: Boolean, onExternalSubtitle: (SubtitleChoice) -> Unit, series: Boolean, party: Boolean, onEpisodes: () -> Unit, onParty: () -> Unit, onTiming: () -> Unit, spanishOnlyRP83:Boolean=false, onClose: () -> Unit) {
+    onSpeed: (Float) -> Unit, externalSubtitles: List<SubtitleChoice>, subtitleLoading: Boolean, onExternalSubtitle: (SubtitleChoice) -> Unit, series: Boolean, party: Boolean, onEpisodes: () -> Unit, onParty: () -> Unit, onTiming: () -> Unit, onAutoSyncRP206: () -> Unit, autoSyncBusyRP206:Boolean=false, autoSyncStatusRP206:String="", spanishOnlyRP83:Boolean=false, onClose: () -> Unit) {
     if(LocalMobileBrunioRP133.current) {
-        MobileTracksRP133(menu,player,tracks,speed,onSpeed,externalSubtitles,subtitleLoading,onExternalSubtitle,spanishOnlyRP83,series,party,onEpisodes,onParty,onTiming,onClose)
+        MobileTracksRP133(menu,player,tracks,speed,onSpeed,externalSubtitles,subtitleLoading,onExternalSubtitle,spanishOnlyRP83,series,party,onEpisodes,onParty,onTiming,onAutoSyncRP206,autoSyncBusyRP206,autoSyncStatusRP206,onClose)
         return
     }
     var audioStatus by remember(player,menu) { mutableStateOf("") }
@@ -289,6 +289,15 @@ internal fun PlayerOptionsDialog(menu: String, player: Player, tracks: Tracks, s
                             player.trackSelectionParameters=auto.build();onClose()
                         } }
                         if(type==C.TRACK_TYPE_TEXT) item { FocusButton(tr("Sincronizar subtítulos","Subtitle timing")) { onTiming() } }
+                        if(type==C.TRACK_TYPE_TEXT) item {
+                            FocusButton(if(autoSyncBusyRP206) tr("Analizando voz…","Analyzing dialogue…")
+                                else tr("Autosync · Detectar retraso","Autosync · Detect delay")) {
+                                if(!autoSyncBusyRP206) onAutoSyncRP206()
+                            }
+                        }
+                        if(type==C.TRACK_TYPE_TEXT && autoSyncStatusRP206.isNotBlank()) item {
+                            Text(autoSyncStatusRP206,color=Color.White,fontSize=13.sp)
+                        }
                         var count=0
                         tracks.groups.filter { it.type==type }.forEach { group ->
                             for(index in 0 until group.length) {

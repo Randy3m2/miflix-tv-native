@@ -17,6 +17,8 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -475,6 +477,16 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
     val headerTarget=remember(current,owner) {FocusRequester()}
     val claim=remember(current,owner) {HeaderNavigationRP108.policy.claim(owner,current.name)}
     val navScroll=androidx.compose.foundation.lazy.rememberLazyListState()
+    var navFocusedRP195 by remember { mutableStateOf<Screen?>(null) }
+    var navOriginRP195 by remember { mutableFloatStateOf(0f) }
+    val navBoundsRP195=remember { mutableStateMapOf<Screen,Pair<Float,Float>>() }
+    val highlightedRP195=navFocusedRP195 ?: current
+    val targetRP195=navBoundsRP195[highlightedRP195]
+    val targetXRP195=(targetRP195?.first ?: navOriginRP195)-navOriginRP195
+    val targetWRP195=targetRP195?.second ?: 0f
+    val pillXRP195 by animateFloatAsState(targetXRP195,tween(175,easing=LinearOutSlowInEasing),label="navPillXRP195")
+    val pillWRP195 by animateFloatAsState(targetWRP195,tween(175,easing=LinearOutSlowInEasing),label="navPillWidthRP195")
+    val navDensityRP195=LocalDensity.current
     fun navigateHeader(destination:Screen) {dismissAssistantRP160();HeaderNavigationRP108.policy.navigate(owner,destination.name);onNavigate(destination)}
     val navItems=(if(kids) listOf(Screen.HOME to "Kids",Screen.SEARCH to tr("Buscar","Search"),Screen.MY_LIST to tr("Mi lista","My List")) else listOf(
         Screen.HOME to tr("Inicio","Home"),
@@ -541,14 +553,32 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
         }
         }
         } // symmetric profile slot
-        Box(Modifier.weight(1f).height(52.dp)) {
+        Box(Modifier.weight(1f).height(52.dp).onGloballyPositioned {navOriginRP195=it.positionInRoot().x}) {
+            if(targetWRP195>1f) {
+                Box(Modifier
+                    .offset { IntOffset(pillXRP195.roundToInt(),0) }
+                    .align(Alignment.CenterStart)
+                    .width(with(navDensityRP195) {pillWRP195.toDp()})
+                    .height(38.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color(0xFFF3F3F3)))
+            }
             androidx.compose.foundation.lazy.LazyRow(Modifier.fillMaxSize(),
                 state=navScroll,verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp,Alignment.CenterHorizontally),
                 contentPadding=PaddingValues(horizontal=4.dp,vertical=6.dp)) {
                 items(navItems,key={it.first}) { (destination,label) ->
                     val activate={if(destination==Screen.LIVE_TV && current==destination && onMoveDown!=null) {dismissAssistantRP160();onMoveDown()} else navigateHeader(destination)}
-                    if(destination==Screen.SEARCH) SearchNavigationButton(selected=current==destination,modifier=if(current==destination) Modifier.focusRequester(headerTarget) else Modifier,onClick=activate)
-                    else NavigationTab(label,selected=current==destination,modifier=if(current==destination) Modifier.focusRequester(headerTarget) else Modifier,onClick=activate)
+                    val loc=Modifier.onGloballyPositioned {
+                        navBoundsRP195[destination]=it.positionInRoot().x to it.size.width.toFloat()
+                    }.then(if(current==destination) Modifier.focusRequester(headerTarget) else Modifier)
+                    val focusChange:(Boolean)->Unit={ focused ->
+                        if(focused) navFocusedRP195=destination
+                        else if(navFocusedRP195==destination) navFocusedRP195=null
+                    }
+                    if(destination==Screen.SEARCH) SearchNavigationButton(
+                        onFocused=focusChange,selected=highlightedRP195==destination,modifier=loc,onClick=activate,sharedHighlightRP195=true)
+                    else NavigationTab(
+                        label,selected=highlightedRP195==destination,onFocused=focusChange,modifier=loc,onClick=activate,sharedHighlightRP195=true)
                 }
                 if(guestExitRP150!=null) item(key="guest-exit-rp150") {FocusButton(tr("Salir invitado","Exit guest"),onClick=guestExitRP150)}
             }
@@ -596,13 +626,14 @@ private fun BellIcon(color: Color,modifier: Modifier) {
 }
 
 @Composable
-private fun SearchNavigationButton(onFocused: (Boolean) -> Unit = {},selected:Boolean=false,modifier:Modifier=Modifier,onClick: () -> Unit) {
+private fun SearchNavigationButton(onFocused: (Boolean) -> Unit = {},selected:Boolean=false,modifier:Modifier=Modifier,sharedHighlightRP195:Boolean=false,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     val focusScaleRP194 by animateFloatAsState(if(focused) 1.055f else 1f,tween(110),label="searchNavScale")
-    Box(modifier.size(40.dp).graphicsLayer { scaleX=focusScaleRP194;scaleY=focusScaleRP194 }.semantics { contentDescription=tr("Buscar","Search") }.onFocusChanged { focused=it.isFocused; onFocused(it.isFocused) }.tvClick(onClick).clickable(onClick=onClick)
-        .background(GlassNavBrushRP106(focused,selected),RoundedCornerShape(50)).border(1.dp,Accent.copy(alpha=if(focused) 1f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
+    Box(modifier.size(40.dp).graphicsLayer { val scale=if(sharedHighlightRP195) 1f else focusScaleRP194;scaleX=scale;scaleY=scale }.semantics { contentDescription=tr("Buscar","Search") }.onFocusChanged { focused=it.isFocused; onFocused(it.isFocused) }.tvClick(onClick).clickable(onClick=onClick)
+        .background(if(sharedHighlightRP195) Brush.verticalGradient(listOf(Color.Transparent,Color.Transparent)) else GlassNavBrushRP106(focused,selected),RoundedCornerShape(50))
+        .border(1.dp,if(sharedHighlightRP195) Color.Transparent else Accent.copy(alpha=if(focused) 1f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
         Canvas(Modifier.size(24.dp)) {
-            val ink=Color.White
+            val ink=if(sharedHighlightRP195 && selected) Color(0xFF171717) else Color.White
             val center=androidx.compose.ui.geometry.Offset(size.width*.4f,size.height*.4f)
             drawCircle(ink,size.width*.29f,center,style=androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
             drawLine(ink,androidx.compose.ui.geometry.Offset(size.width*.62f,size.height*.62f),
@@ -612,16 +643,16 @@ private fun SearchNavigationButton(onFocused: (Boolean) -> Unit = {},selected:Bo
 }
 
 @Composable
-internal fun NavigationTab(text: String,selected: Boolean,onFocused: (Boolean) -> Unit = {},modifier:Modifier=Modifier,onClick: () -> Unit) {
+internal fun NavigationTab(text: String,selected: Boolean,onFocused: (Boolean) -> Unit = {},modifier:Modifier=Modifier,sharedHighlightRP195:Boolean=false,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     val focusScaleRP194 by animateFloatAsState(if(focused) 1.04f else 1f,tween(115),label="tabNavScale")
     val borderRP194 by animateColorAsState(if(focused) Accent.copy(alpha=.78f) else Color.White.copy(alpha=if(selected) .17f else .055f),tween(115),label="tabNavBorder")
-    Box(modifier.height(38.dp).graphicsLayer { scaleX=focusScaleRP194;scaleY=focusScaleRP194 }.onFocusChanged {focused=it.isFocused;onFocused(it.isFocused)}
+    Box(modifier.height(38.dp).graphicsLayer { val scale=if(sharedHighlightRP195) 1f else focusScaleRP194;scaleX=scale;scaleY=scale }.onFocusChanged {focused=it.isFocused;onFocused(it.isFocused)}
         .tvClick(onClick).clickable(onClick=onClick)
-        .background(GlassNavBrushRP106(focused,selected),RoundedCornerShape(50))
-        .border(1.dp,borderRP194,RoundedCornerShape(50))
+        .background(if(sharedHighlightRP195) Brush.verticalGradient(listOf(Color.Transparent,Color.Transparent)) else GlassNavBrushRP106(focused,selected),RoundedCornerShape(50))
+        .border(1.dp,if(sharedHighlightRP195) Color.Transparent else borderRP194,RoundedCornerShape(50))
         .padding(horizontal=13.dp),contentAlignment=Alignment.Center) {
-        Text(text,color=Color.White.copy(alpha=if(focused || selected) 1f else .76f),fontSize=14.sp,lineHeight=18.sp,fontWeight=if(focused || selected) FontWeight.Bold else FontWeight.Medium,maxLines=1)
+        Text(text,color=if(sharedHighlightRP195 && selected) Color(0xFF171717) else Color.White.copy(alpha=if(focused || selected) 1f else .83f),fontSize=14.sp,lineHeight=18.sp,fontWeight=if(focused || selected) FontWeight.Bold else FontWeight.Medium,maxLines=1)
     }
 
 }

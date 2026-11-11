@@ -9,7 +9,7 @@ import androidx.media3.exoplayer.text.TextOutput
 
 /** Positive delay means later subtitles. Audio/video clocks are never changed. */
 class SubtitleTiming {
-    val autoSyncRP206=SubtitleAutoSyncRP206()
+    internal val autoSyncRP206=SubtitleAutoSyncRP206()
     @Volatile var delayMs: Long = 0
     fun positionUs(position: Long): Long = position - delayMs.coerceIn(-30000L,30000L)*1000L
 }

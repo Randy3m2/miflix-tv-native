@@ -10,10 +10,11 @@ import androidx.compose.ui.unit.sp
 internal fun HomeRowVisibilityRC99(state:AppState,close:()->Unit) {
     val rows=listOf(
         "local_lists" to tr("Mis listas locales","My local lists"),
-        "discovery-controls" to tr("Elige tu ánimo · Dazzle Me","Pick your vibe · Dazzle Me"),
+        "explore-shortcuts" to tr("Explorar","Explore"),
+        "mood-selector" to tr("Elige tu vibe","Pick your vibe"),
         "discovery-picks" to tr("Tu ánimo · Tu selección","Your Mood · Your Picks"),
         "continue" to tr("Seguir viendo","Continue Watching"),
-        "daily_rotation" to tr("Rotación diaria","Daily rotation"),
+        "live_favorites" to tr("Canales favoritos · Live TV","Favorite live channels"),
         "streaming" to tr("Plataformas","Streaming"),
         "novelas" to tr("Novelas que atrapan","Telenovelas to fall for"),
         "genres_home" to tr("Explorar por género","Browse by genre"),

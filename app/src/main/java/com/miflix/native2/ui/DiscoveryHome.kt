@@ -68,7 +68,7 @@ private fun MoodTile(mood:String,selected:Boolean,modifier:Modifier=Modifier,ima
     }
     val shape=RoundedCornerShape(16.dp)
     val stroke by animateColorAsState(if(focused) Accent else if(selected) hue else Color.White.copy(alpha=.14f),tween(115),label="mood-focus-border")
-    Box(modifier.height(if(LocalHomeShelfPaging.current) LocalHomeCardRowHeight.current-36.dp else 152.dp).width(210.dp).graphicsLayer {scaleX=scale;scaleY=scale}
+    Box(modifier.height(if(LocalHomeShelfPaging.current) (LocalHomeCardRowHeight.current-14.dp).coerceAtLeast(110.dp) else 174.dp).width(254.dp).graphicsLayer {scaleX=scale;scaleY=scale}
         .onFocusChanged {focused=it.isFocused}.clip(shape)
         .background(Brush.linearGradient(listOf(hue.copy(alpha=.3f),Color(0xff121521))))
         .border(if(focused || selected) 2.dp else 1.dp,stroke,shape)
@@ -77,12 +77,12 @@ private fun MoodTile(mood:String,selected:Boolean,modifier:Modifier=Modifier,ima
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color.Black.copy(alpha=.88f),Color.Black.copy(alpha=.30f)))))
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,Color.Black.copy(alpha=.45f)))))
         Row(Modifier.fillMaxSize().padding(14.dp),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            Box(Modifier.size(40.dp).background(hue.copy(alpha=.16f),RoundedCornerShape(13.dp)).border(1.dp,hue.copy(alpha=.5f),RoundedCornerShape(13.dp)),contentAlignment=androidx.compose.ui.Alignment.Center) {
+            Box(Modifier.size(50.dp).background(hue.copy(alpha=.16f),RoundedCornerShape(13.dp)).border(1.dp,hue.copy(alpha=.5f),RoundedCornerShape(13.dp)),contentAlignment=androidx.compose.ui.Alignment.Center) {
                 Text(if(selected) "✓" else moodGlyph(mood),color=hue,fontSize=25.sp)
             }
             Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-                Text(moodTitle(mood),color=Color.White,fontSize=15.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                Text(if(selected) tr("TU VIBE","YOUR VIBE") else tr("EXPLORAR","EXPLORE"),color=if(selected) hue else Color(0xffd2d5df),fontSize=9.sp)
+                Text(moodTitle(mood),color=Color.White,fontSize=18.sp,fontWeight=androidx.compose.ui.text.font.FontWeight.Bold,maxLines=2,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Text(if(selected) tr("TU VIBE","YOUR VIBE") else tr("EXPLORAR","EXPLORE"),color=if(selected) hue else Color(0xffd2d5df),fontSize=11.sp)
             }
         }
     }
@@ -113,7 +113,7 @@ internal fun MoodSelectorRowRP193(
     val rowHeight=if(LocalHomeShelfPaging.current) LocalHomeCardRowHeight.current+40.dp else 228.dp
     Column(
         Modifier.fillMaxWidth().height(rowHeight).padding(start=40.dp,end=32.dp,top=8.dp,bottom=4.dp),
-        verticalArrangement=Arrangement.spacedBy(10.dp)
+        verticalArrangement=Arrangement.spacedBy(6.dp)
     ) {
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
             Text(tr("Elige tu vibe","Pick your vibe"),color=Color.White,fontSize=23.sp)
@@ -123,7 +123,7 @@ internal fun MoodSelectorRowRP193(
             LazyRow(
                 Modifier.fillMaxWidth().smoothHorizontalDpad(),
                 horizontalArrangement=Arrangement.spacedBy(12.dp),
-                contentPadding=PaddingValues(start=2.dp,end=24.dp,top=6.dp,bottom=8.dp)
+                contentPadding=PaddingValues(start=2.dp,end=24.dp,top=4.dp,bottom=5.dp)
             ) {
                 items(DiscoveryMoods,key={it.ifEmpty {"for-me"}}) { value ->
                     MoodTile(value,mood==value,homeReturnFocus("mood:"+value.ifEmpty {"default"}),image=art[value]) {onMood(value)}

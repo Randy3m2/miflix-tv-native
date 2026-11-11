@@ -129,6 +129,28 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
                 }
             }
         }
+        // RP205: event-based Home synchronization, not periodic Supabase checking.
+        val homeOwnerRP205="${state.session?.userId}:${state.activeProfile.id}"
+        var lastHomeEditRP205 by remember(homeOwnerRP205) {mutableIntStateOf(state.homeEditRevisionRP205)}
+        LaunchedEffect(bootstrapped,homeOwnerRP205) {
+            if(bootstrapped && state.session!=null && !guestRP150) {
+                try {state.syncHomeStudioRP205()}
+                catch(e:kotlinx.coroutines.CancellationException) {throw e}
+                catch(_:Exception) { /* Home remains editable when migration is not installed. */ }
+            }
+        }
+        LaunchedEffect(bootstrapped,homeOwnerRP205,state.homeEditRevisionRP205) {
+            val revision=state.homeEditRevisionRP205
+            if(revision!=lastHomeEditRP205) {
+                lastHomeEditRP205=revision
+                if(bootstrapped && state.session!=null && !guestRP150) {
+                    delay(1500) // rapid reorder/visibility actions => one save
+                    try {state.syncHomeStudioRP205(edited=true)}
+                    catch(e:kotlinx.coroutines.CancellationException) {throw e}
+                    catch(_:Exception) { /* No upload while offline; local settings persist. */ }
+                }
+            }
+        }
         CalendarRuntimeRP120("${state.session?.userId ?: "local"}:${state.activeProfile.id}",state.activeProfile.name,state.appForeground)
         LaunchedEffect(bootstrapped, initialPartyCode,state.easyModeRP79) {
             if (bootstrapped && !state.easyModeRP79 && !initialPartyCode.isNullOrBlank() && consumedPartyRP150!=initialPartyCode) {

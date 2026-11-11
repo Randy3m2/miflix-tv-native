@@ -40,6 +40,8 @@ internal fun MobileRailRP133(state:AppState,title:String,rows:List<MediaSummary>
 
 @Composable
 internal fun MobileHomeRP133(state:AppState) {
+    var showHomeStudioRP205 by remember {mutableStateOf(false)}
+    if(showHomeStudioRP205) HomeStudioMobileRP205(state) {showHomeStudioRP205=false}
     var filter by rememberSaveable {mutableStateOf("")}
     var more by rememberSaveable {mutableIntStateOf(15)}
     LaunchedEffect(state.localExtrasScope(),state.interfaceLanguage,state.kidsMode,state.easyModeRP79) {
@@ -70,6 +72,10 @@ internal fun MobileHomeRP133(state:AppState) {
     val continueRows=filtered(if(kids) state.kidsContinue.toList() else state.continueWatching.toList())
     val hero=filtered(state.trending.toList()+state.movies.toList()).firstOrNull()
     LazyColumn(verticalArrangement=Arrangement.spacedBy(22.dp),contentPadding=PaddingValues(bottom=24.dp)) {
+        if(!kids && !state.easyModeRP79) item("home-studio-rp205") {
+            MobileButtonRP133(tr("✦ Personalizar Home","✦ Customize Home"),"grid",
+                Modifier.fillMaxWidth().padding(horizontal=16.dp)) {showHomeStudioRP205=true}
+        }
         item("filters") {LazyRow(contentPadding=PaddingValues(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             items(listOf("" to tr("Todo","All"),"movie" to tr("Películas","Movies"),"series" to tr("Series","Series"))) {(key,label)->
                 MobileButtonRP133(label,selected=filter==key) {filter=key}
@@ -110,13 +116,28 @@ internal fun MobileHomeRP133(state:AppState) {
                 }
             }
         }
-        val visibleRowsRP189=rows.take(more).filter {filtered(it.second).isNotEmpty()}
-        val beforeDailyRP189=if(!kids && !state.easyModeRP79) 2 else 3
-        visibleRowsRP189.forEachIndexed {index,(title,items)->
-            if(!kids && index==beforeDailyRP189) item("daily-rotation") {DailyRotationRowRP188(state,mobile=true,filter=filter)}
-            item(title) {MobileRailRP133(state,title,filtered(items),topTen=title.startsWith("Top 10"))}
+        val mobileKeysRP205=listOf(
+            "movies","series","ranked_movies","best_series","for_you","novelas",
+            "classic_picks","action","scifi","comedy","thrillers","because_you_watched",
+            "now_playing","romance_picks","horror_movies","seasonal",
+            "platform_netflix","platform_disney","platform_prime","platform_max"
+        )
+        val preferredOrderRP205=state.homeRowOrder
+        val hiddenRP205=state.hiddenHomeRows
+        val visibleRowsRP205=rows.take(more).mapIndexed {index,pair->
+            Triple(mobileKeysRP205.getOrElse(index) {"mobile:$index"},pair.first,pair.second)
+        }.filter {(key,_,items)->filtered(items).isNotEmpty() && key !in hiddenRP205}
+            .let {sections->
+                if(!kids && !state.easyModeRP79 && "live_favorites" !in hiddenRP205)
+                    sections+Triple("live_favorites",tr("Mis canales favoritos","Favorite live channels"),emptyList<MediaSummary>())
+                else sections
+            }.sortedWith(compareBy {section->
+                preferredOrderRP205.indexOf(section.first).let {if(it<0) Int.MAX_VALUE else it}
+            })
+        visibleRowsRP205.forEach { (key,title,items)->
+            if(key=="live_favorites") item(key) {LiveFavoritesHomeRP205(state,mobile=true)}
+            else item(key) {MobileRailRP133(state,title,filtered(items),topTen=title.startsWith("Top 10"))}
         }
-        if(!kids && visibleRowsRP189.size<=beforeDailyRP189) item("daily-rotation") {DailyRotationRowRP188(state,mobile=true,filter=filter)}
         if(!kids && !state.easyModeRP79) item("franchises") {
             Column(Modifier.padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                 Text(tr("Franquicias","Franchises"),color=Color.White,fontSize=19.sp,fontWeight=FontWeight.Bold)

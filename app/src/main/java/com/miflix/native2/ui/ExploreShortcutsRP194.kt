@@ -60,13 +60,13 @@ internal fun ExploreShortcutsRP194(
         ExploreArtworkRP194(ExploreDestinationRP194.DAILY_ROTATION,tr("Rotación diaria","Daily Rotation"),tr("Selección nueva sin repetir títulos","Fresh picks, no repeats"),"◷",R.drawable.theme_sand_rp188)
     )
     val rowHeight=if(LocalHomeShelfPaging.current) LocalHomeCardRowHeight.current+40.dp else 228.dp
-    Column(Modifier.fillMaxWidth().height(rowHeight).padding(start=40.dp,end=24.dp,top=4.dp,bottom=4.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
+    Column(Modifier.fillMaxWidth().height(rowHeight).padding(start=40.dp,end=24.dp,top=4.dp,bottom=4.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
         Text(tr("Explorar","Explore"),color=Color.White,fontSize=23.sp,fontWeight=FontWeight.Bold)
         HomeHorizontalRail {
             LazyRow(
                 Modifier.fillMaxWidth().smoothHorizontalDpad(),
                 horizontalArrangement=Arrangement.spacedBy(14.dp),
-                contentPadding=PaddingValues(start=3.dp,end=32.dp,top=7.dp,bottom=11.dp)
+                contentPadding=PaddingValues(start=3.dp,end=32.dp,top=4.dp,bottom=5.dp)
             ) {
                 items(entries,key={it.destination}) {entry ->
                     val action=when(entry.destination) {
@@ -92,7 +92,7 @@ private fun ExploreShortcutCardRP194(entry:ExploreArtworkRP194,modifier:Modifier
     val stroke by animateColorAsState(if(focused) Accent else Color.White.copy(alpha=.12f),tween(120),label="exploreStroke")
     val shape=RoundedCornerShape(15.dp)
     Box(
-        modifier.width(207.dp).height(if(LocalHomeShelfPaging.current) LocalHomeCardRowHeight.current-36.dp else 152.dp)
+        modifier.width(254.dp).height(if(LocalHomeShelfPaging.current) (LocalHomeCardRowHeight.current-14.dp).coerceAtLeast(110.dp) else 174.dp)
             .graphicsLayer { scaleX=scale;scaleY=scale }
             .onFocusChanged {focused=it.isFocused}
             .tvClick(onClick).clickable(onClick=onClick)
@@ -108,12 +108,12 @@ private fun ExploreShortcutCardRP194(entry:ExploreArtworkRP194,modifier:Modifier
             AsyncImage("file:///android_asset/league_logos_rp138/oscars.png",null,
                 Modifier.align(Alignment.TopEnd).padding(10.dp).size(42.dp),contentScale=ContentScale.Fit)
         }
-        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(horizontal=12.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(3.dp)) {
+        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(horizontal=16.dp,vertical=14.dp),verticalArrangement=Arrangement.spacedBy(3.dp)) {
             Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                Text(entry.glyph,color=Color.White,fontSize=19.sp,fontWeight=FontWeight.Bold)
-                Text(entry.title,color=Color.White,fontSize=14.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
+                Text(entry.glyph,color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
+                Text(entry.title,color=Color.White,fontSize=17.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
             }
-            Text(entry.caption,color=Color(0xFFE2E2E5),fontSize=10.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+            Text(entry.caption,color=Color(0xFFE2E2E5),fontSize=12.sp,maxLines=2,overflow=TextOverflow.Ellipsis)
         }
     }
 }

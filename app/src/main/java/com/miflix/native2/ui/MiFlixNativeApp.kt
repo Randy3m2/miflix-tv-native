@@ -103,15 +103,15 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
             if(state.appForeground) try {state.syncCalendarSubscriptionsRP134()} catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) { }
         }
         // RP204: event-driven only — NO timer, NO background polling.
-        // One read when BruniO enters foreground or the profile changes.
+        // One read at app start / account or profile switch; no foreground polling.
         // A local edit sends one debounced update (multiple quick reorders
         // coalesce into a single Supabase RPC), just like an event notification.
         val collectionsOwnerRP204="${state.session?.userId}:${state.activeProfile.id}"
         var lastLocalEditRP204 by remember(collectionsOwnerRP204) {
             mutableIntStateOf(state.localExtras.collectionsRevision)
         }
-        LaunchedEffect(bootstrapped,collectionsOwnerRP204,state.appForeground) {
-            if(bootstrapped && state.appForeground && state.session!=null && !guestRP150) {
+        LaunchedEffect(bootstrapped,collectionsOwnerRP204) {
+            if(bootstrapped && state.session!=null && !guestRP150) {
                 try {state.syncCustomCollectionsRP204()}
                 catch(e:kotlinx.coroutines.CancellationException) {throw e}
                 catch(_:Exception) { /* Local collections remain available offline. */ }
@@ -123,7 +123,7 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
                 lastLocalEditRP204=current
                 if(bootstrapped && state.session!=null && !guestRP150) {
                     delay(1500) // debounce several rapid sort changes into one write
-                    try {state.syncCustomCollectionsRP204()}
+                    try {state.syncCustomCollectionsRP204(edited=true)}
                     catch(e:kotlinx.coroutines.CancellationException) {throw e}
                     catch(_:Exception) { /* Offline: local order stays saved. */ }
                 }

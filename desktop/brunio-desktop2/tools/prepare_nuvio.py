@@ -96,22 +96,51 @@ def patch_visual_brand(destination: Path) -> None:
 
 
 def patch_brand_icon(destination: Path) -> bool:
-    source = ROOT / "desktop/brunio-pc/assets/brunio_icon.png"
-    if not source.exists():
-        return False
-    icons = destination / "composeApp/src/desktopMain/resources/icons"
-    shutil.copyfile(source, icons / "nuvio-app-icon-transparent.png")
+    """Replace Nuvio-owned brand marks; leave player vector icons unchanged."""
+    icon_source = ROOT / "desktop/brunio-pc/assets/brunio_icon.png"
+    logo_source = ROOT / "web/brunio-logo.png"
+    if not icon_source.exists() or not logo_source.exists():
+        raise FileNotFoundError("BruniO-owned app icon / wordmark is missing")
     try:
         from PIL import Image
-        with Image.open(source) as original:
-            original.convert("RGBA").save(
-                icons / "nuvio-app-icon-transparent.ico",
-                format="ICO",
-                sizes=[(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
-            )
-    except ImportError:
-        # Do not pretend the .ico was replaced if Pillow was unavailable.
-        return False
+    except ImportError as err:
+        raise RuntimeError("Pillow is required to safely rebrand visual assets") from err
+
+    icons = destination / "composeApp/src/desktopMain/resources/icons"
+    common = destination / "composeApp/src/commonMain/composeResources/drawable"
+    with Image.open(icon_source) as original:
+        app_icon = original.convert("RGBA")
+        app_icon.save(icons / "nuvio-app-icon-transparent.png")
+        app_icon.save(
+            icons / "nuvio-app-icon-transparent.ico", format="ICO",
+            sizes=[(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
+        )
+        # BruniO application identity must be consistent in theme variants.
+        for p in sorted(icons.glob("app-icon-*-transparent.png")):
+            with Image.open(p) as existing:
+                size = existing.size
+            app_icon.resize(size, Image.Resampling.LANCZOS).save(p)
+        for p in sorted(common.glob("app_icon*.png")):
+            with Image.open(p) as existing:
+                size = existing.size
+            app_icon.thumbnail(size, Image.Resampling.LANCZOS)
+            canvas = Image.new("RGBA", size)
+            icon_copy = original.convert("RGBA")
+            icon_copy.thumbnail(size, Image.Resampling.LANCZOS)
+            canvas.alpha_composite(icon_copy, ((size[0]-icon_copy.width)//2, (size[1]-icon_copy.height)//2))
+            canvas.save(p)
+    with Image.open(logo_source) as original_logo:
+        logo = original_logo.convert("RGBA")
+        for p in sorted(common.glob("app_logo_wordmark*.png")):
+            with Image.open(p) as existing:
+                size = existing.size
+            stamp = logo.copy()
+            stamp.thumbnail(size, Image.Resampling.LANCZOS)
+            canvas = Image.new("RGBA", size)
+            canvas.alpha_composite(stamp, ((size[0]-stamp.width)//2, (size[1]-stamp.height)//2))
+            canvas.save(p)
+    # Third-party integration marks (Trakt, Jellyfin, IMDb etc.) remain as
+    # upstream, subject to their individual attribution and trademark policies.
     return True
 
 

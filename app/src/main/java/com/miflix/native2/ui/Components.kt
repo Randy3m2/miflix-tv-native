@@ -503,6 +503,8 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
     )).filter {guestExitRP150==null || it.first!=Screen.FRIENDS}
     val homeRestoringRP165=LocalHomeReturnFocus.current?.pending!=null
     LaunchedEffect(current,owner) {
+        // Route changes select the actual destination; leaving the header does not.
+        if(navFocusedRP195!=null && navFocusedRP195!=current) navFocusedRP195=current
         if(claim && !homeRestoringRP165) {
             val index=navItems.indexOfFirst {it.first==current}
             if(index>=0) navScroll.scrollToItem(index)
@@ -602,11 +604,13 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
         if(guestExitRP150==null) NotificationButton(notificationCount+sportUnreadRP120,
             (if(current==Screen.NOTIFICATIONS) Modifier.focusRequester(headerTarget) else Modifier)
                 .onGloballyPositioned {navBoundsRP195[Screen.NOTIFICATIONS]=it.positionInRoot().x to it.size.width.toFloat()},
+            selectedRP198=highlightedRP195==Screen.NOTIFICATIONS,
             onFocused={if(it) navFocusedRP195=Screen.NOTIFICATIONS}) {navigateHeader(Screen.NOTIFICATIONS)}
             if(!kids && assistantOpenRP150!=null) AssistantOrbRP155(onClick=assistantOpenRP150)
             if(!kids && guestExitRP150==null) SettingsNavigationButtonRP106(current==Screen.SETTINGS,
                 (if(current==Screen.SETTINGS) Modifier.focusRequester(headerTarget) else Modifier)
                     .onGloballyPositioned {navBoundsRP195[Screen.SETTINGS]=it.positionInRoot().x to it.size.width.toFloat()},
+                selectedRP198=highlightedRP195==Screen.SETTINGS,
                 onFocused={if(it) navFocusedRP195=Screen.SETTINGS}) {navigateHeader(Screen.SETTINGS)}
         }
 
@@ -614,15 +618,15 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
 }
 
 @Composable
-private fun NotificationButton(count: Int,modifier:Modifier=Modifier,onFocused:(Boolean)->Unit={},onClick: () -> Unit) {
+private fun NotificationButton(count: Int,modifier:Modifier=Modifier,selectedRP198:Boolean=false,onFocused:(Boolean)->Unit={},onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    val whiteFillRP198 by animateColorAsState(if(focused) Color(0xFFF5F5F5) else Color.Transparent,tween(120),label="alertFillRP198")
+    val whiteFillRP198 by animateColorAsState(if(focused || selectedRP198) Color(0xFFF5F5F5) else Color.Transparent,tween(120),label="alertFillRP198")
     val focusScaleRP194 by animateFloatAsState(if(focused) 1.055f else 1f,tween(110),label="alertNavScale")
     Box(modifier.size(40.dp).graphicsLayer { scaleX=focusScaleRP194;scaleY=focusScaleRP194 }.semantics { contentDescription="${tr("Avisos","Alerts")}: $count" }.onFocusChanged { focused=it.isFocused;onFocused(it.isFocused) }.tvClick(onClick).clickable(onClick=onClick)
         .background(GlassNavBrushRP106(false,false),RoundedCornerShape(50))
         .background(whiteFillRP198,RoundedCornerShape(50))
         .border(1.dp,Color.White.copy(alpha=if(focused) .9f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
-        BellIcon(if(focused) Color(0xFF151515) else Color.White,Modifier.size(25.dp))
+        BellIcon(if(focused || selectedRP198) Color(0xFF151515) else Color.White,Modifier.size(25.dp))
         if(count>0) Text(if(count>9) "9+" else count.toString(),color=if(focused) Color.White else Color.Black,fontSize=10.sp,lineHeight=12.sp,
             modifier=Modifier.align(Alignment.TopEnd).background(if(focused) Color(0xFF292929) else Color(0xFFCCCCCC),RoundedCornerShape(8.dp)).padding(horizontal=4.dp,vertical=2.dp))
     }
@@ -682,9 +686,9 @@ private fun GlassNavBrushRP106(focused:Boolean,selected:Boolean):Brush {
 }
 
 @Composable
-private fun SettingsNavigationButtonRP106(selected:Boolean,modifier:Modifier=Modifier,onFocused:(Boolean)->Unit={},onClick:()->Unit) {
+private fun SettingsNavigationButtonRP106(selected:Boolean,modifier:Modifier=Modifier,selectedRP198:Boolean=false,onFocused:(Boolean)->Unit={},onClick:()->Unit) {
     var focused by remember {mutableStateOf(false)}
-    val whiteFillRP198 by animateColorAsState(if(focused) Color(0xFFF5F5F5) else Color.Transparent,tween(120),label="settingsFillRP198")
+    val whiteFillRP198 by animateColorAsState(if(focused || selectedRP198) Color(0xFFF5F5F5) else Color.Transparent,tween(120),label="settingsFillRP198")
     val focusScaleRP194 by animateFloatAsState(if(focused) 1.055f else 1f,tween(110),label="settingsNavScale")
     Box(modifier.size(40.dp).graphicsLayer { scaleX=focusScaleRP194;scaleY=focusScaleRP194 }.semantics {contentDescription=tr("Ajustes","Settings")}
         .onFocusChanged {focused=it.isFocused;onFocused(it.isFocused)}.tvClick(onClick).clickable(onClick=onClick)
@@ -702,7 +706,7 @@ private fun SettingsNavigationButtonRP106(selected:Boolean,modifier:Modifier=Mod
                 if(index==0) gear.moveTo(x,y) else gear.lineTo(x,y)
             }
             gear.close()
-            val ink=if(focused) Color(0xFF151515) else Color.White
+            val ink=if(focused || selectedRP198) Color(0xFF151515) else Color.White
             drawPath(gear,ink,style=androidx.compose.ui.graphics.drawscope.Stroke(1.6.dp.toPx()))
             drawCircle(ink,size.minDimension*.13f,center,style=androidx.compose.ui.graphics.drawscope.Stroke(1.6.dp.toPx()))
         }

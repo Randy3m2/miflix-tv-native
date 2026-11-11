@@ -102,6 +102,27 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
         LaunchedEffect(state.session?.userId,state.activeProfile.id,state.appForeground,calendarSubscriptionsRP134) {
             if(state.appForeground) try {state.syncCalendarSubscriptionsRP134()} catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) { }
         }
+        // RP204: sync only when signed in, foregrounded and the local collections
+        // change; remote polling is deliberately slow to conserve Supabase requests.
+        LaunchedEffect(bootstrapped,state.session?.userId,state.activeProfile.id,
+            state.appForeground,state.localExtras.collectionsRevision) {
+            if(bootstrapped && state.appForeground && state.session!=null && !guestRP150) {
+                delay(1500)
+                try {state.syncCustomCollectionsRP204()}
+                catch(e:kotlinx.coroutines.CancellationException) {throw e}
+                catch(_:Exception) { /* Migration may not be installed; local lists still work. */ }
+            }
+        }
+        LaunchedEffect(bootstrapped,state.session?.userId,state.activeProfile.id,state.appForeground) {
+            if(bootstrapped && state.appForeground && state.session!=null && !guestRP150) {
+                while(state.appForeground) {
+                    delay(90_000)
+                    try {state.syncCustomCollectionsRP204()}
+                    catch(e:kotlinx.coroutines.CancellationException) {throw e}
+                    catch(_:Exception) { /* Offline: retry after next interval. */ }
+                }
+            }
+        }
         CalendarRuntimeRP120("${state.session?.userId ?: "local"}:${state.activeProfile.id}",state.activeProfile.name,state.appForeground)
         LaunchedEffect(bootstrapped, initialPartyCode,state.easyModeRP79) {
             if (bootstrapped && !state.easyModeRP79 && !initialPartyCode.isNullOrBlank() && consumedPartyRP150!=initialPartyCode) {

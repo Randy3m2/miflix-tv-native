@@ -49,7 +49,7 @@ internal fun ExploreShortcutsRP194(
     onOscars: () -> Unit
 ) {
     val entries=listOf(
-        ExploreArtworkRP194(ExploreDestinationRP194.TRAILERS,tr("Deslúmbrame","Dazzle me"),tr("Tráilers para descubrir","Discover trailers"),"▶",R.drawable.brunio_pack_snyder),
+        ExploreArtworkRP194(ExploreDestinationRP194.TRAILERS,tr("Tráilers","Trailers"),tr("Avances y estrenos","Previews & releases"),"▶",R.drawable.brunio_pack_snyder),
         ExploreArtworkRP194(ExploreDestinationRP194.SURPRISE,if(loading) tr("Preparando…","Preparing…") else tr("Sorpréndeme","Surprise me"),tr("Algo inesperado","Something unexpected"),"✧",R.drawable.theme_halloween_rp188),
         ExploreArtworkRP194(ExploreDestinationRP194.CINEMA,tr("Mi universo de cine","My cinema hub"),tr("Explora a tu manera","Explore your way"),"◈",R.drawable.brunio_profile_landscape),
         ExploreArtworkRP194(ExploreDestinationRP194.COLLECTIONS,tr("Colecciones","Collections"),tr("Historias para explorar","Curated worlds"),"▣",R.drawable.franchise_marvel),

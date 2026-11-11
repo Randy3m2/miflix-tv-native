@@ -2,11 +2,8 @@
  * Modified for BruniO RP200. See RP200_NUVIO_ATTRIBUTION.md for license details. */
 package com.miflix.native2.data.rp200
 
-import androidx.annotation.OptIn
-import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
-import androidx.media3.common.util.UnstableApi
-import androidx.media3.exoplayer.mediacodec.MediaCodecUtil
+import android.media.MediaCodecList
 import java.util.concurrent.ConcurrentHashMap
 
 private val CODECS_PARAM_REGEX = Regex("codecs=\"([^\"]+)\"", RegexOption.IGNORE_CASE)
@@ -39,23 +36,28 @@ internal fun videoCodecMimeType(codecs: String): String? {
 internal object VideoDecoderSupport {
     private val cache = ConcurrentHashMap<String, Boolean>()
 
-    @OptIn(UnstableApi::class)
     fun canDecode(codecs: String, width: Int, height: Int, fps: Int): Boolean =
         cache.getOrPut("$codecs|$width|$height|$fps") {
             val mimeType = videoCodecMimeType(codecs) ?: return@getOrPut true
-            val format = Format.Builder()
-                .setSampleMimeType(mimeType)
-                .setCodecs(codecs)
-                .apply {
-                    if (width > 0 && height > 0) setWidth(width).setHeight(height)
-                    if (fps > 0) setFrameRate(fps.toFloat())
-                }
-                .build()
             try {
-                MediaCodecUtil.getDecoderInfos(mimeType, /* secure= */ false, /* tunneling= */ false)
-                    .any { it.isFormatSupported(format) }
+                // Media3 1.11 requires Context for isFormatSupported. Use Android's
+                // decoder capabilities instead: no Context dependency or API mismatch.
+                MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.any { info ->
+                    !info.isEncoder && info.supportedTypes.any { type ->
+                        if (!type.equals(mimeType, ignoreCase = true)) false
+                        else runCatching {
+                            val video = info.getCapabilitiesForType(type).videoCapabilities
+                            when {
+                                video == null -> false
+                                width <= 0 || height <= 0 -> true
+                                fps > 0 -> video.areSizeAndRateSupported(width, height, fps.toDouble())
+                                else -> video.isSizeSupported(width, height)
+                            }
+                        }.getOrDefault(false)
+                    }
+                }
             } catch (e: Exception) {
-                // If the device can't be asked, don't drop streams on a guess.
+                // When capabilities cannot be queried, allow the player to attempt playback.
                 true
             }
         }

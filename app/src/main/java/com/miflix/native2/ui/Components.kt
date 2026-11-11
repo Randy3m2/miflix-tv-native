@@ -493,7 +493,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
         }
     }
     var headerHadFocus by remember { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth().height(76.dp).onPreviewKeyEvent { event ->
+    Row(Modifier.fillMaxWidth().height(66.dp).onPreviewKeyEvent { event ->
         if(event.key==Key.DirectionDown && onMoveDown!=null) {
             if(event.type==KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount==0) onMoveDown()
             true
@@ -503,9 +503,9 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
         headerHadFocus=it.hasFocus
     }.focusGroup()
         .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha=.8f),Color.Black.copy(alpha=.35f),Color.Transparent))).padding(horizontal=24.dp),
-        verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(18.dp)) {
-        Row(Modifier.width(136.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(14.dp)) {
-        Image(painterResource(R.drawable.brunio_icon),"BruniO",Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)))
+        verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.width(116.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+        Image(painterResource(R.drawable.brunio_icon),"BruniO",Modifier.size(33.dp).clip(RoundedCornerShape(9.dp)))
         var profileFocused by remember { mutableStateOf(false) }
         var profileMenu by remember { mutableStateOf(false) }
         val profileAnchor=remember { FocusRequester() }
@@ -541,9 +541,9 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
         }
         }
         } // symmetric profile slot
-        Box(Modifier.weight(1f).height(60.dp)) {
+        Box(Modifier.weight(1f).height(52.dp)) {
             androidx.compose.foundation.lazy.LazyRow(Modifier.fillMaxSize(),
-                state=navScroll,verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp,Alignment.CenterHorizontally),
+                state=navScroll,verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp,Alignment.CenterHorizontally),
                 contentPadding=PaddingValues(horizontal=4.dp,vertical=6.dp)) {
                 items(navItems,key={it.first}) { (destination,label) ->
                     val activate={if(destination==Screen.LIVE_TV && current==destination && onMoveDown!=null) {dismissAssistantRP160();onMoveDown()} else navigateHeader(destination)}
@@ -553,7 +553,7 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
                 if(guestExitRP150!=null) item(key="guest-exit-rp150") {FocusButton(tr("Salir invitado","Exit guest"),onClick=guestExitRP150)}
             }
         }
-        Row(Modifier.width(if(assistantOpenRP150!=null) 174.dp else 136.dp),horizontalArrangement=Arrangement.spacedBy(10.dp,Alignment.End),verticalAlignment=Alignment.CenterVertically) {
+        Row(Modifier.width(if(assistantOpenRP150!=null) 164.dp else 120.dp),horizontalArrangement=Arrangement.spacedBy(9.dp,Alignment.End),verticalAlignment=Alignment.CenterVertically) {
             val calendarContextRP120=androidx.compose.ui.platform.LocalContext.current.applicationContext
         val calendarOwnerRP120=if(profile==null) "" else com.miflix.native2.data.CalendarStoreRP120.owner(calendarContextRP120,profile.id)
         val calendarRevisionRP120 by com.miflix.native2.data.CalendarStoreRP120.revision.collectAsState()
@@ -571,7 +571,8 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
 @Composable
 private fun NotificationButton(count: Int,modifier:Modifier=Modifier,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    Box(modifier.size(46.dp).semantics { contentDescription="${tr("Avisos","Alerts")}: $count" }.onFocusChanged { focused=it.isFocused }.tvClick(onClick).clickable(onClick=onClick)
+    val focusScaleRP194 by animateFloatAsState(if(focused) 1.055f else 1f,tween(110),label="alertNavScale")
+    Box(modifier.size(40.dp).graphicsLayer { scaleX=focusScaleRP194;scaleY=focusScaleRP194 }.semantics { contentDescription="${tr("Avisos","Alerts")}: $count" }.onFocusChanged { focused=it.isFocused }.tvClick(onClick).clickable(onClick=onClick)
         .background(GlassNavBrushRP106(focused,false),RoundedCornerShape(50))
         .border(1.dp,Accent.copy(alpha=if(focused) 1f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
         BellIcon(Color.White,Modifier.size(25.dp))
@@ -597,7 +598,8 @@ private fun BellIcon(color: Color,modifier: Modifier) {
 @Composable
 private fun SearchNavigationButton(onFocused: (Boolean) -> Unit = {},selected:Boolean=false,modifier:Modifier=Modifier,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    Box(modifier.size(44.dp).semantics { contentDescription=tr("Buscar","Search") }.onFocusChanged { focused=it.isFocused; onFocused(it.isFocused) }.tvClick(onClick).clickable(onClick=onClick)
+    val focusScaleRP194 by animateFloatAsState(if(focused) 1.055f else 1f,tween(110),label="searchNavScale")
+    Box(modifier.size(40.dp).graphicsLayer { scaleX=focusScaleRP194;scaleY=focusScaleRP194 }.semantics { contentDescription=tr("Buscar","Search") }.onFocusChanged { focused=it.isFocused; onFocused(it.isFocused) }.tvClick(onClick).clickable(onClick=onClick)
         .background(GlassNavBrushRP106(focused,selected),RoundedCornerShape(50)).border(1.dp,Accent.copy(alpha=if(focused) 1f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
         Canvas(Modifier.size(24.dp)) {
             val ink=Color.White
@@ -612,25 +614,28 @@ private fun SearchNavigationButton(onFocused: (Boolean) -> Unit = {},selected:Bo
 @Composable
 internal fun NavigationTab(text: String,selected: Boolean,onFocused: (Boolean) -> Unit = {},modifier:Modifier=Modifier,onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
-    Box(modifier.height(42.dp).onFocusChanged {focused=it.isFocused;onFocused(it.isFocused)}
+    val focusScaleRP194 by animateFloatAsState(if(focused) 1.04f else 1f,tween(115),label="tabNavScale")
+    val borderRP194 by animateColorAsState(if(focused) Accent.copy(alpha=.78f) else Color.White.copy(alpha=if(selected) .17f else .055f),tween(115),label="tabNavBorder")
+    Box(modifier.height(38.dp).graphicsLayer { scaleX=focusScaleRP194;scaleY=focusScaleRP194 }.onFocusChanged {focused=it.isFocused;onFocused(it.isFocused)}
         .tvClick(onClick).clickable(onClick=onClick)
         .background(GlassNavBrushRP106(focused,selected),RoundedCornerShape(50))
-        .border(1.dp,Accent.copy(alpha=if(focused) 1f else if(selected) .18f else .06f),RoundedCornerShape(50))
-        .padding(horizontal=14.dp),contentAlignment=Alignment.Center) {
+        .border(1.dp,borderRP194,RoundedCornerShape(50))
+        .padding(horizontal=13.dp),contentAlignment=Alignment.Center) {
         Text(text,color=Color.White.copy(alpha=if(focused || selected) 1f else .76f),fontSize=14.sp,lineHeight=18.sp,fontWeight=if(focused || selected) FontWeight.Bold else FontWeight.Medium,maxLines=1)
     }
 
 }
 
 private fun GlassNavBrushRP106(focused:Boolean,selected:Boolean):Brush {
-    val alpha=if(focused) .30f else if(selected) .19f else .045f
+    val alpha=if(focused) .25f else if(selected) .16f else .02f
     return Brush.verticalGradient(listOf(Color.White.copy(alpha=alpha),Color.White.copy(alpha=alpha*.40f)))
 }
 
 @Composable
 private fun SettingsNavigationButtonRP106(selected:Boolean,modifier:Modifier=Modifier,onClick:()->Unit) {
     var focused by remember {mutableStateOf(false)}
-    Box(modifier.size(46.dp).semantics {contentDescription=tr("Ajustes","Settings")}
+    val focusScaleRP194 by animateFloatAsState(if(focused) 1.055f else 1f,tween(110),label="settingsNavScale")
+    Box(modifier.size(40.dp).graphicsLayer { scaleX=focusScaleRP194;scaleY=focusScaleRP194 }.semantics {contentDescription=tr("Ajustes","Settings")}
         .onFocusChanged {focused=it.isFocused}.tvClick(onClick).clickable(onClick=onClick)
         .background(GlassNavBrushRP106(focused,selected),RoundedCornerShape(50))
         .border(1.dp,Accent.copy(alpha=if(focused) 1f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {

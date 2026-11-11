@@ -104,6 +104,22 @@ def patch_brand_icon(destination: Path) -> bool:
     return True
 
 
+def install_brunit_overlay(destination: Path) -> int:
+    """Copy typed compatibility code without rewriting Nuvio's UI implementation."""
+    overlay = ROOT / "desktop/brunio-desktop2/overlay"
+    count = 0
+    for source in overlay.rglob("*"):
+        if not source.is_file():
+            continue
+        target = destination / source.relative_to(overlay)
+        if target.exists():
+            raise UpstreamChanged(f"Overlay unexpectedly overwrites upstream file: {target}")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+        count += 1
+    return count
+
+
 def configure_public_backend(destination: Path) -> bool:
     url = os.environ.get("BRUNIO_SUPABASE_URL", "").strip()
     key = os.environ.get("BRUNIO_SUPABASE_PUBLISHABLE_KEY", "").strip()
@@ -128,10 +144,12 @@ def main() -> None:
     pin_upstream(output)
     patch_visual_brand(output)
     icon_ok = patch_brand_icon(output)
+    files_added = install_brunit_overlay(output)
     backend = configure_public_backend(output)
     print("Pinned upstream:", PIN)
     print("Prepared directory:", output)
     print("Windows icon patched:", icon_ok)
+    print("Overlay files copied:", files_added)
     print("Public Supabase auth endpoint configured:", backend)
     print("STATUS: visual upstream only. NOT a finished BruniO Desktop build.")
     print("BLOCKER: BruniO repositories and RP1 Party backend adapter not yet wired.")

@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -128,6 +130,7 @@ internal fun NativeYoutubeRP200(
             else -> false
         }
     }
+    val playerContent: @Composable () -> Unit = {
     Box(Modifier.fillMaxSize().background(Color.Black).then(swipe).focusRequester(focus).then(keyHandling).focusable()) {
         AndroidView(factory={ctx->PlayerView(ctx).apply {
             useController=false
@@ -156,4 +159,7 @@ internal fun NativeYoutubeRP200(
             FocusButton(tr("Cerrar","Close"),onClick=close)
         }
     }
+    }
+    if(embedded) playerContent()
+    else Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {playerContent()}
 }

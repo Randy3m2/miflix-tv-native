@@ -130,13 +130,6 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
         Column(Modifier.fillMaxSize().background(Color.Black).then(remoteController)) {
             if(preview && !embedded && trailerChromeRP200) {
                 Text(caption,color=Color.White,fontSize=20.sp,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.fillMaxWidth().padding(start=24.dp,end=24.dp,top=10.dp,bottom=4.dp))
-            } else if(!fullscreenRP165) Row(Modifier.fillMaxWidth().padding(10.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                FocusButton(tr("Volver a fuentes","Back to sources"),onClick=close)
-                FocusButton(tr("Pausa / Reproducir","Pause / Play")) {view?.evaluateJavascript("brunioPlayPause()",null)}
-                FocusButton("−10s") {view?.evaluateJavascript("brunioSeek(-10)",null)}
-                FocusButton("+10s") {view?.evaluateJavascript("brunioSeek(10)",null)}
-                FocusButton(tr("Pantalla completa","Full screen")) {fullscreenRP165=true}
-                FocusButton("YouTube") {openLidomWebsite(context,"https://www.youtube.com/watch?v=$video")}
             }
             if(status.startsWith("error:") || status=="blocked") Row(Modifier.padding(10.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                 Text(youtubeMessageRP165(status),color=Color.White,modifier=Modifier.weight(1f))
@@ -171,6 +164,14 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
                 frame.addView(web)
                 frame
             })
+            if(!preview && !fullscreenRP165) Row(Modifier.fillMaxWidth().padding(10.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                FocusButton(tr("Volver a fuentes","Back to sources"),onClick=close)
+                FocusButton(tr("Pausa / Reproducir","Pause / Play")) {view?.evaluateJavascript("brunioPlayPause()",null)}
+                FocusButton("−10s") {view?.evaluateJavascript("brunioSeek(-10)",null)}
+                FocusButton("+10s") {view?.evaluateJavascript("brunioSeek(10)",null)}
+                FocusButton(tr("Pantalla completa","Full screen")) {fullscreenRP165=true}
+                FocusButton("YouTube") {openLidomWebsite(context,"https://www.youtube.com/watch?v=$video")}
+            }
         // RP198: immersive Discover Trailers uses remote shortcuts without a permanent action strip.
         // Fullscreen/standalone previews retain the visible controls for accessibility.
         if(preview && !embedded && trailerChromeRP200) TrailerActionBar(previous,next,details,watch,swipe)

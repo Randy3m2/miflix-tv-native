@@ -68,7 +68,7 @@ private fun MoodTile(mood:String,selected:Boolean,modifier:Modifier=Modifier,ima
     }
     val shape=RoundedCornerShape(16.dp)
     val stroke by animateColorAsState(if(focused) Accent else if(selected) hue else Color.White.copy(alpha=.14f),tween(115),label="mood-focus-border")
-    Box(modifier.height(94.dp).width(210.dp).graphicsLayer {scaleX=scale;scaleY=scale}
+    Box(modifier.height(if(LocalHomeShelfPaging.current) LocalHomeCardRowHeight.current-36.dp else 152.dp).width(210.dp).graphicsLayer {scaleX=scale;scaleY=scale}
         .onFocusChanged {focused=it.isFocused}.clip(shape)
         .background(Brush.linearGradient(listOf(hue.copy(alpha=.3f),Color(0xff121521))))
         .border(if(focused || selected) 2.dp else 1.dp,stroke,shape)
@@ -110,8 +110,9 @@ internal fun MoodSelectorRowRP193(
     onMood:(String)->Unit,
     art:Map<String,String> = emptyMap()
 ) {
+    val rowHeight=if(LocalHomeShelfPaging.current) LocalHomeCardRowHeight.current+40.dp else 228.dp
     Column(
-        Modifier.fillMaxWidth().padding(start=40.dp,end=32.dp,top=8.dp,bottom=4.dp),
+        Modifier.fillMaxWidth().height(rowHeight).padding(start=40.dp,end=32.dp,top=8.dp,bottom=4.dp),
         verticalArrangement=Arrangement.spacedBy(10.dp)
     ) {
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {

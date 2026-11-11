@@ -484,10 +484,13 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
     var navFocusedRP195 by remember { mutableStateOf<Screen?>(null) }
     var navOriginRP195 by remember { mutableFloatStateOf(0f) }
     val navBoundsRP195=remember { mutableStateMapOf<Screen,Pair<Float,Float>>() }
+    // RP198: never fall back to Home when the user moves focus to another header control.
+    // The last focused target remains selected when focus leaves the header.
     val highlightedRP195=navFocusedRP195 ?: current
     val targetRP195=navBoundsRP195[highlightedRP195]
+    val iconTargetRP198=highlightedRP195==Screen.NOTIFICATIONS || highlightedRP195==Screen.SETTINGS
     val targetXRP195=(targetRP195?.first ?: navOriginRP195)-navOriginRP195
-    val targetWRP195=targetRP195?.second ?: 0f
+    val targetWRP195=if(iconTargetRP198) 0f else targetRP195?.second ?: 0f
     val pillXRP195=animateFloatAsState(targetXRP195,tween(175,easing=LinearOutSlowInEasing),label="navPillXRP195")
     val pillWRP195=animateFloatAsState(targetWRP195,tween(175,easing=LinearOutSlowInEasing),label="navPillWidthRP195")
     fun navigateHeader(destination:Screen) {dismissAssistantRP160();HeaderNavigationRP108.policy.navigate(owner,destination.name);onNavigate(destination)}
@@ -580,7 +583,6 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
                     }.then(if(current==destination) Modifier.focusRequester(headerTarget) else Modifier)
                     val focusChange:(Boolean)->Unit={ focused ->
                         if(focused) navFocusedRP195=destination
-                        else if(navFocusedRP195==destination) navFocusedRP195=null
                     }
                     if(destination==Screen.SEARCH) SearchNavigationButton(
                         onFocused=focusChange,selected=highlightedRP195==destination,modifier=loc,onClick=activate,sharedHighlightRP195=true)
@@ -597,22 +599,30 @@ fun Sidebar(screen: Screen,profileName: String,onNavigate: (Screen) -> Unit,noti
         val sportUnreadRP120 by produceState(0,calendarOwnerRP120,calendarRevisionRP120) {
             value=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {com.miflix.native2.data.CalendarStoreRP120.unread(calendarContextRP120,calendarOwnerRP120)}
         }
-        if(guestExitRP150==null) NotificationButton(notificationCount+sportUnreadRP120,if(current==Screen.NOTIFICATIONS) Modifier.focusRequester(headerTarget) else Modifier) {navigateHeader(Screen.NOTIFICATIONS)}
+        if(guestExitRP150==null) NotificationButton(notificationCount+sportUnreadRP120,
+            (if(current==Screen.NOTIFICATIONS) Modifier.focusRequester(headerTarget) else Modifier)
+                .onGloballyPositioned {navBoundsRP195[Screen.NOTIFICATIONS]=it.positionInRoot().x to it.size.width.toFloat()},
+            onFocused={if(it) navFocusedRP195=Screen.NOTIFICATIONS}) {navigateHeader(Screen.NOTIFICATIONS)}
             if(!kids && assistantOpenRP150!=null) AssistantOrbRP155(onClick=assistantOpenRP150)
-            if(!kids && guestExitRP150==null) SettingsNavigationButtonRP106(current==Screen.SETTINGS,if(current==Screen.SETTINGS) Modifier.focusRequester(headerTarget) else Modifier) {navigateHeader(Screen.SETTINGS)}
+            if(!kids && guestExitRP150==null) SettingsNavigationButtonRP106(current==Screen.SETTINGS,
+                (if(current==Screen.SETTINGS) Modifier.focusRequester(headerTarget) else Modifier)
+                    .onGloballyPositioned {navBoundsRP195[Screen.SETTINGS]=it.positionInRoot().x to it.size.width.toFloat()},
+                onFocused={if(it) navFocusedRP195=Screen.SETTINGS}) {navigateHeader(Screen.SETTINGS)}
         }
 
     }
 }
 
 @Composable
-private fun NotificationButton(count: Int,modifier:Modifier=Modifier,onClick: () -> Unit) {
+private fun NotificationButton(count: Int,modifier:Modifier=Modifier,onFocused:(Boolean)->Unit={},onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
+    val whiteFillRP198 by animateColorAsState(if(focused) Color(0xFFF5F5F5) else Color.Transparent,tween(120),label="alertFillRP198")
     val focusScaleRP194 by animateFloatAsState(if(focused) 1.055f else 1f,tween(110),label="alertNavScale")
-    Box(modifier.size(40.dp).graphicsLayer { scaleX=focusScaleRP194;scaleY=focusScaleRP194 }.semantics { contentDescription="${tr("Avisos","Alerts")}: $count" }.onFocusChanged { focused=it.isFocused }.tvClick(onClick).clickable(onClick=onClick)
-        .background(GlassNavBrushRP106(focused,false),RoundedCornerShape(50))
-        .border(1.dp,Accent.copy(alpha=if(focused) 1f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
-        BellIcon(Color.White,Modifier.size(25.dp))
+    Box(modifier.size(40.dp).graphicsLayer { scaleX=focusScaleRP194;scaleY=focusScaleRP194 }.semantics { contentDescription="${tr("Avisos","Alerts")}: $count" }.onFocusChanged { focused=it.isFocused;onFocused(it.isFocused) }.tvClick(onClick).clickable(onClick=onClick)
+        .background(GlassNavBrushRP106(false,false),RoundedCornerShape(50))
+        .background(whiteFillRP198,RoundedCornerShape(50))
+        .border(1.dp,Color.White.copy(alpha=if(focused) .9f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
+        BellIcon(if(focused) Color(0xFF151515) else Color.White,Modifier.size(25.dp))
         if(count>0) Text(if(count>9) "9+" else count.toString(),color=if(focused) Color.White else Color.Black,fontSize=10.sp,lineHeight=12.sp,
             modifier=Modifier.align(Alignment.TopEnd).background(if(focused) Color(0xFF292929) else Color(0xFFCCCCCC),RoundedCornerShape(8.dp)).padding(horizontal=4.dp,vertical=2.dp))
     }
@@ -670,13 +680,15 @@ private fun GlassNavBrushRP106(focused:Boolean,selected:Boolean):Brush {
 }
 
 @Composable
-private fun SettingsNavigationButtonRP106(selected:Boolean,modifier:Modifier=Modifier,onClick:()->Unit) {
+private fun SettingsNavigationButtonRP106(selected:Boolean,modifier:Modifier=Modifier,onFocused:(Boolean)->Unit={},onClick:()->Unit) {
     var focused by remember {mutableStateOf(false)}
+    val whiteFillRP198 by animateColorAsState(if(focused) Color(0xFFF5F5F5) else Color.Transparent,tween(120),label="settingsFillRP198")
     val focusScaleRP194 by animateFloatAsState(if(focused) 1.055f else 1f,tween(110),label="settingsNavScale")
     Box(modifier.size(40.dp).graphicsLayer { scaleX=focusScaleRP194;scaleY=focusScaleRP194 }.semantics {contentDescription=tr("Ajustes","Settings")}
-        .onFocusChanged {focused=it.isFocused}.tvClick(onClick).clickable(onClick=onClick)
-        .background(GlassNavBrushRP106(focused,selected),RoundedCornerShape(50))
-        .border(1.dp,Accent.copy(alpha=if(focused) 1f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
+        .onFocusChanged {focused=it.isFocused;onFocused(it.isFocused)}.tvClick(onClick).clickable(onClick=onClick)
+        .background(GlassNavBrushRP106(false,selected),RoundedCornerShape(50))
+        .background(whiteFillRP198,RoundedCornerShape(50))
+        .border(1.dp,Color.White.copy(alpha=if(focused) .9f else .10f),RoundedCornerShape(50)),contentAlignment=Alignment.Center) {
         Canvas(Modifier.size(24.dp)) {
             val center=androidx.compose.ui.geometry.Offset(size.width/2f,size.height/2f)
             val gear=androidx.compose.ui.graphics.Path()
@@ -688,8 +700,9 @@ private fun SettingsNavigationButtonRP106(selected:Boolean,modifier:Modifier=Mod
                 if(index==0) gear.moveTo(x,y) else gear.lineTo(x,y)
             }
             gear.close()
-            drawPath(gear,Color.White,style=androidx.compose.ui.graphics.drawscope.Stroke(1.6.dp.toPx()))
-            drawCircle(Color.White,size.minDimension*.13f,center,style=androidx.compose.ui.graphics.drawscope.Stroke(1.6.dp.toPx()))
+            val ink=if(focused) Color(0xFF151515) else Color.White
+            drawPath(gear,ink,style=androidx.compose.ui.graphics.drawscope.Stroke(1.6.dp.toPx()))
+            drawCircle(ink,size.minDimension*.13f,center,style=androidx.compose.ui.graphics.drawscope.Stroke(1.6.dp.toPx()))
         }
     }
 }

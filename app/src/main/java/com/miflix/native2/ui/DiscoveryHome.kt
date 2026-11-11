@@ -173,6 +173,8 @@ internal fun DiscoveryTrailers(state:AppState,candidates:List<MediaSummary>,mood
     }
     var index by remember {mutableIntStateOf(0)}
     var trailer by remember {mutableStateOf<TrailerSummary?>(null)}
+    // RP199: bounded trailer metadata cache; no extra video decoder or WebView.
+    val warmedTrailersRP199=remember {java.util.LinkedHashMap<String,TrailerSummary>(12,0.75f,true)}
     var loadedCloud by remember {mutableStateOf<String?>(null)}
     var message by remember {mutableStateOf("")}
     var loading by remember {mutableStateOf(true)}
@@ -183,7 +185,7 @@ internal fun DiscoveryTrailers(state:AppState,candidates:List<MediaSummary>,mood
     LaunchedEffect(item?.cloudId,retry,state.interfaceLanguage,state.activeProfile.id) {
         trailer=null;loadedCloud=null;message="";loading=true
         try {
-            if(item!=null && (!state.kidsMode || state.tmdb.kidsAllowed(item))) trailer=state.tmdb.previewTrailers(item).firstOrNull()
+            if(item!=null && (!state.kidsMode || state.tmdb.kidsAllowed(item))) trailer=warmedTrailersRP199[item.cloudId] ?: state.tmdb.previewTrailers(item).firstOrNull()?.also {warmedTrailersRP199[item.cloudId]=it}
             loadedCloud=item?.cloudId
             if(trailer==null) message=tr("No hay un tráiler disponible para este título.","No trailer is available for this title.")
         } catch(e:CancellationException) {throw e} catch(_:Exception) {message=tr("No se pudo cargar el tráiler. Puedes reintentar o avanzar.","Could not load the trailer. Retry or move to the next title.")} finally {loading=false}
@@ -191,7 +193,15 @@ internal fun DiscoveryTrailers(state:AppState,candidates:List<MediaSummary>,mood
     // Warm only the next title's metadata. No second WebView or video download.
     LaunchedEffect(loadedCloud,index) {
         if(loadedCloud==item?.cloudId && item!=null && index<rows.lastIndex) {
-            try {state.tmdb.previewTrailers(rows[index+1])} catch(e:CancellationException) {throw e} catch(_:Exception) { }
+            val next=rows[index+1]
+            if(next.cloudId !in warmedTrailersRP199 && (!state.kidsMode || state.tmdb.kidsAllowed(next))) {
+                try {
+                    state.tmdb.previewTrailers(next).firstOrNull()?.let {
+                        warmedTrailersRP199[next.cloudId]=it
+                        if(warmedTrailersRP199.size>12) warmedTrailersRP199.remove(warmedTrailersRP199.keys.first())
+                    }
+                } catch(e:CancellationException) {throw e} catch(_:Exception) { }
+            }
         }
     }
     val swipe=Modifier.pointerInput(index) {

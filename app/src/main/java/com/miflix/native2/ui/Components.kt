@@ -664,12 +664,14 @@ internal fun NavigationTab(text: String,selected: Boolean,onFocused: (Boolean) -
     var focused by remember { mutableStateOf(false) }
     val focusScaleRP194 by animateFloatAsState(if(focused) 1.04f else 1f,tween(115),label="tabNavScale")
     val borderRP194 by animateColorAsState(if(focused) Accent.copy(alpha=.78f) else Color.White.copy(alpha=if(selected) .17f else .055f),tween(115),label="tabNavBorder")
+    val localFillRP198 by animateColorAsState(if(focused && !sharedHighlightRP195) Color(0xFFF5F5F5) else Color.Transparent,tween(120),label="subTabWhiteFillRP198")
     Box(modifier.height(38.dp).graphicsLayer { val scale=if(sharedHighlightRP195) 1f else focusScaleRP194;scaleX=scale;scaleY=scale }.onFocusChanged {focused=it.isFocused;onFocused(it.isFocused)}
         .tvClick(onClick).clickable(onClick=onClick)
-        .background(if(sharedHighlightRP195) Brush.verticalGradient(listOf(Color.Transparent,Color.Transparent)) else GlassNavBrushRP106(focused,selected),RoundedCornerShape(50))
-        .border(1.dp,if(sharedHighlightRP195) Color.Transparent else borderRP194,RoundedCornerShape(50))
+        .background(if(sharedHighlightRP195) Brush.verticalGradient(listOf(Color.Transparent,Color.Transparent)) else GlassNavBrushRP106(false,selected),RoundedCornerShape(50))
+        .background(localFillRP198,RoundedCornerShape(50))
+        .border(1.dp,if(sharedHighlightRP195 || focused) Color.Transparent else borderRP194,RoundedCornerShape(50))
         .padding(horizontal=13.dp),contentAlignment=Alignment.Center) {
-        Text(text,color=if(sharedHighlightRP195 && selected) Color(0xFF171717) else Color.White.copy(alpha=if(focused || selected) 1f else .83f),fontSize=14.sp,lineHeight=18.sp,fontWeight=FontWeight.Medium,maxLines=1)
+        Text(text,color=if((sharedHighlightRP195 && selected) || (focused && !sharedHighlightRP195)) Color(0xFF171717) else Color.White.copy(alpha=if(focused || selected) 1f else .83f),fontSize=14.sp,lineHeight=18.sp,fontWeight=FontWeight.Medium,maxLines=1)
     }
 
 }

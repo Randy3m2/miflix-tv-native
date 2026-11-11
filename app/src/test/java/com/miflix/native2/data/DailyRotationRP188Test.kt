@@ -48,9 +48,23 @@ class DailyRotationRP188Test {
         try {repo.load("a",rows,{throw CancellationException()},{});fail("Must cancel")} catch(_:CancellationException) {}
         assertTrue(repo.load("a",rows,{true},{}).isNotEmpty())
     }
-    @Test fun rotationMovesToFifthShelfAndContinueStaysFirst() {
-        assertEquals(listOf("continue","streaming","genres","movies","daily_rotation","series"),DailyRotationPolicyRP188.homeOrder(listOf("daily_rotation","streaming","genres","movies","series")))
-        assertEquals(listOf("continue","streaming","daily_rotation"),DailyRotationPolicyRP188.homeOrder(listOf("streaming")))
+    @Test fun dailyRotationIsAnExploreShortcutNotAHomeShelf() {
+        val result=DailyRotationPolicyRP188.homeOrder(listOf("daily_rotation","streaming","genres","movies","series"))
+        assertFalse(result.contains("daily_rotation"))
+        assertEquals("continue",result.first())
+        assertFalse(DailyRotationPolicyRP188.homeOrder(listOf("streaming")).contains("daily_rotation"))
+    }
+    @Test fun unseenDailyRotationExcludesPastMoviesAndSeriesAcrossDates() {
+        val first=DailyRotationPolicyRP188.unseenCandidates(2026,315,emptySet())
+        val chosen=first.take(6).map {DailyRotationPolicyRP188.identity(it)}.toSet()
+        val future=DailyRotationPolicyRP188.unseenCandidates(2026,316,chosen)
+        assertTrue(future.none {DailyRotationPolicyRP188.identity(it) in chosen})
+        assertEquals(future.size,future.map {DailyRotationPolicyRP188.identity(it)}.distinct().size)
+    }
+    @Test fun exhaustedMovieCatalogIsNotRecycled() {
+        val all=DailyRotationPolicyRP188.unseenCandidates(2026,315,emptySet(),"movie")
+        val exhausted=all.map {DailyRotationPolicyRP188.identity(it)}.toSet()
+        assertTrue(DailyRotationPolicyRP188.unseenCandidates(2026,316,exhausted,"movie").isEmpty())
     }
     @Test fun interruptedLoadingReusesVerifiedCardsAndResumesUncheckedSources()=runBlocking {
         val repo=DailyRotationRepositoryRP188();val rows=DailyRotationPolicyRP188.candidates(2026,312)

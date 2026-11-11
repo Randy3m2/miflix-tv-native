@@ -17,7 +17,7 @@ internal val HomeRows=listOf(
     "explore-shortcuts" to "Explore",
     "mood-selector" to "Mood selector",
     "discovery-picks" to "Mood picks",
-    "daily_rotation" to "Daily rotation",
+    "live_favorites" to "Favorite Live Channels",
     "streaming" to "Streaming",
     "genres_home" to "Browse by genre",
     "comfort_comedies" to "Comfort comedies",
@@ -54,7 +54,7 @@ internal fun HomeOrderDialog(state:AppState,close:()->Unit) {
     var order by remember {mutableStateOf(com.miflix.native2.data.DailyRotationPolicyRP188.homeOrder(state.homeRowOrder+default).filter {it in default})}
     PlayerSideSheet(tr("Orden de Home","Home row order"),close) {
         item {CinemaBanner("BRUNIO · HOME STUDIO",tr("Tu Home, a tu manera","Your Home, your way"),tr("Pon primero lo que más disfrutas.","Put what you love first."))}
-        item {Text(tr("Mueve las filas. Los cambios se guardan solo para este perfil y dispositivo.","Move rows. Changes are saved for this profile on this device."),color=Muted)}
+        item {Text(tr("Ordena el Home del perfil. Se sincroniza al guardar, sin consultas periódicas.","Order this profile’s Home. Changes sync on save without polling."),color=Muted)}
         item {FocusButton(tr("Restablecer orden","Reset order")) {order=default;state.saveHomeRowOrder(emptyList())}}
         items(order,key={it}) {key ->
             val index=order.indexOf(key)
@@ -64,6 +64,7 @@ internal fun HomeOrderDialog(state:AppState,close:()->Unit) {
                 fun move(delta:Int) {val target=index+delta;if(index>0 && target in 1..order.lastIndex) {val copy=order.toMutableList();java.util.Collections.swap(copy,index,target);order=copy;state.saveHomeRowOrder(order)}}
                 if(index>1) FocusButton("↑",horizontalPadding=14.dp) {move(-1)}
                 if(index>0 && index<order.lastIndex) FocusButton("↓",horizontalPadding=14.dp) {move(1)}
+                if(key!="continue") FocusButton(if(key in state.hiddenHomeRows) tr("Mostrar","Show") else tr("Ocultar","Hide"),horizontalPadding=14.dp) {state.setHomeRowVisible(key,key in state.hiddenHomeRows)}
             }
         }
     }

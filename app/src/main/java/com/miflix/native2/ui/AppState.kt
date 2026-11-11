@@ -218,6 +218,23 @@ class AppState(context: Context) {
     }
     internal val localExtras=LocalExtrasRC100(context.getSharedPreferences("brunio_local_extras",Context.MODE_PRIVATE))
     internal fun localExtrasScope()=ratingsKey()
+    private val collectionsSyncMutexRP204=Mutex()
+    /** Sync collections once when opened or when edited; the RPC compares timestamps
+     * atomically, so an older offline device cannot overwrite newer cloud changes.
+     * Other local extras remain untouched.
+     */
+    internal suspend fun syncCustomCollectionsRP204() {
+        val actor=session ?: return
+        val profile=activeProfile.id
+        val scope=localExtrasScope()
+        collectionsSyncMutexRP204.withLock {
+            val stamp=localExtras.collectionStamp(scope)
+            val localItems=if(stamp>0) org.json.JSONArray(localExtras.lists(scope)) else null
+            val (remote,remoteStamp)=cloud.syncCustomCollectionsRP204(actor,profile,localItems,stamp)
+            if(session?.userId==actor.userId && activeProfile.id==profile &&
+                remoteStamp>stamp) localExtras.applyCloudCollections(scope,remote,remoteStamp)
+        }
+    }
     internal fun localRecommendations(rows:List<MediaSummary>)=rows.filterNot {localExtras.hidden(ratingsKey(),it.cloudId)}
     internal fun exportLocalBackupRC100():org.json.JSONObject=org.json.JSONObject()
         .put("brunioLocalBackup",100).put("extras",localExtras.export(ratingsKey()))

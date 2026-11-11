@@ -108,11 +108,11 @@ internal class LidomRepository(private val context:Context, owner:String) {
                 val renderers=page.split("""\"videoRenderer\":""").drop(1).take(35)
                 for(renderer in renderers) {
                     val block=renderer.take(9000).substringBefore("""\"videoRenderer\":""")
-                    val id=Regex("""\"videoId\"\s*:\s*\"([A-Za-z0-9_-]{11})\"""").find(block)?.groupValues?.get(1) ?: continue
+                    val id=Regex("\"videoId\"\\s*:\\s*\"([A-Za-z0-9_-]{11})\"").find(block)?.groupValues?.get(1) ?: continue
                     val live=block.contains("""\"isLiveNow\":true""") ||
                         block.contains("BADGE_STYLE_TYPE_LIVE_NOW")
                     if(!live) continue
-                    val title=Regex("""\"text\"\s*:\s*\"([^\"]{3,180})\"""")
+                    val title=Regex("\"text\"\\s*:\\s*\"([^\"]{3,180})\"")
                         .find(block)?.groupValues?.get(1) ?: source.name
                     return@withContext source to LidomVideo(id,title)
                 }

@@ -656,7 +656,7 @@ internal fun NavigationTab(text: String,selected: Boolean,onFocused: (Boolean) -
         .background(if(sharedHighlightRP195) Brush.verticalGradient(listOf(Color.Transparent,Color.Transparent)) else GlassNavBrushRP106(focused,selected),RoundedCornerShape(50))
         .border(1.dp,if(sharedHighlightRP195) Color.Transparent else borderRP194,RoundedCornerShape(50))
         .padding(horizontal=13.dp),contentAlignment=Alignment.Center) {
-        Text(text,color=if(sharedHighlightRP195 && selected) Color(0xFF171717) else Color.White.copy(alpha=if(focused || selected) 1f else .83f),fontSize=14.sp,lineHeight=18.sp,fontWeight=if(focused || selected) FontWeight.Bold else FontWeight.Medium,maxLines=1)
+        Text(text,color=if(sharedHighlightRP195 && selected) Color(0xFF171717) else Color.White.copy(alpha=if(focused || selected) 1f else .83f),fontSize=14.sp,lineHeight=18.sp,fontWeight=FontWeight.Medium,maxLines=1)
     }
 
 }

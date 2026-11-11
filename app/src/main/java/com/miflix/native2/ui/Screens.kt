@@ -3,6 +3,7 @@
 package com.miflix.native2.ui
 
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.async
 
 import android.content.Intent
 import android.net.Uri

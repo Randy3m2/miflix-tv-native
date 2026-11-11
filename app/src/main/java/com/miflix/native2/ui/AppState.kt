@@ -244,6 +244,26 @@ class AppState(context: Context) {
             }
         }
     }
+    private val homeSyncMutexRP205=Mutex()
+    /** RP205: one cloud request on entering a profile, or per saved edit.
+     * No periodic checks. Failed requests leave the local Home unchanged.
+     */
+    internal suspend fun syncHomeStudioRP205(edited:Boolean=false) {
+        val actor=session ?: return
+        val profile=activeProfile.id
+        homeSyncMutexRP205.withLock {
+            val stamp=homeStampRP205()
+            val payload=if(edited && stamp>0L) homeSettingsRP205() else null
+            var (remote,remoteStamp)=cloud.syncHomeStudioRP205(actor,profile,payload,stamp)
+            if(!edited && stamp>0L && remoteStamp==0L) {
+                val migrated=cloud.syncHomeStudioRP205(actor,profile,homeSettingsRP205(),stamp)
+                remote=migrated.first;remoteStamp=migrated.second
+            }
+            if(session?.userId==actor.userId && activeProfile.id==profile && remoteStamp>stamp) {
+                applyHomeSettingsRP205(remote,remoteStamp)
+            }
+        }
+    }
     internal fun localRecommendations(rows:List<MediaSummary>)=rows.filterNot {localExtras.hidden(ratingsKey(),it.cloudId)}
     internal fun exportLocalBackupRC100():org.json.JSONObject=org.json.JSONObject()
         .put("brunioLocalBackup",100).put("extras",localExtras.export(ratingsKey()))

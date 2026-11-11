@@ -19,7 +19,6 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.miflix.native2.data.LiveRepository
 import com.miflix.native2.model.MediaSummary
-import com.miflix.native2.model.PlayerRequest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 

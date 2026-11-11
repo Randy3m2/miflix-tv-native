@@ -79,6 +79,14 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
     val previewFocus=remember(video) {FocusRequester()}
     LaunchedEffect(video,preview) {if(preview) {withFrameNanos {};runCatching {previewFocus.requestFocus()}}}
     var status by remember(video) {mutableStateOf("")}
+    // RP200: the trailer canvas is cinematic while playing; D-pad reveals native actions.
+    var trailerChromeRP200 by remember(video) {mutableStateOf(true)}
+    LaunchedEffect(status,trailerChromeRP200,preview) {
+        if(preview && trailerChromeRP200 && status=="playing") {
+            kotlinx.coroutines.delay(3500)
+            trailerChromeRP200=false
+        }
+    }
     var view by remember(video) {mutableStateOf<WebView?>(null)}
     val latestWorking by rememberUpdatedState(onWorking)
     val latestEnded by rememberUpdatedState(onEnded)
@@ -101,6 +109,8 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
     DisposableEffect(video) {onDispose {bridge.active=false;view?.let {it.evaluateJavascript("brunioPause()",null);it.stopLoading();it.removeJavascriptInterface("BruniO");it.onPause();it.destroy()};view=null}}
     val remoteController=Modifier.onPreviewKeyEvent {event ->
         val key=event.nativeKeyEvent
+        if(preview && key.action==android.view.KeyEvent.ACTION_DOWN && key.repeatCount==0 &&
+            key.keyCode in setOf(19,20,21,22)) trailerChromeRP200=true
         if(preview && TrailerRemotePolicy.handles(key.keyCode)) {
             when(TrailerRemotePolicy.action(key.keyCode,key.action==android.view.KeyEvent.ACTION_DOWN,key.repeatCount)) {
                 "previous" ->previous?.invoke()
@@ -118,7 +128,7 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
     val playerContent: @Composable () -> Unit = {
         RemoteDialogInputRP167()
         Column(Modifier.fillMaxSize().background(Color.Black).then(remoteController)) {
-            if(preview && !embedded) {
+            if(preview && !embedded && trailerChromeRP200) {
                 Text(caption,color=Color.White,fontSize=20.sp,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.fillMaxWidth().padding(start=24.dp,end=24.dp,top=10.dp,bottom=4.dp))
             } else if(!fullscreenRP165) Row(Modifier.fillMaxWidth().padding(10.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                 FocusButton(tr("Volver a fuentes","Back to sources"),onClick=close)
@@ -163,7 +173,7 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
             })
         // RP198: immersive Discover Trailers uses remote shortcuts without a permanent action strip.
         // Fullscreen/standalone previews retain the visible controls for accessibility.
-        if(preview && !embedded) TrailerActionBar(previous,next,details,watch,swipe)
+        if(preview && !embedded && trailerChromeRP200) TrailerActionBar(previous,next,details,watch,swipe)
 
     }
 }

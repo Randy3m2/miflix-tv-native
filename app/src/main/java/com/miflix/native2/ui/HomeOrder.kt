@@ -14,7 +14,8 @@ internal data class HomeSection(val key:String,val content:@Composable ()->Unit)
 internal val HomeRows=listOf(
     "continue" to "Continue Watching",
     "local_lists" to "My local lists",
-    "discovery-controls" to "Mood selector",
+    "explore-shortcuts" to "Explore",
+    "mood-selector" to "Mood selector",
     "discovery-picks" to "Mood picks",
     "daily_rotation" to "Daily rotation",
     "streaming" to "Streaming",

@@ -213,7 +213,7 @@ internal fun DiscoveryTrailers(state:AppState,candidates:List<MediaSummary>,mood
     val playing=trailer.takeIf {loadedCloud==item?.cloudId}
     Dialog(onDismissRequest=close,properties=DialogProperties(usePlatformDefaultWidth=false,decorFitsSystemWindows=false)) {
     if(item!=null && playing!=null) key(item.cloudId,playing.key) {
-        LidomYoutubePlayer(playing.key,onWorking={state.recordDiscovery("trailers:$mood",item)},close=close,preview=true,embedded=true,
+        NativeYoutubeRP200(playing.key,onWorking={state.recordDiscovery("trailers:$mood",item)},close=close,preview=true,embedded=true,
             caption="${index+1}/${rows.size} · ${item.title}",
             previous=if(index>0) ({index--; Unit}) else null,next={next()},onEnded={next()},
             details={close();state.launch {state.open(item)}},

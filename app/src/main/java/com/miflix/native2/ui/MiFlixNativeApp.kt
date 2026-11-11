@@ -102,24 +102,30 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
         LaunchedEffect(state.session?.userId,state.activeProfile.id,state.appForeground,calendarSubscriptionsRP134) {
             if(state.appForeground) try {state.syncCalendarSubscriptionsRP134()} catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) { }
         }
-        // RP204: sync only when signed in, foregrounded and the local collections
-        // change; remote polling is deliberately slow to conserve Supabase requests.
-        LaunchedEffect(bootstrapped,state.session?.userId,state.activeProfile.id,
-            state.appForeground,state.localExtras.collectionsRevision) {
+        // RP204: event-driven only — NO timer, NO background polling.
+        // One read when BruniO enters foreground or the profile changes.
+        // A local edit sends one debounced update (multiple quick reorders
+        // coalesce into a single Supabase RPC), just like an event notification.
+        val collectionsOwnerRP204="${state.session?.userId}:${state.activeProfile.id}"
+        var lastLocalEditRP204 by remember(collectionsOwnerRP204) {
+            mutableIntStateOf(state.localExtras.collectionsRevision)
+        }
+        LaunchedEffect(bootstrapped,collectionsOwnerRP204,state.appForeground) {
             if(bootstrapped && state.appForeground && state.session!=null && !guestRP150) {
-                delay(1500)
                 try {state.syncCustomCollectionsRP204()}
                 catch(e:kotlinx.coroutines.CancellationException) {throw e}
-                catch(_:Exception) { /* Migration may not be installed; local lists still work. */ }
+                catch(_:Exception) { /* Local collections remain available offline. */ }
             }
         }
-        LaunchedEffect(bootstrapped,state.session?.userId,state.activeProfile.id,state.appForeground) {
-            if(bootstrapped && state.appForeground && state.session!=null && !guestRP150) {
-                while(state.appForeground) {
-                    delay(90_000)
+        LaunchedEffect(bootstrapped,collectionsOwnerRP204,state.localExtras.collectionsRevision) {
+            val current=state.localExtras.collectionsRevision
+            if(current!=lastLocalEditRP204) {
+                lastLocalEditRP204=current
+                if(bootstrapped && state.session!=null && !guestRP150) {
+                    delay(1500) // debounce several rapid sort changes into one write
                     try {state.syncCustomCollectionsRP204()}
                     catch(e:kotlinx.coroutines.CancellationException) {throw e}
-                    catch(_:Exception) { /* Offline: retry after next interval. */ }
+                    catch(_:Exception) { /* Offline: local order stays saved. */ }
                 }
             }
         }

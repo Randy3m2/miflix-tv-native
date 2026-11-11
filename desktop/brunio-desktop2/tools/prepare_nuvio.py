@@ -132,6 +132,9 @@ def install_brunit_overlay(destination: Path) -> int:
 
 
 def configure_public_backend(destination: Path) -> bool:
+    # Nuvio's Gradle 9 generated-config task declares local.properties as an
+    # input even without credentials, so it must always exist.
+    (destination / "local.properties").touch(exist_ok=True)
     url = os.environ.get("BRUNIO_SUPABASE_URL", "").strip()
     key = os.environ.get("BRUNIO_SUPABASE_PUBLISHABLE_KEY", "").strip()
     if not url or not key:

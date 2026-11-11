@@ -180,6 +180,12 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
         discoveryLoading=true;discoveryError=false
         try {val contextual=state.discoveryRun(effectiveMood);discoveryRows=state.freshDiscoveryRows("mood:$effectiveMood",(if(discoveryMood.isEmpty()) state.forYou+contextual else contextual).distinctBy {it.cloudId})} catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {discoveryError=true} finally {positionRP165.discoveryRows=discoveryRows;positionRP165.discoveryMood=discoveryMood;discoveryLoading=false}
     }
+    // RP200: one shared overlay for all Home posters, never a player per card.
+    var posterDwellRP200 by remember(discoveryOwner) {mutableStateOf<MediaSummary?>(null)}
+    if(posterDwellRP200!=null) {
+        val selected=posterDwellRP200!!
+        TitleTrailerRP31(state,selected) {posterDwellRP200=null}
+    }
     if(showTrailers) DiscoveryTrailers(state,(state.forYou+state.trending+state.movies+state.series).distinctBy {it.cloudId},mood=discoveryMood) {showTrailers=false}
     if(showAmbientRP199) AmbientCinemaRP199(
         titles=(state.forYou+state.trending+state.movies+state.series),
@@ -229,7 +235,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     }
     val openItem: (MediaSummary) -> Unit={ item -> state.launch { state.open(item) } }
     val openCollection: (CollectionTile) -> Unit={ tile -> state.launch { state.openCollection(tile.id,tile.title) } }
-    CompositionLocalProvider(LocalHomePositionRP165 provides positionRP165,LocalSimpleHome provides simple,LocalHomeReturnFocus provides homeReturn,LocalHomeShelfMotion provides shelfMotion,
+    CompositionLocalProvider(LocalPosterDwellTrailerRP200 provides { item:MediaSummary -> if(!state.kidsMode && state.appForeground && !state.discoveryPreviewActive) posterDwellRP200=item },LocalHomePositionRP165 provides positionRP165,LocalSimpleHome provides simple,LocalHomeReturnFocus provides homeReturn,LocalHomeShelfMotion provides shelfMotion,
         LocalHomeShelfMore provides {key,title,rows ->
             when(key) {
                 "streaming","franchises_home" -> onNavigate(Screen.COLLECTIONS)

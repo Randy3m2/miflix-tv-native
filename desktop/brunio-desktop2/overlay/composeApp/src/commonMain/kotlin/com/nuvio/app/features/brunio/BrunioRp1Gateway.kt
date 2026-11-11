@@ -1,6 +1,7 @@
 package com.nuvio.app.features.brunio
 
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
@@ -163,7 +164,7 @@ internal class BrunioRp1Gateway(
             put("media", cloudId ?: "")
             put("s", season.coerceAtLeast(0))
             put("e", episode.coerceAtLeast(0))
-            put("room", roomCode?.let(::JsonPrimitive))
+            put("room", roomCode?.let(::JsonPrimitive) ?: JsonNull)
         })
     }
 

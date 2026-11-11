@@ -34,7 +34,11 @@ def replace_exact(path: Path, before: str, after: str) -> None:
 
 
 def run(*cmd: str, cwd: Path | None = None) -> str:
-    result = subprocess.run(cmd, cwd=cwd, check=True, capture_output=True, text=True)
+    try:
+        result = subprocess.run(cmd, cwd=cwd, check=True, capture_output=True, text=True)
+    except subprocess.CalledProcessError as err:
+        details = (err.stderr or err.stdout or "").strip()
+        raise RuntimeError(f"Command failed: {cmd[0]} {cmd[1]}: {details[-3500:]}") from err
     return result.stdout.strip()
 
 
@@ -47,7 +51,10 @@ def pin_upstream(destination: Path) -> None:
     commit = run("git", "rev-parse", "HEAD", cwd=destination)
     if commit != PIN:
         raise UpstreamChanged(f"Expected {PIN}, got {commit}")
-    run("git", "submodule", "update", "--init", "--recursive", cwd=destination)
+    # MPVKit is unnecessary for Windows Compose compilation, and pulling its
+    # Apple-native submodule can fail independently of desktop UI code.
+    if os.environ.get("BRUNIO_DESKTOP2_FULL_SUBMODULES") == "1":
+        run("git", "submodule", "update", "--init", "--recursive", cwd=destination)
     # Upstream bundles native Windows libmpv through Git LFS; a text pointer
     # must never be treated as a valid native player runtime.
     if shutil.which("git-lfs"):

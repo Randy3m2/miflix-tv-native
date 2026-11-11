@@ -144,6 +144,15 @@ internal fun LocalListsRC100(state:AppState,adding:MediaSummary?,initialListId:S
                         else {selected=preview.id;name=preview.name;message="";deleting=false}
                     }}
                 }
+                Text(tr("Orden de colecciones","Collection order"),color=Muted,fontSize=13.sp)
+                rows.forEachIndexed {index,row ->
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp),
+                        verticalAlignment=Alignment.CenterVertically) {
+                        Text(row.optString("name"),modifier=Modifier.weight(1f),color=Color.White,maxLines=1)
+                        FocusButton("↑",modifier=Modifier.width(64.dp)) {if(index>0) extras.moveList(owner,row.optString("id"),-1)}
+                        FocusButton("↓",modifier=Modifier.width(64.dp)) {if(index<rows.lastIndex) extras.moveList(owner,row.optString("id"),1)}
+                    }
+                }
             }
         } else {
             val preview=remember(owner,selected,extras.revision) {localListPreviewRC104(current)}
@@ -160,8 +169,14 @@ internal fun LocalListsRC100(state:AppState,adding:MediaSummary?,initialListId:S
                 }
             }
             if(currentItems.isEmpty()) Text(tr("Lista vacía. Abre una película o serie y elige Añadir a lista local para comenzar.","Empty list. Open a movie or series and choose Add to local list to begin."),color=Muted,fontSize=14.sp)
-            currentItems.take(shown).forEach {item ->
-                key(item.cloudId) {LocalListTitleRC104(item,onOpen={close();state.launch {state.open(item)}},onRemove={extras.remove(owner,current.getString("id"),item.cloudId)})}
+            currentItems.take(shown).forEachIndexed {index,item ->
+                key(item.cloudId) {
+                    LocalListTitleRC104(item,onOpen={close();state.launch {state.open(item)}},onRemove={extras.remove(owner,current.getString("id"),item.cloudId)})
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                        FocusButton(tr("↑ Subir","↑ Move up")) {if(index>0) extras.moveListItem(owner,current.getString("id"),item.cloudId,-1)}
+                        FocusButton(tr("↓ Bajar","↓ Move down")) {if(index<currentItems.lastIndex) extras.moveListItem(owner,current.getString("id"),item.cloudId,1)}
+                    }
+                }
             }
             if(currentItems.size>shown) FocusButton(tr("Cargar 25 más","Load 25 more")) {shown+=25}
         }

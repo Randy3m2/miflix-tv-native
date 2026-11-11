@@ -114,6 +114,13 @@ internal class LidomRepository(private val context:Context, owner:String) {
                     if(!live) continue
                     val title=Regex("\"text\"\\s*:\\s*\"([^\"]{3,180})\"")
                         .find(block)?.groupValues?.get(1) ?: source.name
+                    val club=team(teamId) ?: continue
+                    fun fold(value:String)=Normalizer.normalize(value,Normalizer.Form.NFD)
+                        .replace(Regex("[\\u0300-\\u036f]"),"").lowercase(Locale.ROOT)
+                    val label=fold(title)
+                    val matches=sequenceOf(club.short,club.name,club.id)
+                        .map(::fold).any {it.length>=4 && label.contains(it)}
+                    if(!matches) continue
                     return@withContext source to LidomVideo(id,title)
                 }
             }

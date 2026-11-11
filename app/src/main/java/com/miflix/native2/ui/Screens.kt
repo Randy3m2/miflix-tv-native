@@ -180,9 +180,35 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
         discoveryLoading=true;discoveryError=false
         try {val contextual=state.discoveryRun(effectiveMood);discoveryRows=state.freshDiscoveryRows("mood:$effectiveMood",(if(discoveryMood.isEmpty()) state.forYou+contextual else contextual).distinctBy {it.cloudId})} catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(_:Exception) {discoveryError=true} finally {positionRP165.discoveryRows=discoveryRows;positionRP165.discoveryMood=discoveryMood;discoveryLoading=false}
     }
-    // RP200: one shared overlay for all Home posters, never a player per card.
+    // RP201: centralized Home focus dwell. Resolve metadata while counting down,
+    // so 7 seconds means 7 seconds of actual D-pad focus, not 7 + network latency.
+    // A new focus (even on the same title in a different rail) restarts the timer;
+    // leaving a poster cancels both countdown and metadata request.
     var posterDwellRP200 by remember(discoveryOwner) {mutableStateOf<MediaSummary?>(null)}
-    val activePosterRP200=remember(discoveryOwner) {mutableStateOf<String?>(null)}
+    var focusedPosterRP201 by remember(discoveryOwner) {mutableStateOf<MediaSummary?>(null)}
+    var focusEpochRP201 by remember(discoveryOwner) {mutableIntStateOf(0)}
+    LaunchedEffect(discoveryOwner,focusEpochRP201,focusedPosterRP201?.cloudId,state.appForeground,state.kidsMode) {
+        val title=focusedPosterRP201 ?: return@LaunchedEffect
+        if(state.kidsMode || !state.appForeground || state.discoveryPreviewActive ||
+            showTrailers || showAmbientRP199 || posterDwellRP200!=null) return@LaunchedEffect
+        kotlinx.coroutines.coroutineScope {
+            val available=async {
+                try {
+                    state.tmdb.previewTrailers(title).any {
+                        it.site.equals("YouTube",ignoreCase=true) && it.key.isNotBlank()
+                    }
+                } catch(e:kotlinx.coroutines.CancellationException) {throw e}
+                  catch(_:Exception) {false}
+            }
+            delay(7000L)
+            if(available.await() && focusedPosterRP201?.cloudId==title.cloudId &&
+                state.screen==Screen.HOME && state.appForeground && !state.kidsMode &&
+                !state.discoveryPreviewActive && !showTrailers && !showAmbientRP199 &&
+                posterDwellRP200==null) {
+                posterDwellRP200=title
+            }
+        }
+    }
     if(posterDwellRP200!=null) {
         val selected=posterDwellRP200!!
         TitleTrailerRP31(state,selected) {posterDwellRP200=null}
@@ -238,22 +264,15 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     val openCollection: (CollectionTile) -> Unit={ tile -> state.launch { state.openCollection(tile.id,tile.title) } }
     CompositionLocalProvider(
         LocalPosterFocusRP200 provides {item:MediaSummary,focused:Boolean ->
-            if(focused) activePosterRP200.value=item.cloudId
-            else if(activePosterRP200.value==item.cloudId) activePosterRP200.value=null
-        },
-        LocalPosterDwellTrailerRP200 provides { item:MediaSummary ->
-            if(!state.kidsMode && state.appForeground && !state.discoveryPreviewActive && activePosterRP200.value==item.cloudId) {
-                state.launch {
-                    // Metadata lookup is cancellable by focus changes; absent trailers never open a dialog.
-                    val available=try {state.tmdb.previewTrailers(item).any {it.site.equals("YouTube",true) && it.key.isNotBlank()}}
-                        catch(e:kotlinx.coroutines.CancellationException) {throw e}
-                        catch(_:Exception) {false}
-                    if(available && activePosterRP200.value==item.cloudId &&
-                        state.screen==Screen.HOME && state.appForeground && !state.discoveryPreviewActive)
-                        posterDwellRP200=item
-                }
+            if(focused) {
+                focusedPosterRP201=item
+                focusEpochRP201++
+            } else if(focusedPosterRP201?.cloudId==item.cloudId) {
+                focusedPosterRP201=null
             }
         },
+        // Dwell is centrally scheduled above. Avoid a second timer per card.
+        LocalPosterDwellTrailerRP200 provides null,
         LocalHomePositionRP165 provides positionRP165,LocalSimpleHome provides simple,LocalHomeReturnFocus provides homeReturn,LocalHomeShelfMotion provides shelfMotion,
         LocalHomeShelfMore provides {key,title,rows ->
             when(key) {

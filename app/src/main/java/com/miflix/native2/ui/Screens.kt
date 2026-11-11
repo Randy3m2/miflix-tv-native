@@ -1594,6 +1594,9 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     val initialSubtitleDelayRP89=if(state.easyModeRP79) 0L else savedSeriesTracks?.optLong("delay",0L) ?: 0L
     val timing=remember(request.playbackId) { state.preparedTimingRP91(request) ?: com.miflix.native2.player.SubtitleTiming().also {it.delayMs=initialSubtitleDelayRP89} }
     var timingMs by remember(request.playbackId) { mutableStateOf(initialSubtitleDelayRP89) }
+    var autoSyncBusyRP206 by remember(request.playbackId) {mutableStateOf(false)}
+    var autoSyncStatusRP206 by remember(request.playbackId) {mutableStateOf("")}
+
     var confirmMulti by remember { mutableStateOf(false) }
     val playbackView = LocalView.current
     var quickReactions by remember(request.playbackId) { mutableStateOf(false) }
@@ -1675,6 +1678,74 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             active.playWhenReady=!state.isPlaybackParked(request) && (request.sourceFallbackPlaying ?: true)
         }
         active
+    }
+
+    LaunchedEffect(autoSyncBusyRP206,request.playbackId,player) {
+        while(autoSyncBusyRP206) {
+            timing.autoSyncRP206.playerPositionMs=player.currentPosition.coerceAtLeast(0)
+            delay(250)
+        }
+    }
+    fun launchSubtitleAutoSyncRP206() {
+        if(autoSyncBusyRP206) return
+        if(request.live || player.playbackParameters.speed!=1f || !player.isPlaying) {
+            autoSyncStatusRP206=tr("Autosync requiere un video reproduciéndose a velocidad normal.",
+                "Autosync requires playback at normal speed.")
+            return
+        }
+        val activeText=player.currentTracks.groups.filter {it.type==C.TRACK_TYPE_TEXT}
+            .firstNotNullOfOrNull {group->
+                (0 until group.length).firstOrNull {group.isTrackSelected(it)}?.let {group.getTrackFormat(it)}
+            }
+        val configs=player.currentMediaItem?.localConfiguration?.subtitleConfigurations.orEmpty()
+        val selected=configs.firstOrNull {it.label!=null && it.label==activeText?.label}
+            ?: configs.singleOrNull()
+        val uri=selected?.uri?.toString()
+        if(activeText==null || uri.isNullOrBlank()) {
+            autoSyncStatusRP206=tr("Autosync necesita un subtítulo externo SRT o VTT seleccionado. El subtítulo integrado conserva el ajuste manual.",
+                "Autosync needs a selected external SRT or VTT subtitle. Embedded tracks still support manual timing.")
+            return
+        }
+        channelMenuScopeRP34.launch {
+            autoSyncBusyRP206=true
+            autoSyncStatusRP206=tr("Preparando subtítulos para comparar con el audio local…",
+                "Preparing subtitle timestamps for local audio comparison…")
+            try {
+                val source=com.miflix.native2.player.fetchSubtitleTextRP206(uri)
+                val cues=source?.let(com.miflix.native2.player.SubtitleAutoSyncMathRP206::parse).orEmpty()
+                if(cues.size<5) {
+                    autoSyncStatusRP206=tr("El subtítulo no permite análisis (solo SRT/VTT de texto accesible). Usa sincronización manual.",
+                        "Subtitle cannot be analyzed (accessible text SRT/VTT only). Try manual timing.")
+                    return@launch
+                }
+                val capture=timing.autoSyncRP206
+                capture.start(player.currentPosition.coerceAtLeast(0))
+                autoSyncStatusRP206=tr("Escuchando la actividad de voz local durante unos segundos…",
+                    "Measuring local dialogue activity…")
+                // Only runs after the user presses Autosync. No microphone or Supabase.
+                delay(24_000)
+                val measured=capture.stop()
+                val estimate=com.miflix.native2.player.SubtitleAutoSyncMathRP206.estimate(cues,measured,timingMs)
+                if(estimate==null) {
+                    autoSyncStatusRP206=tr("No encontré una coincidencia suficientemente fiable. No cambié tus subtítulos; puedes usar ajuste manual.",
+                        "No sufficiently reliable match found. Subtitles were unchanged; manual timing is available.")
+                } else {
+                    timingMs=estimate.delayMs.coerceIn(-30_000L,30_000L)
+                    timing.delayMs=timingMs
+                    state.localExtras.rememberTracks(playerTrackScopeRP89,request.item,player,timingMs)
+                    if(player.isCurrentMediaItemSeekable) player.seekTo(player.currentPosition)
+                    autoSyncStatusRP206=tr("Autosync aplicado: ","Autosync applied: ")+
+                        (if(timingMs>=0) "+" else "")+String.format(java.util.Locale.US,"%.2f",timingMs/1000.0)+" s"
+                }
+            } catch(e:kotlinx.coroutines.CancellationException) {throw e}
+            catch(_:Exception) {
+                autoSyncStatusRP206=tr("No se pudo analizar esta fuente. No se cambió el timing.",
+                    "Unable to analyze this source. Subtitle timing was not changed.")
+            } finally {
+                timing.autoSyncRP206.stop()
+                autoSyncBusyRP206=false
+            }
+        }
     }
 
     LaunchedEffect(state.remotePlayerActionRP167) {
@@ -2456,6 +2527,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             onEpisodes={ episodesResumeAfterClose=player.playWhenReady; player.pause(); showEpisodes=true },
             onParty={ openPlayerParty() },
             onTiming={ playerMenu="timing" },
+            onAutoSyncRP206={launchSubtitleAutoSyncRP206()},autoSyncBusyRP206=autoSyncBusyRP206,autoSyncStatusRP206=autoSyncStatusRP206,
             onClose={ state.localExtras.rememberTracks(playerTrackScopeRP89,request.item,player,timingMs);playerMenu=null; controlInteraction++ })
         if(playerMenu=="timing") SubtitleTimingDialog(timingMs,apply={ value ->
             timingMs=value;timing.delayMs=value

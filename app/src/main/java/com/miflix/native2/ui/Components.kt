@@ -2,6 +2,7 @@ package com.miflix.native2.ui
 
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -199,9 +200,11 @@ fun FocusButton(
     var focused by remember { mutableStateOf(false) }
     val actionFocused=actionFocusVisibleRP64(focused)
     val actionShape=themeShapeRP181(if(ThemeRuntimeRP177.id.isBlank()) 50.dp else 16.dp)
+    val focusScale by animateFloatAsState(if(actionFocused) 1.024f else 1f,tween(115),label="actionFocusScaleRP193")
+    val borderTone by animateColorAsState(if(actionFocused) Accent else if(destructive) Color(0xFF78404B) else if(primary) Accent.copy(alpha=.55f) else PanelBorder,tween(115),label="actionBorderRP193")
     Box(
         modifier
-
+            .graphicsLayer { scaleX=focusScale; scaleY=focusScale }
             .onFocusChanged {
                 focused = it.isFocused
                 onFocused?.invoke(it.isFocused)
@@ -210,7 +213,7 @@ fun FocusButton(
             .then(if (onLongClick != null) Modifier.tvPlaybackClick(onClick, onLongClick) else Modifier.tvClick(onClick))
             .clickable(onClick = onClick)
             .background(GlassActionBrushRP108(actionFocused,primary,destructive), actionShape)
-            .border(if (actionFocused) 2.dp else 1.dp, if(actionFocused) Accent else if(destructive) Color(0xFF78404B) else if(primary) Accent.copy(alpha=.55f) else PanelBorder, actionShape)
+            .border(if (actionFocused) 2.dp else 1.dp, borderTone, actionShape)
             .themeOrnamentRP181()
             .padding(horizontal = horizontalPadding, vertical = if(LocalSimpleHome.current) 16.dp else 12.dp),
         contentAlignment = Alignment.Center

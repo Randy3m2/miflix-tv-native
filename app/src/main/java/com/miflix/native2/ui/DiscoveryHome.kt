@@ -2,6 +2,7 @@ package com.miflix.native2.ui
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -59,17 +60,18 @@ private fun moodGlyph(mood:String)=when(mood) {
 @Composable
 private fun MoodTile(mood:String,selected:Boolean,modifier:Modifier=Modifier,image:String?=null,onClick:()->Unit) {
     var focused by remember {mutableStateOf(false)}
-    val scale by animateFloatAsState(if(focused) 1.025f else 1f,tween(150),label="mood-photo-focus")
+    val scale by animateFloatAsState(if(focused) 1.018f else 1f,tween(115),label="mood-photo-focus")
     val hue=when(mood) {
         "christmas" ->Color(0xff62dbc0);"happy","cozy" ->Color(0xffffd28a);"sad" ->Color(0xff9ebdff)
         "romantic" ->Color(0xffffb3d1);"adrenaline","halloween" ->Color(0xffffb484)
         else ->Color(0xffcab2ff)
     }
-    val shape=RoundedCornerShape(19.dp)
-    Box(modifier.height(100.dp).width(224.dp).graphicsLayer {scaleX=scale;scaleY=scale}
+    val shape=RoundedCornerShape(16.dp)
+    val stroke by animateColorAsState(if(focused) Accent else if(selected) hue else Color.White.copy(alpha=.14f),tween(115),label="mood-focus-border")
+    Box(modifier.height(94.dp).width(210.dp).graphicsLayer {scaleX=scale;scaleY=scale}
         .onFocusChanged {focused=it.isFocused}.clip(shape)
         .background(Brush.linearGradient(listOf(hue.copy(alpha=.3f),Color(0xff121521))))
-        .border(if(focused || selected) 2.dp else 1.dp,if(focused) Accent else if(selected) hue else Color.White.copy(alpha=.14f),shape)
+        .border(if(focused || selected) 2.dp else 1.dp,stroke,shape)
         .clickable(onClick=onClick)) {
         if(image!=null) AsyncImage(image,contentDescription=moodTitle(mood),contentScale=ContentScale.Crop,modifier=Modifier.fillMaxSize())
         Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color.Black.copy(alpha=.88f),Color.Black.copy(alpha=.30f)))))
@@ -101,26 +103,51 @@ internal fun TrailerActionBar(previous:(()->Unit)?,next:(()->Unit)?,details:(()-
     }
 }
 
+/** RP193: Mood Selector is its own stable Home rail, independent from discovery actions. */
 @Composable
-internal fun DiscoveryControls(mood:String,loading:Boolean,onMood:(String)->Unit,onTrailers:()->Unit,onSurprise:()->Unit,onTools:()->Unit,art:Map<String,String> = emptyMap()) {
-    CompositionLocalProvider(LocalSimpleHome provides false) {
-        Column(Modifier.fillMaxWidth().padding(horizontal=40.dp,vertical=4.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
-                Text(tr("Elige tu vibe","Pick your vibe"),color=Color.White,fontSize=23.sp)
-                Text(tr("TU NOCHE. TU ESTILO.","YOUR NIGHT. YOUR VIBE."),color=Accent,fontSize=11.sp)
-            }
-            HomeHorizontalRail {
-                LazyRow(Modifier.fillMaxWidth().smoothHorizontalDpad(),horizontalArrangement=Arrangement.spacedBy(10.dp),contentPadding=PaddingValues(vertical=4.dp)) {
-                    items(DiscoveryMoods,key={it.ifEmpty {"for-me"}}) {value ->
-                        MoodTile(value,mood==value,homeReturnFocus("mood:"+value.ifEmpty {"default"}),image=art[value]) {onMood(value)}
-                    }
+internal fun MoodSelectorRowRP193(
+    mood:String,
+    onMood:(String)->Unit,
+    art:Map<String,String> = emptyMap()
+) {
+    Column(
+        Modifier.fillMaxWidth().padding(start=40.dp,end=32.dp,top=8.dp,bottom=4.dp),
+        verticalArrangement=Arrangement.spacedBy(10.dp)
+    ) {
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+            Text(tr("Elige tu vibe","Pick your vibe"),color=Color.White,fontSize=23.sp)
+            Text(tr("TU NOCHE. TU ESTILO.","YOUR NIGHT. YOUR VIBE."),color=Muted,fontSize=11.sp)
+        }
+        HomeHorizontalRail {
+            LazyRow(
+                Modifier.fillMaxWidth().smoothHorizontalDpad(),
+                horizontalArrangement=Arrangement.spacedBy(12.dp),
+                contentPadding=PaddingValues(start=2.dp,end=24.dp,top=6.dp,bottom=8.dp)
+            ) {
+                items(DiscoveryMoods,key={it.ifEmpty {"for-me"}}) { value ->
+                    MoodTile(value,mood==value,homeReturnFocus("mood:"+value.ifEmpty {"default"}),image=art[value]) {onMood(value)}
                 }
             }
-            Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                FocusButton("▶  "+tr("Deslúmbrame","Dazzle me"),modifier=homeReturnFocus("discovery:trailers"),onClick=onTrailers)
-                FocusButton(if(loading) tr("Preparando…","Preparing…") else "✧  "+tr("Sorpréndeme","Surprise me"),modifier=homeReturnFocus("discovery:surprise"),onClick=onSurprise)
-                FocusButton(tr("Mi universo de cine","My cinema hub"),onClick=onTools)
-            }
+        }
+    }
+}
+
+/** The three discovery actions remain a separate lightweight Home section. */
+@Composable
+internal fun DiscoveryActionsRP193(
+    loading:Boolean,
+    onTrailers:()->Unit,
+    onSurprise:()->Unit,
+    onTools:()->Unit
+) {
+    CompositionLocalProvider(LocalSimpleHome provides false) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal=40.dp,vertical=6.dp),
+            horizontalArrangement=Arrangement.spacedBy(12.dp)
+        ) {
+            FocusButton("▶  "+tr("Deslúmbrame","Dazzle me"),modifier=homeReturnFocus("discovery:trailers"),onClick=onTrailers)
+            FocusButton(if(loading) tr("Preparando…","Preparing…") else "✧  "+tr("Sorpréndeme","Surprise me"),modifier=homeReturnFocus("discovery:surprise"),onClick=onSurprise)
+            FocusButton(tr("Mi universo de cine","My cinema hub"),onClick=onTools)
         }
     }
 }

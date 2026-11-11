@@ -249,10 +249,20 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                 if(state.localExtras.enabled("lists")) shelf(key="local_lists") {
                     LocalListsHomeRC104(state) {id ->initialLocalList=id;showLocalLists=true}
                 }
+                shelf(key="mood-selector") {
+                    MoodSelectorRowRP193(
+                        discoveryMood,
+                        onMood={discoveryMood=it;discoveryRetry++},
+                        art=state.moodArtworkRC102()
+                    )
+                }
                 shelf(key="discovery-controls") {
-                    DiscoveryControls(discoveryMood,discoveryLoading || state.randomChoosing,
-                        onMood={discoveryMood=it;discoveryRetry++},onTrailers={showTrailers=true},onTools={showCinemaHub=true},art=state.moodArtworkRC102(),
-                        onSurprise={if(!discoveryLoading && !state.randomChoosing) {if(state.localRecommendations(discoveryRows).isEmpty()) state.error=tr("La selección aún no está disponible. Elige otro ánimo o reintenta.","Picks are not available yet. Choose another mood or retry.") else state.launch {state.surpriseDiscovery(state.localRecommendations(discoveryRows))}}})
+                    DiscoveryActionsRP193(
+                        discoveryLoading || state.randomChoosing,
+                        onTrailers={showTrailers=true},
+                        onTools={showCinemaHub=true},
+                        onSurprise={if(!discoveryLoading && !state.randomChoosing) {if(state.localRecommendations(discoveryRows).isEmpty()) state.error=tr("La selección aún no está disponible. Elige otro ánimo o reintenta.","Picks are not available yet. Choose another mood or retry.") else state.launch {state.surpriseDiscovery(state.localRecommendations(discoveryRows))}}}
+                    )
                 }
                 if(state.localRecommendations(discoveryRows).isNotEmpty()) shelf(key="discovery-picks") {
                     SpotlightRail(moodTitle(effectiveMood),state.localRecommendations(discoveryRows),eyebrow=if(discoveryMood.isEmpty()) tr("PARA ESTE MOMENTO","FOR THIS MOMENT") else tr("TU ÁNIMO · TU SELECCIÓN","YOUR MOOD · YOUR PICKS"),onClick=openItem)

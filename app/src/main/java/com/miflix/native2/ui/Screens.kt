@@ -423,8 +423,11 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                                             if(previousIndex>=0 && previousFocus!=null) {
                                                 scope.launch {
                                                     scroll.scrollToItem(previousIndex)
-                                                    withFrameNanos { }
-                                                    runCatching {previousFocus.requestFocus()}
+                                                    // The previous lazy shelf can take multiple frames to attach.
+                                                    repeat(6) {
+                                                        withFrameNanos { }
+                                                        if(runCatching {previousFocus.requestFocus()}.getOrDefault(false)) return@launch
+                                                    }
                                                 }
                                                 true
                                             } else false

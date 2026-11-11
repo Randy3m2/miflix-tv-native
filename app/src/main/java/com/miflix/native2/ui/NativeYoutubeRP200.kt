@@ -37,7 +37,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 
 /** RP200: use one native video surface and BruniO remote controls. Never create an iframe. */
-private object NativeTrailerResolverRP200 {
+internal object NativeTrailerResolverRP200 {
     val extractor = InAppYouTubeExtractor()
     private val cache=mutableMapOf<String,TrailerPlaybackSource>()
     suspend fun get(id:String):TrailerPlaybackSource? {

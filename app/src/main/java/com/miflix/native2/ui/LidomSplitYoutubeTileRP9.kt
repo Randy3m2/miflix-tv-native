@@ -19,6 +19,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -41,6 +43,7 @@ internal fun LidomSplitYoutubeTileRP9(req:PlayerRequest,audible:Boolean,modifier
     val player=remember(req.playbackId) {ExoPlayer.Builder(context.applicationContext).build()}
     val lifecycle=context.playbackActivity()?.lifecycle
     val running=lifecycle?.currentState?.isAtLeast(Lifecycle.State.STARTED)!=false
+    val readyState by rememberUpdatedState(ready)
     LaunchedEffect(video) {
         if(video==null) {message=tr("Enlace de YouTube inválido","Invalid YouTube URL");return@LaunchedEffect}
         message="";ready=false
@@ -62,10 +65,19 @@ internal fun LidomSplitYoutubeTileRP9(req:PlayerRequest,audible:Boolean,modifier
         player.volume=if(audible) 1f else 0f
         player.playWhenReady=running && ready
     }
+    DisposableEffect(player) {
+        val listener=object:Player.Listener {
+            override fun onPlayerError(cause:PlaybackException) {
+                message=tr("No se pudo reproducir el directo","Could not play live stream")
+            }
+        }
+        player.addListener(listener)
+        onDispose {player.removeListener(listener)}
+    }
     DisposableEffect(lifecycle,player) {
         val observer=LifecycleEventObserver {_,event ->
             if(event==Lifecycle.Event.ON_STOP) player.playWhenReady=false
-            else if(event==Lifecycle.Event.ON_START && ready) player.playWhenReady=true
+            else if(event==Lifecycle.Event.ON_START && readyState) player.playWhenReady=true
         }
         lifecycle?.addObserver(observer)
         onDispose {lifecycle?.removeObserver(observer);player.release()}

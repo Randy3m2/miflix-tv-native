@@ -37,6 +37,19 @@ class SupabaseRepository(private val url: String, private val key: String) {
         return (response.optJSONArray("collections") ?: JSONArray()) to response.optLong("updatedAt",0L)
     }
 
+    /** RP205: one Home configuration exchange on app/profile load or user edit. */
+    suspend fun syncHomeStudioRP205(
+        session:CloudSession,profile:String,home:JSONObject?,timestamp:Long
+    ):Pair<JSONObject,Long> {
+        val body=JSONObject().put("p_profile",profile).put("p_updated_at",timestamp)
+        if(home!=null) body.put("p_home",home)
+        val response=JSONObject(Http.text(
+            "$url/rest/v1/rpc/brunio_home_sync_rp205","POST",
+            headers(session),body.toString()
+        ))
+        return (response.optJSONObject("home") ?: JSONObject()) to response.optLong("updatedAt",0L)
+    }
+
     suspend fun login(email: String, password: String): CloudSession {
         val body = JSONObject().put("email", email).put("password", password).toString()
         val j = JSONObject(Http.text("$url/auth/v1/token?grant_type=password", "POST", headers(), body))

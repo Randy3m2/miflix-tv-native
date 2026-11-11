@@ -170,6 +170,22 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     var initialLocalList by remember(discoveryOwner) {mutableStateOf<String?>(null)}
     if(showLocalLists && state.localExtras.enabled("lists")) LocalListsRC100(state,null,initialListId=initialLocalList) {showLocalLists=false}
     var showTrailers by remember(discoveryOwner) {mutableStateOf(false)}
+    var showDailyRotationRP203 by remember(discoveryOwner) {mutableStateOf(false)}
+    if(showDailyRotationRP203) Dialog(
+        onDismissRequest={showDailyRotationRP203=false},
+        properties=DialogProperties(usePlatformDefaultWidth=false)
+    ) {
+        Column(
+            Modifier.fillMaxWidth(.92f).background(Color(0xFF101116),RoundedCornerShape(22.dp))
+                .padding(horizontal=18.dp,vertical=16.dp),
+            verticalArrangement=Arrangement.spacedBy(8.dp)
+        ) {
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End) {
+                FocusButton(tr("Cerrar","Close")) {showDailyRotationRP203=false}
+            }
+            DailyRotationRowRP188(state)
+        }
+    }
     var showAmbientRP199 by remember(discoveryOwner) {mutableStateOf(false)}
     val clock=remember(state.appForeground) {java.util.Calendar.getInstance()}
     val contextualMood=remember(clock) {com.miflix.native2.data.DiscoveryMood.context(clock.get(java.util.Calendar.HOUR_OF_DAY),clock.get(java.util.Calendar.MONTH)+1,clock.get(java.util.Calendar.DAY_OF_MONTH),clock.get(java.util.Calendar.DAY_OF_WEEK) in setOf(java.util.Calendar.SATURDAY,java.util.Calendar.SUNDAY))}
@@ -313,7 +329,8 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                         onCinema={showCinemaHub=true},
                         onCollections={onNavigate(Screen.COLLECTIONS)},
                         onOscars={onNavigate(Screen.OSCARS)},
-                        onAmbient={showAmbientRP199=true}
+                        onAmbient={showAmbientRP199=true},
+                        onDailyRotation={showDailyRotationRP203=true}
                     )
                 }
                 shelf(key="mood-selector") {
@@ -348,7 +365,6 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                         progressFor={ state.progress[it.cloudId]?.percent },onLongClick={state.titleActions(it,true)},onClick=openItem)
                     }
                 }
-                if(!state.kidsMode) shelf(key="daily_rotation") {DailyRotationRowRP188(state)}
                 shelf(key="streaming") { CollectionRail(tr("Plataformas","Streaming"),StreamingTiles,openCollection) }
                 shelf(key="genres_home") { Column {
                     Row(Modifier.fillMaxWidth().padding(start=40.dp,end=40.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {

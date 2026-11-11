@@ -479,16 +479,20 @@ private fun HubLidomRP41(state:AppState,modifier:Modifier) {
 internal fun HubCategoryChipRP42(label:String,selected:Boolean,click:()->Unit) {
     var focused by remember {mutableStateOf(false)}
     val active=actionFocusVisibleRP64(focused)
-    Row(Modifier.clip(RoundedCornerShape(18.dp)).background(GlassActionBrushRP108(active,selected))
-        .border(if(focused) 2.dp else 1.dp,if(focused) Accent else if(selected) Color(0xFF727272) else Color(0xFF2A2A2A),RoundedCornerShape(18.dp))
+    val tone by animateColorAsState(if(active) Color(0xFFF5F5F5) else Color.Transparent,tween(120),label="hubChipFillRP198")
+    val textTone by animateColorAsState(if(active) Color(0xFF171717) else Color.White,tween(120),label="hubChipTextRP198")
+    val shape=RoundedCornerShape(18.dp)
+    Row(Modifier.clip(shape).background(GlassActionBrushRP108(false,selected))
+        .background(tone,shape)
+        .border(1.dp,if(active) Color.White else if(selected) Color(0xFF727272) else Color(0xFF2A2A2A),shape)
         .onFocusChanged {focused=it.isFocused}.tvClick(click).clickable(onClick=click).padding(horizontal=16.dp,vertical=12.dp),
         verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(9.dp)) {
         Canvas(Modifier.size(16.dp)) {
             if(label=="M3U") {
-                for(i in 0..2) drawLine(if(active) Color.White else Color.White,androidx.compose.ui.geometry.Offset(0f,size.height*(.2f+i*.3f)),androidx.compose.ui.geometry.Offset(size.width,size.height*(.2f+i*.3f)),strokeWidth=2.dp.toPx())
-            } else drawCircle(if(active) Color.White else if(selected) Color.White else Color(0xFF888888),radius=size.minDimension*.28f)
+                for(i in 0..2) drawLine(textTone,androidx.compose.ui.geometry.Offset(0f,size.height*(.2f+i*.3f)),androidx.compose.ui.geometry.Offset(size.width,size.height*(.2f+i*.3f)),strokeWidth=2.dp.toPx())
+            } else drawCircle(if(active || selected) textTone else Color(0xFF888888),radius=size.minDimension*.28f)
         }
-        Text(label,color=if(active) Color.White else Color.White,fontSize=13.sp,fontWeight=if(active || selected) FontWeight.Bold else FontWeight.Normal)
+        Text(label,color=textTone,fontSize=13.sp,fontWeight=FontWeight.Medium)
     }
 }
 

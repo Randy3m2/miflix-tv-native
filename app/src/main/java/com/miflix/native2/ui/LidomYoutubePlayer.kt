@@ -118,7 +118,7 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
     val playerContent: @Composable () -> Unit = {
         RemoteDialogInputRP167()
         Column(Modifier.fillMaxSize().background(Color.Black).then(remoteController)) {
-            if(preview) {
+            if(preview && !embedded) {
                 Text(caption,color=Color.White,fontSize=20.sp,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.fillMaxWidth().padding(start=24.dp,end=24.dp,top=10.dp,bottom=4.dp))
             } else if(!fullscreenRP165) Row(Modifier.fillMaxWidth().padding(10.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                 FocusButton(tr("Volver a fuentes","Back to sources"),onClick=close)
@@ -161,7 +161,9 @@ internal fun LidomYoutubePlayer(video:String,onWorking:()->Unit,close:()->Unit,
                 frame.addView(web)
                 frame
             })
-        if(preview) TrailerActionBar(previous,next,details,watch,swipe)
+        // RP198: immersive Discover Trailers uses remote shortcuts without a permanent action strip.
+        // Fullscreen/standalone previews retain the visible controls for accessibility.
+        if(preview && !embedded) TrailerActionBar(previous,next,details,watch,swipe)
 
     }
 }

@@ -249,6 +249,7 @@ fun BackIconButton(onClick: () -> Unit) {
 
 // RP200: the Home screen owns the trailer overlay; cards only publish dwell events.
 internal val LocalPosterDwellTrailerRP200 = androidx.compose.runtime.compositionLocalOf<((MediaSummary)->Unit)?> { null }
+internal val LocalPosterFocusRP200 = androidx.compose.runtime.compositionLocalOf<((MediaSummary,Boolean)->Unit)?> { null }
 
 @Composable
 fun MediaCard(
@@ -267,6 +268,7 @@ fun MediaCard(
     val titleActions=LocalTitleActions.current
     val hold=onLongClick ?: titleActions?.takeIf {allowContextMenu}?.let {action -> {action(item)}}
     var focused by remember(item.cloudId) { mutableStateOf(false) }
+    val publishFocusRP200=LocalPosterFocusRP200.current
     val dwellTrailerRP200=LocalPosterDwellTrailerRP200.current
     val latestDwellRP200 by rememberUpdatedState(dwellTrailerRP200)
     LaunchedEffect(item.cloudId,focused) {
@@ -301,6 +303,7 @@ fun MediaCard(
 
                 .onFocusChanged {
                     focused = it.isFocused
+                    publishFocusRP200?.invoke(item,it.isFocused)
                     if (it.isFocused) { onFocused(item);publishPreview?.invoke(item) }
                 }
 

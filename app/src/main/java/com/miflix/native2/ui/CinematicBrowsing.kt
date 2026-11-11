@@ -151,6 +151,9 @@ private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolea
     val freshness=observeCardFreshness(item)
     val simple=LocalSimpleHome.current
     var focused by remember(item.cloudId) { mutableStateOf(false) }
+    // RP202: Home uses SpotlightCard, not MediaCard. Forward actual D-pad
+    // focus changes to the centralized seven-second trailer scheduler.
+    val notifyPosterFocusRP202=LocalPosterFocusRP200.current
     val focusInk by animateColorAsState(if(focused) Accent else Color.Transparent,tween(120),label="posterFocusInk")
     val focusScale by animateFloatAsState(if(focused) 1.012f else 1f,tween(120),label="posterFocusScale")
     val cardBring=remember { BringIntoViewRequester() }
@@ -166,7 +169,14 @@ private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolea
     }
     Box(modifier.width(slotWidth.dp).fillMaxHeight().padding(horizontal=6.dp)
         .bringIntoViewRequester(cardBring)
-        .onFocusChanged { focused=it.isFocused; if(it.isFocused) onFocused() }
+        .onFocusChanged { state ->
+            val now=state.isFocused
+            if(focused!=now) {
+                focused=now
+                notifyPosterFocusRP202?.invoke(item,now)
+                if(now) onFocused()
+            }
+        }
         .then(if(onLongClick==null) Modifier.tvClick(onClick) else Modifier.tvPlaybackClick(onClick,onLongClick)).clickable(onClick=onClick)) {
         Box(Modifier.fillMaxSize().graphicsLayer {scaleX=focusScale;scaleY=focusScale}
         .border(if(simple) 3.dp else 2.dp,focusInk,RoundedCornerShape(18.dp))

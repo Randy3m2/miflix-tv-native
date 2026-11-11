@@ -83,7 +83,7 @@ internal class LocalExtrasRC100(private val prefs:SharedPreferences) {
         }
         mutate(scope) {it.put("lists",JSONArray(remote.toString()))}
         prefs.edit().putLong(collectionStampKey(scope),stamp).apply()
-        collectionsRevision++
+        // Remote data updates the UI via revision; do not mark as a new local edit.
     }
     fun listItems(row:JSONObject):List<MediaSummary> {
         val a=row.optJSONArray("items") ?: JSONArray()

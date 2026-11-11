@@ -48,6 +48,10 @@ def pin_upstream(destination: Path) -> None:
     if commit != PIN:
         raise UpstreamChanged(f"Expected {PIN}, got {commit}")
     run("git", "submodule", "update", "--init", "--recursive", cwd=destination)
+    # Upstream bundles native Windows libmpv through Git LFS; a text pointer
+    # must never be treated as a valid native player runtime.
+    if shutil.which("git-lfs"):
+        run("git", "lfs", "pull", cwd=destination)
 
 
 def patch_visual_brand(destination: Path) -> None:

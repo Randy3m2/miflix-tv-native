@@ -30,7 +30,7 @@ import coil3.compose.AsyncImage
 import com.miflix.native2.R
 
 /** RP194: visually consistent Home rail. All five original actions are preserved. */
-internal enum class ExploreDestinationRP194 { TRAILERS, SURPRISE, CINEMA, COLLECTIONS, OSCARS, AMBIENT }
+internal enum class ExploreDestinationRP194 { TRAILERS, SURPRISE, CINEMA, COLLECTIONS, OSCARS, AMBIENT, DAILY_ROTATION }
 private data class ExploreArtworkRP194(
     val destination: ExploreDestinationRP194,
     val title: String,
@@ -47,7 +47,8 @@ internal fun ExploreShortcutsRP194(
     onCinema: () -> Unit,
     onCollections: () -> Unit,
     onOscars: () -> Unit,
-    onAmbient: () -> Unit
+    onAmbient: () -> Unit,
+    onDailyRotation: () -> Unit
 ) {
     val entries=listOf(
         ExploreArtworkRP194(ExploreDestinationRP194.TRAILERS,tr("Tráilers","Trailers"),tr("Avances y estrenos","Previews & releases"),"▶",R.drawable.brunio_pack_snyder),
@@ -55,9 +56,11 @@ internal fun ExploreShortcutsRP194(
         ExploreArtworkRP194(ExploreDestinationRP194.CINEMA,tr("Mi universo de cine","My cinema hub"),tr("Explora a tu manera","Explore your way"),"◈",R.drawable.brunio_profile_landscape),
         ExploreArtworkRP194(ExploreDestinationRP194.COLLECTIONS,tr("Colecciones","Collections"),tr("Historias para explorar","Curated worlds"),"▣",R.drawable.franchise_marvel),
         ExploreArtworkRP194(ExploreDestinationRP194.OSCARS,"Oscars",tr("Premios y nominaciones","Awards & nominees"),"★",R.drawable.theme_sand_rp188),
-        ExploreArtworkRP194(ExploreDestinationRP194.AMBIENT,tr("Cine ambiental","Ambient Cinema"),tr("Fondos de película en pantalla completa","Full-screen cinematic art"),"✦",R.drawable.brunio_profile_landscape)
+        ExploreArtworkRP194(ExploreDestinationRP194.AMBIENT,tr("Cine ambiental","Ambient Cinema"),tr("Fondos de película en pantalla completa","Full-screen cinematic art"),"✦",R.drawable.brunio_profile_landscape),
+        ExploreArtworkRP194(ExploreDestinationRP194.DAILY_ROTATION,tr("Rotación diaria","Daily Rotation"),tr("Selección nueva sin repetir títulos","Fresh picks, no repeats"),"◷",R.drawable.theme_sand_rp188)
     )
-    Column(Modifier.fillMaxWidth().padding(start=40.dp,end=24.dp,top=4.dp,bottom=4.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
+    val rowHeight=if(LocalHomeShelfPaging.current) LocalHomeCardRowHeight.current+40.dp else 228.dp
+    Column(Modifier.fillMaxWidth().height(rowHeight).padding(start=40.dp,end=24.dp,top=4.dp,bottom=4.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
         Text(tr("Explorar","Explore"),color=Color.White,fontSize=23.sp,fontWeight=FontWeight.Bold)
         HomeHorizontalRail {
             LazyRow(
@@ -73,6 +76,7 @@ internal fun ExploreShortcutsRP194(
                         ExploreDestinationRP194.COLLECTIONS -> onCollections
                         ExploreDestinationRP194.OSCARS -> onOscars
                         ExploreDestinationRP194.AMBIENT -> onAmbient
+                        ExploreDestinationRP194.DAILY_ROTATION -> onDailyRotation
                     }
                     ExploreShortcutCardRP194(entry,homeReturnFocus("explore:"+entry.destination.name),action)
                 }
@@ -88,7 +92,7 @@ private fun ExploreShortcutCardRP194(entry:ExploreArtworkRP194,modifier:Modifier
     val stroke by animateColorAsState(if(focused) Accent else Color.White.copy(alpha=.12f),tween(120),label="exploreStroke")
     val shape=RoundedCornerShape(15.dp)
     Box(
-        modifier.width(207.dp).height(124.dp)
+        modifier.width(207.dp).height(if(LocalHomeShelfPaging.current) LocalHomeCardRowHeight.current-36.dp else 152.dp)
             .graphicsLayer { scaleX=scale;scaleY=scale }
             .onFocusChanged {focused=it.isFocused}
             .tvClick(onClick).clickable(onClick=onClick)

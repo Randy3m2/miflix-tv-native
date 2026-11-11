@@ -68,8 +68,8 @@ internal data class SubtitleAlignmentRP206(val delayMs:Long,val confidence:Doubl
 
 /** Supports normal SRT and WebVTT timestamps; limited to a capped number of cues. */
 internal object SubtitleAutoSyncMathRP206 {
-    private val arrow=Regex("""(\\d{1,2}:)?\\d{2}:\\d{2}[.,]\\d{3}\\s*-->\\s*(\\d{1,2}:)?\\d{2}:\\d{2}[.,]\\d{3}""")
-    private val stamp=Regex("""(?:(\\d{1,2}):)?(\\d{2}):(\\d{2})[.,](\\d{3})""")
+    private val arrow=Regex("""(\d{1,2}:)?\d{2}:\d{2}[.,]\d{3}\s*-->\s*(\d{1,2}:)?\d{2}:\d{2}[.,]\d{3}""")
+    private val stamp=Regex("""(?:(\d{1,2}):)?(\d{2}):(\d{2})[.,](\d{3})""")
     fun parse(text:String):List<SubtitleCueRP206> {
         if(text.length>1_000_000) return emptyList()
         return arrow.findAll(text).take(2000).mapNotNull {match->
@@ -129,3 +129,34 @@ internal object SubtitleAutoSyncMathRP206 {
         return SubtitleAlignmentRP206(currentDelayMs+best.first,best.second,best.third)
     }
 }
+
+/** Explicitly requested only: bounded subtitle download, never background polling. */
+internal suspend fun fetchSubtitleTextRP206(url:String):String? =
+    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val parsed=runCatching {java.net.URL(url)}.getOrNull() ?: return@withContext null
+        if(parsed.protocol!="https" || parsed.userInfo!=null ||
+            parsed.port !in listOf(-1,443)) return@withContext null
+        val connection=(parsed.openConnection() as? java.net.HttpURLConnection)
+            ?: return@withContext null
+        try {
+            connection.connectTimeout=6500
+            connection.readTimeout=6500
+            connection.instanceFollowRedirects=false
+            connection.setRequestProperty("Accept","text/plain,text/vtt,application/x-subrip")
+            if(connection.responseCode !in 200..299 ||
+                connection.contentLengthLong>800_000L) return@withContext null
+            val bytes=connection.inputStream.use {input->
+                val out=java.io.ByteArrayOutputStream()
+                val buffer=ByteArray(8192)
+                while(true) {
+                    val n=input.read(buffer)
+                    if(n<0) break
+                    if(out.size()+n>800_000) return@withContext null
+                    out.write(buffer,0,n)
+                }
+                out.toByteArray()
+            }
+            bytes.toString(Charsets.UTF_8).takeIf {it.isNotBlank()}
+        } catch(_:Exception) {null}
+        finally {connection.disconnect()}
+    }

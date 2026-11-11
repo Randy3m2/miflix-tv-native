@@ -93,6 +93,33 @@ internal class LidomRepository(private val context:Context, owner:String) {
         }
     }
 
+    /** RP200: only return a video when the team's configured channel marks it LIVE NOW.
+     * No title-only "live" guesses: a replay/premiere must never auto-launch as a live game.
+     * YouTube channel page markup can change; failure returns null and preserves manual sources.
+     */
+    suspend fun verifiedLive(teamId:String):Pair<LidomSource,LidomVideo>? =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            for(source in sources(teamId).filter { it.kind=="YOUTUBE" && youtubeChannel(it.url) }) {
+                val page=runCatching {
+                    val link=source.url.trimEnd('/')+"/streams"
+                    Http.text(link,timeoutMs=10000)
+                }.getOrNull() ?: continue
+                // Each videoRenderer belongs to one video. Never use a generic page-wide LIVE badge.
+                val renderers=page.split("\\"videoRenderer\\":").drop(1).take(35)
+                for(renderer in renderers) {
+                    val block=renderer.take(9000).substringBefore("\\"videoRenderer\\":")
+                    val id=Regex("\\"videoId\\"\\s*:\\s*\\"([A-Za-z0-9_-]{11})\\"").find(block)?.groupValues?.get(1) ?: continue
+                    val live=block.contains("\\"isLiveNow\\":true") ||
+                        block.contains("BADGE_STYLE_TYPE_LIVE_NOW")
+                    if(!live) continue
+                    val title=Regex("\\"text\\"\\s*:\\s*\\"([^\\"]{3,180})\\"")
+                        .find(block)?.groupValues?.get(1) ?: source.name
+                    return@withContext source to LidomVideo(id,title)
+                }
+            }
+            null
+        }
+
     private val youtubeChannelsRP61=mutableMapOf<String,String>()
     suspend fun videos(source:LidomSource):List<LidomVideo> {
         val channel=LidomUrlPolicy.channelId(source.url) ?: youtubeChannelsRP61[source.url] ?: run {

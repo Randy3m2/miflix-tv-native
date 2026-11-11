@@ -365,6 +365,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                         progressFor={ state.progress[it.cloudId]?.percent },onLongClick={state.titleActions(it,true)},onClick=openItem)
                     }
                 }
+                shelf(key="live_favorites") {LiveFavoritesHomeRP205(state)}
                 shelf(key="streaming") { CollectionRail(tr("Plataformas","Streaming"),StreamingTiles,openCollection) }
                 shelf(key="genres_home") { Column {
                     Row(Modifier.fillMaxWidth().padding(start=40.dp,end=40.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {

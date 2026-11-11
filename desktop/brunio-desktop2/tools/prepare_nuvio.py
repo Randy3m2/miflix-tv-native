@@ -144,6 +144,73 @@ def patch_brand_icon(destination: Path) -> bool:
     return True
 
 
+def patch_brunioplayer_explicit_autosync(destination: Path) -> None:
+    """Keep Nuvio's player design but make BruniO Autosync exclusively click-driven."""
+    root = destination / "composeApp/src/commonMain/kotlin/com/nuvio/app"
+
+    prefs = root / "features/autosync/AutoSyncPreferencesRepository.kt"
+    replace_exact(prefs,
+        "private val _preferredSubtitleAutoSyncOnStart = MutableStateFlow(true)",
+        "private val _preferredSubtitleAutoSyncOnStart = MutableStateFlow(false)")
+    replace_exact(prefs,
+        "_preferredSubtitleAutoSyncOnStart.value = loadPersistedValue?.invoke() ?: true",
+        "_preferredSubtitleAutoSyncOnStart.value = false // BruniO: explicit click only")
+    replace_exact(prefs,
+        """    fun setPreferredSubtitleAutoSyncOnStart(enabled: Boolean) {
+        ensureLoaded()
+        if (_preferredSubtitleAutoSyncOnStart.value == enabled) return
+        _preferredSubtitleAutoSyncOnStart.value = enabled
+        savePersistedValue?.invoke(enabled)
+    }""",
+        """    fun setPreferredSubtitleAutoSyncOnStart(enabled: Boolean) {
+        ensureLoaded()
+        _preferredSubtitleAutoSyncOnStart.value = false
+        savePersistedValue?.invoke(false)
+    }""")
+
+    autosync = root / "features/player/PlayerRuntimeAutoSync.kt"
+    replace_exact(autosync,
+        "playerController?.setSubtitleUriWithSelectedAutoSync(url)",
+        "playerController?.setSubtitleUri(url) // BruniO: regular selection stays regular")
+
+    modal = root / "features/player/SubtitleModal.kt"
+    replace_exact(modal,
+        "    onAutoSyncCapture: () -> Unit,\n",
+        "    onExplicitAutoSync: () -> Unit,\n    onAutoSyncCapture: () -> Unit,\n")
+    replace_exact(modal,
+        """                            Column(
+                                modifier = Modifier
+                                    .heightIn(max = railMaxHeight)
+                                    .verticalScroll(rememberScrollState()),
+                            ) {
+                                SubtitleStylePanel(""",
+        """                            Column(
+                                modifier = Modifier
+                                    .heightIn(max = railMaxHeight)
+                                    .verticalScroll(rememberScrollState()),
+                            ) {
+                                if (effectiveSelectedAddonSubtitle != null) {
+                                    PlayerDialogButton(
+                                        label = "Autosync · Detect timing",
+                                        onClick = onExplicitAutoSync,
+                                    )
+                                }
+                                SubtitleStylePanel(""")
+
+    hosts = root / "features/player/PlayerScreenModalHosts.kt"
+    replace_exact(hosts,
+        "    onAutoSyncCapture: () -> Unit,\n",
+        "    onExplicitAutoSync: () -> Unit,\n    onAutoSyncCapture: () -> Unit,\n")
+    replace_exact(hosts,
+        "        onAutoSyncCapture = onAutoSyncCapture,\n",
+        "        onExplicitAutoSync = onExplicitAutoSync,\n        onAutoSyncCapture = onAutoSyncCapture,\n")
+
+    ui = root / "features/player/PlayerScreenRuntimeUi.kt"
+    replace_exact(ui,
+        "        onAutoSyncCapture = { captureSubtitleAutoSyncTime() },\n",
+        "        onExplicitAutoSync = { runBrunioExplicitAutoSync() },\n        onAutoSyncCapture = { captureSubtitleAutoSyncTime() },\n")
+
+
 def install_brunit_overlay(destination: Path) -> int:
     """Copy typed compatibility code without rewriting Nuvio's UI implementation."""
     overlay = ROOT / "desktop/brunio-desktop2/overlay"
@@ -186,6 +253,7 @@ def main() -> None:
     output = args.output.resolve()
     pin_upstream(output)
     patch_visual_brand(output)
+    patch_brunioplayer_explicit_autosync(output)
     icon_ok = patch_brand_icon(output)
     files_added = install_brunit_overlay(output)
     backend = configure_public_backend(output)

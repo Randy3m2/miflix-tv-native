@@ -12,6 +12,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,6 +48,21 @@ private object NativeTrailerResolverRP200 {
     }
 }
 
+/** One lazily retained decoder/player, analogous to Nuvio's shared trailer pool. */
+private object NativeTrailerPlayerPoolRP200 {
+    private var pooled:ExoPlayer?=null
+    @Synchronized fun acquire(context:android.content.Context):ExoPlayer {
+        return pooled ?: ExoPlayer.Builder(context.applicationContext).build().also {pooled=it}
+    }
+    @Synchronized fun park(player:ExoPlayer) {
+        if(pooled===player) {
+            player.playWhenReady=false
+            player.stop()
+            player.clearMediaItems()
+        }
+    }
+}
+
 @OptIn(UnstableApi::class)
 @Composable
 internal fun NativeYoutubeRP200(
@@ -55,7 +73,7 @@ internal fun NativeYoutubeRP200(
 ) {
     val context=LocalContext.current
     val focus=remember(video) {FocusRequester()}
-    val player=remember(video) {ExoPlayer.Builder(context).build()}
+    val player=remember(video) {NativeTrailerPlayerPoolRP200.acquire(context)}
     var source by remember(video) {mutableStateOf<TrailerPlaybackSource?>(null)}
     var loading by remember(video) {mutableStateOf(true)}
     var error by remember(video) {mutableStateOf(false)}
@@ -76,7 +94,7 @@ internal fun NativeYoutubeRP200(
             override fun onPlayerError(cause:androidx.media3.common.PlaybackException) {error=true}
         }
         player.addListener(listener)
-        onDispose {player.removeListener(listener);player.release()}
+        onDispose {player.removeListener(listener);NativeTrailerPlayerPoolRP200.park(player)}
     }
     LaunchedEffect(video,retry) {
         loading=true;error=false;firstFrame=false;source=null
@@ -107,6 +125,7 @@ internal fun NativeYoutubeRP200(
         }
     }
     LaunchedEffect(video) {withFrameNanos {};runCatching {focus.requestFocus()}}
+    val videoAlpha by animateFloatAsState(if(firstFrame) 1f else 0f,animationSpec=tween(280),label="rp200NativeFirstFrame")
     val keyHandling=Modifier.onPreviewKeyEvent {event ->
         val k=event.nativeKeyEvent
         if(k.action!=KeyEvent.ACTION_DOWN || k.repeatCount!=0) false
@@ -137,7 +156,7 @@ internal fun NativeYoutubeRP200(
             resizeMode=androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
             this.player=player
             setShutterBackgroundColor(android.graphics.Color.BLACK)
-        }},modifier=Modifier.fillMaxSize())
+        }},modifier=Modifier.fillMaxSize().graphicsLayer {alpha=videoAlpha})
         if(!firstFrame) Box(Modifier.fillMaxSize().background(Color.Black),contentAlignment=Alignment.Center) {
             Text(if(error) tr("No se pudo cargar el tráiler nativo","Native video unavailable")
                 else tr("Preparando reproducción…","Preparing playback…"),color=Color.White,fontSize=17.sp)
@@ -146,7 +165,12 @@ internal fun NativeYoutubeRP200(
             .background(Color.Black.copy(alpha=.68f),RoundedCornerShape(topStart=16.dp,topEnd=16.dp))
             .padding(18.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             Text(caption,color=Color.White,fontSize=19.sp)
-            if(duration>0) Text("${position/1000}s / ${duration/1000}s",color=Color.LightGray,fontSize=12.sp)
+            if(duration>0) {
+                Box(Modifier.fillMaxWidth().height(3.dp).background(Color.White.copy(alpha=.25f))) {
+                    Box(Modifier.fillMaxWidth((position.toFloat()/duration.toFloat()).coerceIn(0f,1f)).fillMaxHeight().background(Color.White))
+                }
+                Text("${position/1000}s / ${duration/1000}s",color=Color.LightGray,fontSize=12.sp)
+            }
             Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                 FocusButton(if(paused) "▶" else "Ⅱ") {paused=!paused;controls=true}
                 FocusButton("−10s") {player.seekTo((player.currentPosition-10000).coerceAtLeast(0));controls=true}

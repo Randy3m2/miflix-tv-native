@@ -2,6 +2,8 @@ package com.miflix.native2.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.Canvas
@@ -386,11 +388,14 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,dayRP1
 internal fun HubEventCardRP41(title:String,poster:String?,subtitle:String,onHoldRP48:(()->Unit)?=null,logoRP50:Boolean=false,sportLogoRP138:String="",cardHeightRP188:androidx.compose.ui.unit.Dp=194.dp,click:()->Unit) {
     var logoFailedRP50 by remember(poster) {mutableStateOf(false)}
     var focused by remember(title) {mutableStateOf(false)}
+    val focusScaleRP193 by animateFloatAsState(if(focused) 1.014f else 1f,tween(115),label="liveCardScaleRP193")
+    val focusStrokeRP193 by animateColorAsState(if(focused) Accent else PanelBorder,tween(115),label="liveCardBorderRP193")
     val bring=remember {BringIntoViewRequester()}
     LaunchedEffect(focused) {if(focused) {withFrameNanos {};bring.bringIntoView()}}
     Column(Modifier.fillMaxWidth().height(cardHeightRP188).bringIntoViewRequester(bring)
+        .graphicsLayer {scaleX=focusScaleRP193;scaleY=focusScaleRP193}
         .clip(RoundedCornerShape(13.dp)).background(Brush.verticalGradient(listOf(Color(0xFF242424),Color(0xFF101010))))
-        .border(if(focused) 2.dp else 1.dp,if(focused) Accent else PanelBorder,RoundedCornerShape(13.dp))
+        .border(if(focused) 2.dp else 1.dp,focusStrokeRP193,RoundedCornerShape(13.dp))
         .onFocusChanged {focused=it.isFocused}.tvPlaybackClick(click,onHoldRP48 ?: click).clickable(onClick=click)) {
         Box(Modifier.fillMaxWidth().weight(1f).background(Brush.verticalGradient(listOf(if(logoRP50) Color(0xFF171717) else Color(0xFF17283C),Color.Black))),contentAlignment=Alignment.Center) {
             if(!poster.isNullOrBlank() && !logoFailedRP50) AsyncImage(poster,null,Modifier.fillMaxSize().padding(if(logoRP50) 22.dp else 0.dp),contentScale=if(logoRP50) ContentScale.Fit else ContentScale.Crop,onError={logoFailedRP50=true})

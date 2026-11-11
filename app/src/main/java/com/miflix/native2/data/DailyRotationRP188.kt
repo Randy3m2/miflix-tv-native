@@ -48,10 +48,8 @@ internal object DailyRotationPolicyRP188 {
         (if(entry.isMovie) "movie:" else "series:")+entry.tmdbId
 
     fun homeOrder(saved:List<String>):List<String> {
-        val order=HomeOrderPolicyRP106.order(saved).toMutableList()
-        order.remove(rowKey)
-        order.add(minOf(4,order.size),rowKey)
-        return order
+        // RP203: Daily Rotation lives inside Explore; never reinsert the old Home shelf.
+        return HomeOrderPolicyRP106.order(saved).filterNot {it==rowKey}
     }
 }
 

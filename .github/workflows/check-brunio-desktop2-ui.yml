@@ -1,0 +1,52 @@
+name: BruniO Desktop2 Nuvio UI migration verification
+
+on:
+  push:
+    branches: [feature/brunio-desktop2-nuvio-migration]
+    paths:
+      - 'desktop/brunio-desktop2/**'
+      - '.github/workflows/check-brunio-desktop2-ui.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-visual-upstream-and-codec:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout BruniO migration branch
+        uses: actions/checkout@v4
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prepare original Nuvio UI
+        shell: pwsh
+        run: |
+          python -m pip install "Pillow>=11,<13"
+          python desktop/brunio-desktop2/tools/prepare_nuvio.py --output "$env:RUNNER_TEMP/brunio-desktop2-upstream"
+      - name: Verify pinned UI and separate BruniO application identity
+        shell: pwsh
+        run: |
+          $src = "$env:RUNNER_TEMP/brunio-desktop2-upstream"
+          $head = git -C $src rev-parse HEAD
+          if ($head -ne '37ce07d351fc69e17d05a4640ef78d08deba20e2') { throw "Unexpected upstream commit: $head" }
+          if (!(Test-Path "$src/composeApp/src/commonMain/kotlin/com/nuvio/app/features/brunio/BrunioPartyWire.kt")) { throw 'BruniO codec overlay missing' }
+          if (!(Select-String -Path "$src/composeApp/src/desktopMain/kotlin/com/nuvio/app/Main.kt" -Pattern '"BruniO"' -Quiet)) { throw 'Window branding missing' }
+      - name: Compile Kotlin/Compose desktop with BruniO Party codec
+        shell: pwsh
+        run: |
+          $src = "$env:RUNNER_TEMP/brunio-desktop2-upstream"
+          cd $src
+          .\gradlew.bat :composeApp:compileKotlinDesktop --no-daemon --stacktrace "-Dorg.gradle.jvmargs=-Xmx5g -Dfile.encoding=UTF-8"
+      - name: State test scope
+        run: |
+          echo "Source/UI/codec compilation only. No installer published."
+          echo "BruniO Supabase schemas and cross-platform Watch Party need full adaptation."

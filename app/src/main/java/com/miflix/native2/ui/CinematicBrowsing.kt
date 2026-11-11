@@ -88,6 +88,8 @@ internal fun SpotlightRail(
     val more=LocalHomeShelfMore.current
     val shelfKey=LocalHomeShelfKey.current
     val cardRowHeight=if(homeShelf) LocalHomeCardRowHeight.current else 188.dp
+    if(rows.isEmpty()) return
+    var selectedId by rememberSaveable(title) { mutableStateOf(rows.first().cloudId) }
     val prefetchContextRP204=androidx.compose.ui.platform.LocalContext.current
     // Prewarm the next three posters only after focus settles. The shared
     // Coil cache suppresses duplicate downloads and limits concurrent work.
@@ -99,8 +101,7 @@ internal fun SpotlightRail(
             rows.drop(index+1).take(3).mapNotNull {it.poster ?: it.backdrop}
         )
     }
-    if(rows.isEmpty()) return
-    var selectedId by rememberSaveable(title) { mutableStateOf(rows.first().cloudId) }
+
     var active by remember { mutableStateOf(false) }
     var settledId by remember { mutableStateOf<String?>(null) }
     val bring=remember { BringIntoViewRequester() }

@@ -30,7 +30,7 @@ import coil3.compose.AsyncImage
 import com.miflix.native2.R
 
 /** RP194: visually consistent Home rail. All five original actions are preserved. */
-internal enum class ExploreDestinationRP194 { TRAILERS, SURPRISE, CINEMA, COLLECTIONS, OSCARS }
+internal enum class ExploreDestinationRP194 { TRAILERS, SURPRISE, CINEMA, COLLECTIONS, OSCARS, AMBIENT }
 private data class ExploreArtworkRP194(
     val destination: ExploreDestinationRP194,
     val title: String,
@@ -46,14 +46,16 @@ internal fun ExploreShortcutsRP194(
     onSurprise: () -> Unit,
     onCinema: () -> Unit,
     onCollections: () -> Unit,
-    onOscars: () -> Unit
+    onOscars: () -> Unit,
+    onAmbient: () -> Unit
 ) {
     val entries=listOf(
         ExploreArtworkRP194(ExploreDestinationRP194.TRAILERS,tr("Tráilers","Trailers"),tr("Avances y estrenos","Previews & releases"),"▶",R.drawable.brunio_pack_snyder),
         ExploreArtworkRP194(ExploreDestinationRP194.SURPRISE,if(loading) tr("Preparando…","Preparing…") else tr("Sorpréndeme","Surprise me"),tr("Algo inesperado","Something unexpected"),"✧",R.drawable.theme_halloween_rp188),
         ExploreArtworkRP194(ExploreDestinationRP194.CINEMA,tr("Mi universo de cine","My cinema hub"),tr("Explora a tu manera","Explore your way"),"◈",R.drawable.brunio_profile_landscape),
         ExploreArtworkRP194(ExploreDestinationRP194.COLLECTIONS,tr("Colecciones","Collections"),tr("Historias para explorar","Curated worlds"),"▣",R.drawable.franchise_marvel),
-        ExploreArtworkRP194(ExploreDestinationRP194.OSCARS,"Oscars",tr("Premios y nominaciones","Awards & nominees"),"★",R.drawable.theme_sand_rp188)
+        ExploreArtworkRP194(ExploreDestinationRP194.OSCARS,"Oscars",tr("Premios y nominaciones","Awards & nominees"),"★",R.drawable.theme_sand_rp188),
+        ExploreArtworkRP194(ExploreDestinationRP194.AMBIENT,tr("Cine ambiental","Ambient Cinema"),tr("Fondos de película en pantalla completa","Full-screen cinematic art"),"✦",R.drawable.brunio_profile_landscape)
     )
     Column(Modifier.fillMaxWidth().padding(start=40.dp,end=24.dp,top=4.dp,bottom=4.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
         Text(tr("Explorar","Explore"),color=Color.White,fontSize=23.sp,fontWeight=FontWeight.Bold)
@@ -70,6 +72,7 @@ internal fun ExploreShortcutsRP194(
                         ExploreDestinationRP194.CINEMA -> onCinema
                         ExploreDestinationRP194.COLLECTIONS -> onCollections
                         ExploreDestinationRP194.OSCARS -> onOscars
+                        ExploreDestinationRP194.AMBIENT -> onAmbient
                     }
                     ExploreShortcutCardRP194(entry,homeReturnFocus("explore:"+entry.destination.name),action)
                 }

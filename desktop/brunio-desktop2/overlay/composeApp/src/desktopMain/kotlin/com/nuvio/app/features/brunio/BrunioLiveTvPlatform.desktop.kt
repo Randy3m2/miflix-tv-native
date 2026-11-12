@@ -18,3 +18,17 @@ internal actual fun saveHiddenBrunioChannels(ids: Set<String>) {
     liveSettings.put("hidden", ids.sorted().joinToString(","))
     liveSettings.flush()
 }
+
+/** Local user preferences are isolated by BruniO profile. */
+private fun perProfileLiveSettings(profileIndex: Int): Preferences =
+    Preferences.userRoot().node("brunio/desktop2/live-tv/profile-${profileIndex.coerceIn(1, 999)}")
+
+internal actual fun favoriteBrunioChannels(profileIndex: Int): Set<String> =
+    perProfileLiveSettings(profileIndex).get("favorites", "")
+        .split(',').filter(String::isNotBlank).toSet()
+
+internal actual fun saveFavoriteBrunioChannels(profileIndex: Int, ids: Set<String>) {
+    val prefs = perProfileLiveSettings(profileIndex)
+    prefs.put("favorites", ids.sorted().joinToString(","))
+    prefs.flush()
+}

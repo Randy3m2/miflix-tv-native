@@ -100,7 +100,7 @@ def patch_visual_brand(destination: Path) -> None:
     replace_exact(
         desktop_main,
         'title = if (smokePlayerUrl == null) "Nuvio" else "Nuvio Player Smoke",',
-        'title = if (smokePlayerUrl == null) "BruniO Desktop 2.2.0" else "BruniO Player Smoke",',
+        'title = if (smokePlayerUrl == null) "BruniO Desktop 2.2.1" else "BruniO Player Smoke",',
     )
     replace_exact(gradle, 'packageName = "Nuvio"', 'packageName = "BruniO"')
     replace_exact(gradle, 'vendor = "Nuvio Media"', 'vendor = "BruniO"')
@@ -148,13 +148,20 @@ def patch_brand_icon(destination: Path) -> bool:
     common = destination / "composeApp/src/commonMain/composeResources/drawable"
     from install_tv_assets_rp206 import safe_square
     with Image.open(icon_source) as original:
-        app_icon = safe_square(original, 512, margin=0.13)
+        app_icon = safe_square(original, 512, margin=0.19)
         app_icon.save(icons / "nuvio-app-icon-transparent.png")
         app_icon.save(
             icons / "nuvio-app-icon-transparent.ico", format="ICO",
             sizes=[(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
         )
         # BruniO application identity must be consistent in theme variants.
+        # Windows's runtime shortcut icon updater loads variant ICO files.
+        # The earlier build only rebranded PNG variants, leaving old Nuvio ICOs.
+        for p in sorted(icons.glob("app-icon-*-transparent.ico")):
+            app_icon.save(
+                p, format="ICO",
+                sizes=[(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
+            )
         for p in sorted(icons.glob("app-icon-*-transparent.png")):
             with Image.open(p) as existing:
                 size = existing.size
@@ -336,7 +343,11 @@ def main() -> None:
     patch_brunio_home_playback(output)
     from patch_v220_home import apply as patch_v220_home
     patch_v220_home(output)
+    from patch_v221_home import apply as patch_v221_home
+    patch_v221_home(output)
     icon_ok = patch_brand_icon(output)
+    from patch_v221_brand import apply as patch_v221_brand
+    patch_v221_brand(output)
     files_added = install_brunit_overlay(output)
     # These integration patches touch both the pinned upstream and BruniO's
     # typed overlay, so run only once both trees have been staged.
@@ -354,8 +365,14 @@ def main() -> None:
     patch_v220_foundations(output)
     from patch_v220_party import apply as patch_v220_party
     patch_v220_party(output)
+    from patch_v221_party import apply as patch_v221_party
+    patch_v221_party(output)
+    from patch_v221_player_sources import apply as patch_v221_player_sources
+    patch_v221_player_sources(output)
     from patch_v220_multiview import apply as patch_v220_multiview
     patch_v220_multiview(output)
+    from patch_v221_multiview import apply as patch_v221_multiview
+    patch_v221_multiview(output)
     from patch_v220_floating_pip import apply as patch_v220_floating_pip
     patch_v220_floating_pip(output)
     from install_tv_assets_rp206 import install as install_tv_assets

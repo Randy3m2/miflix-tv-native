@@ -292,6 +292,8 @@ def main() -> None:
     patch_brunio_streams(output)
     from patch_state import apply as patch_brunio_state
     patch_brunio_state(output)
+    from patch_playback_party import apply as patch_brunio_playback_party
+    patch_brunio_playback_party(output)
     icon_ok = patch_brand_icon(output)
     files_added = install_brunit_overlay(output)
     backend = configure_public_backend(output)

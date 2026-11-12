@@ -50,8 +50,11 @@ internal object BrunioTmdb {
         } else mapOf("Accept" to "application/json"))
     }
 
-    suspend fun catalog(endpoint: String, kind: String? = null): List<MetaPreview> =
-        decodeResults(fetchRaw(endpoint), kind)
+    suspend fun catalog(
+        endpoint: String,
+        kind: String? = null,
+        query: Map<String, String> = emptyMap(),
+    ): List<MetaPreview> = decodeResults(fetchRaw(endpoint, query), kind)
 
     suspend fun search(term: String): List<MetaPreview> {
         val normalized = term.trim().take(120)

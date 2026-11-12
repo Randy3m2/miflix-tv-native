@@ -40,18 +40,19 @@ def apply(root):
     once(ui,
          """            onPartyClick = if (BrunioCloud.enabled ||
                 PartyRepository.available.collectAsStateWithLifecycle().value) {""",
-         """            onPartyClick = if (!BrunioCloud.enabled &&
+         """            onPartyClick = if (BrunioCloud.enabled ||
                 PartyRepository.available.collectAsStateWithLifecycle().value) {""")
 
-    # The Nuvio webview party UI uses Nuvio watch_party RPCs and misleads
-    # the user; native RP1 is the only supported party surface in BruniO.
+    # Restore the built-in player control for Party. BruniO routes its
+    # click to the native RP1 panel through RenderParty (not Nuvio RPCs).
+    # Desktop currently hides Party altogether because available was false.
     controls = app / "features/player/PlayerScreenRuntimePartyControls.kt"
     once(controls,
          """        available = if (BrunioCloud.enabled) true else available,""",
-         """        available = if (BrunioCloud.enabled) false else available,""")
+         """        available = if (BrunioCloud.enabled) true else available,""")
     once(controls,
          """        canStart = if (BrunioCloud.enabled) brunioAuthed else canStart,""",
-         """        canStart = if (BrunioCloud.enabled) false else canStart,""")
+         """        canStart = if (BrunioCloud.enabled) brunioAuthed else canStart,""")
 
     # The RP1 panel content must inherit readable foreground, not Nuvio's
     # possibly dark-on-dark LocalContentColor.

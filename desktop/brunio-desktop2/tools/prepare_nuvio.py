@@ -60,11 +60,26 @@ def pin_upstream(destination: Path) -> None:
     # Apple-native submodule can fail independently of desktop UI code.
     if os.environ.get("BRUNIO_DESKTOP2_FULL_SUBMODULES") == "1":
         run("git", "submodule", "update", "--init", "--recursive", cwd=destination)
-    # Only Windows's libmpv is needed; NEVER attempt macOS LFS binaries.
-    # Verify the native Windows runtime rather than treating a text pointer
-    # as a valid DLL.
+    # Nuvio's upstream LFS quota can be exhausted independently of this fork.
+    # The Windows DLL is byte-identical to the already verified BruniO 2.0.2
+    # build. Verify it against the PINNED Git LFS sha256 OID before using it.
+    # Never accept an arbitrary binary supplied by the environment.
     dll = destination / "composeApp/src/desktopMain/native/windows/runtime/libmpv-2.dll"
-    if shutil.which("git-lfs"):
+    pointer = dll.read_text(encoding="ascii") if dll.stat().st_size < 4096 else ""
+    import hashlib
+    import re
+    oid = re.search(r"(?m)^oid sha256:([a-f0-9]{64})$", pointer)
+    verified = False
+    cached_runtime = os.environ.get("BRUNIO_DESKTOP2_MPV_FALLBACK", "").strip()
+    if cached_runtime and oid:
+        candidate = Path(cached_runtime).resolve()
+        if candidate.is_file() and candidate.stat().st_size >= 1_000_000:
+            digest = hashlib.sha256(candidate.read_bytes()).hexdigest()
+            if digest == oid.group(1):
+                shutil.copy2(candidate, dll)
+                verified = True
+                print("Windows libmpv restored from pinned, hash-verified BruniO MSI.")
+    if not verified and shutil.which("git-lfs"):
         run(
             "git", "lfs", "pull",
             "--include=composeApp/src/desktopMain/native/windows/runtime/libmpv-2.dll",
@@ -73,9 +88,10 @@ def pin_upstream(destination: Path) -> None:
         )
     if not dll.is_file() or dll.stat().st_size < 1_000_000 or dll.open("rb").read(2) != b"MZ":
         raise RuntimeError(
-            "Windows libmpv native DLL unavailable from pinned upstream LFS; "
-            "refusing to package an invalid MSI."
+            "Windows native libmpv DLL unavailable; refusing to package an invalid MSI."
         )
+    if oid and hashlib.sha256(dll.read_bytes()).hexdigest() != oid.group(1):
+        raise RuntimeError("Windows libmpv SHA-256 differs from pinned upstream LFS OID.")
 
 
 def patch_visual_brand(destination: Path) -> None:

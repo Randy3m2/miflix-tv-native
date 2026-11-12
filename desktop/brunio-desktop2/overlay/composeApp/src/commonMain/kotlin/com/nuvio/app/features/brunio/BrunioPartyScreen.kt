@@ -72,6 +72,7 @@ internal fun BrunioPartyScreen(
         }
     }
 
+    BrunioReadableSurface {
     NuvioScreen(modifier = Modifier.fillMaxSize()) {
         stickyHeader { NuvioScreenHeader(title = "Watch Party · BruniO", onBack = onBack) }
         item {
@@ -160,3 +161,4 @@ internal fun BrunioPartyScreen(
         }
     }
 }
+    }

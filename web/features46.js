@@ -27,6 +27,14 @@ async function openExternalSource46(source,target,row,button,isCurrent){
   if(!isCurrent())return;
   if(typeof appendExternalPlayerActions!=='function')throw Error(words46('No se pudo abrir el selector de reproductores.','Could not open external player options.'));
   appendExternalPlayerActions(row,result.url);
+  // On iOS, the selected source is already resolved: request VLC immediately.
+  // Keep the explicit VLC link in the source row if Safari blocks app handoff
+  // or VLC is not installed. No attempt is made before an actual user click.
+  if(isAppleMobile()){
+   const vlcUrl=vlcStreamLink(result.url);
+   try{window.location.assign(vlcUrl);}
+   catch{toast(words46('Pulsa «Abrir en VLC» para continuar.','Tap «Open in VLC» to continue.'));}
+  }
   const actions=row.querySelector('.external-player-actions');
   if(actions){
    actions.prepend(el('strong',words46('Reproducir en otro dispositivo o app','Play in another app or device')));

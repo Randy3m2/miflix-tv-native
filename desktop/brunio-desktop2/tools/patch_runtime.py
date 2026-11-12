@@ -199,3 +199,99 @@ def install(destination: Path) -> None:
         get() = !BrunioCloud.enabled && available.value
         // RP1 adapter is being connected separately; never create incompatible
         // Nuvio watch_party_* records on the user's BruniO backend.''')
+
+
+    library = root / "features/library/LibraryRepository.kt"
+    once(library, "import co.touchlab.kermit.Logger",
+        "import com.nuvio.app.features.brunio.BrunioCloud\n"
+        "import com.nuvio.app.features.brunio.BrunioMediaStateWire\n"
+        "import co.touchlab.kermit.Logger")
+    once(library,
+        '''    suspend fun pullFromServer(
+        profileId: Int,
+        refreshIntent: TrackingRefreshIntent = TrackingRefreshIntent.AUTOMATIC,
+    ) {
+        val operationToken''',
+        '''    suspend fun pullFromServer(
+        profileId: Int,
+        refreshIntent: TrackingRefreshIntent = TrackingRefreshIntent.AUTOMATIC,
+    ) {
+        if (BrunioCloud.enabled) {
+            applyBrunioSnapshot(BrunioMediaStateWire.favoriteItems(BrunioCloud.loadProfileState(profileId)))
+            return
+        }
+        val operationToken''')
+    once(library, '''    fun ensureLoaded() {
+        ensureTrackingProvidersRegistered()''',
+        '''    fun applyBrunioSnapshot(items: List<LibraryItem>) {
+        ensureLoaded()
+        val profileId = ProfileRepository.activeProfileId
+        val token = activeOperationToken(profileId) ?: return
+        val pull = localState.markPullStarted(token) ?: return
+        val result = localState.applyServerItems(pull, items) ?: return
+        persist(result.snapshot)
+        publish()
+    }
+
+    fun ensureLoaded() {
+        ensureTrackingProvidersRegistered()''')
+    once(library,
+        '''    private fun pushToServer(
+        snapshot: LibraryLocalSnapshot,
+        delayMs: Long = pushDebounceMs,
+    ) {
+        if (!snapshot.hasPendingPush) return''',
+        '''    private fun pushToServer(
+        snapshot: LibraryLocalSnapshot,
+        delayMs: Long = pushDebounceMs,
+    ) {
+        if (BrunioCloud.enabled) return // Nuvio library RPCs are not BruniO-compatible
+        if (!snapshot.hasPendingPush) return''')
+
+    progress = root / "features/watchprogress/WatchProgressRepository.kt"
+    once(progress, "import co.touchlab.kermit.Logger",
+        "import com.nuvio.app.features.brunio.BrunioCloud\n"
+        "import com.nuvio.app.features.brunio.BrunioMediaStateWire\n"
+        "import co.touchlab.kermit.Logger")
+    once(progress,
+        '''    fun ensureLoaded() {''',
+        '''    fun applyBrunioSnapshot(entries: List<WatchProgressEntry>) {
+        ensureLoaded()
+        if (currentProfileId != ProfileRepository.activeProfileId) return
+        replaceLocalEntries(entries)
+        replaceDirtyProgressKeys(emptySet())
+        hasLoadedNuvioRemoteProgress = true
+        publish()
+        persist()
+    }
+
+    fun ensureLoaded() {''')
+    once(progress,
+        '''    private suspend fun refreshNuvioSource(
+        profileId: Int,
+        operationGeneration: Long,
+        force: Boolean,
+    ): Boolean {
+        val authState''',
+        '''    private suspend fun refreshNuvioSource(
+        profileId: Int,
+        operationGeneration: Long,
+        force: Boolean,
+    ): Boolean {
+        if (BrunioCloud.enabled) {
+            applyBrunioSnapshot(BrunioMediaStateWire.progressEntries(BrunioCloud.loadProfileState(profileId)))
+            return true
+        }
+        val authState''')
+    once(progress,
+        '''    private fun pushScrobbleToServer(entry: WatchProgressEntry, profileId: Int) {
+        if (ServerItemRef.isServerId(entry.parentMetaId)) return''',
+        '''    private fun pushScrobbleToServer(entry: WatchProgressEntry, profileId: Int) {
+        if (BrunioCloud.enabled) return // Keep local until safe RP1 profile-state merge is tested
+        if (ServerItemRef.isServerId(entry.parentMetaId)) return''')
+    once(progress,
+        '''    private fun pushDeleteToServer(entries: Collection<WatchProgressEntry>) {
+        if (activeSource.providerId != null) return''',
+        '''    private fun pushDeleteToServer(entries: Collection<WatchProgressEntry>) {
+        if (BrunioCloud.enabled) return // Never delete via incompatible Nuvio sync
+        if (activeSource.providerId != null) return''')

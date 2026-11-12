@@ -100,7 +100,7 @@ internal fun BrunioLiveTvScreen(
         mutableStateOf(favoriteBrunioChannels(profileIndex))
     }
     val groups = remember(all) {
-        listOf("Favoritos", "Live Sports", "Tirso TV") +
+        listOf("Favoritos", "Tirso TV") +
             listOf("República Dominicana", "Deportes",
             "Películas & Series", "Entretenimiento", "24/7 Shows", "Noticias")
             .filter { value -> all.any { it.category == value } } +
@@ -115,10 +115,6 @@ internal fun BrunioLiveTvScreen(
                 when (category) {
                     "Tirso TV" -> true
                     "Favoritos" -> it.id in favorites
-                    "Live Sports" -> it.category.contains("sport", ignoreCase = true) ||
-                        it.category.contains("deport", ignoreCase = true) ||
-                        it.name.contains("ESPN", ignoreCase = true) ||
-                        it.name.contains("TNT Sports", ignoreCase = true)
                     else -> it.category == category
                 }
             }

@@ -109,7 +109,7 @@ internal object BrunioTmdb {
 
     fun sections(label: String, source: List<MetaPreview>): List<HomeCatalogSection> =
         source.groupBy { it.type }.map { (kind, items) ->
-            section("\$label-\$kind",
+            section("$label-$kind",
                 if (kind == "series") "$label · Series" else "$label · Películas",
                 kind, items)
         }

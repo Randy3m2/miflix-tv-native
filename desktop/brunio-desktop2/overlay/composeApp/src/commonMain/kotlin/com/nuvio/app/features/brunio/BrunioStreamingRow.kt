@@ -45,14 +45,32 @@ private object NuvioStreamingArt {
         "disney" to Files("disney/disney-landscape.png", "disney/disney.gif"),
         "prime" to Files("prime-video/prime-video-landscape.png", "prime-video/prime-video.gif"),
         "apple" to Files("apple-tv/apple-tv-landscape.jpg", "apple-tv/apple-tv.gif"),
-        "hbo" to Files("hbo-max/hbo-max-landscape.gif", null),
+        "hbo" to Files("hbo-max/hbo-max-landscape.gif", "hbo-max/hbo-max-landscape.gif"),
         "crunchyroll" to Files("crunchyroll/crunchyroll-landscape.gif", "crunchyroll/crunchyroll.gif"),
         "hulu" to Files("hulu/hulu.gif", "hulu/hulu.gif"),
         "paramount" to Files("paramount/paramount.gif", "paramount/paramount.gif"),
     )
-    fun cover(id: String): String? = files[id]?.cover?.let { "$base/$it" }
+    // Nuvio's original HBO/Hulu GIFs can begin on nearly empty frames.
+    // Use separately verified, static Nuvio-compatible covers at rest and
+    // keep the original Nuvio animations for focused/hovered cards.
+    private const val stableBase =
+        "https://raw.githubusercontent.com/luckynumb3rs/stremio-perfect-setup/main/collections/streaming"
+    private val staticCovers = mapOf(
+        "hbo" to "$stableBase/cover/hbo-max.png",
+        "hulu" to "$stableBase/cover/hulu.png",
+    )
+    private val titleLogos = mapOf(
+        "hbo" to "$stableBase/title/hbo-max.png",
+        "hulu" to "$stableBase/title/hulu.png",
+        // AMC+ has no cover in rrevanth/nuvio-assets. Its logo remains
+        // legible even if its bundled background is too dark.
+        "amcplus" to "https://image.tmdb.org/t/p/original/j96rCGRPVyOWkXAJXVffl3Jy3OR.jpg",
+    )
+    fun cover(id: String): String? = staticCovers[id]
+        ?: files[id]?.cover?.let { "$base/$it" }
         ?: brunioStreamingLogoUri(id)
     fun focus(id: String): String? = files[id]?.focus?.let { "$base/$it" }
+    fun titleLogo(id: String): String? = titleLogos[id]
 }
 
 /**
@@ -82,6 +100,7 @@ internal fun BrunioStreamingRow(
                     id = provider.id,
                     title = provider.label,
                     coverImageUrl = NuvioStreamingArt.cover(provider.id),
+                    titleLogoUrl = NuvioStreamingArt.titleLogo(provider.id),
                     focusGifUrl = NuvioStreamingArt.focus(provider.id),
                     focusGifEnabled = true,
                     mobileFocusGifEnabled = true,

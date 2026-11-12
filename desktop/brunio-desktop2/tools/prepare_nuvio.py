@@ -258,6 +258,8 @@ def main() -> None:
     pin_upstream(output)
     patch_visual_brand(output)
     patch_brunioplayer_explicit_autosync(output)
+    from patch_upstream import apply as patch_upstream_compatibility
+    patch_upstream_compatibility(output)
     icon_ok = patch_brand_icon(output)
     files_added = install_brunit_overlay(output)
     backend = configure_public_backend(output)

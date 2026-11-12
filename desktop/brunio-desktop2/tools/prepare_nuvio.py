@@ -346,6 +346,8 @@ def main() -> None:
     from patch_v221_home import apply as patch_v221_home
     patch_v221_home(output)
     icon_ok = patch_brand_icon(output)
+    from patch_v221_brand import apply as patch_v221_brand
+    patch_v221_brand(output)
     files_added = install_brunit_overlay(output)
     # These integration patches touch both the pinned upstream and BruniO's
     # typed overlay, so run only once both trees have been staged.

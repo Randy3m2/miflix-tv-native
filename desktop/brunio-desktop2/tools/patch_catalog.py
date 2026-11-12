@@ -178,6 +178,69 @@ def apply(root: Path) -> None:
         if (BrunioCloud.enabled) return
         val current = _discoverUiState.value''')
 
+    # Nuvio previously parsed only "tmdb:123" for standalone details.
+    # BruniO uses "tmdb:movie:123"/"tmdb:series:123" throughout the UI.
+    details = app / "features/tmdb/TmdbMetadataService.kt"
+    once(details,
+         '''        val tmdbId = id
+            .takeIf { it.startsWith("tmdb:", ignoreCase = true) }
+            ?.substringAfter(':')
+            ?.substringBefore(':')
+            ?.toIntOrNull()
+            ?: return null''',
+         '''        val tmdbId = id
+            .takeIf { it.startsWith("tmdb:", ignoreCase = true) }
+            ?.substringAfterLast(':')
+            ?.toIntOrNull()
+            ?: return null''')
+
+    # Provide episode cards for standalone TMDB series; without this the
+    # series details page contains no playable episode selection.
+    once(details,
+         '''        return buildStandaloneMeta(
+            type = type,
+            id = id,
+            tmdbId = tmdbId,
+            enrichment = enrichment,
+        )''',
+         '''        val standalone = buildStandaloneMeta(
+            type = type,
+            id = id,
+            tmdbId = tmdbId,
+            enrichment = enrichment,
+        )
+        if (!BrunioCloud.enabled || type !in setOf("series", "tv")) return standalone
+        val episodes = BrunioTmdb.episodes(tmdbId)
+        return standalone.copy(
+            videos = episodes,
+            defaultVideoId = episodes.firstOrNull()?.id,
+            hasScheduledVideos = episodes.isNotEmpty(),
+        )''')
+
+    # Resolve canonical BruniO TMDB identities in both addon metadata and
+    # standalone fallback. Loading full seasons takes longer than 5 seconds.
+    repo = app / "features/details/MetaDetailsRepository.kt"
+    once(repo, "import co.touchlab.kermit.Logger",
+         "import com.nuvio.app.features.brunio.BrunioCloud\n"
+         "import co.touchlab.kermit.Logger")
+    once(repo,
+         '''        val tmdbId = itemId
+            .takeIf { it.startsWith("tmdb:", ignoreCase = true) }
+            ?.substringAfter(':')
+            ?.substringBefore(':')
+            ?.toIntOrNull()
+            ?: return itemId''',
+         '''        val tmdbId = itemId
+            .takeIf { it.startsWith("tmdb:", ignoreCase = true) }
+            ?.substringAfterLast(':')
+            ?.toIntOrNull()
+            ?: return itemId''')
+    once(repo,
+         '''    private suspend fun tryFetchTmdbFallbackMeta(type: String, id: String): MetaDetails? =
+        withTimeoutOrNull(TMDB_ENRICH_TIMEOUT_MS) {''',
+         '''    private suspend fun tryFetchTmdbFallbackMeta(type: String, id: String): MetaDetails? =
+        withTimeoutOrNull(if (BrunioCloud.enabled) 30_000L else TMDB_ENRICH_TIMEOUT_MS) {''')
+
     # Nuvio's metadata endpoints default to a "v3 api_key" URL. BruniO also
     # supports TMDB's v4 access token (JWT) and must use a Bearer header for it.
     for rel in ["features/tmdb/TmdbMetadataService.kt", "features/tmdb/TmdbService.kt"]:

@@ -73,6 +73,36 @@ def apply(root: Path) -> None:
                 textAlign = TextAlign.Center,
             )
         }''')
+    # BruniO does not have Nuvio's membership and avatar catalog tables.
+    # Avoid unnecessary server calls at startup.
+    gate = src / "AppGate.kt"
+    once(gate,
+         '''        MemberAccessRepository.ensureStarted()
+        ProfileRepository.loadCachedProfiles()
+        AvatarRepository.fetchAvatars()''',
+         '''        if (!BrunioCloud.enabled) MemberAccessRepository.ensureStarted()
+        ProfileRepository.loadCachedProfiles()
+        if (!BrunioCloud.enabled) AvatarRepository.fetchAvatars()''')
+    once(gate,
+         '''        CollectionSyncService.startObserving()
+        ProfileSettingsSync.startObserving()''',
+         '''        if (!BrunioCloud.enabled) {
+            CollectionSyncService.startObserving()
+            ProfileSettingsSync.startObserving()
+        }''')
+
+    # Do not show Nuvio's updater, donations, or custom server controls
+    # inside a BruniO-branded Windows client.
+    policy = root / "composeApp/src/desktopMain/kotlin/com/nuvio/app/core/build/AppFeaturePolicy.desktop.kt"
+    once(policy, "    actual val inAppUpdaterEnabled: Boolean = true",
+         "    actual val inAppUpdaterEnabled: Boolean = false")
+    once(policy, "    actual val customServerConnectionsEnabled: Boolean = true",
+         "    actual val customServerConnectionsEnabled: Boolean = false")
+    once(policy, "    actual val supportersContributorsPageEnabled: Boolean = true",
+         "    actual val supportersContributorsPageEnabled: Boolean = false")
+    once(policy, "    actual val donationActionsEnabled: Boolean = true",
+         "    actual val donationActionsEnabled: Boolean = false")
+
     # Only the email/password Supabase flow is supported. Nuvio's device link
     # endpoint uses different server RPCs.
     server = src / "core/network/ServerConfiguration.kt"

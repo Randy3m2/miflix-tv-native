@@ -14,6 +14,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,6 +47,8 @@ internal object BrunioSportsAddon {
 
     private fun JsonObject.value(key: String): String? =
         (this[key] as? JsonPrimitive)?.contentOrNull?.trim()
+
+    fun validManifest(manifest: String): Boolean = runCatching { root(manifest); true }.getOrDefault(false)
 
     private fun root(manifest: String): String {
         val trimmed = manifest.trim()
@@ -103,7 +107,11 @@ internal fun BrunioSportsAddonScreen(
     onBack: () -> Unit,
     onPlay: (String, String, String?) -> Unit,
 ) {
-    val manifest = remember { brunioDefaultSportsManifest() }
+    var customManifest by remember { mutableStateOf(brunioSavedSportsManifest()) }
+    val manifest = customManifest.ifBlank { brunioDefaultSportsManifest() }
+    var showSettings by remember { mutableStateOf(customManifest.isBlank()) }
+    var manifestDraft by remember { mutableStateOf(customManifest) }
+    var settingsError by remember { mutableStateOf<String?>(null) }
     var catalogs by remember { mutableStateOf(emptyList<BrunioSportsAddon.Catalog>()) }
     var selected by remember { mutableStateOf<BrunioSportsAddon.Catalog?>(null) }
     var events by remember { mutableStateOf(emptyList<BrunioSportsAddon.Event>()) }
@@ -154,10 +162,46 @@ internal fun BrunioSportsAddonScreen(
                 OutlinedButton(onClick = onBack) { Text("Volver") }
                 Text("Live Sports · Add-on", style = MaterialTheme.typography.headlineMedium)
                 Spacer(modifier = Modifier.weight(1f))
+                OutlinedButton(onClick = { showSettings = !showSettings }) { Text("Configurar add-on") }
                 OutlinedButton(onClick = { refresh++ }) { Text("Actualizar") }
             }
             Text("Eventos del add-on deportivo de BruniO TV, independientes de Tirso TV.")
             if (manifest.isBlank()) Text("No hay manifiesto deportivo configurado.")
+            if (showSettings) {
+                OutlinedTextField(
+                    value = manifestDraft,
+                    onValueChange = { manifestDraft = it; settingsError = null },
+                    label = { Text("URL privada del manifiesto de Live Sports") },
+                    placeholder = { Text("https://proveedor.example/manifest.json") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = {
+                        val candidate = manifestDraft.trim()
+                        if (!BrunioSportsAddon.validManifest(candidate)) {
+                            settingsError = "Pega una URL HTTPS completa que termine en /manifest.json."
+                        } else {
+                            brunioSaveSportsManifest(candidate)
+                            customManifest = candidate
+                            showSettings = false
+                            settingsError = null
+                            refresh++
+                        }
+                    }) { Text("Guardar add-on") }
+                    OutlinedButton(onClick = {
+                        brunioSaveSportsManifest("")
+                        customManifest = ""
+                        manifestDraft = ""
+                        settingsError = null
+                        refresh++
+                    }) { Text("Restaurar predeterminado") }
+                    OutlinedButton(onClick = { showSettings = false }) { Text("Cerrar") }
+                }
+                if (settingsError != null) Text(settingsError.orEmpty(),
+                    color = MaterialTheme.colorScheme.error)
+            }
             if (error != null) Text(error.orEmpty(), color = MaterialTheme.colorScheme.error)
             if (busy || selectedLoading) Text("Cargando…")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

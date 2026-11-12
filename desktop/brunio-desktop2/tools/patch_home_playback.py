@@ -95,6 +95,12 @@ def apply(root: Path) -> None:
 
     repository = app / "features/home/HomeRepository.kt"
     once(repository,
+        """    fun applyCurrentSettings() {
+        publishCurrentState(""",
+        """    fun applyCurrentSettings() {
+        if (BrunioCloud.enabled) return // Nuvio catalog settings must not erase TMDB rows
+        publishCurrentState(""")
+    once(repository,
         """        if (BrunioCloud.enabled) {
             activeJob?.cancel()
             _uiState.value = HomeUiState(isLoading = true)""",

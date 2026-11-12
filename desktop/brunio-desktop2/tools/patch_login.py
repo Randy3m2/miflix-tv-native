@@ -73,6 +73,24 @@ def apply(root: Path) -> None:
                 textAlign = TextAlign.Center,
             )
         }''')
+    # BruniO does not have Nuvio's membership and avatar catalog tables.
+    # Avoid unnecessary server calls at startup.
+    gate = src / "AppGate.kt"
+    once(gate,
+         '''        MemberAccessRepository.ensureStarted()
+        ProfileRepository.loadCachedProfiles()
+        AvatarRepository.fetchAvatars()''',
+         '''        if (!BrunioCloud.enabled) MemberAccessRepository.ensureStarted()
+        ProfileRepository.loadCachedProfiles()
+        if (!BrunioCloud.enabled) AvatarRepository.fetchAvatars()''')
+    once(gate,
+         '''        CollectionSyncService.startObserving()
+        ProfileSettingsSync.startObserving()''',
+         '''        if (!BrunioCloud.enabled) {
+            CollectionSyncService.startObserving()
+            ProfileSettingsSync.startObserving()
+        }''')
+
     # Only the email/password Supabase flow is supported. Nuvio's device link
     # endpoint uses different server RPCs.
     server = src / "core/network/ServerConfiguration.kt"

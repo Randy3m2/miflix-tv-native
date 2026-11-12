@@ -282,6 +282,8 @@ def main() -> None:
     patch_upstream_compatibility(output)
     from patch_runtime import install as patch_brunio_runtime
     patch_brunio_runtime(output)
+    from patch_party import apply as patch_brunio_party
+    patch_brunio_party(output)
     icon_ok = patch_brand_icon(output)
     files_added = install_brunit_overlay(output)
     backend = configure_public_backend(output)

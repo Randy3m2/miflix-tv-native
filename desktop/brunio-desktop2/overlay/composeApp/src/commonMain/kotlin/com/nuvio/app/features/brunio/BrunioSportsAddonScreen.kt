@@ -26,6 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.features.addons.httpGetTextWithHeaders
 import io.ktor.http.encodeURLParameter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -36,7 +38,7 @@ import kotlinx.serialization.json.contentOrNull
 
 /** Live Sports is a separate Stremio-compatible add-on, not an IPTV category. */
 internal object BrunioSportsAddon {
-    data class Catalog(val id: String, val name: String, val type: String)
+    data class Catalog(val id: String, val name: String, val type: String, val genre: String? = null)
     data class Event(val id: String, val name: String, val poster: String?)
     data class Source(val name: String, val url: String)
     private val json = Json { ignoreUnknownKeys = true }
@@ -52,10 +54,11 @@ internal object BrunioSportsAddon {
         }
         return trimmed.removeSuffix("/manifest.json")
     }
-    private suspend fun fetch(url: String): JsonObject =
+    private suspend fun fetch(url: String): JsonObject = withContext(Dispatchers.IO) {
         json.parseToJsonElement(httpGetTextWithHeaders(url,
             mapOf("Accept" to "application/json"))) as? JsonObject
             ?: error("El add-on devolvió una respuesta no válida.")
+    }
 
     suspend fun catalogs(manifest: String): List<Catalog> {
         val body = fetch(root(manifest) + "/manifest.json")
@@ -64,13 +67,16 @@ internal object BrunioSportsAddon {
             val row = item as? JsonObject ?: return@mapNotNull null
             val type = row.value("type") ?: return@mapNotNull null
             val id = row.value("id") ?: return@mapNotNull null
-            if (type !in setOf("tv", "channel") || !Regex("[A-Za-z0-9_.-]{1,120}").matches(id))
-                return@mapNotNull null
+            // Mirror TV LiveRepository: accept published add-on catalog types,
+            // not only tv/channel. Event providers may use other Stremio types.
+            if (!Regex("[A-Za-z0-9_.:-]{1,120}").matches(type) ||
+                !Regex("[A-Za-z0-9_.:-]{1,150}").matches(id)) return@mapNotNull null
             Catalog(id, row.value("name") ?: id, type)
         }.distinctBy { it.type + ":" + it.id }
     }
     suspend fun events(manifest: String, catalog: Catalog): List<Event> {
-        val body = fetch(root(manifest) + "/catalog/${catalog.type}/${catalog.id}.json")
+        val genre = catalog.genre?.let { "/genre=${it.encodeURLParameter()}" }.orEmpty()
+        val body = fetch(root(manifest) + "/catalog/${catalog.type.encodeURLParameter()}/${catalog.id.encodeURLParameter()}$genre.json")
         return (body["metas"] as? JsonArray).orEmpty().mapNotNull { item ->
             val row = item as? JsonObject ?: return@mapNotNull null
             val id = row.value("id")?.takeIf { it.length <= 250 } ?: return@mapNotNull null
@@ -79,7 +85,7 @@ internal object BrunioSportsAddon {
     }
     suspend fun sources(manifest: String, catalog: Catalog, event: Event): List<Source> {
         val id = event.id.encodeURLParameter()
-        val body = fetch(root(manifest) + "/stream/${catalog.type}/$id.json")
+        val body = fetch(root(manifest) + "/stream/${catalog.type.encodeURLParameter()}/$id.json")
         return (body["streams"] as? JsonArray).orEmpty().mapNotNull { item ->
             val row = item as? JsonObject ?: return@mapNotNull null
             val url = row.value("url") ?: return@mapNotNull null
@@ -104,6 +110,7 @@ internal fun BrunioSportsAddonScreen(
     var selectedEvent by remember { mutableStateOf<BrunioSportsAddon.Event?>(null) }
     var sources by remember { mutableStateOf(emptyList<BrunioSportsAddon.Source>()) }
     var busy by remember { mutableStateOf(false) }
+    var selectedLoading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var refresh by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
@@ -128,7 +135,7 @@ internal fun BrunioSportsAddonScreen(
         events = emptyList()
         selectedEvent = null
         sources = emptyList()
-        busy = true
+        selectedLoading = true
         try {
             events = BrunioSportsAddon.events(manifest, catalog)
         } catch (cancel: CancellationException) {
@@ -136,7 +143,7 @@ internal fun BrunioSportsAddonScreen(
         } catch (_: Exception) {
             error = "No se pudo cargar el catálogo de eventos."
         } finally {
-            busy = false
+            selectedLoading = false
         }
     }
 
@@ -152,7 +159,7 @@ internal fun BrunioSportsAddonScreen(
             Text("Eventos del add-on deportivo de BruniO TV, independientes de Tirso TV.")
             if (manifest.isBlank()) Text("No hay manifiesto deportivo configurado.")
             if (error != null) Text(error.orEmpty(), color = MaterialTheme.colorScheme.error)
-            if (busy) Text("Cargando…")
+            if (busy || selectedLoading) Text("Cargando…")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 catalogs.forEach { catalog ->
                     FilterChip(selected = selected == catalog,
@@ -160,6 +167,7 @@ internal fun BrunioSportsAddonScreen(
                         label = { Text(catalog.name) })
                 }
             }
+            if (!busy && !selectedLoading && selected == null && catalogs.isNotEmpty()) Text("Selecciona un catálogo deportivo.")
             if (selectedEvent != null) {
                 Text(selectedEvent!!.name, style = MaterialTheme.typography.titleLarge)
                 OutlinedButton(onClick = { selectedEvent = null; sources = emptyList() }) {

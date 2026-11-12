@@ -303,11 +303,27 @@ def main() -> None:
     patch_brunio_home_playback(output)
     icon_ok = patch_brand_icon(output)
     files_added = install_brunit_overlay(output)
+    # These integration patches touch both the pinned upstream and BruniO's
+    # typed overlay, so run only once both trees have been staged.
+    from patch_party_rp206 import apply as patch_party_rp206
+    patch_party_rp206(output)
+    from patch_library_rp206 import apply as patch_library_rp206
+    patch_library_rp206(output)
+    from patch_collections_rp206 import apply as patch_collections_rp206
+    patch_collections_rp206(output)
+    from patch_livetv_rp206 import apply as patch_livetv_rp206
+    patch_livetv_rp206(output)
+    from patch_avatars_rp206 import apply as patch_avatars_rp206
+    patch_avatars_rp206(output)
+    from install_tv_assets_rp206 import install as install_tv_assets
+    tv_assets = install_tv_assets(output)
     backend = configure_public_backend(output)
     print("Pinned upstream:", PIN)
     print("Prepared directory:", output)
     print("Windows icon patched:", icon_ok)
     print("Overlay files copied:", files_added)
+    print("Original TV avatar assets installed:", tv_assets)
+    print("Live TV channel list copied from BruniO TV.")
     print("Public Supabase auth endpoint configured:", backend)
     print("STATUS: BruniO Desktop service integration candidate (requires account/device acceptance testing).")
     print("CHECK: Verify sign-in, TMDB, stream providers and TV/Mobile interoperability before release.")

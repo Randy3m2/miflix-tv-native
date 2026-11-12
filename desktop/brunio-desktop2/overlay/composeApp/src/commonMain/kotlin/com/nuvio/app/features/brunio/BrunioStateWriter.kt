@@ -117,6 +117,38 @@ internal object BrunioStateWriter {
         save(user, profile, JsonObject(remote + ("progress" to JsonObject(progress))))
     }
 
+    private suspend fun updateAccountSetup(transform: (JsonObject) -> JsonObject) {
+        val user = AuthRepository.state.value as? AuthState.Authenticated
+            ?: error("BruniO login required")
+        check(!user.isAnonymous)
+        BrunioCloud.pullProfiles(user.userId)
+        val account = BrunioCloud.accountState()
+        val setup = account["privateSetup"] as? JsonObject ?: JsonObject(emptyMap())
+        val next = JsonObject(account + ("privateSetup" to transform(setup)))
+        save(user.userId, "__account__", next)
+        BrunioCloud.pullProfiles(user.userId)
+    }
+
+    suspend fun saveTmdbToken(token: String) = writer.withLock {
+        val trimmed = token.trim()
+        require(trimmed.length <= 4096)
+        updateAccountSetup { state ->
+            JsonObject(state + ("tmdbToken" to JsonPrimitive(trimmed)))
+        }
+    }
+
+    suspend fun saveAddonManifests(raw: List<String>) = writer.withLock {
+        val urls = raw.map(String::trim)
+            .filter { it.startsWith("https://") && it.length <= 2048 }
+            .distinct().take(40)
+        updateAccountSetup { state ->
+            JsonObject(state +
+                ("addonManifests" to JsonArray(urls.map(::JsonPrimitive))) +
+                ("torrentioManifest" to JsonPrimitive(urls.firstOrNull().orEmpty()))
+            )
+        }
+    }
+
     suspend fun saveProfiles(payloads: List<ProfilePushPayload>) = writer.withLock {
         val auth = AuthRepository.state.value as? AuthState.Authenticated
             ?: error("BruniO login required")
@@ -128,7 +160,8 @@ internal object BrunioStateWriter {
         val rewritten = payloads.map { profile ->
             val old = existing.getOrNull(profile.profileIndex - 1) as? JsonObject
             val stableId = old?.get("id")?.let { (it as? JsonPrimitive)?.contentOrNull }
-                ?: "pc-${Clock.System.now().toEpochMilliseconds()}-${profile.profileIndex}"
+                ?: if (profile.profileIndex == 1) "default" else
+                    "pc-${Clock.System.now().toEpochMilliseconds()}-${profile.profileIndex}"
             buildJsonObject {
                 if (old != null) old.forEach { (key, value) -> put(key, value) }
                 put("id", stableId)

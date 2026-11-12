@@ -18,7 +18,7 @@ async function openPlayerSources43(current,data){
    const result=await api('/functions/v1/brunio-downloads','POST',{action:'sources',sourcePolicy:playerSourcePolicy51,maxGb:picker.maxGb,refresh:false,cloud:target.cloudId,profile:current.profile,season:target.season||1,episode:target.episode||1,language});
    picker.sources=playerFactorySources51(result).slice(0,100).map((s,i)=>({...s,id:String(i)}));
   }
-  sourceReply43(current,picker,{sources:picker.sources.map(s=>({id:s.id,name:String(s.name||'Source').slice(0,180),description:[String(s.provider||''),s.size>0?(s.size/1e9).toFixed(2)+' GB':'',''].filter(Boolean).join(' · ')}))});
+  sourceReply43(current,picker,{sources:picker.sources.map(s=>({id:s.id,name:String(s.name||'Source').slice(0,180),description:[typeof sourceLanguageBadge46==='function'?(sourceLanguageBadge46(s)?.flag||''):'',String(s.provider||''),s.size>0?(s.size/1e9).toFixed(2)+' GB':''].filter(Boolean).join(' · ')}))});
  }catch(e){sourceReply43(current,picker,{error:e.message});}
 }
 async function selectPlayerSource43(current,data){

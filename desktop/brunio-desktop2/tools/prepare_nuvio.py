@@ -113,8 +113,9 @@ def patch_brand_icon(destination: Path) -> bool:
 
     icons = destination / "composeApp/src/desktopMain/resources/icons"
     common = destination / "composeApp/src/commonMain/composeResources/drawable"
+    from install_tv_assets_rp206 import safe_square
     with Image.open(icon_source) as original:
-        app_icon = original.convert("RGBA")
+        app_icon = safe_square(original, 512, margin=0.13)
         app_icon.save(icons / "nuvio-app-icon-transparent.png")
         app_icon.save(
             icons / "nuvio-app-icon-transparent.ico", format="ICO",
@@ -128,19 +129,19 @@ def patch_brand_icon(destination: Path) -> bool:
         for p in sorted(common.glob("app_icon*.png")):
             with Image.open(p) as existing:
                 size = existing.size
-            app_icon.thumbnail(size, Image.Resampling.LANCZOS)
-            canvas = Image.new("RGBA", size)
-            icon_copy = original.convert("RGBA")
-            icon_copy.thumbnail(size, Image.Resampling.LANCZOS)
-            canvas.alpha_composite(icon_copy, ((size[0]-icon_copy.width)//2, (size[1]-icon_copy.height)//2))
-            canvas.save(p)
+            # Keep consistent transparent safe area across all in-app sizes.
+            app_icon.resize(size, Image.Resampling.LANCZOS).save(p)
     with Image.open(logo_source) as original_logo:
         logo = original_logo.convert("RGBA")
+        bbox = logo.getchannel("A").getbbox()
+        if bbox:
+            logo = logo.crop(bbox)
         for p in sorted(common.glob("app_logo_wordmark*.png")):
             with Image.open(p) as existing:
                 size = existing.size
             stamp = logo.copy()
-            stamp.thumbnail(size, Image.Resampling.LANCZOS)
+            stamp.thumbnail((max(1, int(size[0]*0.88)), max(1, int(size[1]*0.82))),
+                            Image.Resampling.LANCZOS)
             canvas = Image.new("RGBA", size)
             canvas.alpha_composite(stamp, ((size[0]-stamp.width)//2, (size[1]-stamp.height)//2))
             canvas.save(p)

@@ -367,6 +367,8 @@ def main() -> None:
     patch_v220_party(output)
     from patch_v221_party import apply as patch_v221_party
     patch_v221_party(output)
+    from patch_v221_player_sources import apply as patch_v221_player_sources
+    patch_v221_player_sources(output)
     from patch_v220_multiview import apply as patch_v220_multiview
     patch_v220_multiview(output)
     from patch_v221_multiview import apply as patch_v221_multiview

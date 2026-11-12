@@ -106,6 +106,7 @@ internal fun BrunioLiveTvScreen(
             .take(3000)
             .toList()
     }
+    BrunioReadableSurface {
     Column(
         modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp, vertical = 20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -166,3 +167,4 @@ internal fun BrunioLiveTvScreen(
         }
     }
 }
+    }

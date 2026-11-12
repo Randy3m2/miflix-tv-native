@@ -12,6 +12,7 @@ def apply(root: Path) -> None:
     repo = app / "features/home/HomeRepository.kt"
     once(repo,
          "import com.nuvio.app.features.brunio.BrunioTmdb",
+         "import kotlinx.coroutines.CancellationException\n"
          "import com.nuvio.app.features.brunio.BrunioTmdb\n"
          "import com.nuvio.app.features.brunio.BrunioHomeExtras\n"
          "import com.nuvio.app.features.brunio.BrunioRatingsRecommendations")

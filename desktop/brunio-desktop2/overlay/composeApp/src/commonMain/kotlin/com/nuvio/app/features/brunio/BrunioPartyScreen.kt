@@ -1,8 +1,6 @@
 package com.nuvio.app.features.brunio
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -82,8 +80,7 @@ internal fun BrunioPartyScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Column(
-                    modifier = Modifier.widthIn(max = 680.dp).fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
+                    modifier = Modifier.widthIn(max = 680.dp).fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     Text("Comparte una película o episodio con tus amigos", style = MaterialTheme.typography.titleMedium)

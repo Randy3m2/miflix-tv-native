@@ -1,11 +1,15 @@
 package com.nuvio.app.features.brunio
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,80 +36,127 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.ui.NuvioAsyncImage
 import com.nuvio.app.core.ui.NuvioDesktopAnimation
 
-/** Exact streaming badges/GIFs from BruniO TV; tap to add/remove the TMDB row. */
+/**
+ * Exactly Nuvio's original landscape collection artwork; no recreated wordmarks.
+ * https://github.com/rrevanth/nuvio-assets at pinned commit.
+ */
+private object NuvioStreamingArt {
+    private const val base =
+        "https://raw.githubusercontent.com/rrevanth/nuvio-assets/" +
+        "6013348026be6a943aaec367a4681e731dbe50ab/streaming"
+
+    private data class Files(val cover: String, val focus: String?)
+    private val files = mapOf(
+        "netflix" to Files("netflix/netflix-landscape.gif", "netflix/netflix.gif"),
+        "disney" to Files("disney/disney-landscape.png", "disney/disney.gif"),
+        "prime" to Files("prime-video/prime-video-landscape.png", "prime-video/prime-video.gif"),
+        "apple" to Files("apple-tv/apple-tv-landscape.jpg", "apple-tv/apple-tv.gif"),
+        "hbo" to Files("hbo-max/hbo-max-landscape.gif", "hbo-max/hbo-max-landscape.gif"),
+        "crunchyroll" to Files("crunchyroll/crunchyroll-landscape.gif", "crunchyroll/crunchyroll.gif"),
+        "hulu" to Files("hulu/hulu.gif", "hulu/hulu.gif"),
+        "paramount" to Files("paramount/paramount.gif", "paramount/paramount.gif"),
+        "amcplus" to Files("", null),
+    )
+
+    fun cover(id: String) = files[id]?.cover?.takeIf(String::isNotEmpty)?.let { "$base/$it" }
+        ?: brunioStreamingLogoUri(id)
+    fun focus(id: String) = files[id]?.focus?.let { "$base/$it" }
+}
+
+/** Shows Nuvio landscape artwork and labels, separate from Home row configuration. */
 @Composable
-internal fun BrunioStreamingRow(onRefresh: () -> Unit) {
+internal fun BrunioStreamingRow(
+    onRefresh: () -> Unit,
+    onOpenProvider: (BrunioHomeRow) -> Unit = {},
+    sectionPadding: Dp = 28.dp,
+) {
     val enabled by BrunioHomePreferences.selected.collectAsStateWithLifecycle()
     var showEditor by remember { mutableStateOf(false) }
-    val streaming = remember { BrunioOptionalHomeRows.filter { it.id in
-        setOf("netflix", "disney", "prime", "apple", "hbo", "hulu", "paramount", "amcplus") } }
-    BrunioReadableSurface {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically) {
-                Text("Streaming", style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold, color = Color.White)
-                OutlinedButton(onClick = { showEditor = true }) { Text("Agregar / organizar filas") }
+    val streaming = remember {
+        listOf("netflix", "disney", "prime", "apple", "hbo", "crunchyroll",
+            "hulu", "paramount", "amcplus").mapNotNull { id ->
+                BrunioOptionalHomeRows.firstOrNull { it.id == id }
             }
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(streaming, key = { it.id }) { provider ->
-                    val active = provider.id in enabled
-                    Column(
-                        modifier = Modifier.width(158.dp)
+    }
+
+    // Original Nuvio layout: heading, wide 16:9 landscape artwork, name below.
+    // No border/checkmark/configuration state in any provider tile.
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            "Streaming",
+            modifier = Modifier.padding(horizontal = sectionPadding)
+                .combinedClickable(
+                    onClick = { showEditor = true },
+                    onLongClick = { showEditor = true },
+                ),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+        )
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = sectionPadding),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            items(streaming, key = { it.id }) { provider ->
+                val hoverSource = remember { MutableInteractionSource() }
+                val hovered by hoverSource.collectIsHoveredAsState()
+                val cover = if (hovered) {
+                    NuvioStreamingArt.focus(provider.id) ?: NuvioStreamingArt.cover(provider.id)
+                } else NuvioStreamingArt.cover(provider.id)
+                Column(
+                    modifier = Modifier.width(340.dp)
+                        .clickable { onOpenProvider(provider) },
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(192.dp)
                             .clip(RoundedCornerShape(14.dp))
-                            .border(if (active) 2.dp else 1.dp,
-                                if (active) BrunioDarkColors.primary else BrunioDarkColors.outlineVariant,
-                                RoundedCornerShape(14.dp))
-                            .background(BrunioDarkColors.surface)
-                            .clickable {
-                                BrunioHomePreferences.toggle(provider.id)
-                                onRefresh()
-                            }.padding(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(5.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                            .background(Color(0xFF191919))
+                            .hoverable(hoverSource),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Box(modifier = Modifier.fillMaxWidth().height(78.dp),
-                            contentAlignment = Alignment.Center) {
-                            val picture = brunioStreamingLogoUri(provider.id)
-                            if (picture != null) {
-                                NuvioAsyncImage(
-                                    model = picture,
-                                    contentDescription = provider.label,
-                                    modifier = Modifier.fillMaxWidth().height(72.dp),
-                                    contentScale = ContentScale.Fit,
-                                    desktopAnimation = NuvioDesktopAnimation.Always,
-                                )
-                            } else Text(provider.label,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold, color = Color.White)
-                        }
-                        Text(
-                            if (active) "✓ " + provider.label else "+ " + provider.label,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            color = BrunioDarkColors.onSurface,
+                        NuvioAsyncImage(
+                            model = cover,
+                            contentDescription = provider.label,
+                            modifier = Modifier.fillMaxWidth().height(192.dp),
+                            contentScale = ContentScale.Crop,
+                            desktopAnimation = NuvioDesktopAnimation.Always,
                         )
                     }
+                    Text(
+                        provider.label,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFFECECEC),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
         }
-        if (showEditor) {
+    }
+    // Keep the row management capability; it is not part of the visual cards.
+    if (showEditor) {
+        BrunioReadableSurface {
             AlertDialog(
                 onDismissRequest = { showEditor = false },
                 title = { Text("Personalizar filas del Home") },
                 text = {
-                    LazyColumn(modifier = Modifier.height(380.dp)) {
+                    LazyColumn(modifier = Modifier.height(390.dp)) {
                         items(BrunioOptionalHomeRows, key = { it.id }) { row ->
-                            Row(modifier = Modifier.fillMaxWidth().clickable {
-                                BrunioHomePreferences.toggle(row.id)
-                                onRefresh()
-                            }.padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clickable {
+                                    BrunioHomePreferences.toggle(row.id)
+                                    onRefresh()
+                                }.padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
                                 Checkbox(
                                     checked = row.id in enabled,
                                     onCheckedChange = {
@@ -113,8 +164,11 @@ internal fun BrunioStreamingRow(onRefresh: () -> Unit) {
                                         onRefresh()
                                     },
                                 )
-                                Text(row.label, modifier = Modifier.padding(start = 8.dp),
-                                    color = BrunioDarkColors.onSurface)
+                                Text(
+                                    row.label,
+                                    modifier = Modifier.padding(start = 8.dp),
+                                    color = BrunioDarkColors.onSurface,
+                                )
                             }
                         }
                     }

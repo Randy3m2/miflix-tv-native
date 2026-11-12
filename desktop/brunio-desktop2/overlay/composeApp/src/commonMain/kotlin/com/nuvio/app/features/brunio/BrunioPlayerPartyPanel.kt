@@ -48,6 +48,8 @@ internal fun BrunioPlayerPartyPanel(
     positionMs: Long,
     playing: Boolean,
     onOpenSources: () -> Unit,
+    onTogglePlayback: () -> Unit,
+    onSeekBy: (Long) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val session by AuthRepository.state.collectAsStateWithLifecycle()
@@ -146,6 +148,34 @@ internal fun BrunioPlayerPartyPanel(
                         ) { Text("Cambiar mi fuente / Source picker") }
                         Text("Tu cambio de fuente no cambia la fuente de los demás.",
                             style = MaterialTheme.typography.bodySmall)
+                        Text("Control de reproducción",
+                            style = MaterialTheme.typography.titleMedium)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (party.host) {
+                                OutlinedButton(onClick = { onSeekBy(-10_000L) }) {
+                                    Text("−10 s")
+                                }
+                            }
+                            Button(onClick = {
+                                if (party.host) onTogglePlayback()
+                                else action {
+                                    BrunioPartyService.requestPlayerControl(
+                                        media, !playing,
+                                    )
+                                }
+                            }, enabled = !busy) {
+                                Text(if (party.host) {
+                                    if (playing) "Pausar" else "Reproducir"
+                                } else {
+                                    if (playing) "Solicitar pausa" else "Solicitar reproducción"
+                                })
+                            }
+                            if (party.host) {
+                                OutlinedButton(onClick = { onSeekBy(10_000L) }) {
+                                    Text("+10 s")
+                                }
+                            }
+                        }
                         if (party.host && party.requests.isNotEmpty()) {
                             Text("Solicitudes de acceso")
                             party.requests.forEach { request ->

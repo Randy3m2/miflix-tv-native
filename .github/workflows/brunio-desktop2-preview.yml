@@ -1,6 +1,6 @@
 # Builds the isolated BruniO Desktop2 integration candidate on the pinned UI.
 # Account/device acceptance remains required. Never publish to pc-latest automatically.
-name: BruniO Desktop 2.1.0 RP206 all-in-one validation (NO RELEASE)
+name: BruniO Desktop 2.2.0 real-desktop integration validation
 
 on:
   pull_request:
@@ -23,8 +23,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 65
     env:
-      NUVIO_DESKTOP_VERSION_NAME: 2.1.0
-      NUVIO_DESKTOP_VERSION_CODE: "210"
+      NUVIO_DESKTOP_VERSION_NAME: 2.2.0
+      NUVIO_DESKTOP_VERSION_CODE: "220"
       WEBVIEW2_VERSION: "1.0.4078.44"
     steps:
       - uses: actions/checkout@v4
@@ -122,7 +122,7 @@ jobs:
       - name: Upload BruniO Windows integration candidate
         uses: actions/upload-artifact@v4
         with:
-          name: BruniO-Desktop2-v2.1.0-RP206-ALL-IN-ONE
+          name: BruniO-Desktop-v2.2.0-REAL-VALIDATION
           path: _brunio_desktop2_build/composeApp/build/compose/release-msis/BruniO-Windows-*.msi
           if-no-files-found: error
           retention-days: 7

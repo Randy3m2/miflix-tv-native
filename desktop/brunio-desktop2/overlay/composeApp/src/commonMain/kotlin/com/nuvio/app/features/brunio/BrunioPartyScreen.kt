@@ -160,5 +160,5 @@ internal fun BrunioPartyScreen(
             }
         }
     }
-}
     }
+}

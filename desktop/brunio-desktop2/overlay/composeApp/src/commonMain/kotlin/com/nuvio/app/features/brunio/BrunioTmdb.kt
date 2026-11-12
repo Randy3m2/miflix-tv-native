@@ -2,10 +2,14 @@ package com.nuvio.app.features.brunio
 
 import com.nuvio.app.features.addons.httpGetTextWithHeaders
 import com.nuvio.app.features.catalog.CatalogTarget
+import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.home.HomeCatalogSection
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.tmdb.TmdbSettingsRepository
 import io.ktor.http.encodeURLParameter
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -54,6 +58,50 @@ internal object BrunioTmdb {
             "query" to normalized,
             "include_adult" to "false",
         ))).filter { it.type == "movie" || it.type == "series" }
+    }
+
+    /**
+     * TMDB standalone metadata doesn't carry Stremio's episode list. Populate
+     * Nuvio's existing series detail UI from TMDB season endpoints.
+     */
+    suspend fun episodes(tmdbId: Int): List<MetaVideo> {
+        require(tmdbId > 0)
+        val show = json.parseToJsonElement(fetchRaw("tv/$tmdbId")) as? JsonObject
+            ?: return emptyList()
+        val seasons = (show["seasons"] as? JsonArray).orEmpty()
+            .mapNotNull { row ->
+                val item = row as? JsonObject ?: return@mapNotNull null
+                val number = (item["season_number"] as? JsonPrimitive)?.intOrNull
+                number?.takeIf { it > 0 }
+            }.distinct().sorted().take(30)
+        return coroutineScope {
+            seasons.map { season ->
+                async {
+                    runCatching {
+                        val body = json.parseToJsonElement(fetchRaw("tv/$tmdbId/season/$season"))
+                            as? JsonObject ?: return@runCatching emptyList<MetaVideo>()
+                        val episodes = body["episodes"] as? JsonArray ?: return@runCatching emptyList<MetaVideo>()
+                        val seasonPoster = body.string("poster_path")?.let { image + "w342" + it }
+                        episodes.mapNotNull { element ->
+                            val episode = element as? JsonObject ?: return@mapNotNull null
+                            val number = (episode["episode_number"] as? JsonPrimitive)?.intOrNull
+                                ?.takeIf { it > 0 } ?: return@mapNotNull null
+                            MetaVideo(
+                                id = "tmdb:series:$tmdbId:s${season}e$number",
+                                title = episode.string("name") ?: "Episodio $number",
+                                season = season,
+                                episode = number,
+                                released = episode.string("air_date"),
+                                thumbnail = episode.string("still_path")?.let { image + "w500" + it },
+                                seasonPoster = seasonPoster,
+                                overview = episode.string("overview"),
+                                runtime = (episode["runtime"] as? JsonPrimitive)?.intOrNull,
+                            )
+                        }
+                    }.getOrDefault(emptyList())
+                }
+            }.awaitAll().flatten()
+        }
     }
 
     fun sections(label: String, source: List<MetaPreview>): List<HomeCatalogSection> =

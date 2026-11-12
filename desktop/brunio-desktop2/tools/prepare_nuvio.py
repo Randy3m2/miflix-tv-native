@@ -67,7 +67,7 @@ def patch_visual_brand(destination: Path) -> None:
     replace_exact(
         desktop_main,
         'title = if (smokePlayerUrl == null) "Nuvio" else "Nuvio Player Smoke",',
-        'title = if (smokePlayerUrl == null) "BruniO Desktop 2.0.1" else "BruniO Player Smoke",',
+        'title = if (smokePlayerUrl == null) "BruniO Desktop 2.0.2" else "BruniO Player Smoke",',
     )
     replace_exact(gradle, 'packageName = "Nuvio"', 'packageName = "BruniO"')
     replace_exact(gradle, 'vendor = "Nuvio Media"', 'vendor = "BruniO"')
@@ -298,6 +298,8 @@ def main() -> None:
     patch_brunio_account_setup(output)
     from patch_tests import apply as patch_brunio_test_policy
     patch_brunio_test_policy(output)
+    from patch_home_playback import apply as patch_brunio_home_playback
+    patch_brunio_home_playback(output)
     icon_ok = patch_brand_icon(output)
     files_added = install_brunit_overlay(output)
     backend = configure_public_backend(output)

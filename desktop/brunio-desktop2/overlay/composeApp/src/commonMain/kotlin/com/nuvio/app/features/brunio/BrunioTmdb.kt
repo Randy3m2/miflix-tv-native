@@ -83,6 +83,7 @@ internal object BrunioTmdb {
             ?.get("results") as? JsonArray ?: return emptyList()
         return rows.mapNotNull { value ->
             val row = value as? JsonObject ?: return@mapNotNull null
+            if (row.string("media_type") == "person") return@mapNotNull null
             val numericId = (row["id"] as? JsonPrimitive)?.intOrNull?.takeIf { it > 0 }
                 ?: return@mapNotNull null
             val kind = forcedKind ?: when (row.string("media_type")) {

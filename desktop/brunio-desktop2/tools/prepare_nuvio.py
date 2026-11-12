@@ -148,13 +148,20 @@ def patch_brand_icon(destination: Path) -> bool:
     common = destination / "composeApp/src/commonMain/composeResources/drawable"
     from install_tv_assets_rp206 import safe_square
     with Image.open(icon_source) as original:
-        app_icon = safe_square(original, 512, margin=0.13)
+        app_icon = safe_square(original, 512, margin=0.19)
         app_icon.save(icons / "nuvio-app-icon-transparent.png")
         app_icon.save(
             icons / "nuvio-app-icon-transparent.ico", format="ICO",
             sizes=[(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
         )
         # BruniO application identity must be consistent in theme variants.
+        # Windows's runtime shortcut icon updater loads variant ICO files.
+        # The earlier build only rebranded PNG variants, leaving old Nuvio ICOs.
+        for p in sorted(icons.glob("app-icon-*-transparent.ico")):
+            app_icon.save(
+                p, format="ICO",
+                sizes=[(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
+            )
         for p in sorted(icons.glob("app-icon-*-transparent.png")):
             with Image.open(p) as existing:
                 size = existing.size

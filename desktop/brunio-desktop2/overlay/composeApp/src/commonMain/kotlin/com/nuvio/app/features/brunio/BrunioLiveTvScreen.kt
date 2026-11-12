@@ -26,6 +26,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import com.nuvio.app.features.profiles.ProfileRepository
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -42,6 +44,8 @@ internal data class BrunioLiveChannel(
 internal expect fun bundledBrunioLivePlaylist(): String
 internal expect fun hiddenBrunioChannels(): Set<String>
 internal expect fun saveHiddenBrunioChannels(ids: Set<String>)
+internal expect fun favoriteBrunioChannels(profileIndex: Int): Set<String>
+internal expect fun saveFavoriteBrunioChannels(profileIndex: Int, ids: Set<String>)
 
 /**
  * TV's existing curated M3U: category -> channels -> native Nuvio/MPV player.
@@ -91,8 +95,13 @@ internal fun BrunioLiveTvScreen(
     var category by remember { mutableStateOf("Tirso TV") }
     var hidden by remember { mutableStateOf(hiddenBrunioChannels()) }
     var multiviewIds by remember { mutableStateOf(setOf<String>()) }
+    val profileIndex = ProfileRepository.activeProfileId
+    var favorites by remember(profileIndex) {
+        mutableStateOf(favoriteBrunioChannels(profileIndex))
+    }
     val groups = remember(all) {
-        listOf("Tirso TV") + listOf("República Dominicana", "Deportes",
+        listOf("Favoritos", "Live Sports", "Tirso TV") +
+            listOf("República Dominicana", "Deportes",
             "Películas & Series", "Entretenimiento", "24/7 Shows", "Noticias")
             .filter { value -> all.any { it.category == value } } +
             all.map { it.category }.distinct().filterNot {
@@ -100,9 +109,19 @@ internal fun BrunioLiveTvScreen(
                     "Entretenimiento", "24/7 Shows", "Noticias")
             }.sorted()
     }
-    val matching = remember(all, category, filter, hidden) {
+    val matching = remember(all, category, filter, hidden, favorites) {
         all.asSequence()
-            .filter { category == "Tirso TV" || it.category == category }
+            .filter {
+                when (category) {
+                    "Tirso TV" -> true
+                    "Favoritos" -> it.id in favorites
+                    "Live Sports" -> it.category.contains("sport", ignoreCase = true) ||
+                        it.category.contains("deport", ignoreCase = true) ||
+                        it.name.contains("ESPN", ignoreCase = true) ||
+                        it.name.contains("TNT Sports", ignoreCase = true)
+                    else -> it.category == category
+                }
+            }
             .filter { it.id !in hidden }
             .filter { filter.isBlank() || it.name.contains(filter.trim(), ignoreCase = true) }
             .take(3000)
@@ -163,6 +182,13 @@ internal fun BrunioLiveTvScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(channel.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(channel.category, style = MaterialTheme.typography.bodySmall)
+                    }
+                    OutlinedButton(onClick = {
+                        favorites = if (channel.id in favorites) favorites - channel.id
+                            else favorites + channel.id
+                        saveFavoriteBrunioChannels(profileIndex, favorites)
+                    }) {
+                        Text(if (channel.id in favorites) "★ Favorito" else "☆ Favorito")
                     }
                     OutlinedButton(onClick = {
                         val wasSelected = channel.id in multiviewIds

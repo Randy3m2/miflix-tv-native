@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.features.addons.httpGetTextWithHeaders
+import io.ktor.http.encodeURLPathPart
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -77,7 +78,7 @@ internal object BrunioSportsAddon {
         }.take(300)
     }
     suspend fun sources(manifest: String, catalog: Catalog, event: Event): List<Source> {
-        val id = io.ktor.http.encodeURLPathPart(event.id)
+        val id = event.id.encodeURLPathPart()
         val body = fetch(root(manifest) + "/stream/${catalog.type}/$id.json")
         return (body["streams"] as? JsonArray).orEmpty().mapNotNull { item ->
             val row = item as? JsonObject ?: return@mapNotNull null

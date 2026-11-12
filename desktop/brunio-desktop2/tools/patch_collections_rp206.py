@@ -76,3 +76,12 @@ def apply(root):
         CollectionSyncService.pullFromServer(index)
         CollectionSyncService.startObserving()
         WatchProgressRepository.applyBrunioSnapshot''')
+
+    tmdb = app / "features/collection/TmdbCollectionSourceResolver.kt"
+    once(tmdb, "import com.nuvio.app.features.addons.httpGetText",
+         "import com.nuvio.app.features.brunio.BrunioCloud\n"
+         "import com.nuvio.app.features.brunio.BrunioTmdb\n"
+         "import com.nuvio.app.features.addons.httpGetText")
+    once(tmdb, "json.decodeFromString<T>(httpGetText(url))",
+         "json.decodeFromString<T>(if (BrunioCloud.enabled) "
+         "BrunioTmdb.fetchRaw(endpoint, query) else httpGetText(url))")

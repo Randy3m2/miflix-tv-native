@@ -53,11 +53,16 @@ internal object BrunioCloud {
         runCatching { profileProjection?.brunioId(profileIndex) }.getOrNull()
 
     fun manifestUrls(): List<String> {
-        val setup = accountSnapshot?.get("privateSetup") as? JsonObject ?: return emptyList()
+        val setup = accountSnapshot?.get("privateSetup") as? JsonObject ?: JsonObject(emptyMap())
         val urls = ((setup["addonManifests"] as? JsonArray)
             ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
             ?: emptyList()) +
-            listOfNotNull((setup["torrentioManifest"] as? JsonPrimitive)?.contentOrNull)
+            listOfNotNull((setup["torrentioManifest"] as? JsonPrimitive)?.contentOrNull) +
+            listOf(
+                (setup["sportsManifest"] as? JsonPrimitive)?.contentOrNull
+                    ?.takeIf { it.startsWith("https://") }
+                    ?: brunioDefaultSportsManifest()
+            )
         // Reuse the Nuvio Stremio parser; never disclose private manifest URLs in logs.
         return urls.map(String::trim)
             .filter { it.startsWith("https://") && it.length <= 2048 }

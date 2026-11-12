@@ -1,6 +1,9 @@
 package com.nuvio.app.features.brunio
 
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -26,5 +29,15 @@ internal val BrunioDarkColors = darkColorScheme(
 
 @Composable
 internal fun BrunioReadableSurface(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = BrunioDarkColors, content = content)
+    MaterialTheme(colorScheme = BrunioDarkColors) {
+        // MaterialTheme alone does NOT override LocalContentColor. Nuvio's
+        // root ContentColor may be black even though our BruniO pages are dark.
+        CompositionLocalProvider(LocalContentColor provides BrunioDarkColors.onSurface) {
+            Surface(
+                color = BrunioDarkColors.background,
+                contentColor = BrunioDarkColors.onSurface,
+                content = content,
+            )
+        }
+    }
 }

@@ -24,6 +24,14 @@ def apply(destination: Path) -> None:
         '            }')
     once(cache, 'when (val connection = url.openConnection()) {',
         'when (val connection = url.openConnection().apply { useCaches = false }) {')
+    # FileURLConnection.contentLengthLong leaves a stream open on Windows.
+    # Resolve metadata through NIO instead of touching URLConnection for local files.
+    once(cache,
+        '    private fun resourceStamp(url: URL): String =\n        when (val connection = url.openConnection().apply { useCaches = false }) {',
+        '    private fun resourceStamp(url: URL): String =\n        if (url.protocol == "file") {\n'
+        '            val path = Path.of(url.toURI())\n'
+        '            Files.size(path).toString() + ":" + Files.getLastModifiedTime(path).toMillis().toString()\n'
+        '        } else when (val connection = url.openConnection().apply { useCaches = false }) {')
 
     storage = root / "desktopMain/kotlin/com/nuvio/app/core/storage/DesktopStorage.kt"
     for old, new in [
@@ -60,10 +68,10 @@ def apply(destination: Path) -> None:
 
     progress = root / "commonTest/kotlin/com/nuvio/app/features/watchprogress/WatchProgressIdentityTest.kt"
     # A one-second clip is below upstream's minimum completion sample threshold.
-    once(progress, '"lastPositionMs": 940,', '"lastPositionMs": 94000,')
-    once(progress, '"durationMs": 1000,', '"durationMs": 100000,')
+    once(progress, '"lastPositionMs": 940,', '"lastPositionMs": 169200,')
+    once(progress, '"durationMs": 1000,', '"durationMs": 180000,')
     once(progress, "assertEquals(940L, decoded.single().lastPositionMs)",
-         "assertEquals(94000L, decoded.single().lastPositionMs)")
+         "assertEquals(169200L, decoded.single().lastPositionMs)")
 
     updater = root / "desktopMain/kotlin/com/nuvio/app/features/updater/AppUpdaterPlatform.desktop.kt"
     once(updater,

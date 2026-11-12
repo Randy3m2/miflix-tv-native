@@ -35,7 +35,12 @@ def replace_exact(path: Path, before: str, after: str) -> None:
 
 def run(*cmd: str, cwd: Path | None = None) -> str:
     try:
-        result = subprocess.run(cmd, cwd=cwd, check=True, capture_output=True, text=True)
+        # Do not check out unused macOS/Linux LFS payloads when building Windows.
+        # They can exhaust upstream LFS quota and break otherwise valid Windows builds.
+        env = os.environ.copy()
+        if cmd and cmd[0] == "git":
+            env["GIT_LFS_SKIP_SMUDGE"] = "1"
+        result = subprocess.run(cmd, cwd=cwd, check=True, capture_output=True, text=True, env=env)
     except subprocess.CalledProcessError as err:
         details = (err.stderr or err.stdout or "").strip()
         raise RuntimeError(f"Command failed: {cmd[0]} {cmd[1]}: {details[-3500:]}") from err
@@ -55,10 +60,38 @@ def pin_upstream(destination: Path) -> None:
     # Apple-native submodule can fail independently of desktop UI code.
     if os.environ.get("BRUNIO_DESKTOP2_FULL_SUBMODULES") == "1":
         run("git", "submodule", "update", "--init", "--recursive", cwd=destination)
-    # Upstream bundles native Windows libmpv through Git LFS; a text pointer
-    # must never be treated as a valid native player runtime.
-    if shutil.which("git-lfs"):
-        run("git", "lfs", "pull", cwd=destination)
+    # Nuvio's upstream LFS quota can be exhausted independently of this fork.
+    # The Windows DLL is byte-identical to the already verified BruniO 2.0.2
+    # build. Verify it against the PINNED Git LFS sha256 OID before using it.
+    # Never accept an arbitrary binary supplied by the environment.
+    dll = destination / "composeApp/src/desktopMain/native/windows/runtime/libmpv-2.dll"
+    pointer = dll.read_text(encoding="ascii") if dll.stat().st_size < 4096 else ""
+    import hashlib
+    import re
+    oid = re.search(r"(?m)^oid sha256:([a-f0-9]{64})$", pointer)
+    verified = False
+    cached_runtime = os.environ.get("BRUNIO_DESKTOP2_MPV_FALLBACK", "").strip()
+    if cached_runtime and oid:
+        candidate = Path(cached_runtime).resolve()
+        if candidate.is_file() and candidate.stat().st_size >= 1_000_000:
+            digest = hashlib.sha256(candidate.read_bytes()).hexdigest()
+            if digest == oid.group(1):
+                shutil.copy2(candidate, dll)
+                verified = True
+                print("Windows libmpv restored from pinned, hash-verified BruniO MSI.")
+    if not verified and shutil.which("git-lfs"):
+        run(
+            "git", "lfs", "pull",
+            "--include=composeApp/src/desktopMain/native/windows/runtime/libmpv-2.dll",
+            "--exclude=",
+            cwd=destination,
+        )
+    if not dll.is_file() or dll.stat().st_size < 1_000_000 or dll.open("rb").read(2) != b"MZ":
+        raise RuntimeError(
+            "Windows native libmpv DLL unavailable; refusing to package an invalid MSI."
+        )
+    if oid and hashlib.sha256(dll.read_bytes()).hexdigest() != oid.group(1):
+        raise RuntimeError("Windows libmpv SHA-256 differs from pinned upstream LFS OID.")
 
 
 def patch_visual_brand(destination: Path) -> None:
@@ -67,7 +100,7 @@ def patch_visual_brand(destination: Path) -> None:
     replace_exact(
         desktop_main,
         'title = if (smokePlayerUrl == null) "Nuvio" else "Nuvio Player Smoke",',
-        'title = if (smokePlayerUrl == null) "BruniO Desktop 2.0.2" else "BruniO Player Smoke",',
+        'title = if (smokePlayerUrl == null) "BruniO Desktop 2.1.0" else "BruniO Player Smoke",',
     )
     replace_exact(gradle, 'packageName = "Nuvio"', 'packageName = "BruniO"')
     replace_exact(gradle, 'vendor = "Nuvio Media"', 'vendor = "BruniO"')
@@ -113,8 +146,9 @@ def patch_brand_icon(destination: Path) -> bool:
 
     icons = destination / "composeApp/src/desktopMain/resources/icons"
     common = destination / "composeApp/src/commonMain/composeResources/drawable"
+    from install_tv_assets_rp206 import safe_square
     with Image.open(icon_source) as original:
-        app_icon = original.convert("RGBA")
+        app_icon = safe_square(original, 512, margin=0.13)
         app_icon.save(icons / "nuvio-app-icon-transparent.png")
         app_icon.save(
             icons / "nuvio-app-icon-transparent.ico", format="ICO",
@@ -128,19 +162,19 @@ def patch_brand_icon(destination: Path) -> bool:
         for p in sorted(common.glob("app_icon*.png")):
             with Image.open(p) as existing:
                 size = existing.size
-            app_icon.thumbnail(size, Image.Resampling.LANCZOS)
-            canvas = Image.new("RGBA", size)
-            icon_copy = original.convert("RGBA")
-            icon_copy.thumbnail(size, Image.Resampling.LANCZOS)
-            canvas.alpha_composite(icon_copy, ((size[0]-icon_copy.width)//2, (size[1]-icon_copy.height)//2))
-            canvas.save(p)
+            # Keep consistent transparent safe area across all in-app sizes.
+            app_icon.resize(size, Image.Resampling.LANCZOS).save(p)
     with Image.open(logo_source) as original_logo:
         logo = original_logo.convert("RGBA")
+        bbox = logo.getchannel("A").getbbox()
+        if bbox:
+            logo = logo.crop(bbox)
         for p in sorted(common.glob("app_logo_wordmark*.png")):
             with Image.open(p) as existing:
                 size = existing.size
             stamp = logo.copy()
-            stamp.thumbnail(size, Image.Resampling.LANCZOS)
+            stamp.thumbnail((max(1, int(size[0]*0.88)), max(1, int(size[1]*0.82))),
+                            Image.Resampling.LANCZOS)
             canvas = Image.new("RGBA", size)
             canvas.alpha_composite(stamp, ((size[0]-stamp.width)//2, (size[1]-stamp.height)//2))
             canvas.save(p)
@@ -302,11 +336,27 @@ def main() -> None:
     patch_brunio_home_playback(output)
     icon_ok = patch_brand_icon(output)
     files_added = install_brunit_overlay(output)
+    # These integration patches touch both the pinned upstream and BruniO's
+    # typed overlay, so run only once both trees have been staged.
+    from patch_party_rp206 import apply as patch_party_rp206
+    patch_party_rp206(output)
+    from patch_library_rp206 import apply as patch_library_rp206
+    patch_library_rp206(output)
+    from patch_collections_rp206 import apply as patch_collections_rp206
+    patch_collections_rp206(output)
+    from patch_livetv_rp206 import apply as patch_livetv_rp206
+    patch_livetv_rp206(output)
+    from patch_avatars_rp206 import apply as patch_avatars_rp206
+    patch_avatars_rp206(output)
+    from install_tv_assets_rp206 import install as install_tv_assets
+    tv_assets = install_tv_assets(output)
     backend = configure_public_backend(output)
     print("Pinned upstream:", PIN)
     print("Prepared directory:", output)
     print("Windows icon patched:", icon_ok)
     print("Overlay files copied:", files_added)
+    print("Original TV avatar assets installed:", tv_assets)
+    print("Live TV channel list copied from BruniO TV.")
     print("Public Supabase auth endpoint configured:", backend)
     print("STATUS: BruniO Desktop service integration candidate (requires account/device acceptance testing).")
     print("CHECK: Verify sign-in, TMDB, stream providers and TV/Mobile interoperability before release.")

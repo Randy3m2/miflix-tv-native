@@ -1,6 +1,7 @@
 package com.nuvio.app.features.brunio
 
 import com.nuvio.app.features.party.PartyMedia
+import com.nuvio.app.features.party.PartyPlayback
 import com.nuvio.app.features.profiles.ProfileRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,6 +13,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import kotlin.random.Random
+import kotlin.time.Clock
 
 internal data class BrunioPartyRequest(val roomCode: String, val userId: String, val nickname: String)
 internal data class BrunioPartyMessage(val id: Long, val sender: String, val kind: String, val body: String)
@@ -24,6 +26,7 @@ internal data class BrunioPartyView(
     val requests: List<BrunioPartyRequest> = emptyList(),
     val messages: List<BrunioPartyMessage> = emptyList(),
     val media: PartyMedia? = null,
+    val playback: PartyPlayback? = null,
     val error: String? = null,
 )
 
@@ -39,6 +42,7 @@ internal object BrunioPartyService {
     private var gatewayProfile: String? = null
     private var selfActor: String? = null
     private var roomHostId: String? = null
+    private var roomSnapshot: JsonObject = JsonObject(emptyMap())
 
     private fun service(): BrunioRp1Gateway {
         val id = BrunioCloud.profileId(ProfileRepository.activeProfileId)
@@ -117,13 +121,54 @@ internal object BrunioPartyService {
                 BrunioPartyMessage(id, field(row, "user_id"), field(row, "kind"), field(row, "body"))
             }
         val mediaState = room["state"] as? JsonObject
+        roomSnapshot = mediaState ?: JsonObject(emptyMap())
+        val roomPlayback = mediaState?.let { BrunioPartyWire.readBrunioState(it) }
         _state.value = current.copy(
             host = selfActor != null && host == selfActor,
             members = members,
             requests = requests,
             messages = (current.messages + updates).distinctBy { it.id }.takeLast(100),
-            media = mediaState?.let { BrunioPartyWire.readBrunioState(it)?.media },
+            media = roomPlayback?.media,
+            playback = roomPlayback?.playback,
             error = null,
+        )
+    }
+
+    /**
+     * Host-authoritative playback bridge. No stream URL or credentials leave the
+     * desktop. Other BruniO clients resolve their own source for the same TMDB ID.
+     */
+    suspend fun publishPlayerState(media: PartyMedia, paused: Boolean, positionMs: Long) {
+        val snapshot = _state.value
+        if (snapshot.roomCode.isEmpty() || !snapshot.host) return
+        val kind = if (media.metaType == "series" || media.type == "series") "series" else "movie"
+        val numeric = Regex("tmdb:(?:movie|series):([0-9]+)")
+            .find(media.metaId)?.groupValues?.getOrNull(1)
+            ?: media.metaId.toLongOrNull()?.toString()
+            ?: return
+        val cloudMedia = media.copy(metaId = "tmdb:$kind:$numeric", metaType = kind, type = kind)
+        val now = Clock.System.now().toEpochMilliseconds()
+        val playback = PartyPlayback(
+            seq = now, paused = paused, positionMs = positionMs.coerceAtLeast(0L),
+            at = now, mediaKey = cloudMedia.key,
+        )
+        val state = JsonObject(
+            BrunioPartyWire.writeBrunioState(roomSnapshot, cloudMedia, playback, now) +
+                ("title" to JsonPrimitive(cloudMedia.title.take(256)))
+        )
+        val (time, expiry) = brunioPartyClock()
+        service().hostUpdate(snapshot.roomCode, state, time, expiry)
+        roomSnapshot = state
+        _state.value = _state.value.copy(media = cloudMedia, playback = playback)
+    }
+
+    /** Guest requests a change through RP1 rather than editing the room. */
+    suspend fun requestPlayerControl(media: PartyMedia, playing: Boolean) {
+        val snapshot = _state.value
+        if (snapshot.roomCode.isBlank() || snapshot.host) return
+        val cloud = Regex("tmdb:(?:movie|series):[0-9]+").find(media.metaId)?.value ?: return
+        service().requestPlayback(
+            snapshot.roomCode, cloud, media.season ?: 0, media.episode ?: 0, playing,
         )
     }
 
@@ -154,6 +199,7 @@ internal object BrunioPartyService {
         gatewayProfile = null
         selfActor = null
         roomHostId = null
+        roomSnapshot = JsonObject(emptyMap())
         _state.value = BrunioPartyView()
     }
 

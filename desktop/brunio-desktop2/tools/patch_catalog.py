@@ -178,6 +178,22 @@ def apply(root: Path) -> None:
         if (BrunioCloud.enabled) return
         val current = _discoverUiState.value''')
 
+    # Nuvio previously parsed only "tmdb:123" for standalone details.
+    # BruniO uses "tmdb:movie:123"/"tmdb:series:123" throughout the UI.
+    details = app / "features/tmdb/TmdbMetadataService.kt"
+    once(details,
+         '''        val tmdbId = id
+            .takeIf { it.startsWith("tmdb:", ignoreCase = true) }
+            ?.substringAfter(':')
+            ?.substringBefore(':')
+            ?.toIntOrNull()
+            ?: return null''',
+         '''        val tmdbId = id
+            .takeIf { it.startsWith("tmdb:", ignoreCase = true) }
+            ?.substringAfterLast(':')
+            ?.toIntOrNull()
+            ?: return null''')
+
     # Nuvio's metadata endpoints default to a "v3 api_key" URL. BruniO also
     # supports TMDB's v4 access token (JWT) and must use a Bearer header for it.
     for rel in ["features/tmdb/TmdbMetadataService.kt", "features/tmdb/TmdbService.kt"]:

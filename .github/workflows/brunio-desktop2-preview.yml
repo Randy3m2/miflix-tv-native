@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: desktop2-preview-${{ github.ref }}
@@ -31,6 +32,34 @@ jobs:
       - name: Install Python image tools
         shell: pwsh
         run: python -m pip install --disable-pip-version-check Pillow==11.3.0
+
+      # Reuse ONLY the Windows libmpv DLL from our previously successful
+      # BruniO 2.0.2 MSI; the preparation script verifies its SHA-256 against
+      # the original pinned Nuvio Git LFS object before loading it.
+      - name: Retrieve pinned Windows runtime from verified BruniO 2.0.2 MSI
+        uses: actions/download-artifact@v4
+        with:
+          name: BruniO-Desktop2-v2.0.2-Home-Playback-Hotfix
+          run-id: 43226541574
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: _brunio_runtime_seed
+
+      - name: Extract native Windows runtime from verified MSI
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem "_brunio_runtime_seed" -Recurse -File -Filter "BruniO-Windows-*.msi" | Select-Object -First 1
+          if ($null -eq $msi) { throw 'Verified BruniO 2.0.2 MSI artifact unavailable' }
+          $target = Join-Path $env:RUNNER_TEMP "brunio_msi_admin_extract"
+          New-Item -ItemType Directory -Force -Path $target | Out-Null
+          $args = @('/a', ('"' + $msi.FullName + '"'), '/qn', ('TARGETDIR="' + $target + '"'))
+          $process = Start-Process -FilePath 'msiexec.exe' -ArgumentList $args -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "MSI extraction failed: $($process.ExitCode)" }
+          $dll = Get-ChildItem $target -Recurse -File -Filter 'libmpv-2.dll' | Select-Object -First 1
+          if ($null -eq $dll -or $dll.Length -lt 1000000) { throw 'Verified MSI has no native Windows libmpv DLL' }
+          $copy = Join-Path $env:RUNNER_TEMP 'brunio-pinned-libmpv-2.dll'
+          Copy-Item -LiteralPath $dll.FullName -Destination $copy -Force
+          "BRUNIO_DESKTOP2_MPV_FALLBACK=$copy" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host 'Pinned native Windows DLL recovered from previously verified build.'
 
       - name: Prepare pinned Nuvio UI with BruniO overlay
         shell: pwsh

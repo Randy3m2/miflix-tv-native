@@ -27,7 +27,8 @@ def apply(root: Path) -> None:
         model.withDesktopImageOptions(""",
          """    val localBrunioAvatarFile = remember(model) {
         if (model is String && model.startsWith("file:") &&
-            model.contains("brunio-desktop2-avatars/")
+            (model.contains("brunio-desktop2-avatars/") ||
+                model.contains("brunio-desktop2-streaming/"))
         ) {
             runCatching { File(URI(model)) }.getOrNull()?.takeIf { it.isFile }
         } else null

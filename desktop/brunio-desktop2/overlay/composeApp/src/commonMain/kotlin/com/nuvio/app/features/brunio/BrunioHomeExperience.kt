@@ -79,6 +79,8 @@ internal object BrunioHomePreferences {
 
 internal expect fun brunioStreamingLogoUri(id: String): String?
 internal expect fun brunioDefaultSportsManifest(): String
+internal expect fun brunioSavedSportsManifest(): String
+internal expect fun brunioSaveSportsManifest(url: String)
 
 internal object BrunioHomeExtras {
     suspend fun load(): List<HomeCatalogSection> = coroutineScope {

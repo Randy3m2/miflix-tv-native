@@ -1,5 +1,7 @@
 # BruniO Desktop 2.0 — Nuvio UI migration (engineering workspace)
 
+> **Security notice:** The Windows MSI from this workflow is an engineering UI preview, not the integrated BruniO client. Do not enter personal BruniO login credentials in it: upstream authentication and data repositories are not yet all replaced. The Nuvio Sentry and Discord RPC startup paths are disabled. Only install/test with non-sensitive preview data until BruniO auth, profile, playback, and RP1 Party integration has passed cross-device tests.
+
 > **Not a final installer.** This branch is an isolated, reviewed migration workspace. The existing PySide6/VLC BruniO PC and the Android/TV products are unchanged. Do **not** ship a renamed Nuvio binary as BruniO: BruniO backend and Watch Party interoperability must be implemented and tested first.
 
 ## Definitive architectural choice

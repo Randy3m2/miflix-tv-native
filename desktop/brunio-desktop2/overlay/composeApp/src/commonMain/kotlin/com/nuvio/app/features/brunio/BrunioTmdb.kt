@@ -10,6 +10,8 @@ import io.ktor.http.encodeURLParameter
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -75,9 +77,10 @@ internal object BrunioTmdb {
                 number?.takeIf { it > 0 }
             }.distinct().sorted().take(30)
         return coroutineScope {
+            val throttle = Semaphore(4)
             seasons.map { season ->
                 async {
-                    runCatching {
+                    throttle.withPermit { runCatching {
                         val body = json.parseToJsonElement(fetchRaw("tv/$tmdbId/season/$season"))
                             as? JsonObject ?: return@runCatching emptyList<MetaVideo>()
                         val episodes = body["episodes"] as? JsonArray ?: return@runCatching emptyList<MetaVideo>()
@@ -98,7 +101,7 @@ internal object BrunioTmdb {
                                 runtime = (episode["runtime"] as? JsonPrimitive)?.intOrNull,
                             )
                         }
-                    }.getOrDefault(emptyList())
+                    }.getOrDefault(emptyList()) }
                 }
             }.awaitAll().flatten()
         }

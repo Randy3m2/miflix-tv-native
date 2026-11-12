@@ -7,7 +7,6 @@ def apply(root: Path) -> None:
     base = root / "composeApp/src/commonMain/kotlin/com/nuvio/app"
     party = base / "features/player/PlayerScreenRuntimeParty.kt"
     once(party, "import com.nuvio.app.features.party.PartyPanel",
-         "import com.nuvio.app.features.brunio.BrunioCloud\n"
          "import com.nuvio.app.features.brunio.BrunioPlayerPartyPanel\n"
          "import com.nuvio.app.features.party.PartyPanel")
     once(party, """    val partyState by PartyRepository.state.collectAsStateWithLifecycle()

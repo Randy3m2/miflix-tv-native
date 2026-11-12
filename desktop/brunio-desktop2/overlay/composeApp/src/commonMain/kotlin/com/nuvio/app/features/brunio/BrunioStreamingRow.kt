@@ -64,6 +64,7 @@ private object NuvioStreamingArt {
     private val staticCovers = mapOf(
         "hbo" to "$stableBase/cover/hbo-max.png",
         "hulu" to "$stableBase/cover/hulu.png",
+        "amcplus" to "https://raw.githubusercontent.com/Randy3m2/miflix-tv-native/main/app/src/main/res/drawable-nodpi/streaming_amcplus_rp48.png",
     )
     private val titleLogos = mapOf(
         "hbo" to "$stableBase/title/hbo-max.png",

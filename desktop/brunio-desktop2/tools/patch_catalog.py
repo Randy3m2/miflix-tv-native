@@ -194,6 +194,29 @@ def apply(root: Path) -> None:
             ?.toIntOrNull()
             ?: return null''')
 
+    # Provide episode cards for standalone TMDB series; without this the
+    # series details page contains no playable episode selection.
+    once(details,
+         '''        return buildStandaloneMeta(
+            type = type,
+            id = id,
+            tmdbId = tmdbId,
+            enrichment = enrichment,
+        )''',
+         '''        val standalone = buildStandaloneMeta(
+            type = type,
+            id = id,
+            tmdbId = tmdbId,
+            enrichment = enrichment,
+        )
+        if (!BrunioCloud.enabled || type !in setOf("series", "tv")) return standalone
+        val episodes = BrunioTmdb.episodes(tmdbId)
+        return standalone.copy(
+            videos = episodes,
+            defaultVideoId = episodes.firstOrNull()?.id,
+            hasScheduledVideos = episodes.isNotEmpty(),
+        )''')
+
     # Nuvio's metadata endpoints default to a "v3 api_key" URL. BruniO also
     # supports TMDB's v4 access token (JWT) and must use a Bearer header for it.
     for rel in ["features/tmdb/TmdbMetadataService.kt", "features/tmdb/TmdbService.kt"]:

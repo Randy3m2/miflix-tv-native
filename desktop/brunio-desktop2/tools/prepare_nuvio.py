@@ -243,7 +243,22 @@ def configure_public_backend(destination: Path) -> bool:
     url = os.environ.get("BRUNIO_SUPABASE_URL", "").strip()
     key = os.environ.get("BRUNIO_SUPABASE_PUBLISHABLE_KEY", "").strip()
     if not url or not key:
-        return False
+        # Reuse the *public* BruniO project configuration already checked into
+        # its existing PC client. Do not hardcode private account tokens here.
+        import ast
+        source = ROOT / "desktop/brunio-pc/brunio/core.py"
+        allowed = {"SUPABASE_URL": "url", "SUPABASE_KEY": "key"}
+        parsed = {}
+        for node in ast.parse(source.read_text(encoding="utf-8")).body:
+            if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Constant):
+                continue
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id in allowed and isinstance(node.value.value, str):
+                    parsed[target.id] = node.value.value.strip()
+        url = url or parsed.get("SUPABASE_URL", "")
+        key = key or parsed.get("SUPABASE_KEY", "")
+    if not url or not key:
+        raise RuntimeError("BruniO public Supabase URL and publishable key unavailable")
     if not url.startswith("https://") or "\n" in url + key:
         raise ValueError("Invalid public Supabase configuration")
     # Nuvio's auth endpoint can be pointed to BruniO for future adapter testing.
@@ -265,6 +280,8 @@ def main() -> None:
     patch_brunioplayer_explicit_autosync(output)
     from patch_upstream import apply as patch_upstream_compatibility
     patch_upstream_compatibility(output)
+    from patch_runtime import install as patch_brunio_runtime
+    patch_brunio_runtime(output)
     icon_ok = patch_brand_icon(output)
     files_added = install_brunit_overlay(output)
     backend = configure_public_backend(output)
@@ -273,8 +290,8 @@ def main() -> None:
     print("Windows icon patched:", icon_ok)
     print("Overlay files copied:", files_added)
     print("Public Supabase auth endpoint configured:", backend)
-    print("STATUS: visual upstream only. NOT a finished BruniO Desktop build.")
-    print("BLOCKER: BruniO repositories and RP1 Party backend adapter not yet wired.")
+    print("STATUS: BruniO account/TMDB/add-on integration preview; not a final release.")
+    print("BLOCKER: BruniO Watch Party UI, progress and full cross-device validation pending.")
 
 
 if __name__ == "__main__":

@@ -298,6 +298,8 @@ def main() -> None:
     patch_brunio_account_setup(output)
     from patch_tests import apply as patch_brunio_test_policy
     patch_brunio_test_policy(output)
+    from patch_home_playback import apply as patch_brunio_home_playback
+    patch_brunio_home_playback(output)
     icon_ok = patch_brand_icon(output)
     files_added = install_brunit_overlay(output)
     backend = configure_public_backend(output)

@@ -35,7 +35,12 @@ def replace_exact(path: Path, before: str, after: str) -> None:
 
 def run(*cmd: str, cwd: Path | None = None) -> str:
     try:
-        result = subprocess.run(cmd, cwd=cwd, check=True, capture_output=True, text=True)
+        # Do not check out unused macOS/Linux LFS payloads when building Windows.
+        # They can exhaust upstream LFS quota and break otherwise valid Windows builds.
+        env = os.environ.copy()
+        if cmd and cmd[0] == "git":
+            env["GIT_LFS_SKIP_SMUDGE"] = "1"
+        result = subprocess.run(cmd, cwd=cwd, check=True, capture_output=True, text=True, env=env)
     except subprocess.CalledProcessError as err:
         details = (err.stderr or err.stdout or "").strip()
         raise RuntimeError(f"Command failed: {cmd[0]} {cmd[1]}: {details[-3500:]}") from err
@@ -55,10 +60,22 @@ def pin_upstream(destination: Path) -> None:
     # Apple-native submodule can fail independently of desktop UI code.
     if os.environ.get("BRUNIO_DESKTOP2_FULL_SUBMODULES") == "1":
         run("git", "submodule", "update", "--init", "--recursive", cwd=destination)
-    # Upstream bundles native Windows libmpv through Git LFS; a text pointer
-    # must never be treated as a valid native player runtime.
+    # Only Windows's libmpv is needed; NEVER attempt macOS LFS binaries.
+    # Verify the native Windows runtime rather than treating a text pointer
+    # as a valid DLL.
+    dll = destination / "composeApp/src/desktopMain/native/windows/runtime/libmpv-2.dll"
     if shutil.which("git-lfs"):
-        run("git", "lfs", "pull", cwd=destination)
+        run(
+            "git", "lfs", "pull",
+            "--include=composeApp/src/desktopMain/native/windows/runtime/libmpv-2.dll",
+            "--exclude=",
+            cwd=destination,
+        )
+    if not dll.is_file() or dll.stat().st_size < 1_000_000 or dll.open("rb").read(2) != b"MZ":
+        raise RuntimeError(
+            "Windows libmpv native DLL unavailable from pinned upstream LFS; "
+            "refusing to package an invalid MSI."
+        )
 
 
 def patch_visual_brand(destination: Path) -> None:

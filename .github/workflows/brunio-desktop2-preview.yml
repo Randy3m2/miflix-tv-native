@@ -62,14 +62,14 @@ jobs:
         working-directory: _brunio_desktop2_build
         shell: pwsh
         run: |
-          ./gradlew.bat :composeApp:desktopTest :composeApp:compileKotlinDesktop --stacktrace --no-daemon "-Pnuvio.webview2.dir=$env:BRUNIO_WEBVIEW2_ROOT" "-Dorg.gradle.jvmargs=-Xmx5g -Dfile.encoding=UTF-8"
+          ./gradlew.bat :composeApp:desktopTest :composeApp:compileKotlinDesktop --stacktrace --no-daemon --no-configuration-cache "-Pnuvio.webview2.dir=$env:BRUNIO_WEBVIEW2_ROOT" "-Dorg.gradle.jvmargs=-Xmx5g -Dfile.encoding=UTF-8"
           if ($LASTEXITCODE -ne 0) { throw 'Compose Desktop compilation or tests failed' }
 
       - name: Package isolated engineering MSI
         working-directory: _brunio_desktop2_build
         shell: pwsh
         run: |
-          ./gradlew.bat :composeApp:packageReleaseMsi --stacktrace --no-daemon "-Pnuvio.webview2.dir=$env:BRUNIO_WEBVIEW2_ROOT" "-Dorg.gradle.jvmargs=-Xmx5g -Dfile.encoding=UTF-8"
+          ./gradlew.bat :composeApp:packageReleaseMsi --stacktrace --no-daemon --no-configuration-cache "-Pnuvio.webview2.dir=$env:BRUNIO_WEBVIEW2_ROOT" "-Dorg.gradle.jvmargs=-Xmx5g -Dfile.encoding=UTF-8"
           if ($LASTEXITCODE -ne 0) { throw 'Windows MSI package failed' }
           $msi = Get-ChildItem "composeApp/build/compose/release-msis" -Filter "BruniO-Windows-*.msi" | Select-Object -First 1
           if ($null -eq $msi) { throw 'BruniO preview MSI missing' }
@@ -81,4 +81,15 @@ jobs:
           name: BruniO-Desktop2-UI-ENGINEERING-PREVIEW-NOT-FINAL
           path: _brunio_desktop2_build/composeApp/build/compose/release-msis/BruniO-Windows-*.msi
           if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload test reports when tests fail
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: BruniO-Desktop2-Test-Reports
+          path: |
+            _brunio_desktop2_build/composeApp/build/reports/tests/desktopTest/**
+            _brunio_desktop2_build/composeApp/build/test-results/desktopTest/**
+          if-no-files-found: warn
           retention-days: 7

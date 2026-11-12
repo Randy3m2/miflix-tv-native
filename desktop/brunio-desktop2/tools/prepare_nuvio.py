@@ -67,7 +67,7 @@ def patch_visual_brand(destination: Path) -> None:
     replace_exact(
         desktop_main,
         'title = if (smokePlayerUrl == null) "Nuvio" else "Nuvio Player Smoke",',
-        'title = if (smokePlayerUrl == null) "BruniO" else "BruniO Player Smoke",',
+        'title = if (smokePlayerUrl == null) "BruniO Desktop 2.0 - UI Preview" else "BruniO Player Smoke",',
     )
     replace_exact(gradle, 'packageName = "Nuvio"', 'packageName = "BruniO"')
     replace_exact(gradle, 'vendor = "Nuvio Media"', 'vendor = "BruniO"')
@@ -86,6 +86,11 @@ def patch_visual_brand(destination: Path) -> None:
         '"Nuvio-$desktopReleasePackageVersion.msi"',
         '"BruniO-$desktopReleasePackageVersion.msi"',
     )
+    # No upstream Nuvio telemetry or Discord application ID in a BruniO binary.
+    replace_exact(desktop_main, "    SentryInitializer.start()", "    // BruniO: upstream Sentry disabled")
+    replace_exact(desktop_main, "    DiscordPresenceManager.start()", "    // BruniO: upstream Discord RPC disabled")
+    replace_exact(desktop_main, "            SentryInitializer.close()", "            // BruniO: upstream Sentry disabled")
+    replace_exact(desktop_main, "            DiscordPresenceManager.shutdown()", "            // BruniO: upstream Discord RPC disabled")
     # Exact Nuvio motion/density/theme code is deliberately not touched.
     # UI-visible identity strings only; retain all upstream attribution/license text.
     resources = destination / "composeApp/src/commonMain/composeResources"

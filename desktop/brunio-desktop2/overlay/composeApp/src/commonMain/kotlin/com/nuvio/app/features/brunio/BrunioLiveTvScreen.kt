@@ -84,11 +84,13 @@ internal object BrunioLiveTvCatalog {
 internal fun BrunioLiveTvScreen(
     onBack: () -> Unit,
     onPlay: (BrunioLiveChannel) -> Unit,
+    onMultiView: (List<BrunioLiveChannel>) -> Unit = {},
 ) {
     val all = remember { BrunioLiveTvCatalog.parse(bundledBrunioLivePlaylist()) }
     var filter by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("Tirso TV") }
     var hidden by remember { mutableStateOf(hiddenBrunioChannels()) }
+    var multiviewIds by remember { mutableStateOf(setOf<String>()) }
     val groups = remember(all) {
         listOf("Tirso TV") + listOf("República Dominicana", "Deportes",
             "Películas & Series", "Entretenimiento", "24/7 Shows", "Noticias")
@@ -116,6 +118,11 @@ internal fun BrunioLiveTvScreen(
             OutlinedButton(onClick = onBack) { Text("Volver") }
             Text("Live TV · BruniO", style = MaterialTheme.typography.headlineMedium)
             Spacer(modifier = Modifier.weight(1f))
+            if (multiviewIds.size >= 2) {
+                Button(onClick = {
+                    onMultiView(all.filter { it.id in multiviewIds }.take(4))
+                }) { Text("Multiview · " + multiviewIds.size + " canales") }
+            }
             if (hidden.isNotEmpty()) OutlinedButton(onClick = {
                 hidden = emptySet()
                 saveHiddenBrunioChannels(hidden)
@@ -158,7 +165,15 @@ internal fun BrunioLiveTvScreen(
                         Text(channel.category, style = MaterialTheme.typography.bodySmall)
                     }
                     OutlinedButton(onClick = {
+                        val wasSelected = channel.id in multiviewIds
+                        multiviewIds = if (wasSelected) multiviewIds - channel.id else
+                            if (multiviewIds.size < 4) multiviewIds + channel.id else multiviewIds
+                    }, enabled = channel.id in multiviewIds || multiviewIds.size < 4) {
+                        Text(if (channel.id in multiviewIds) "✓ En multiview" else "+ Multiview")
+                    }
+                    OutlinedButton(onClick = {
                         hidden = hidden + channel.id
+                        multiviewIds = multiviewIds - channel.id
                         saveHiddenBrunioChannels(hidden)
                     }) { Text("Ocultar") }
                     Button(onClick = { onPlay(channel) }) { Text("Ver canal") }

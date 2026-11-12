@@ -221,7 +221,7 @@ def apply(root: Path) -> None:
     # standalone fallback. Loading full seasons takes longer than 5 seconds.
     repo = app / "features/details/MetaDetailsRepository.kt"
     once(repo, "import co.touchlab.kermit.Logger",
-         "import com.nuvio.app.features.brunio.BrunioCloud\\n"
+         "import com.nuvio.app.features.brunio.BrunioCloud\n"
          "import co.touchlab.kermit.Logger")
     once(repo,
          '''        val tmdbId = itemId

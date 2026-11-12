@@ -100,7 +100,7 @@ def patch_visual_brand(destination: Path) -> None:
     replace_exact(
         desktop_main,
         'title = if (smokePlayerUrl == null) "Nuvio" else "Nuvio Player Smoke",',
-        'title = if (smokePlayerUrl == null) "BruniO Desktop 2.1.0" else "BruniO Player Smoke",',
+        'title = if (smokePlayerUrl == null) "BruniO Desktop 2.2.0" else "BruniO Player Smoke",',
     )
     replace_exact(gradle, 'packageName = "Nuvio"', 'packageName = "BruniO"')
     replace_exact(gradle, 'vendor = "Nuvio Media"', 'vendor = "BruniO"')
@@ -334,6 +334,8 @@ def main() -> None:
     patch_brunio_test_policy(output)
     from patch_home_playback import apply as patch_brunio_home_playback
     patch_brunio_home_playback(output)
+    from patch_v220_home import apply as patch_v220_home
+    patch_v220_home(output)
     icon_ok = patch_brand_icon(output)
     files_added = install_brunit_overlay(output)
     # These integration patches touch both the pinned upstream and BruniO's
@@ -348,8 +350,16 @@ def main() -> None:
     patch_livetv_rp206(output)
     from patch_avatars_rp206 import apply as patch_avatars_rp206
     patch_avatars_rp206(output)
+    from patch_v220_foundations import apply as patch_v220_foundations
+    patch_v220_foundations(output)
+    from patch_v220_party import apply as patch_v220_party
+    patch_v220_party(output)
+    from patch_v220_multiview import apply as patch_v220_multiview
+    patch_v220_multiview(output)
     from install_tv_assets_rp206 import install as install_tv_assets
     tv_assets = install_tv_assets(output)
+    from install_v220_assets import install as install_v220_assets
+    streaming_assets = install_v220_assets(output)
     backend = configure_public_backend(output)
     print("Pinned upstream:", PIN)
     print("Prepared directory:", output)
@@ -357,6 +367,8 @@ def main() -> None:
     print("Overlay files copied:", files_added)
     print("Original TV avatar assets installed:", tv_assets)
     print("Live TV channel list copied from BruniO TV.")
+    print("TV streaming art files installed:", streaming_assets)
+    print("TV Sports add-on default bundled.")
     print("Public Supabase auth endpoint configured:", backend)
     print("STATUS: BruniO Desktop service integration candidate (requires account/device acceptance testing).")
     print("CHECK: Verify sign-in, TMDB, stream providers and TV/Mobile interoperability before release.")

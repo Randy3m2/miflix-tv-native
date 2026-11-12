@@ -41,6 +41,8 @@ internal val BrunioOptionalHomeRows = listOf(
         mapOf("with_watch_providers" to "350", "watch_region" to "US")),
     BrunioHomeRow("hbo", "HBO Max", "discover/movie", "movie",
         mapOf("with_watch_providers" to "1899|384", "watch_region" to "US")),
+    BrunioHomeRow("crunchyroll", "Crunchyroll", "discover/tv", "series",
+        mapOf("with_watch_providers" to "283", "watch_region" to "US")),
     BrunioHomeRow("hulu", "Hulu", "discover/movie", "movie",
         mapOf("with_watch_providers" to "15", "watch_region" to "US")),
     BrunioHomeRow("paramount", "Paramount+", "discover/movie", "movie",

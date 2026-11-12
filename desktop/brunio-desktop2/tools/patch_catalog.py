@@ -217,6 +217,30 @@ def apply(root: Path) -> None:
             hasScheduledVideos = episodes.isNotEmpty(),
         )''')
 
+    # Resolve canonical BruniO TMDB identities in both addon metadata and
+    # standalone fallback. Loading full seasons takes longer than 5 seconds.
+    repo = app / "features/details/MetaDetailsRepository.kt"
+    once(repo, "import co.touchlab.kermit.Logger",
+         "import com.nuvio.app.features.brunio.BrunioCloud\\n"
+         "import co.touchlab.kermit.Logger")
+    once(repo,
+         '''        val tmdbId = itemId
+            .takeIf { it.startsWith("tmdb:", ignoreCase = true) }
+            ?.substringAfter(':')
+            ?.substringBefore(':')
+            ?.toIntOrNull()
+            ?: return itemId''',
+         '''        val tmdbId = itemId
+            .takeIf { it.startsWith("tmdb:", ignoreCase = true) }
+            ?.substringAfterLast(':')
+            ?.toIntOrNull()
+            ?: return itemId''')
+    once(repo,
+         '''    private suspend fun tryFetchTmdbFallbackMeta(type: String, id: String): MetaDetails? =
+        withTimeoutOrNull(TMDB_ENRICH_TIMEOUT_MS) {''',
+         '''    private suspend fun tryFetchTmdbFallbackMeta(type: String, id: String): MetaDetails? =
+        withTimeoutOrNull(if (BrunioCloud.enabled) 30_000L else TMDB_ENRICH_TIMEOUT_MS) {''')
+
     # Nuvio's metadata endpoints default to a "v3 api_key" URL. BruniO also
     # supports TMDB's v4 access token (JWT) and must use a Bearer header for it.
     for rel in ["features/tmdb/TmdbMetadataService.kt", "features/tmdb/TmdbService.kt"]:

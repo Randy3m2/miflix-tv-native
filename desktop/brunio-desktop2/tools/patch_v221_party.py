@@ -37,6 +37,12 @@ def apply(root):
     }
 }""")
 
+    once(ui,
+         """            onPartyClick = if (BrunioCloud.enabled ||
+                PartyRepository.available.collectAsStateWithLifecycle().value) {""",
+         """            onPartyClick = if (!BrunioCloud.enabled &&
+                PartyRepository.available.collectAsStateWithLifecycle().value) {""")
+
     # The Nuvio webview party UI uses Nuvio watch_party RPCs and misleads
     # the user; native RP1 is the only supported party surface in BruniO.
     controls = app / "features/player/PlayerScreenRuntimePartyControls.kt"

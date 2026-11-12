@@ -47,6 +47,8 @@ internal object BrunioCloud {
         return projection
     }
 
+    fun accountState(): JsonObject = accountSnapshot ?: JsonObject(emptyMap())
+
     fun profileId(profileIndex: Int): String? =
         runCatching { profileProjection?.brunioId(profileIndex) }.getOrNull()
 
@@ -78,7 +80,11 @@ internal object BrunioCloud {
         val token = (setup["tmdbToken"] as? JsonPrimitive)?.contentOrNull.orEmpty()
         val language = (accountSnapshot?.get("language") as? JsonPrimitive)?.contentOrNull
             ?: "es-ES"
-        TmdbSettingsRepository.applyBrunioAccountSettings(token, language)
+        if (token.isNotBlank()) {
+            TmdbSettingsRepository.applyBrunioAccountSettings(token, language)
+        } else {
+            TmdbSettingsRepository.ensureLoaded()
+        }
         val state = loadProfileState(index)
         LibraryRepository.applyBrunioSnapshot(BrunioMediaStateWire.favoriteItems(state))
         WatchProgressRepository.applyBrunioSnapshot(BrunioMediaStateWire.progressEntries(state))

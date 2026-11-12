@@ -284,6 +284,14 @@ def main() -> None:
     patch_brunio_runtime(output)
     from patch_party import apply as patch_brunio_party
     patch_brunio_party(output)
+    from patch_login import apply as patch_brunio_login
+    patch_brunio_login(output)
+    from patch_catalog import apply as patch_brunio_catalog
+    patch_brunio_catalog(output)
+    from patch_streams import apply as patch_brunio_streams
+    patch_brunio_streams(output)
+    from patch_state import apply as patch_brunio_state
+    patch_brunio_state(output)
     icon_ok = patch_brand_icon(output)
     files_added = install_brunit_overlay(output)
     backend = configure_public_backend(output)
@@ -292,8 +300,8 @@ def main() -> None:
     print("Windows icon patched:", icon_ok)
     print("Overlay files copied:", files_added)
     print("Public Supabase auth endpoint configured:", backend)
-    print("STATUS: BruniO account/TMDB/add-on integration preview; not a final release.")
-    print("BLOCKER: BruniO Watch Party UI, progress and full cross-device validation pending.")
+    print("STATUS: BruniO Desktop service integration candidate (requires account/device acceptance testing).")
+    print("CHECK: Verify sign-in, TMDB, stream providers and TV/Mobile interoperability before release.")
 
 
 if __name__ == "__main__":

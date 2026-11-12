@@ -60,8 +60,9 @@ internal object BrunioProfileWire {
                 userId = authenticatedUserId,
                 profileIndex = n,
                 name = data.text("name")?.trim()?.takeIf(String::isNotEmpty) ?: "Profile $n",
-                avatarId = data.text("avatarId") ?: data.text("icon"),
-                avatarUrl = (data.text("avatarUrl") ?: data.text("avatar_url"))
+                avatarId = (data.text("avatarValue") ?: data.text("avatarId") ?: data.text("icon"))
+                    ?.takeUnless { it.startsWith("https://", true) },
+                avatarUrl = (data.text("avatarValue") ?: data.text("avatarUrl") ?: data.text("avatar_url"))
                     ?.takeIf { it.startsWith("https://", true) },
                 avatarColorHex = data.text("avatarColor") ?: data.text("avatar_color_hex") ?: "#1E88E5",
                 usesPrimaryAddons = (data["primary"] as? JsonPrimitive)?.booleanOrNull ?: (index == 0),

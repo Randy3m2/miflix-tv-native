@@ -3,6 +3,21 @@ const words46=(es,en)=>language==='en'?en:es;
 function validMedia46(raw){try{publicLiveURL(raw);return true;}catch{return false;}}
 const sourcePolicy49='torrentio-comet-v53';
 function factorySources49(result){if(result?.sourcePolicy!==sourcePolicy49)throw Error(words46('Actualiza la función brunio-downloads en Supabase. El servidor aún no confirmó Torrentio y Comet.','Update the brunio-downloads function in Supabase. The server has not confirmed Torrentio and Comet yet.'));return (result.sources||[]).filter(s=>['torrentio','comet'].includes(s.providerId)).sort((a,b)=>Number(a.providerId==='torrentio')-Number(b.providerId==='torrentio'));}
+// Provider stream titles may include language labels; these badges describe
+// provider metadata, NOT verified audio tracks. Unknown stays unlabelled.
+function sourceLanguageBadge46(source){
+ const label=[source.name,source.filename].filter(v=>typeof v==='string').join(' ');
+ const normalized=label.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ const has=pattern=>pattern.test(normalized);
+ const latin=has(/(?:^|[^a-z])(?:latino|latam|latin[ ._-]?american|es[ ._-]?419|es[ ._-]?(?:mx|lat|ar)|dual[ ._-]?latino)(?:$|[^a-z])/);
+ const spanish=has(/(?:^|[^a-z])(?:castellano|spanish|espanol|espana|es[ ._-]?es|spa)(?:$|[^a-z])/);
+ const english=has(/(?:^|[^a-z])(?:english|ingles|eng|en[ ._-]?us)(?:$|[^a-z])/);
+ if(latin&&spanish)return {flag:'🇲🇽 🇪🇸',name:'Latino + castellano'};
+ if(latin)return {flag:'🇲🇽',name:'Español latino (indicado por fuente)'};
+ if(spanish)return {flag:'🇪🇸',name:'Español (indicado por fuente)'};
+ if(english)return {flag:'🇺🇸',name:'Inglés (indicado por fuente)'};
+ return null;
+}
 const sourceCache46=new Map();
 let sourceRun46=0;
 function scope46(){return session?.user.id+':'+selected();}
@@ -60,7 +75,14 @@ async function manualSources46(item){++sourceRun46;if(activeWebPlayer)activeWebP
  const options=el('div',undefined,'source-options46');const cap=el('input');cap.type='number';cap.required=true;cap.min='0';cap.max='1000';cap.step='any';cap.value=downloadMaxGb;const label=el('label',words46('Límite por archivo (GB)','File size limit (GB)'));label.append(cap);const apply=el('button',words46('Aplicar','Apply'),'quiet');apply.onclick=()=>{if(!cap.reportValidity())return;downloadMaxGb=Number(cap.value);try{localStorage.setItem('brunio-download-max-gb',String(downloadMaxGb));}catch{}manualSources46(item);};options.append(label,apply,el('small',words46('0 = sin límite. Se permiten enlaces sin tamaño informado.','0 = unlimited. Sources without a reported size are allowed.')));panel.append(options);
  if(item.type==='series'){const season=el('button',words46('↓ Descargar temporada','↓ Download season'),'quiet');season.onclick=()=>seasonDownloads46(target,panel,season);heading.append(season);}
  const valid=()=>run===sourceRun46&&scope===scope46()&&$('detail').open&&currentDetail?.cloudId===item.cloudId;
- try{const sources=await sources46(target);if(!valid())return;status.textContent=sources.length?words46('Elige una fuente para reproducir en BruniO, abrir en otra app o descargar.','Choose a source to play in BruniO, open in another app, or download.'):words46('No hay enlaces disponibles.','No sources available.');for(const source of sources){const row=el('article',undefined,'source-row46'),meta=el('div');meta.append(el('strong',source.provider||source.name),el('span',[source.name,source.size>0?(source.size/1e9).toFixed(1)+' GB':''].filter(Boolean).join(' · ')));const actions=el('div',undefined,'source-actions46');for(const download of [false,true]){const b=el('button',download?words46('Descargar','Download'):words46('▶ Reproducir','▶ Play'),download?'quiet':'primary');b.onclick=async()=>{b.disabled=true;const clearLoading=download?()=>{}:loading48($('detail'));try{const result=await resolve46(source);if(!valid())return;if(download){b.replaceWith(downloadLink46(result.url,result.filename));}else if(isAppleMobile()){launchVlcFromSource46(result.url);}else openBrowserPlayer(result.url,target.title,target.backdrop||target.poster,{...target,sourceFilename:result.filename||source.filename});}catch(e){if(valid())toast(e.message);}finally{clearLoading();b.disabled=false;}};actions.append(b);}
+ try{const sources=await sources46(target);if(!valid())return;status.textContent=sources.length?words46('Elige una fuente para reproducir en BruniO, abrir en otra app o descargar.','Choose a source to play in BruniO, open in another app, or download.'):words46('No hay enlaces disponibles.','No sources available.');for(const source of sources){const row=el('article',undefined,'source-row46'),meta=el('div');const languageBadge=sourceLanguageBadge46(source);
+ const headline=el('strong',source.provider||source.name);
+ if(languageBadge){
+  const badge=el('span',languageBadge.flag+' '+languageBadge.name,'source-language-badge');
+  badge.title=words46('Idioma indicado por el proveedor; audio no verificado','Language advertised by source; audio not verified');
+  headline.append(' ',badge);
+ }
+ meta.append(headline,el('span',[source.name,source.size>0?(source.size/1e9).toFixed(1)+' GB':''].filter(Boolean).join(' · ')));const actions=el('div',undefined,'source-actions46');for(const download of [false,true]){const b=el('button',download?words46('Descargar','Download'):words46('▶ Reproducir','▶ Play'),download?'quiet':'primary');b.onclick=async()=>{b.disabled=true;const clearLoading=download?()=>{}:loading48($('detail'));try{const result=await resolve46(source);if(!valid())return;if(download){b.replaceWith(downloadLink46(result.url,result.filename));}else if(isAppleMobile()){launchVlcFromSource46(result.url);}else openBrowserPlayer(result.url,target.title,target.backdrop||target.poster,{...target,sourceFilename:result.filename||source.filename});}catch(e){if(valid())toast(e.message);}finally{clearLoading();b.disabled=false;}};actions.append(b);}
  const external=el('button',words46('↗ Reproductor externo','↗ External player'),'quiet');
  external.type='button';
  external.onclick=()=>openExternalSource46(source,target,row,external,valid);

@@ -3,6 +3,8 @@ package com.nuvio.app.features.brunio
 import com.nuvio.app.core.auth.AuthRepository
 import com.nuvio.app.core.auth.AuthState
 import com.nuvio.app.core.network.SupabaseProvider
+import com.nuvio.app.features.library.LibraryRepository
+import com.nuvio.app.features.watchprogress.WatchProgressRepository
 import com.nuvio.app.features.tmdb.TmdbSettingsRepository
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.json.Json
@@ -77,6 +79,25 @@ internal object BrunioCloud {
         val language = (accountSnapshot?.get("language") as? JsonPrimitive)?.contentOrNull
             ?: "es-ES"
         TmdbSettingsRepository.applyBrunioAccountSettings(token, language)
+        val state = loadProfileState(index)
+        LibraryRepository.applyBrunioSnapshot(BrunioMediaStateWire.favoriteItems(state))
+        WatchProgressRepository.applyBrunioSnapshot(BrunioMediaStateWire.progressEntries(state))
+    }
+
+    suspend fun loadProfileState(index: Int): JsonObject {
+        val auth = AuthRepository.state.value as? AuthState.Authenticated
+            ?: return JsonObject(emptyMap())
+        val profile = profileId(index)
+            ?: return JsonObject(emptyMap())
+        val rows = SupabaseProvider.client.postgrest.from("miflix_user_state").select {
+            filter {
+                eq("user_id", auth.userId)
+                eq("profile_id", profile)
+            }
+        }.data
+        val entry = (json.parseToJsonElement(rows) as? JsonArray)
+            ?.firstOrNull() as? JsonObject
+        return (entry?.get("state") as? JsonObject) ?: JsonObject(emptyMap())
     }
 
     fun clear() {

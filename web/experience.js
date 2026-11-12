@@ -101,6 +101,13 @@ if(isAppleMobile()){
  vlc.disabled=!aired;
  info.append(vlc);
 }
+const episodeSources=button(words('Sources','Fuentes'),()=>{
+ $('castSeason').value=String(ep.season);
+ $('castEpisode').value=String(ep.episode);
+ manualSources46(item);
+},'web-episode-sources');
+episodeSources.disabled=!aired;
+info.append(episodeSources);
 const save=button((favorites.has(item.cloudId)?'✓ ':'+ ')+t('Mi lista'),()=>toggle(item,save));save.dataset.favoriteId=item.cloudId;save.setAttribute('aria-pressed',String(favorites.has(item.cloudId)));info.append(play,save,button(words('Add to queue','Añadir a la cola'),()=>enqueue(item,ep.season,ep.episode)),button(seen?words('Mark unwatched','Marcar no visto'):words('Mark watched','Marcar visto'),async event=>{const control=event.currentTarget;if(control.disabled)return;control.disabled=true;try{if(await markWebWatched(item,ep.season,ep.episode)&&validDetail(item,key,lang)){const nowSeen=watched(item,ep.season,ep.episode);control.textContent=nowSeen?words('Mark unwatched','Marcar no visto'):words('Mark watched','Marcar visto');info.querySelector('strong').textContent=(nowSeen?'✓ ':'')+words('Episode ','Episodio ')+ep.episode;const thumb=row.querySelector('img');if(thumb)thumb.classList.toggle('spoiler-blur',!nowSeen&&!spoiler.open);}}finally{control.disabled=false;}},'web-mark-watched'));row.append(info);parent.append(row);}if(data.hasMore){const more=button(words('Load more · 25','Ver más · 25'),()=>{more.remove();showEpisodes(item,season,parent,page+1);});parent.append(more);}}catch(e){if(validDetail(item,key,lang)&&parent.dataset.ticket===ticket)parent.append(el('p',e.message),button(words('Retry','Reintentar'),()=>showEpisodes(item,season,parent,page)));}}
 async function randomWebEpisode(item){try{const key=ownerKey(),lang=language,result=await catalog({action:'randomEpisode',cloud:item.cloudId,excludeSeason:Number($('castSeason').value||0),excludeEpisode:Number($('castEpisode').value||0)});if(!validDetail(item,key,lang))return;const ep=result.episode;if(!ep){toast(words('No released episodes available.','No hay episodios estrenados disponibles.'));return;}$('castSeason').value=String(ep.season);$('castEpisode').value=String(ep.episode);autoPlay46(item);}catch(e){toast(e.message);}}
 function enrichDetail(item){

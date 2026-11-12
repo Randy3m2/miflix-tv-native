@@ -54,18 +54,27 @@ jobs:
           $args = @('/a', ('"' + $msi.FullName + '"'), '/qn', ('TARGETDIR="' + $target + '"'))
           $process = Start-Process -FilePath 'msiexec.exe' -ArgumentList $args -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw "MSI extraction failed: $($process.ExitCode)" }
-          Write-Host 'Extracted MSI native dependency candidates:'
-          Get-ChildItem -LiteralPath $target -Recurse -File |
-            Sort-Object Length -Descending | Select-Object -First 18 |
-            ForEach-Object { Write-Host "$($_.Length) $($_.FullName)" }
-          $dll = Get-ChildItem $target -Recurse -File -Filter 'libmpv*.dll' | Select-Object -First 1
-          if ($null -eq $dll -or $dll.Length -lt 1000000) {
-            throw 'Verified MSI did not expose a standalone native libmpv DLL'
-          }
+          # The official Nuvio Windows packager embeds native/windows/libmpv-2.dll
+          # INSIDE composeApp-desktop-*.jar (not as a loose MSI file).
+          $appJar = Get-ChildItem $target -Recurse -File -Filter "composeApp-desktop-*.jar" | Select-Object -First 1
+          if ($null -eq $appJar) { throw 'Verified MSI has no Compose Desktop application JAR' }
+          Add-Type -AssemblyName System.IO.Compression
+          $archive = [System.IO.Compression.ZipFile]::OpenRead($appJar.FullName)
           $copy = Join-Path $env:RUNNER_TEMP 'brunio-pinned-libmpv-2.dll'
-          Copy-Item -LiteralPath $dll.FullName -Destination $copy -Force
+          try {
+            $entry = $archive.GetEntry("native/windows/libmpv-2.dll")
+            if ($null -eq $entry -or $entry.Length -lt 1000000) {
+              throw 'Verified MSI JAR lacks native/windows/libmpv-2.dll'
+            }
+            $stream = [System.IO.File]::Create($copy)
+            try {
+              $inputStream = $entry.Open()
+              try { $inputStream.CopyTo($stream) }
+              finally { $inputStream.Dispose() }
+            } finally { $stream.Dispose() }
+          } finally { $archive.Dispose() }
           "BRUNIO_DESKTOP2_MPV_FALLBACK=$copy" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          Write-Host 'Pinned native Windows DLL recovered from previously verified build.'
+          Write-Host "Native Windows libmpv recovered from pinned BruniO MSI JAR ($((Get-Item $copy).Length) bytes)."
 
       - name: Prepare pinned Nuvio UI with BruniO overlay
         shell: pwsh

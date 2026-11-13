@@ -1,0 +1,45 @@
+name: Publish verified BruniO Desktop 2.2.4 MSI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-brunio-desktop-224.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Retrieve the verified Windows MSI from the successful workflow run
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 43333753167
+          name: BruniO-Desktop-v2.2.4-ICON-CROP
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: brunio-msi
+
+      - name: Verify MSI exists and publish standalone Windows download
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(brunio-msi/BruniO-Windows-*.msi)
+          if [ "${#files[@]}" -ne 1 ]; then
+            echo "::error::Expected exactly one verified MSI artifact."
+            exit 1
+          fi
+          test "$(stat -c%s "${files[0]}")" -gt 100000000
+          sha256sum "${files[0]}"
+          # Publish a separately tagged desktop release without changing Android's Latest.
+          gh release create desktop-v2.2.4 "${files[0]}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "BruniO Desktop 2.2.4 · Windows" \
+            --notes "Windows MSI from successful GitHub Actions run 43333753167. Includes original BruniO icon sizing fix, Live Sports configuration, Streaming cards and Watch Party updates. Automatic compilation/tests passed; device acceptance is still recommended." \
+            --latest=false

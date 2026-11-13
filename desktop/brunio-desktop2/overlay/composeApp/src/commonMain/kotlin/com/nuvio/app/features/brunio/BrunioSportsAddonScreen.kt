@@ -1,7 +1,15 @@
 package com.nuvio.app.features.brunio
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,6 +18,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import coil3.compose.AsyncImage
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -41,7 +57,7 @@ import kotlinx.serialization.json.contentOrNull
 /** Live Sports is a separate Stremio-compatible add-on, not an IPTV category. */
 internal object BrunioSportsAddon {
     data class Catalog(val id: String, val name: String, val type: String, val genre: String? = null)
-    data class Event(val id: String, val name: String, val poster: String?)
+    data class Event(val id: String, val name: String, val poster: String?, val backdrop: String?, val logo: String?, val description: String?)
     data class Source(val name: String, val url: String)
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -84,7 +100,9 @@ internal object BrunioSportsAddon {
         return (body["metas"] as? JsonArray).orEmpty().mapNotNull { item ->
             val row = item as? JsonObject ?: return@mapNotNull null
             val id = row.value("id")?.takeIf { it.length <= 250 } ?: return@mapNotNull null
-            Event(id, row.value("name") ?: id, row.value("poster"))
+            Event(id, row.value("name") ?: id, row.value("poster"),
+                row.value("background") ?: row.value("backdrop"),
+                row.value("logo"), row.value("description"))
         }.take(300)
     }
     suspend fun sources(manifest: String, catalog: Catalog, event: Event): List<Source> {
@@ -122,6 +140,7 @@ internal fun BrunioSportsAddonScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var refresh by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
+    var multiSelected by remember { mutableStateOf(emptySet<String>()) }
 
     LaunchedEffect(manifest, refresh) {
         error = null
@@ -204,7 +223,8 @@ internal fun BrunioSportsAddonScreen(
             }
             if (error != null) Text(error.orEmpty(), color = MaterialTheme.colorScheme.error)
             if (busy || selectedLoading) Text("Cargando…")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 catalogs.forEach { catalog ->
                     FilterChip(selected = selected == catalog,
                         onClick = { selected = catalog; error = null },
@@ -213,40 +233,108 @@ internal fun BrunioSportsAddonScreen(
             }
             if (!busy && !selectedLoading && selected == null && catalogs.isNotEmpty()) Text("Selecciona un catálogo deportivo.")
             if (selectedEvent != null) {
-                Text(selectedEvent!!.name, style = MaterialTheme.typography.titleLarge)
-                OutlinedButton(onClick = { selectedEvent = null; sources = emptyList() }) {
-                    Text("Volver a eventos")
+                val event = selectedEvent!!
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedButton(onClick = { selectedEvent = null; sources = emptyList() }) {
+                        Text("Volver a eventos")
+                    }
+                    Text(event.name, style = MaterialTheme.typography.titleLarge,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
-                LazyColumn {
+                LazyColumn(modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     items(sources) { source ->
-                        Button(onClick = {
-                            onPlay(selectedEvent!!.name, source.url, selectedEvent!!.poster)
-                        }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                            Text(source.name)
+                        Column(modifier = Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color(0xFF171E2B)).padding(12.dp)) {
+                            Text(source.name, style = MaterialTheme.typography.titleMedium)
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Button(onClick = { onPlay(event.name, source.url,
+                                    event.poster ?: event.backdrop) }) {
+                                    Text("▶ Reproducir")
+                                }
+                                OutlinedButton(onClick = {
+                                    val id = BrunioLiveSessionRegistry.register(
+                                        event.name, source.url,
+                                        event.poster ?: event.backdrop, "Live Sports")
+                                    multiSelected = if (id in multiSelected) multiSelected - id
+                                        else if (multiSelected.size < 4) multiSelected + id
+                                        else multiSelected
+                                }) { Text("+ Multiview") }
+                            }
                         }
+                    }
+                    if (multiSelected.size >= 2) item {
+                        Button(onClick = {
+                            BrunioMultiViewRequests.launch(multiSelected.toList())
+                        }) { Text("Abrir Multiview · " + multiSelected.size) }
                     }
                 }
                 if (!busy && sources.isEmpty()) Text("Sin enlaces directos compatibles con MPV.")
             } else {
-                LazyColumn {
-                    items(events, key = { it.id }) { event ->
-                        Row(modifier = Modifier.fillMaxWidth().clickable {
-                            val catalog = selected ?: return@clickable
-                            selectedEvent = event
-                            sources = emptyList()
-                            busy = true
-                            scope.launch {
-                                try {
-                                    sources = BrunioSportsAddon.sources(manifest, catalog, event)
-                                } catch (cancel: CancellationException) {
-                                    throw cancel
-                                } catch (_: Exception) {
-                                    error = "No se pudieron consultar las fuentes del evento."
-                                } finally { busy = false }
+                LazyColumn(modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                    items(events.chunked(4)) { rowEvents ->
+                        Row(modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            rowEvents.forEach { event ->
+                                Column(modifier = Modifier.weight(1f)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(Color(0xFF171D2A))
+                                    .clickable {
+                                        val catalog = selected ?: return@clickable
+                                        selectedEvent = event
+                                        sources = emptyList()
+                                        busy = true
+                                        scope.launch {
+                                            try {
+                                                sources = BrunioSportsAddon.sources(manifest, catalog, event)
+                                            } catch (cancel: CancellationException) {
+                                                throw cancel
+                                            } catch (_: Exception) {
+                                                error = "No se pudieron consultar las fuentes del evento."
+                                            } finally { busy = false }
+                                        }
+                                    }.padding(10.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Box(modifier = Modifier.fillMaxWidth().height(130.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFF26364D))) {
+                                        val art = event.backdrop ?: event.poster ?: event.logo
+                                        if (!art.isNullOrBlank()) {
+                                            AsyncImage(model = art,
+                                                contentDescription = event.name,
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.fillMaxSize())
+                                        } else {
+                                            Text("▶", color = Color(0xFF77C9F4),
+                                                style = MaterialTheme.typography.headlineLarge,
+                                                modifier = Modifier.align(Alignment.Center))
+                                        }
+                                        Text("LIVE SPORTS", color = Color.White,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            modifier = Modifier.align(Alignment.TopStart)
+                                                .background(Color(0xD3101620),
+                                                    RoundedCornerShape(bottomEnd = 8.dp))
+                                                .padding(horizontal = 8.dp, vertical = 5.dp))
+                                    }
+                                    Text(event.name, color = Color.White, fontWeight = FontWeight.SemiBold,
+                                        maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                    if (!event.description.isNullOrBlank())
+                                        Text(event.description, maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                            color = Color(0xFFB6C4D7),
+                                            style = MaterialTheme.typography.bodySmall)
+                                }
                             }
-                        }.padding(vertical = 12.dp)) {
-                            Text(event.name)
+                            repeat(4 - rowEvents.size) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                         }
+                    }
+                    if (!selectedLoading && events.isEmpty()) item {
+                        Text("No hay eventos en esta categoría.")
                     }
                 }
             }

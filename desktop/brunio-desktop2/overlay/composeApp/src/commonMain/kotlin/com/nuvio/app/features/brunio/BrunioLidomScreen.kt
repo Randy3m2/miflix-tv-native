@@ -50,8 +50,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
-import java.time.LocalDate
-import java.time.ZoneId
 
 private val inkLidom = Color(0xFF0B0F19)
 private val mutedLidom = Color(0xFFADB9CC)
@@ -78,8 +76,7 @@ private object BrunioLidomData {
     private fun JsonObject.n(key: String): Int = (this[key] as? JsonPrimitive)?.intOrNull ?: 0
 
     suspend fun standings(): List<LIdomStand> = withContext(Dispatchers.IO) {
-        val date = LocalDate.now(ZoneId.of("America/Santo_Domingo"))
-        val season = if (date.monthValue < 7) date.year - 1 else date.year
+        val season = brunioLidomSeason()
         val body = json.parseToJsonElement(httpGetTextWithHeaders(
             "https://statsapi.mlb.com/api/v1/standings?leagueId=131&season=$season&standingsTypes=regularSeason",
             mapOf("Accept" to "application/json"),
@@ -117,6 +114,7 @@ private object BrunioLidomData {
     }
 }
 
+internal expect fun brunioLidomSeason(): Int
 internal expect fun openBrunioLidomYouTube(url: String): Boolean
 
 @Composable

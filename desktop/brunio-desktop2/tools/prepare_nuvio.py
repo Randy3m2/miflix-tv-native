@@ -100,7 +100,7 @@ def patch_visual_brand(destination: Path) -> None:
     replace_exact(
         desktop_main,
         'title = if (smokePlayerUrl == null) "Nuvio" else "Nuvio Player Smoke",',
-        'title = if (smokePlayerUrl == null) "BruniO Desktop 2.2.4" else "BruniO Player Smoke",',
+        'title = if (smokePlayerUrl == null) "BruniO Desktop 2.2.5" else "BruniO Player Smoke",',
     )
     replace_exact(gradle, 'packageName = "Nuvio"', 'packageName = "BruniO"')
     replace_exact(gradle, 'vendor = "Nuvio Media"', 'vendor = "BruniO"')

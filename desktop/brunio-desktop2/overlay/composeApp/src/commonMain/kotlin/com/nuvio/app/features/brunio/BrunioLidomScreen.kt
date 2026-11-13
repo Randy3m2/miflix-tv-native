@@ -164,8 +164,12 @@ internal fun BrunioLidomScreen(onBack: () -> Unit, onPlay: (String, String, Stri
             teamsLidom.forEach { team ->
                 launch {
                     val result = runCatching { BrunioLidomData.live(team) }
-                    liveStatus = liveStatus + (team.id to result.getOrNull()?.let { true }
-                        ?: if (result.isSuccess) false else null)
+                    val detected: Boolean? = when {
+                        result.isFailure -> null
+                        result.getOrNull() != null -> true
+                        else -> false
+                    }
+                    liveStatus = liveStatus + (team.id to detected)
                 }
             }
         }

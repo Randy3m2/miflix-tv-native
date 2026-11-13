@@ -1,0 +1,44 @@
+name: Publish verified BruniO Desktop 2.2.8 MSI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-brunio-desktop-228.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download validated BruniO Desktop 2.2.8 MSI
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 43429737084
+          name: BruniO-Desktop-v2.2.8-LIDOM-MULTIVIEW
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: brunio-msi
+
+      - name: Publish public installer in GitHub Releases
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(brunio-msi/BruniO-Windows-*.msi)
+          if [ "${#files[@]}" -ne 1 ]; then
+            echo "::error::Expected exactly one verified MSI"
+            exit 1
+          fi
+          test "$(stat -c%s "${files[0]}")" -gt 100000000
+          sha256sum "${files[0]}"
+          gh release create desktop-v2.2.8 "${files[0]}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "BruniO Desktop 2.2.8 · Windows" \
+            --notes "Verified Windows MSI from successful Actions run 43429737084. Includes Live Sports poster cards, updated six-team LIDOM YouTube live detection and player Multiview. Automatically compiled and tested; live YouTube behavior should also be validated on Windows." \
+            --latest=false

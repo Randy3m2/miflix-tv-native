@@ -30,6 +30,25 @@ import kotlinx.coroutines.flow.MutableSharedFlow
  * In-player selection shares only channel identifiers, never URLs between
  * clients. Live sports channels and normal TV channels can share one grid.
  */
+/**
+ * Session-only live sources. No private URLs are stored on disk, in navigation
+ * arguments or in Watch Party rooms. They are discarded when BruniO exits.
+ */
+internal object BrunioLiveSessionRegistry {
+    private val entries = linkedMapOf<String, BrunioLiveChannel>()
+    fun register(name: String, url: String, logo: String?, category: String): String {
+        require(url.startsWith("https://") || url.startsWith("http://"))
+        val id = "session-" + (name + "|" + url).hashCode().toUInt().toString(16)
+        synchronized(entries) {
+            entries[id] = BrunioLiveChannel(id, name, url, category, logo)
+            while (entries.size > 30) entries.remove(entries.keys.first())
+        }
+        return id
+    }
+    fun find(id: String): BrunioLiveChannel? = synchronized(entries) { entries[id] }
+    fun available(): List<BrunioLiveChannel> = synchronized(entries) { entries.values.toList() }
+}
+
 internal object BrunioMultiViewRequests {
     val requests = MutableSharedFlow<List<String>>(extraBufferCapacity = 1)
     fun launch(ids: List<String>) {
@@ -47,13 +66,15 @@ internal fun BrunioMultiViewPickerPanel(
     onDismiss: () -> Unit,
 ) {
     val all = remember { BrunioLiveTvCatalog.parse(bundledBrunioLivePlaylist()) }
+    val registered = BrunioLiveSessionRegistry.available()
+    val combined = (registered + all).distinctBy { it.id }
     var search by remember { mutableStateOf("") }
     var sportsOnly by remember { mutableStateOf(false) }
     var selected by remember(currentLiveChannelId) {
         mutableStateOf(setOf(currentLiveChannelId).filter(String::isNotEmpty).toSet())
     }
-    val visibleChannels = remember(all, search, sportsOnly) {
-        all.asSequence().filter {
+    val visibleChannels = remember(combined, search, sportsOnly) {
+        combined.asSequence().filter {
             (!sportsOnly || isBrunioSportsChannel(it)) &&
                 (search.isEmpty() || it.name.contains(search, ignoreCase = true))
         }.take(500).toList()
@@ -133,7 +154,8 @@ internal fun BrunioMultiViewPickerPanel(
 }
 
 internal fun isBrunioSportsChannel(channel: BrunioLiveChannel): Boolean =
-    channel.category.contains("deport", ignoreCase = true) ||
+    channel.category.contains("LIDOM", ignoreCase = true) ||
+        channel.category.contains("deport", ignoreCase = true) ||
         channel.category.contains("sport", ignoreCase = true) ||
         channel.name.contains("ESPN", ignoreCase = true) ||
         channel.name.contains("TNT Sports", ignoreCase = true) ||

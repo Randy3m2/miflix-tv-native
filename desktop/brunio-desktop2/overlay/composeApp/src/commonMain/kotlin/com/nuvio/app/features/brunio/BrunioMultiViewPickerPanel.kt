@@ -39,14 +39,12 @@ internal object BrunioLiveSessionRegistry {
     fun register(name: String, url: String, logo: String?, category: String): String {
         require(url.startsWith("https://") || url.startsWith("http://"))
         val id = "session-" + (name + "|" + url).hashCode().toUInt().toString(16)
-        synchronized(entries) {
-            entries[id] = BrunioLiveChannel(id, name, url, category, logo)
-            while (entries.size > 30) entries.remove(entries.keys.first())
-        }
+        entries[id] = BrunioLiveChannel(id, name, url, category, logo)
+        while (entries.size > 30) entries.remove(entries.keys.first())
         return id
     }
-    fun find(id: String): BrunioLiveChannel? = synchronized(entries) { entries[id] }
-    fun available(): List<BrunioLiveChannel> = synchronized(entries) { entries.values.toList() }
+    fun find(id: String): BrunioLiveChannel? = entries[id]
+    fun available(): List<BrunioLiveChannel> = entries.values.toList()
 }
 
 internal object BrunioMultiViewRequests {

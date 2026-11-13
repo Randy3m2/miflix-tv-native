@@ -52,7 +52,7 @@ def apply(root):
     main = app / "MainAppContent.kt"
     once(main,
          'import com.nuvio.app.features.brunio.BrunioLiveTvScreen',
-         'import com.nuvio.app.features.brunio.BrunioLiveSessionRegistry\nimport com.nuvio.app.features.brunio.BrunioSportsAddonScreen\n'
+         'import com.nuvio.app.features.brunio.BrunioSportsAddonScreen\n'
          'import com.nuvio.app.features.brunio.BrunioLiveTvScreen')
     once(main,
          '''                        liveTvSelected = currentRoute is BrunioLiveTvRoute,''',

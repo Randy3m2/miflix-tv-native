@@ -78,6 +78,7 @@ internal object BrunioHomePreferences {
 }
 
 internal expect fun brunioStreamingLogoUri(id: String): String?
+internal expect fun brunioLidomLogoUri(id: String): String?
 internal expect fun brunioDefaultSportsManifest(): String
 internal expect fun brunioSavedSportsManifest(): String
 internal expect fun brunioSaveSportsManifest(url: String)

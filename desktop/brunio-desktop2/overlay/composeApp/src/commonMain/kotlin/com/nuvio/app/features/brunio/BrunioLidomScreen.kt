@@ -155,6 +155,36 @@ internal fun BrunioLidomScreen(onBack: () -> Unit, onPlay: (String, String, Stri
     var loadingTeam by remember { mutableStateOf<String?>(null) }
     var playingError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    var multiSelected by remember { mutableStateOf(emptySet<String>()) }
+    fun launchTeam(team: BrunioLidomTeam, addToMulti: Boolean) {
+        loadingTeam = team.id
+        playingError = null
+        scope.launch {
+            try {
+                val live = BrunioLidomData.live(team)
+                if (live == null) {
+                    playingError = "No se encontró EN DIRECTO de ${team.name}. Revisa su canal oficial."
+                } else {
+                    val playbackUrl = TrailerPlaybackResolver.resolveSingleUrlFromYouTubeUrl(
+                        "https://www.youtube.com/watch?v=${live.videoId}")
+                    if (playbackUrl.isNullOrBlank()) {
+                        playingError = "No se pudo resolver el video para Nuvio; revisa el canal oficial."
+                    } else if (addToMulti) {
+                        val id = BrunioLiveSessionRegistry.register(
+                            live.title, playbackUrl, brunioLidomLogoUri(team.id), "LIDOM")
+                        multiSelected = if (id in multiSelected) multiSelected - id
+                            else if (multiSelected.size < 4) multiSelected + id
+                            else multiSelected
+                    } else {
+                        onPlay(live.title, playbackUrl, brunioLidomLogoUri(team.id))
+                    }
+                }
+            } catch (cancel: CancellationException) { throw cancel }
+            catch (_: Exception) {
+                playingError = "No se pudo consultar el directo de ${team.name}. Prueba su canal oficial."
+            } finally { loadingTeam = null }
+        }
+    }
     LaunchedEffect(revision) {
         standBusy = true
         standError = null
@@ -209,30 +239,12 @@ internal fun BrunioLidomScreen(onBack: () -> Unit, onPlay: (String, String, Stri
                                     maxLines = 2, overflow = TextOverflow.Ellipsis)
                                 Button(
                                     enabled = loadingTeam == null,
-                                    onClick = {
-                                        loadingTeam = team.id
-                                        playingError = null
-                                        scope.launch {
-                                            try {
-                                                val live = BrunioLidomData.live(team)
-                                                if (live == null) {
-                                                    playingError = "No se encontró un video marcado EN DIRECTO para ${team.name}. Puedes revisar su canal oficial."
-                                                } else {
-                                                    val playbackUrl = TrailerPlaybackResolver.resolveSingleUrlFromYouTubeUrl(
-                                                        "https://www.youtube.com/watch?v=${live.videoId}")
-                                                    if (playbackUrl.isNullOrBlank()) {
-                                                        playingError = "YouTube no permitió la reproducción nativa de ${team.name}. Abre su canal oficial."
-                                                    } else {
-                                                        onPlay(live.title, playbackUrl, brunioLidomLogoUri(team.id))
-                                                    }
-                                                }
-                                            } catch (cancel: CancellationException) { throw cancel }
-                                            catch (_: Exception) {
-                                                playingError = "No se pudo consultar el directo de ${team.name}. Prueba su canal oficial."
-                                            } finally { loadingTeam = null }
-                                        }
-                                    },
+                                    onClick = { launchTeam(team, addToMulti = false) },
                                 ) { Text(if (loadingTeam == team.id) "Buscando LIVE…" else "▶ Ver EN DIRECTO") }
+                                OutlinedButton(
+                                    enabled = loadingTeam == null,
+                                    onClick = { launchTeam(team, addToMulti = true) },
+                                ) { Text("+ Multiview") }
                                 OutlinedButton(onClick = { openBrunioLidomYouTube(team.handle + "/live") }) {
                                     Text("Canal oficial")
                                 }
@@ -240,6 +252,12 @@ internal fun BrunioLidomScreen(onBack: () -> Unit, onPlay: (String, String, Stri
                         }
                         repeat(3 - line.size) { Spacer(Modifier.weight(1f)) }
                     }
+                }
+                if (multiSelected.size >= 2) item {
+                    Button(
+                        onClick = { BrunioMultiViewRequests.launch(multiSelected.toList()) },
+                        modifier = Modifier.padding(horizontal = 32.dp),
+                    ) { Text("Abrir Multiview · " + multiSelected.size + " directos") }
                 }
                 if (playingError != null) item {
                     Text(playingError.orEmpty(), Modifier.padding(horizontal = 32.dp),

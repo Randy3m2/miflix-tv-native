@@ -93,22 +93,51 @@ private object BrunioLidomData {
         }.distinctBy { it.id }.sortedWith(compareByDescending<LIdomStand> { it.wins.toDouble() / (it.wins + it.losses).coerceAtLeast(1) }.thenByDescending { it.wins })
     }
 
-    /** A live broadcast is recognized only when its OWN videoRenderer says LIVE NOW. */
+    /**
+     * YouTube /streams can omit an active broadcast (or use a different renderer).
+     * Check the channel /live page first and require videoDetails.isLiveContent,
+     * then check each stream renderer for a video-specific LIVE NOW marker.
+     * Never treat an unrelated replay or channel-wide "LIVE" badge as a game.
+     */
     suspend fun live(team: BrunioLidomTeam): LIdomLive? = withContext(Dispatchers.IO) {
-        val html = httpGetTextWithHeaders(team.handle.trimEnd('/') + "/streams",
-            mapOf("Accept" to "text/html", "Accept-Language" to "es-DO,es;q=0.9,en;q=0.5"))
-        val marker = '"' + "videoRenderer" + '"' + ":"
-        val entries = html.split(marker).drop(1).take(45)
-        for (chunk in entries) {
-            val block = chunk.take(10000).substringBefore(marker)
-            val isLiveMarker = '"' + "isLiveNow" + '"' + ":true"
-            if (!block.contains(isLiveMarker) &&
-                !block.contains("BADGE_STYLE_TYPE_LIVE_NOW")) continue
-            val id = Regex("videoId[^A-Za-z0-9_-]{1,15}([A-Za-z0-9_-]{11})")
-                .find(block)?.groupValues?.getOrNull(1) ?: continue
-            val title = Regex("text[^A-Za-z0-9]{1,15}([^\\\\\"]{3,160})")
-                .find(block)?.groupValues?.getOrNull(1) ?: team.name
-            return@withContext LIdomLive(id, title)
+        val headers = mapOf("Accept" to "text/html",
+            "Accept-Language" to "es-DO,es;q=0.9,en;q=0.5")
+        val watch = runCatching {
+            httpGetTextWithHeaders(team.handle.trimEnd('/') + "/live", headers)
+        }.getOrNull()
+        if (watch != null) {
+            val playerStart = watch.indexOf("ytInitialPlayerResponse")
+            if (playerStart >= 0) {
+                val player = watch.substring(playerStart).take(80000)
+                val details = player.substringAfter("\"videoDetails\"", "")
+                    .take(12000)
+                val liveFlag = Regex(""""isLiveContent"\s*:\s*true""")
+                val videoId = Regex(""""videoId"\s*:\s*"([A-Za-z0-9_-]{11})"""")
+                    .find(details)?.groupValues?.getOrNull(1)
+                val title = Regex(""""title"\s*:\s*"([^"]{3,160})"""")
+                    .find(details)?.groupValues?.getOrNull(1) ?: team.name
+                if (videoId != null && liveFlag.containsMatchIn(details)) {
+                    return@withContext LIdomLive(videoId, title)
+                }
+            }
+        }
+        val streams = runCatching {
+            httpGetTextWithHeaders(team.handle.trimEnd('/') + "/streams", headers)
+        }.getOrNull() ?: return@withContext null
+        val markers = listOf("\"videoRenderer\":", "\"gridVideoRenderer\":")
+        for (marker in markers) {
+            for (chunk in streams.split(marker).drop(1).take(60)) {
+                val block = chunk.take(12000).substringBefore(marker)
+                val liveNow = Regex(""""isLiveNow"\s*:\s*true""")
+                    .containsMatchIn(block) ||
+                    block.contains("BADGE_STYLE_TYPE_LIVE_NOW")
+                if (!liveNow) continue
+                val id = Regex(""""videoId"\s*:\s*"([A-Za-z0-9_-]{11})"""")
+                    .find(block)?.groupValues?.getOrNull(1) ?: continue
+                val title = Regex(""""text"\s*:\s*"([^"]{3,160})"""")
+                    .find(block)?.groupValues?.getOrNull(1) ?: team.name
+                return@withContext LIdomLive(id, title)
+            }
         }
         null
     }

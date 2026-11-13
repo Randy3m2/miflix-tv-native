@@ -44,6 +44,22 @@ internal actual fun brunioDefaultSportsManifest(): String =
         ?.bufferedReader(Charsets.UTF_8)?.use { it.readText().trim() }.orEmpty()
         .takeIf { it.startsWith("https://") }.orEmpty()
 
+internal actual fun brunioLidomLogoUri(id: String): String? {
+    if (id !in setOf("aguilas", "licey", "estrellas", "toros", "escogido", "gigantes")) return null
+    val name = "lidom_$id.png"
+    extracted[name]?.let { return it }
+    return runCatching {
+        val target = File(System.getProperty("java.io.tmpdir"),
+            "brunio-desktop2-lidom/$name")
+        target.parentFile.mkdirs()
+        // Always refresh to avoid a stale cached logo from another application version.
+        resourceLoader.getResourceAsStream("brunio/streaming/$name")?.use {
+            Files.copy(it, target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        } ?: return null
+        target.toURI().toASCIIString().also { extracted[name] = it }
+    }.getOrNull()
+}
+
 internal actual fun brunioStreamingLogoUri(id: String): String? {
     val name = when (id) {
         "hulu" -> "hulu.gif"

@@ -48,7 +48,7 @@ def apply(root):
     main = app / "MainAppContent.kt"
     once(main,
          'import com.nuvio.app.features.brunio.BrunioSportsAddonScreen',
-         'import com.nuvio.app.features.brunio.BrunioLidomScreen\n'
+         'import com.nuvio.app.features.brunio.BrunioLiveSessionRegistry\nimport com.nuvio.app.features.brunio.BrunioLidomScreen\n'
          'import com.nuvio.app.features.brunio.BrunioSportsAddonScreen')
     once(main,
          '''                        sportsSelected = currentRoute is BrunioSportsRoute,''',
@@ -71,7 +71,8 @@ def apply(root):
                                 providerName = "YouTube · LIDOM",
                                 contentType = null,
                                 videoId = null,
-                                parentMetaId = "lidom:" + title.hashCode().toUInt().toString(16),
+                                parentMetaId = "live:" + BrunioLiveSessionRegistry.register(
+                                    title, url, poster, "LIDOM"),
                                 parentMetaType = "live",
                             )
                             val id = PlayerLaunchStore.put(launch)

@@ -379,6 +379,8 @@ def main() -> None:
     patch_v221_multiview(output)
     from patch_v222_sports import apply as patch_v222_sports
     patch_v222_sports(output)
+    from patch_v226_lidom import apply as patch_v226_lidom
+    patch_v226_lidom(output)
     from patch_v220_floating_pip import apply as patch_v220_floating_pip
     patch_v220_floating_pip(output)
     from install_tv_assets_rp206 import install as install_tv_assets

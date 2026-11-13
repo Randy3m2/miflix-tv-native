@@ -57,6 +57,7 @@ def apply(root):
     main = app / "MainAppContent.kt"
     once(main,
          "import com.nuvio.app.features.brunio.BrunioMultiViewScreen",
+         "import com.nuvio.app.features.brunio.BrunioLiveSessionRegistry\n"
          "import com.nuvio.app.features.brunio.BrunioMultiViewRequests\n"
          "import com.nuvio.app.features.brunio.BrunioMultiViewScreen")
     once(main,
@@ -69,3 +70,12 @@ def apply(root):
             }
         }
         val appUpdaterController = rememberAppUpdaterController()""")
+
+    once(main,
+         '''                        route.channelIds.distinct().take(4)
+                            .mapNotNull { id -> allLiveChannels.firstOrNull { it.id == id } }''',
+         '''                        route.channelIds.distinct().take(4)
+                            .mapNotNull { id ->
+                                BrunioLiveSessionRegistry.find(id)
+                                    ?: allLiveChannels.firstOrNull { it.id == id }
+                            }''')

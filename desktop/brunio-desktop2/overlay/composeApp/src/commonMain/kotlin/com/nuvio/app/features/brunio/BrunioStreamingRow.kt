@@ -94,28 +94,6 @@ internal fun BrunioStreamingRow(
     val enabled by BrunioHomePreferences.selected.collectAsStateWithLifecycle()
     var showEditor by remember { mutableStateOf(false) }
     var chosenProvider by remember { mutableStateOf<BrunioHomeRow?>(null) }
-    var catalogLoading by remember { mutableStateOf(false) }
-    var catalogError by remember { mutableStateOf<String?>(null) }
-    var catalogEntries by remember { mutableStateOf(emptyList<MetaPreview>()) }
-
-    LaunchedEffect(chosenProvider) {
-        val provider = chosenProvider ?: return@LaunchedEffect
-        catalogLoading = true
-        catalogError = null
-        catalogEntries = emptyList()
-        try {
-            val providerQuery = provider.query
-            val movies = BrunioTmdb.catalog("discover/movie", "movie", providerQuery)
-            val series = BrunioTmdb.catalog("discover/tv", "series", providerQuery)
-            catalogEntries = (movies + series).distinctBy { it.id }
-        } catch (cancel: CancellationException) {
-            throw cancel
-        } catch (_: Exception) {
-            catalogError = "No se pudo cargar el catálogo. Comprueba tu conexión y TMDB."
-        } finally {
-            catalogLoading = false
-        }
-    }
     val streaming = remember {
         listOf("netflix", "disney", "prime", "apple", "hbo", "crunchyroll",
             "hulu", "paramount", "amcplus").mapNotNull { id ->
@@ -163,55 +141,15 @@ internal fun BrunioStreamingRow(
         )
     }
 
-    if (chosenProvider != null) {
-        BrunioReadableSurface {
-            AlertDialog(
-                onDismissRequest = { chosenProvider = null },
-                title = { Text(chosenProvider?.label.orEmpty()) },
-                text = {
-                    Column {
-                        Text("Películas y series disponibles en esta plataforma.",
-                            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
-                        if (catalogLoading) Text("Cargando catálogo…")
-                        if (catalogError != null) Text(catalogError.orEmpty(),
-                            color = androidx.compose.material3.MaterialTheme.colorScheme.error)
-                        if (!catalogLoading && catalogError == null && catalogEntries.isEmpty()) {
-                            Text("No se encontraron títulos para esta plataforma.")
-                        }
-                        LazyColumn(modifier = Modifier.height(440.dp)) {
-                            items(catalogEntries, key = { it.id }) { media ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth()
-                                        .clickable {
-                                            chosenProvider = null
-                                            onOpenMedia?.invoke(media)
-                                        }.padding(vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    AsyncImage(
-                                        model = media.poster,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(width = 65.dp, height = 94.dp),
-                                    )
-                                    Column(modifier = Modifier.padding(start = 12.dp)) {
-                                        Text(media.name, maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis)
-                                        Text(if (media.type == "series") "Serie" else "Película",
-                                            style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    OutlinedButton(onClick = { chosenProvider = null }) { Text("Cerrar") }
-                },
-                containerColor = BrunioDarkColors.surface,
-                titleContentColor = BrunioDarkColors.onSurface,
-                textContentColor = BrunioDarkColors.onSurface,
-            )
-        }
+    chosenProvider?.let { provider ->
+        BrunioProviderScreen(
+            provider = provider,
+            onBack = { chosenProvider = null },
+            onOpenMedia = { media ->
+                chosenProvider = null
+                onOpenMedia?.invoke(media)
+            },
+        )
     }
 
     if (showEditor) {

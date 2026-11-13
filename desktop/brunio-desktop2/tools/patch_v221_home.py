@@ -21,19 +21,7 @@ def apply(root):
                                         addonsUiState.addons.enabledAddons(), force = true,
                                     )
                                 },
-                                onOpenProvider = { provider ->
-                                    val catalog = homeUiState.sections.firstOrNull {
-                                        it.key == provider.id
-                                    }
-                                    if (catalog != null) {
-                                        onCatalogClick?.invoke(catalog)
-                                    } else {
-                                        if (provider.id !in BrunioHomePreferences.selected.value) {
-                                            BrunioHomePreferences.toggle(provider.id)
-                                        }
-                                        HomeRepository.refresh(
-                                            addonsUiState.addons.enabledAddons(), force = true,
-                                        )
-                                    }
-                                },
+                                // Provider cards open their own film/series catalog.
+                                // Poster clicks use the existing Nuvio detail navigation.
+                                onOpenMedia = onPosterClick,
                             )""")

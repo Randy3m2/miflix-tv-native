@@ -26,10 +26,39 @@ internal actual fun saveBrunioHomeRowIds(ids: Set<String>) {
     homePrefs.flush()
 }
 
+private val sportsPrefs: Preferences
+    get() = Preferences.userRoot().node("brunio/desktop2/sports")
+
+// Keep private premium manifest URLs on the user's device; never in Git.
+internal actual fun brunioSavedSportsManifest(): String =
+    sportsPrefs.get("manifest", "").trim()
+
+internal actual fun brunioSaveSportsManifest(url: String) {
+    if (url.isBlank()) sportsPrefs.remove("manifest")
+    else sportsPrefs.put("manifest", url.trim())
+    sportsPrefs.flush()
+}
+
 internal actual fun brunioDefaultSportsManifest(): String =
     resourceLoader.getResourceAsStream("brunio/default_sports_manifest.txt")
         ?.bufferedReader(Charsets.UTF_8)?.use { it.readText().trim() }.orEmpty()
         .takeIf { it.startsWith("https://") }.orEmpty()
+
+internal actual fun brunioLidomLogoUri(id: String): String? {
+    if (id !in setOf("aguilas", "licey", "estrellas", "toros", "escogido", "gigantes")) return null
+    val name = "lidom_$id.png"
+    extracted[name]?.let { return it }
+    return runCatching {
+        val target = File(System.getProperty("java.io.tmpdir"),
+            "brunio-desktop2-lidom/$name")
+        target.parentFile.mkdirs()
+        // Always refresh to avoid a stale cached logo from another application version.
+        resourceLoader.getResourceAsStream("brunio/streaming/$name")?.use {
+            Files.copy(it, target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        } ?: return null
+        target.toURI().toASCIIString().also { extracted[name] = it }
+    }.getOrNull()
+}
 
 internal actual fun brunioStreamingLogoUri(id: String): String? {
     val name = when (id) {

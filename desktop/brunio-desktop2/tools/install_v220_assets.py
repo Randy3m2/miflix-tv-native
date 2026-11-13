@@ -19,6 +19,11 @@ def install(destination: Path) -> int:
         (ROOT / "app/src/main/assets/streaming_rp48/paramount-plus.gif", "paramount.gif"),
         (ROOT / "app/src/main/res/drawable-nodpi/streaming_amcplus_rp48.png", "amcplus.png"),
     ]
+    for id in ("aguilas", "licey", "estrellas", "toros", "escogido", "gigantes"):
+        assets.append((
+            ROOT / "app/src/main/res/drawable-nodpi" / f"lidom_{id}.png",
+            f"lidom_{id}.png",
+        ))
     for source, name in assets:
         if not source.is_file() or source.stat().st_size < 1000:
             raise RuntimeError("Missing original BruniO TV streaming art: " + name)

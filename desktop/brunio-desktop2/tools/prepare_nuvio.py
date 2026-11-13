@@ -100,7 +100,7 @@ def patch_visual_brand(destination: Path) -> None:
     replace_exact(
         desktop_main,
         'title = if (smokePlayerUrl == null) "Nuvio" else "Nuvio Player Smoke",',
-        'title = if (smokePlayerUrl == null) "BruniO Desktop 2.2.1" else "BruniO Player Smoke",',
+        'title = if (smokePlayerUrl == null) "BruniO Desktop 2.2.8" else "BruniO Player Smoke",',
     )
     replace_exact(gradle, 'packageName = "Nuvio"', 'packageName = "BruniO"')
     replace_exact(gradle, 'vendor = "Nuvio Media"', 'vendor = "BruniO"')
@@ -148,7 +148,11 @@ def patch_brand_icon(destination: Path) -> bool:
     common = destination / "composeApp/src/commonMain/composeResources/drawable"
     from install_tv_assets_rp206 import safe_square
     with Image.open(icon_source) as original:
-        app_icon = safe_square(original, 512, margin=0.19)
+        # Preserve the exact BruniO artwork, without redesigning it.
+        # 19% padding on every side shrunk the Windows shortcut to ~62% of
+        # the available canvas; 7% gives the icon a normal Windows presence.
+        # safe_square crops existing transparent borders and never stretches.
+        app_icon = safe_square(original, 512, margin=0.07)
         app_icon.save(icons / "nuvio-app-icon-transparent.png")
         app_icon.save(
             icons / "nuvio-app-icon-transparent.ico", format="ICO",
@@ -373,6 +377,10 @@ def main() -> None:
     patch_v220_multiview(output)
     from patch_v221_multiview import apply as patch_v221_multiview
     patch_v221_multiview(output)
+    from patch_v222_sports import apply as patch_v222_sports
+    patch_v222_sports(output)
+    from patch_v226_lidom import apply as patch_v226_lidom
+    patch_v226_lidom(output)
     from patch_v220_floating_pip import apply as patch_v220_floating_pip
     patch_v220_floating_pip(output)
     from install_tv_assets_rp206 import install as install_tv_assets

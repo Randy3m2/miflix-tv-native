@@ -29,7 +29,7 @@ def apply(root):
          """        RenderPlayerModals(displayedPositionMs = displayedPositionMs)
         if (BrunioCloud.enabled && isDesktop && !isInPip && !showPartyPanel) {""",
          """        RenderPlayerModals(displayedPositionMs = displayedPositionMs)
-        if (BrunioCloud.enabled && isDesktop && !isInPip &&
+        if (isDesktop && !isInPip &&
             parentMetaId.startsWith("live:") && !showBrunioMultiViewPicker
         ) {
             androidx.compose.material3.Button(
@@ -40,7 +40,7 @@ def apply(root):
                 androidx.compose.material3.Text("+ Multiview")
             }
         }
-        if (BrunioCloud.enabled && isDesktop && parentMetaId.startsWith("live:")) {
+        if (isDesktop && parentMetaId.startsWith("live:")) {
             BrunioMultiViewPickerPanel(
                 visible = showBrunioMultiViewPicker && !isInPip,
                 modal = true,
@@ -57,6 +57,7 @@ def apply(root):
     main = app / "MainAppContent.kt"
     once(main,
          "import com.nuvio.app.features.brunio.BrunioMultiViewScreen",
+         "import com.nuvio.app.features.brunio.BrunioLiveSessionRegistry\n"
          "import com.nuvio.app.features.brunio.BrunioMultiViewRequests\n"
          "import com.nuvio.app.features.brunio.BrunioMultiViewScreen")
     once(main,
@@ -69,3 +70,12 @@ def apply(root):
             }
         }
         val appUpdaterController = rememberAppUpdaterController()""")
+
+    once(main,
+         '''                        route.channelIds.distinct().take(4)
+                            .mapNotNull { id -> allLiveChannels.firstOrNull { it.id == id } }''',
+         '''                        route.channelIds.distinct().take(4)
+                            .mapNotNull { id ->
+                                BrunioLiveSessionRegistry.find(id)
+                                    ?: allLiveChannels.firstOrNull { it.id == id }
+                            }''')

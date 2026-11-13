@@ -154,7 +154,22 @@ internal fun BrunioLidomScreen(onBack: () -> Unit, onPlay: (String, String, Stri
     var revision by remember { mutableStateOf(0) }
     var loadingTeam by remember { mutableStateOf<String?>(null) }
     var playingError by remember { mutableStateOf<String?>(null) }
+    var liveStatus by remember { mutableStateOf<Map<String, Boolean?>>(emptyMap()) }
     val scope = rememberCoroutineScope()
+    LaunchedEffect(revision) {
+        liveStatus = teamsLidom.associate { it.id to null }
+        // Query each of the six official channels. Failed/blocked requests are
+        // unknown, never falsely reported as confirmation that no game exists.
+        kotlinx.coroutines.coroutineScope {
+            teamsLidom.forEach { team ->
+                launch {
+                    val result = runCatching { BrunioLidomData.live(team) }
+                    liveStatus = liveStatus + (team.id to result.getOrNull()?.let { true }
+                        ?: if (result.isSuccess) false else null)
+                }
+            }
+        }
+    }
     var multiSelected by remember { mutableStateOf(emptySet<String>()) }
     fun launchTeam(team: BrunioLidomTeam, addToMulti: Boolean) {
         loadingTeam = team.id
@@ -237,6 +252,13 @@ internal fun BrunioLidomScreen(onBack: () -> Unit, onPlay: (String, String, Stri
                                 Text(team.name, color = Color.White,
                                     fontWeight = FontWeight.SemiBold,
                                     maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                Text(when (liveStatus[team.id]) {
+                                    true -> "🔴 Directo detectado"
+                                    false -> "Sin directo verificado ahora"
+                                    null -> "Consultando / sin respuesta"
+                                }, color = if (liveStatus[team.id] == true) Color(0xFFFF7373)
+                                    else mutedLidom,
+                                    style = MaterialTheme.typography.bodySmall)
                                 Button(
                                     enabled = loadingTeam == null,
                                     onClick = { launchTeam(team, addToMulti = false) },

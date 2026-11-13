@@ -29,7 +29,7 @@ def apply(root):
          """        RenderPlayerModals(displayedPositionMs = displayedPositionMs)
         if (BrunioCloud.enabled && isDesktop && !isInPip && !showPartyPanel) {""",
          """        RenderPlayerModals(displayedPositionMs = displayedPositionMs)
-        if (BrunioCloud.enabled && isDesktop && !isInPip &&
+        if (isDesktop && !isInPip &&
             parentMetaId.startsWith("live:") && !showBrunioMultiViewPicker
         ) {
             androidx.compose.material3.Button(
@@ -40,7 +40,7 @@ def apply(root):
                 androidx.compose.material3.Text("+ Multiview")
             }
         }
-        if (BrunioCloud.enabled && isDesktop && parentMetaId.startsWith("live:")) {
+        if (isDesktop && parentMetaId.startsWith("live:")) {
             BrunioMultiViewPickerPanel(
                 visible = showBrunioMultiViewPicker && !isInPip,
                 modal = true,

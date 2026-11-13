@@ -148,7 +148,11 @@ def patch_brand_icon(destination: Path) -> bool:
     common = destination / "composeApp/src/commonMain/composeResources/drawable"
     from install_tv_assets_rp206 import safe_square
     with Image.open(icon_source) as original:
-        app_icon = safe_square(original, 512, margin=0.19)
+        # Preserve the exact BruniO artwork, without redesigning it.
+        # 19% padding on every side shrunk the Windows shortcut to ~62% of
+        # the available canvas; 7% gives the icon a normal Windows presence.
+        # safe_square crops existing transparent borders and never stretches.
+        app_icon = safe_square(original, 512, margin=0.07)
         app_icon.save(icons / "nuvio-app-icon-transparent.png")
         app_icon.save(
             icons / "nuvio-app-icon-transparent.ico", format="ICO",

@@ -52,7 +52,7 @@ def apply(root):
     main = app / "MainAppContent.kt"
     once(main,
          'import com.nuvio.app.features.brunio.BrunioLiveTvScreen',
-         'import com.nuvio.app.features.brunio.BrunioSportsAddonScreen\n'
+         'import com.nuvio.app.features.brunio.BrunioLiveSessionRegistry\nimport com.nuvio.app.features.brunio.BrunioSportsAddonScreen\n'
          'import com.nuvio.app.features.brunio.BrunioLiveTvScreen')
     once(main,
          '''                        liveTvSelected = currentRoute is BrunioLiveTvRoute,''',
@@ -75,7 +75,8 @@ def apply(root):
                                 providerName = "BruniO Live Sports",
                                 contentType = null,
                                 videoId = null,
-                                parentMetaId = "sport:" + eventTitle.hashCode().toUInt().toString(16),
+                                parentMetaId = "live:" + BrunioLiveSessionRegistry.register(
+                                    eventTitle, url, poster, "Live Sports"),
                                 parentMetaType = "live",
                             )
                             val launchId = PlayerLaunchStore.put(launch)

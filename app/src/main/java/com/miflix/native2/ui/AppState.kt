@@ -3704,7 +3704,8 @@ class AppState(context: Context) {
         val playbackOwner=session?.userId; val playbackProfile=activeProfile.id
         fun valid()=playbackWork.current(ticket) && session?.userId==playbackOwner && activeProfile.id==playbackProfile
         if(playbackLoading?.let {it.item.cloudId==item.cloudId && it.season==season && it.episode==episode}!=true) beginPlaybackLoading(item,season,episode)
-        busyMessage = tr("Buscando el mejor enlace…","Finding the best source…")
+        busyMessage = if(selectedStream==null) tr("Buscando el mejor enlace…","Finding the best source…")
+            else tr("Abriendo enlace…","Opening source…")
         error = null
         val memoryKeyRP16=lastSourceKeyRP16(item,season,episode)
         val progressKeyRP16=if(item.type=="series") "${item.cloudId}:s${season}e${episode}" else item.cloudId
@@ -3724,16 +3725,27 @@ class AppState(context: Context) {
         }
         if(!valid()) return@run
         val rejectedWarmRP92=warmRetryPlanRP92?.takeIf {it.identity==warmIdentityRP91(item,imdb,season,episode)}?.rejected?.toSet().orEmpty()
-        val expectedPositionRP91=resumeOverride ?: targetProgressRP16?.position ?: 0L
-        val preparedRP91=if(selectedStream==null) preparedVideoRP91?.takeIf {entry ->
+        val key = if(item.type=="series") "${item.cloudId}:s${season}e${episode}" else item.cloudId
+        val requestedPosition=resumeOverride ?: (progress[key] ?: progress[item.cloudId])?.position ?: 0L
+        val expectedPositionRP91=if(selectedStream==null) resumeOverride ?: targetProgressRP16?.position ?: 0L else requestedPosition
+        val preparedRP91=preparedVideoRP91?.takeIf {entry ->
             entry.request.item.cloudId==item.cloudId && entry.request.season==season && entry.request.episode==episode &&
             entry.identity==warmIdentityRP91(item,imdb,season,episode) && entry.player.playerError==null &&
-            WarmVideoPolicyRP91.fresh(android.os.SystemClock.elapsedRealtime()-entry.createdAt,entry.request.resumeMs,expectedPositionRP91)
-        } else null
-        if(preparedRP91==null) discardPreparedVideoRP91()
+            WarmVideoPolicyRP91.fresh(android.os.SystemClock.elapsedRealtime()-entry.createdAt,entry.request.resumeMs,expectedPositionRP91) &&
+            (selectedStream==null || (entry.originalUrl==selectedStream.url &&
+                entry.request.stream.requestHeaders==selectedStream.requestHeaders && watchParty==null &&
+                playerRequest?.momentEndMs?.let {it>0}!=true))
+        }
+        if(preparedRP91==null) {
+            if(selectedStream!=null) sourceWarmupJobRP90?.cancel()
+            discardPreparedVideoRP91()
+        }
+        val sizeLimit=streamSizeBytes
         val streamsJob = async {
             val rows=if(rememberedRP16!=null && rememberedRP16.url !in rejectedWarmRP92) listOf(rememberedRP16)
-                else if(selectedStream!=null) (listOf(selectedStream)+fallbackStreams).distinctBy {it.url}.filter {StreamFilters.allowed(it,item.type,item.year,streamSizeBytes,item.title)}
+                else if(selectedStream!=null) kotlinx.coroutines.withContext(Dispatchers.Default) {
+                    (listOf(selectedStream)+fallbackStreams).distinctBy {it.url}.filter {StreamFilters.allowed(it,item.type,item.year,sizeLimit,item.title)}
+                }
                 else resolvePlaybackSources(item,imdb,season,episode)
             if(selectedStream!=null) rows else rows.filter {it.url !in rejectedWarmRP92}
         }
@@ -3774,9 +3786,7 @@ class AppState(context: Context) {
                 }.thenBy { it.label })
             if(!valid()) return@run
             val enriched = best.copy(subtitles = mergedSubs)
-            val key = if (item.type == "series") "${item.cloudId}:s${season}e${episode}" else item.cloudId
-            val saved = progress[key] ?: progress[item.cloudId]
-            playerRequest = PlayerRequest(item, enriched, season, episode, resumeOverride ?: saved?.position ?: 0L,sourceMemoryKeyRP16=memoryKeyRP16)
+            playerRequest = PlayerRequest(item, enriched, season, episode, requestedPosition,sourceMemoryKeyRP16=memoryKeyRP16)
             if(rememberedRP16!=null && rememberedRP16.url !in rejectedWarmRP92) playerRequest?.let {rememberedStartRP16=RememberedStartRP16(it.playbackId,imdb,playbackOwner,playbackProfile,ticket.generation)}
             playbackLoading=playbackLoading?.copy(playbackId=playerRequest?.playbackId)
             screen = Screen.PLAYER

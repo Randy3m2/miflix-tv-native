@@ -1507,8 +1507,22 @@ internal fun playbackPreferencesRP92(state:AppState,request:PlayerRequest):Playb
         tr("Subtítulo","Subtitle"))
 }
 
+private class UnsupportedBluRayLayout(message:String): IllegalArgumentException(message)
+
 internal fun playbackSetupRP92(context:android.content.Context,prefs:PlaybackPreferencesRP92,request:PlayerRequest,
     timing:com.miflix.native2.player.SubtitleTiming,warmGate:WarmLoadControlRP91?=null):PlaybackSetupRP92 {
+    val tvVod=!request.live && context.packageName!="com.brunio.mobile"
+    if(tvVod) {
+        val discLayout=listOf(request.stream.filename,Uri.parse(request.stream.url).path.orEmpty()).any {
+            val path=it.lowercase(java.util.Locale.ROOT)
+            path.endsWith(".iso") || path.endsWith(".bdmv") || path.endsWith(".mpls")
+        }
+        if(discLayout) throw UnsupportedBluRayLayout(tr(
+            "Esta fuente es una imagen o lista de reproducción de disco Blu-ray. Elige un archivo de video como MKV o MP4.",
+            "This source is a Blu-ray disc image or playlist. Choose a video file such as MKV or MP4."))
+    }
+    val lowMemory=tvVod && context.getSystemService(android.app.ActivityManager::class.java)
+        ?.let {it.isLowRamDevice || it.memoryClass<=128}!=false
     val strictSpanish=prefs.strictSpanish
     val saved=prefs.rawTracks.takeIf {it.isNotBlank()}?.let {raw ->runCatching {org.json.JSONObject(raw).optJSONObject("tracks:${request.item.cloudId}")}.getOrNull()}
     timing.delayMs=if(prefs.easy) 0L else saved?.optLong("delay",0L) ?: 0L
@@ -1521,7 +1535,7 @@ internal fun playbackSetupRP92(context:android.content.Context,prefs:PlaybackPre
         .setLooper(android.os.Looper.getMainLooper())
         .setHandleAudioBecomingNoisy(true)
         .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(context,http)))
-        .setLoadControl(warmGate ?: androidx.media3.exoplayer.DefaultLoadControl.Builder()
+        .setLoadControl(warmGate ?: if(tvVod) tvVodLoadControl(lowMemory) else androidx.media3.exoplayer.DefaultLoadControl.Builder()
             .setBufferDurationsMs(15000,50000,1000,1500).setTargetBufferBytes(48*1024*1024)
             .setPrioritizeTimeOverSizeThresholds(false).build())
     if(!request.live) builder.setAudioAttributes(androidx.media3.common.AudioAttributes.Builder()
@@ -1669,15 +1683,40 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
     var countdown by remember(request.playbackId) { mutableStateOf(10) }
     var cancelAutoplay by remember(request.playbackId) { mutableStateOf(false) }
 
-    val player = remember(request.playbackId) {
-        state.playerReleaseRP87.beforeReplace()
-        val prepared=state.takePreparedPlayerRP91(request)
-        val active=prepared ?: createPlaybackPlayerRP91(context,state,request,timing)
-        if(prepared!=null) {
-            active.volume=1f
-            active.playWhenReady=!state.isPlaybackParked(request) && (request.sourceFallbackPlaying ?: true)
+    val startup = remember(request.playbackId) {
+        try {
+            state.playerReleaseRP87.beforeReplace()
+            val prepared=state.takePreparedPlayerRP91(request)
+            val active=prepared ?: createPlaybackPlayerRP91(context,state,request,timing)
+            if(prepared!=null) {
+                active.volume=1f
+                active.playWhenReady=!state.isPlaybackParked(request) && (request.sourceFallbackPlaying ?: true)
+            }
+            Result.success(active)
+        } catch(e:kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch(e:Exception) {
+            com.miflix.native2.data.LocalCrashRP87.record(context,e)
+            Result.failure(e)
         }
-        active
+    }
+    val player=startup.getOrNull()
+    if(player==null) {
+        LaunchedEffect(request.playbackId) { state.finishPlaybackLoading(request.playbackId) }
+        BackHandler(onBack=onClose)
+        Box(Modifier.fillMaxSize().background(Bg),contentAlignment=Alignment.Center) {
+            Column(Modifier.padding(24.dp),horizontalAlignment=Alignment.CenterHorizontally,
+                verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                val message=(startup.exceptionOrNull() as? UnsupportedBluRayLayout)?.message
+                    ?: tr("No se pudo abrir este enlace.","This source could not be opened.")
+                Text(message,color=Color.White)
+                if(!request.live && !state.easyModeRP79) FocusButton(tr("Elegir otro enlace","Choose another source"),primary=true) {
+                    state.launch { state.playerSources(request,request.resumeMs) }
+                }
+                FocusButton(tr("Volver","Back"),primary=request.live || state.easyModeRP79,onClick=onClose)
+            }
+        }
+        return
     }
 
     LaunchedEffect(autoSyncBusyRP206,request.playbackId,player) {

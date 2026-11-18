@@ -7,10 +7,14 @@ import androidx.media3.exoplayer.LoadControl
 import com.miflix.native2.data.WarmVideoPolicyRP91
 import com.miflix.native2.player.SubtitleTiming
 
+internal fun tvVodLoadControl(lowMemory:Boolean=false):LoadControl = DefaultLoadControl.Builder()
+    .setBufferDurationsMs(10000,30000,500,1500)
+    .setTargetBufferBytes(WarmVideoPolicyRP91.bufferBytes(lowMemory))
+    .setPrioritizeTimeOverSizeThresholds(false).build()
+
 /** The same allocator/control is retained when the player becomes visible. */
-internal class WarmLoadControlRP91(private val lowMemory:Boolean=false,private val smartRP167:Boolean=false,private val normal:LoadControl=DefaultLoadControl.Builder()
-    .setBufferDurationsMs(15000,50000,1000,1500).setTargetBufferBytes(48*1024*1024)
-    .setPrioritizeTimeOverSizeThresholds(false).build()):LoadControl by normal {
+internal class WarmLoadControlRP91(private val lowMemory:Boolean=false,private val smartRP167:Boolean=false,
+    private val normal:LoadControl=tvVodLoadControl(lowMemory)):LoadControl by normal {
     @Volatile private var warming=true
     fun activate() {warming=false}
     override fun shouldContinueLoading(parameters:LoadControl.Parameters):Boolean {

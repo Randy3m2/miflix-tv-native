@@ -1724,6 +1724,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         return
     }
 
+    val attachedView=remember(player) { java.util.concurrent.atomic.AtomicReference<PlayerView?>() }
     LaunchedEffect(autoSyncBusyRP206,request.playbackId,player) {
         while(autoSyncBusyRP206) {
             timing.autoSyncRP206.playerPositionMs=player.currentPosition.coerceAtLeast(0)
@@ -2240,7 +2241,10 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                     state.launch {state.traktMarkWatched(request,lastPosition,lastDuration)}
                     state.launch {runCatching {state.pushCloud()}}
                 }
-            } finally {retry404RP144.close();player.release()}
+            } finally {
+                retry404RP144.close()
+                try { attachedView.getAndSet(null)?.player=null } finally { player.release() }
+            }
         }
         // A prepared player already discovered its tracks before this visible listener was installed.
         if(player.currentTracks.groups.isNotEmpty()) listener.onTracksChanged(player.currentTracks)
@@ -2466,11 +2470,19 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
                         true
                     }
                     this.player = player
+                    attachedView.set(this)
                     layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                 }
             },
+            onRelease = { view ->
+                attachedView.compareAndSet(view,null)
+                view.player=null
+            },
             update = { view ->
-                if (view.player !== player) view.player = player
+                if (view.player !== player && state.playerRequest?.playbackId==request.playbackId) {
+                    view.player=player
+                    attachedView.set(view)
+                }
                 if(view.resizeMode!=resizeMode) view.resizeMode = resizeMode
                 view.subtitleView?.apply {
                     val styleKey=state.subtitleColor to state.subtitleScale

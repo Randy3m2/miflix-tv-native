@@ -19,6 +19,27 @@ class AddonStartupRP12Test {
   }
   assertEquals(1,repo.resolve("tt1","movie",preferredAudio="en").size)
  }
+ @Test fun fastProviderIsPublishedBeforeSlowProviderFinishes()=runBlocking {
+  val releaseSlow=CompletableDeferred<Unit>()
+  val batches=mutableListOf<String>()
+  val repo=StreamRepository("https://slow.test/manifest.json") {url,_ ->
+   when {
+    url.endsWith("manifest.json") -> manifest
+    url.contains("slow.test") -> {releaseSlow.await();stream("Latino")}
+    else -> stream("English")
+   }
+  }
+  repo.addManifest("https://fast.test/manifest.json")
+  val rows=withTimeout(5000) {
+   repo.resolve("tt1","movie",preferredAudio="es") {batch ->
+    val name=batch.single().name
+    batches.add(name)
+    if(name=="English") releaseSlow.complete(Unit)
+   }
+  }
+  assertEquals(listOf("English","Latino"),batches)
+  assertEquals(listOf("Latino","English"),rows.map {it.name})
+ }
  @Test fun allProviderResultsKeepSpanishBeforeEnglish()=runBlocking {
   val repo=StreamRepository("https://english.test/manifest.json") {url,_ ->
    if(url.endsWith("manifest.json")) manifest else if(url.contains("english")) stream("English")

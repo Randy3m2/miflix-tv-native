@@ -1564,10 +1564,10 @@ class AppState(context: Context) {
     private fun playbackCacheKey(item: MediaSummary,imdb: String,season: Int,episode: Int)=PlaybackCacheKey(
         session?.userId,activeProfile.id,item.cloudId,imdb,season,episode,item.year,item.title,
         streamRepo.manifests().toList(),nativeSourceEnabled,nativeRevision,nativeOnlyRP75,nativeSpanishOnlyRP77,nativeSizeAscendingRP77,streamSizeBytes,audioLanguage,secondaryAudioLanguageRP62,easyModeRP79)
-    private suspend fun resolvePlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int):List<StreamChoice> {
+    private suspend fun resolvePlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int,onBatch:(suspend (List<StreamChoice>)->Unit)?=null):List<StreamChoice> {
         val key=playbackCacheKey(item,imdb,season,episode)
         if(sourceWarmupKeyRP90!=null && sourceWarmupKeyRP90!=key) sourceWarmupJobRP90?.cancel()
-        return resolveCachedSourcesRP90(item,imdb,season,episode)
+        return resolveCachedSourcesRP90(item,imdb,season,episode,onBatch)
     }
     private suspend fun sortPlaybackRowsRP92(rows:List<StreamChoice>,item:MediaSummary?=null):List<StreamChoice> {
         val audio=audioLanguage;val secondary=secondaryAudioLanguageRP62;val order=sourceProviderOrderRP2()
@@ -1577,10 +1577,10 @@ class AppState(context: Context) {
             StreamOrdering.sorted(accepted,audio,providerOrder=order,secondaryAudio=secondary,nativeSizeAscending=ascending,nativeSpanishOnly=spanish)
         }
     }
-    private suspend fun resolveCachedSourcesRP90(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = playbackCacheMutex.withLock {
+    private suspend fun resolveCachedSourcesRP90(item: MediaSummary,imdb: String,season: Int,episode: Int,onBatch:(suspend (List<StreamChoice>)->Unit)?=null): List<StreamChoice> = playbackCacheMutex.withLock {
         val key=playbackCacheKey(item,imdb,season,episode)
         playbackLinkCache.get(key)?.let {return@withLock sortPlaybackRowsRP92(it)}
-        val streams=fetchPlaybackSources(item,imdb,season,episode)
+        val streams=fetchPlaybackSources(item,imdb,season,episode,onBatch)
         // Cache successful lists only; account/settings changes cannot publish stale results.
         if(streams.isNotEmpty() && key==playbackCacheKey(item,imdb,season,episode)) playbackLinkCache.put(key,streams)
         streams
@@ -1589,32 +1589,35 @@ class AppState(context: Context) {
         if(!com.miflix.native2.data.DbzEpisodeRP107.enabled(item.type,item.id)) return season to episode
         return com.miflix.native2.data.DbzEpisodeRP107.coordinates(season,episode,tmdb.season(item.id,1))
     }
-    private suspend fun fetchPlaybackSources(item:MediaSummary,imdb:String,season:Int,episode:Int):List<StreamChoice> {
+    private suspend fun fetchPlaybackSources(item:MediaSummary,imdb:String,season:Int,episode:Int,onBatch:(suspend (List<StreamChoice>)->Unit)?=null):List<StreamChoice> {
         if(com.miflix.native2.data.DbzEpisodeRP107.enabled(item.type,item.id)) {
             val target=providerEpisodeRP107(item,season,episode)
             // DBZ is ALWAYS S1:absolute at the provider boundary; never query saga seasons first.
-            return fetchCanonicalSourcesRP102(item,imdb,target.first,target.second)
+            return fetchCanonicalSourcesRP102(item,imdb,target.first,target.second,onBatch)
         }
-        val normal=fetchCanonicalSourcesRP102(item,imdb,season,episode)
+        val normal=fetchCanonicalSourcesRP102(item,imdb,season,episode,onBatch)
         if(normal.isNotEmpty() || item.type!="series" || !com.miflix.native2.data.AbsoluteEpisodeRP102.enabled(item.id)) return normal
         val absolute=tmdb.absoluteNumberRP102(item.id,season,episode) ?: return normal
         if(season==1 && episode==absolute) return normal
         // Only an empty result triggers the alternate numbering; never mix two episode identities.
-        return fetchCanonicalSourcesRP102(item,imdb,1,absolute)
+        return fetchCanonicalSourcesRP102(item,imdb,1,absolute,onBatch)
     }
-    private suspend fun fetchCanonicalSourcesRP102(item: MediaSummary,imdb: String,season: Int,episode: Int): List<StreamChoice> = supervisorScope {
+    private suspend fun fetchCanonicalSourcesRP102(item: MediaSummary,imdb: String,season: Int,episode: Int,onBatch:(suspend (List<StreamChoice>)->Unit)?=null): List<StreamChoice> = supervisorScope {
         val owner=session?.userId
+        val publish: (suspend (List<StreamChoice>) -> Unit)? = onBatch?.let { callback ->
+            { rows -> callback(sortPlaybackRowsRP92(rows,item)) }
+        }
         if(easyModeRP79) return@supervisorScope StreamOrdering.sorted(
-            easyStreamsRP79.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage),
+            easyStreamsRP79.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage,publish),
             audioLanguage,secondaryAudio=secondaryAudioLanguageRP62)
         val native=owner!=null && nativeStore.enabled(owner)
         // Disabled is the default and leaves the existing add-on path unchanged.
         if(!native) return@supervisorScope sortPlaybackRowsRP92(
-            streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage))
+            streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage,publish))
         val token=nativeStore.token(owner)
         val onlyNative=nativeOnlyRP75
         val addon=async {
-            if(onlyNative || streamRepo.manifests().isEmpty()) emptyList() else streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage)
+            if(onlyNative || streamRepo.manifests().isEmpty()) emptyList() else streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage,publish)
         }
         var failure: String?=null
         val builtIn=try {
@@ -1625,6 +1628,7 @@ class AppState(context: Context) {
                     try {tmdb.spanishTitle(item).ifBlank {item.title}} catch(e: CancellationException) {throw e} catch(_: Exception) {item.title}
                 else item.title),item.type,item.year,season,episode,streamSizeBytes,audioLanguage,spanishOnly=nativeSpanishOnlyRP77,sizeAscending=nativeSizeAscendingRP77) }
         } catch(e: kotlinx.coroutines.TimeoutCancellationException) { failure=tr("Motor nativo: tiempo agotado","Native engine: timed out");emptyList() } catch(e: CancellationException) { throw e } catch(e: Exception) { failure=e.message;emptyList() }
+        if(builtIn.isNotEmpty()) publish?.invoke(builtIn)
         val links=sortPlaybackRowsRP92(addon.await()+builtIn,item)
         if(session?.userId==owner) nativeSourceStatus=failure ?: tr("Motor nativo: ","Native engine: ")+builtIn.size+tr(" enlaces disponibles"," available links")
         if(links.isEmpty() && failure!=null) throw IllegalStateException(failure)
@@ -3368,33 +3372,68 @@ class AppState(context: Context) {
     private suspend fun chooseSources(item: MediaSummary, imdb: String, season: Int, episode: Int, resumeMs: Long? = null) = latestPlaybackRP87.run {
         val ticket=playbackWork.begin(); val owner=session?.userId; val profile=activeProfile.id
         fun valid()=playbackWork.current(ticket) && session?.userId==owner && activeProfile.id==profile
-        sourceSelection=null; busyMessage=tr("Buscando todos los enlaces…","Finding all playback links…"); error=null
+        fun current()=sourceSelection?.takeIf {it.workGeneration==ticket.generation && it.workSequence==ticket.sequence && valid()}
+        val progressive=appContext.packageName!="com.brunio.mobile" && !easyModeRP79
+        val initial=SourceSelection(item,imdb,season,episode,emptyList(),resumeMs,ticket.generation,ticket.sequence,loading=true)
+        sourceSelection=initial.takeIf {progressive}
+        busyMessage=if(progressive) null else tr("Buscando todos los enlaces…","Finding all playback links…")
+        error=null
+        // A speculative lookup holds the cache lock until all providers finish.
+        // Give the interactive picker priority so it can display providers as they finish.
+        if(progressive) sourceWarmupJobRP90?.cancel()
+        val results=linkedMapOf<String,StreamChoice>()
+        fun publish(batch:List<StreamChoice>,loading:Boolean) {
+            val selection=current() ?: return
+            batch.forEach { results.putIfAbsent(SourcePaginationRP12.key(it),it) }
+            sourceSelection=selection.copy(streams=results.values.toList(),loading=loading)
+        }
         try {
-            val links=resolvePlaybackSources(item,imdb,season,episode)
-            if(!valid()) return@run
-            if(links.isEmpty()) error=tr("No hay enlaces que cumplan los filtros. Revisa Size Limit en Settings.","No links match your filters. Check Size Limit in Settings.")
-            else sourceSelection=SourceSelection(item,imdb,season,episode,links,resumeMs,ticket.generation,ticket.sequence)
-        } catch(e: CancellationException) { throw e } catch(e: Exception) { if(valid()) error=e.message } finally { if(valid()) busyMessage=null }
+            val onBatch: (suspend (List<StreamChoice>) -> Unit)? = if(progressive) {
+                { rows -> publish(rows,true) }
+            } else null
+            val links=resolvePlaybackSources(item,imdb,season,episode,onBatch)
+            if(!valid() || (progressive && current()==null)) return@run
+            if(links.isEmpty()) {
+                sourceSelection=null
+                error=tr("No hay enlaces que cumplan los filtros. Revisa Size Limit en Settings.","No links match your filters. Check Size Limit in Settings.")
+            } else if(progressive) publish(links,false)
+            else sourceSelection=initial.copy(streams=links,loading=false)
+        } catch(e:CancellationException) {throw e} catch(e:Exception) {
+            if(valid() && (!progressive || current()!=null)) {
+                if(results.isEmpty()) {sourceSelection=null;error=e.message}
+                else publish(emptyList(),false)
+            }
+        } finally {
+            if(valid() && !progressive) busyMessage=null
+        }
+    }
+
+    fun closeSourcePicker() {
+        val loading=sourceSelection?.loading==true
+        sourceSelection=null
+        if(loading) latestPlaybackRP87.cancel()
     }
 
     suspend fun refreshPlaybackLinks(selection: SourceSelection) {
         val ticket=PlaybackWorkGate.Ticket(selection.workGeneration,selection.workSequence)
-        if(sourceSelection!=selection || !playbackWork.current(ticket)) return
+        if(!playbackWork.current(ticket) || sourceSelection?.workSequence!=ticket.sequence) return
+        closeSourcePicker()
         playbackCacheMutex.withLock {
-            if(sourceSelection!=selection || !playbackWork.current(ticket)) return
+            if(!playbackWork.current(ticket)) return
             playbackLinkCache.remove(playbackCacheKey(selection.item,selection.imdb,selection.season,selection.episode))
             nativeSources.invalidate()
         }
-        if(sourceSelection==selection && playbackWork.current(ticket))
+        if(playbackWork.current(ticket))
             chooseSources(selection.item,selection.imdb,selection.season,selection.episode,selection.resumeMs)
     }
 
     suspend fun playSelectedSource(selection: SourceSelection, stream: StreamChoice) {
         if(!rapidPlaybackRP87.accept("${localExtrasScope()}:source:${stream.url}",android.os.SystemClock.uptimeMillis())) return
         val ticket=PlaybackWorkGate.Ticket(selection.workGeneration,selection.workSequence)
-        if(sourceSelection!=selection || !playbackWork.current(ticket)) return
-        if(stream !in selection.streams || !StreamFilters.allowed(stream,selection.item.type,selection.item.year,streamSizeBytes,selection.item.title)) return
-        sourceSelection=null
+        val current=sourceSelection?.takeIf {it.workGeneration==ticket.generation && it.workSequence==ticket.sequence} ?: return
+        if(!playbackWork.current(ticket)) return
+        if(stream !in current.streams || !StreamFilters.allowed(stream,selection.item.type,selection.item.year,streamSizeBytes,selection.item.title)) return
+        closeSourcePicker()
         if(partyRole==PartyRole.GUEST) {
             val remote=refreshParty() ?: return
             if(!playbackWork.current(ticket)) return
@@ -3404,7 +3443,7 @@ class AppState(context: Context) {
         }
         val moment=playerRequest?.takeIf {it.momentEndMs>0 && it.item.cloudId==selection.item.cloudId &&
             it.season==selection.season && it.episode==selection.episode}
-        if(playbackWork.current(ticket)) playResolved(selection.item,selection.imdb,selection.season,selection.episode,selection.resumeMs,stream,fallbackStreams=selection.streams,
+        if(playbackWork.current(ticket)) playResolved(selection.item,selection.imdb,selection.season,selection.episode,selection.resumeMs,stream,fallbackStreams=current.streams,
             onStarted={ req -> if(moment!=null) playerRequest=req.copy(momentStartMs=moment.momentStartMs,momentEndMs=moment.momentEndMs,momentSender=moment.momentSender) })
     }
 
@@ -4556,7 +4595,8 @@ data class SourceSelection(
     val streams: List<StreamChoice>,
     val resumeMs: Long? = null,
     val workGeneration: Long = -1,
-    val workSequence: Long = -1
+    val workSequence: Long = -1,
+    val loading: Boolean = false
 )
 
 internal fun partyTargetPosition(room: com.miflix.native2.model.WatchParty, now: Long = System.currentTimeMillis()): Long =

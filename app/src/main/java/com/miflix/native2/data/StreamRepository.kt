@@ -81,25 +81,29 @@ class StreamRepository internal constructor(initialManifestUrl:String,
         manifestUrls.remove(value.trim().replace("|","%7C"))
     }
 
-    suspend fun resolve(imdbId: String, type: String, season: Int = 0, episode: Int = 0, movieYear: String? = null, maxBytes: Long = 0, movieTitle: String? = null, preferredAudio: String = ""): List<StreamChoice> = coroutineScope {
+    suspend fun resolve(imdbId: String, type: String, season: Int = 0, episode: Int = 0, movieYear: String? = null, maxBytes: Long = 0, movieTitle: String? = null, preferredAudio: String = "", onBatch: (suspend (List<StreamChoice>) -> Unit)? = null): List<StreamChoice> = coroutineScope {
         val manifests = manifestUrls.toList()
         if (manifests.isEmpty()) throw IllegalStateException("No stream add-on is configured")
         val rows = manifests.mapIndexed { index,manifest ->
-            async(kotlinx.coroutines.Dispatchers.Default) {
-                try {
-                    val raw=resolveOne(manifest,index,imdbId,type,season,episode)
-                    val accepted=raw.filter {StreamFilters.allowed(it,type,movieYear,maxBytes,movieTitle)}
-                    val unknownSize=if(maxBytes>0) raw.count {StreamOrdering.bytes(it)<=0 && !StreamFilters.allowsUnknownSize(it)} else 0
-                    statuses[manifest]="Returned: ${raw.size} · Available: ${accepted.size}"+
-                        (if(unknownSize>0) " · Hidden (unknown size): $unknownSize" else "")+
-                        (if((torrentCounts[manifest] ?: 0)>0) " · Torrents ignored: ${torrentCounts[manifest]}" else "")
-                    accepted
-                } catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(e:Exception) {
-                    val configured=statuses[manifest]=="Configuration required"
-                    statuses[manifest]=if(configured) "Configuration required" else
-                        if(e is AddonHttpFailureRP12) "HTTP ${e.status}" else if(e is HttpFailure) "HTTP ${e.status}" else "Request failed"
-                    emptyList()
+            async {
+                val batch = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                    try {
+                        val raw=resolveOne(manifest,index,imdbId,type,season,episode)
+                        val accepted=raw.filter {StreamFilters.allowed(it,type,movieYear,maxBytes,movieTitle)}
+                        val unknownSize=if(maxBytes>0) raw.count {StreamOrdering.bytes(it)<=0 && !StreamFilters.allowsUnknownSize(it)} else 0
+                        statuses[manifest]="Returned: ${raw.size} · Available: ${accepted.size}"+
+                            (if(unknownSize>0) " · Hidden (unknown size): $unknownSize" else "")+
+                            (if((torrentCounts[manifest] ?: 0)>0) " · Torrents ignored: ${torrentCounts[manifest]}" else "")
+                        accepted
+                    } catch(e:kotlinx.coroutines.CancellationException) {throw e} catch(e:Exception) {
+                        val configured=statuses[manifest]=="Configuration required"
+                        statuses[manifest]=if(configured) "Configuration required" else
+                            if(e is AddonHttpFailureRP12) "HTTP ${e.status}" else if(e is HttpFailure) "HTTP ${e.status}" else "Request failed"
+                        emptyList()
+                    }
                 }
+                if(batch.isNotEmpty()) onBatch?.invoke(batch)
+                batch
             }
         }.awaitAll().flatten()
 

@@ -3024,10 +3024,10 @@ fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
     var addonFilter by remember(selection.item.cloudId,selection.season,selection.episode) {mutableStateOf("")}
     val addonNames=(state.orderedSourceAddonsRP2().map {it.name}+selection.streams.map {it.addonName.ifBlank {"Add-on"}}).distinct()
     val filteredStreams=selection.streams.filter {addonFilter.isBlank() || it.addonName.ifBlank {"Add-on"}==addonFilter}
-    val pages=remember(selection) {mutableStateMapOf<String,Int>()}
+    val pages=remember(selection.workGeneration,selection.workSequence) {mutableStateMapOf<String,Int>()}
     val sizes=state.sourcePageSizesRP12()
     LaunchedEffect(addonNames) {if(addonFilter.isNotBlank() && addonFilter !in addonNames) addonFilter=""}
-    val firstLink = remember(selection) { FocusRequester() }
+    val firstLink = remember(selection.workGeneration,selection.workSequence) { FocusRequester() }
     val activeRequest=state.playerRequest?.takeIf {it.item.cloudId==selection.item.cloudId &&
         it.season==selection.season && it.episode==selection.episode}
     val playingUrl=activeRequest?.stream?.let {it.sourceUrl.ifBlank {it.url}}
@@ -3042,8 +3042,8 @@ fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
         val index=visibleStreams.indexOfFirst {com.miflix.native2.data.SourcePaginationRP12.key(it)==target}
         if(index>=0) {linkScroll.scrollToItem(index);withFrameNanos {};runCatching {nextLink.requestFocus()};nextKey=null}
     }
-    LaunchedEffect(selection) {
-        if(selection.streams.isNotEmpty()) {
+    LaunchedEffect(selection.workSequence,visibleStreams.isNotEmpty()) {
+        if(visibleStreams.isNotEmpty()) {
             linkScroll.scrollToItem(focusIndex)
             withFrameNanos { }
             runCatching {firstLink.requestFocus()}
@@ -3052,7 +3052,7 @@ fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
     LaunchedEffect(addonFilter) {linkScroll.scrollToItem(focusIndex)}
     PlayerMenuDialog(
         forceSide = true,
-        onDismissRequest = { state.sourceSelection = null },
+        onDismissRequest = state::closeSourcePicker,
         properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false)
     ) {
         Box(Modifier.fillMaxSize().background(Color.Transparent).padding(20.dp)) {
@@ -3063,7 +3063,7 @@ fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
                     Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                     FocusButton(tr("Actualizar enlaces","Refresh links")) { state.launch { state.refreshPlaybackLinks(selection) } }
                     Spacer(Modifier.width(12.dp))
-                    FocusButton(tr("Cerrar","Close")) { state.sourceSelection = null }
+                    FocusButton(tr("Cerrar","Close")) { state.closeSourcePicker() }
                     }
                 }
                 Text(tr("Enlaces guardados hasta 3 horas. Usa Actualizar enlaces si alguno dejó de funcionar.",
@@ -3077,10 +3077,11 @@ fun SourcePickerOverlay(state: AppState, selection: SourceSelection) {
                     item {FocusButton("All",primary=addonFilter.isBlank()) {addonFilter=""}}
                     items(addonNames,key={it}) {name ->FocusButton(name,primary=addonFilter==name) {addonFilter=name}}
                 }
-                if(visibleStreams.isEmpty()) Text(tr("Este add-on no devolvió enlaces para este título.","This add-on returned no links for this title."),color=Muted,fontSize=14.sp)
+                if(selection.loading) Text(tr("Buscando enlaces…","Looking for links…"),color=Muted,fontSize=14.sp)
+                else if(visibleStreams.isEmpty()) Text(tr("Este add-on no devolvió enlaces para este título.","This add-on returned no links for this title."),color=Muted,fontSize=14.sp)
                 Spacer(Modifier.height(10.dp))
                 LazyColumn(Modifier.weight(1f),state=linkScroll,verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 30.dp)) {
-                    items(visibleStreams.size) { index ->
+                    items(visibleStreams.size,key={index -> com.miflix.native2.data.SourcePaginationRP12.key(visibleStreams[index])}) { index ->
                         val stream=visibleStreams[index]
                         Column {
                         if(state.partyRole==PartyRole.GUEST && com.miflix.native2.data.PartySourcePolicy.key(stream)==state.watchParty?.sourceKey) Text(tr("FUENTE DEL PARTY","PARTY SOURCE"),color=Accent,fontSize=12.sp)

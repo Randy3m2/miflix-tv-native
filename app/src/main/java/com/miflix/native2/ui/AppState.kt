@@ -21,6 +21,7 @@ import com.miflix.native2.data.TmdbRepository
 import com.miflix.native2.data.UpdateRepository
 import com.miflix.native2.model.*
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +30,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -694,7 +697,7 @@ class AppState(context: Context) {
         if(req.liveProvider=="lidom") {showLidomSources(req);return}
         if(req.live) { error=tr("Los canales en vivo usan su enlace configurado","Live channels use their configured stream"); return }
         val generation=playbackWork.generation
-        val imdb=tmdb.details(req.item).imdbId ?: return
+        val imdb=(details?.takeIf {it.summary.cloudId==req.item.cloudId} ?: tmdb.details(req.item)).imdbId ?: return
         if(generation!=playbackWork.generation || playerRequest?.playbackId!=req.playbackId) return
         chooseSources(req.item,imdb,req.season,req.episode,position)
     }
@@ -1348,7 +1351,7 @@ class AppState(context: Context) {
     private val playbackCacheMutex=Mutex()
     private var sourcePrefetchRevisionRP90 by mutableIntStateOf(0)
     private fun sourcePrefetchKeyRP90()="source_prefetch_rp90:${localExtrasScope()}"
-    internal val sourcePrefetchEnabledRP90:Boolean get() {sourcePrefetchRevisionRP90;return playbackPrefs.getBoolean(sourcePrefetchKeyRP90(),false)}
+    internal val sourcePrefetchEnabledRP90:Boolean get() {sourcePrefetchRevisionRP90;return playbackPrefs.getBoolean(sourcePrefetchKeyRP90(),appContext.packageName!="com.brunio.mobile")}
     internal fun saveSourcePrefetchRP90(enabled:Boolean) {
         playbackPrefs.edit().putBoolean(sourcePrefetchKeyRP90(),enabled).apply()
         sourcePrefetchRevisionRP90++
@@ -1356,6 +1359,11 @@ class AppState(context: Context) {
     }
     private var sourceWarmupJobRP90:kotlinx.coroutines.Job?=null
     private var sourceWarmupKeyRP90:PlaybackCacheKey?=null
+    private class WarmSourceLookup(val key:PlaybackCacheKey) {
+        val batches=MutableStateFlow<List<StreamChoice>>(emptyList())
+        val finished=CompletableDeferred<List<StreamChoice>?>()
+    }
+    private var warmSourceLookup:WarmSourceLookup?=null
     private data class WarmIdentityRP91(val sources:PlaybackCacheKey,val subtitle:String,val tracksRevision:Int)
     var smartPrebufferEnabledRP167 by mutableStateOf(playbackPrefs.getBoolean("smart_prebuffer_rp167",true))
         private set
@@ -1533,23 +1541,35 @@ class AppState(context: Context) {
     internal suspend fun prefetchDetailsRP90(item:MediaSummary,identity:Any) {
         delay(DetailsPrefetchRP90.DELAY_MS)
         // An earlier Play already owns startup; do not start a parallel decoder/materialization.
-        if(playbackLoading!=null || detailsWarmupKeyRP90(item)!=identity) return
+        if(playbackLoading!=null || sourceSelection!=null || detailsWarmupKeyRP90(item)!=identity) return
         val imdb=details?.imdbId ?: return
         val target=warmupTargetRP90(item)
         val key=playbackCacheKey(item,imdb,target.first,target.second)
         val job=kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job] ?: return
         sourceWarmupJobRP90?.takeUnless {it===job}?.cancel()
         sourceWarmupJobRP90=job;sourceWarmupKeyRP90=key
+        val lookup=WarmSourceLookup(key)
+        warmSourceLookup=lookup
         try {
-            // Share source selection and materialization with an early Play.
-            val streams=kotlinx.coroutines.withTimeoutOrNull(12000L) {resolveCachedSourcesRP90(item,imdb,target.first,target.second)}.orEmpty()
-            if(streams.isNotEmpty()) prepareVideoRP91(item,imdb,target.first,target.second,identity,streams)
+            val streams=try {
+                withTimeoutOrNull(12000L) {
+                    resolveCachedSourcesRP90(item,imdb,target.first,target.second) { batch ->
+                        lookup.batches.value=lookup.batches.value+batch
+                    }
+                }.also {lookup.finished.complete(it)}.orEmpty()
+            } finally {
+                lookup.finished.complete(null)
+                if(warmSourceLookup===lookup) warmSourceLookup=null
+            }
+            if(streams.isNotEmpty() && sourceSelection==null && playbackPrefs.getBoolean(sourcePrefetchKeyRP90(),false))
+                prepareVideoRP91(item,imdb,target.first,target.second,identity,streams)
         } catch(e:CancellationException) {throw e} catch(_:Exception) {
-            // Speculative failure is silent and is never cached; Play can retry normally.
+            // Play can retry a failed speculative lookup.
         } finally {
             if(sourceWarmupJobRP90===job) {sourceWarmupJobRP90=null;sourceWarmupKeyRP90=null}
         }
     }
+
     internal fun endVideoWarmupRP91(identity:Any?) {
         val entry=preparedVideoRP91
         if(entry?.identity!=identity && warmRetryPlanRP92?.identity!=identity) return
@@ -1567,7 +1587,21 @@ class AppState(context: Context) {
     private suspend fun resolvePlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int,onBatch:(suspend (List<StreamChoice>)->Unit)?=null):List<StreamChoice> {
         val key=playbackCacheKey(item,imdb,season,episode)
         if(sourceWarmupKeyRP90!=null && sourceWarmupKeyRP90!=key) sourceWarmupJobRP90?.cancel()
-        return resolveCachedSourcesRP90(item,imdb,season,episode,onBatch)
+        val lookup=warmSourceLookup?.takeIf {it.key==key}
+        if(lookup==null || onBatch==null) return resolveCachedSourcesRP90(item,imdb,season,episode,onBatch)
+        return coroutineScope {
+            val updates=launch {lookup.batches.collect {if(it.isNotEmpty()) onBatch(it)}}
+            val resolved=try {
+                lookup.finished.await()
+            } finally {
+                updates.cancel()
+            }
+            // A timed-out prefetch did not populate the full cache. Keep its visible results
+            // and let the foreground request retry the missing lookup.
+            val partial=lookup.batches.value
+            if(partial.isNotEmpty()) onBatch(partial)
+            resolved ?: resolveCachedSourcesRP90(item,imdb,season,episode,onBatch)
+        }
     }
     private suspend fun sortPlaybackRowsRP92(rows:List<StreamChoice>,item:MediaSummary?=null):List<StreamChoice> {
         val audio=audioLanguage;val secondary=secondaryAudioLanguageRP62;val order=sourceProviderOrderRP2()
@@ -3378,9 +3412,6 @@ class AppState(context: Context) {
         sourceSelection=initial.takeIf {progressive}
         busyMessage=if(progressive) null else tr("Buscando todos los enlaces…","Finding all playback links…")
         error=null
-        // A speculative lookup holds the cache lock until all providers finish.
-        // Give the interactive picker priority so it can display providers as they finish.
-        if(progressive) sourceWarmupJobRP90?.cancel()
         val results=linkedMapOf<String,StreamChoice>()
         fun publish(batch:List<StreamChoice>,loading:Boolean) {
             val selection=current() ?: return
@@ -3418,6 +3449,8 @@ class AppState(context: Context) {
         val ticket=PlaybackWorkGate.Ticket(selection.workGeneration,selection.workSequence)
         if(!playbackWork.current(ticket) || sourceSelection?.workSequence!=ticket.sequence) return
         closeSourcePicker()
+        if(sourceWarmupKeyRP90==playbackCacheKey(selection.item,selection.imdb,selection.season,selection.episode))
+            sourceWarmupJobRP90?.cancel()
         playbackCacheMutex.withLock {
             if(!playbackWork.current(ticket)) return
             playbackLinkCache.remove(playbackCacheKey(selection.item,selection.imdb,selection.season,selection.episode))

@@ -1387,11 +1387,10 @@ class AppState(context: Context) {
         discardPreparedVideoRP91()
         val request=PlayerRequest(current.item,chosen,next.season,next.episode,0L)
         val timing=com.miflix.native2.player.SubtitleTiming()
-        val gate=WarmLoadControlRP91(smartRP167=true)
-        val player=createWarmPlaybackRP92(appContext,this,request,timing,gate,::valid)
+        val player=createWarmPlaybackRP92(appContext,this,request,timing,::valid)
         if(!valid()){player.release();return}
         player.volume=0f;player.playWhenReady=false
-        val entry=PreparedVideoRP91(warmIdentityRP91(current.item,imdb,next.season,next.episode),imdb,request,chosen.url,player,timing,gate,android.os.SystemClock.elapsedRealtime())
+        val entry=PreparedVideoRP91(warmIdentityRP91(current.item,imdb,next.season,next.episode),imdb,request,chosen.url,player,timing,android.os.SystemClock.elapsedRealtime())
         preparedVideoRP91=entry;smartNextEntryRP167=entry;smartNextOriginRP167=current.playbackId
         val listener=object:androidx.media3.common.Player.Listener {override fun onPlayerError(error:androidx.media3.common.PlaybackException){if(preparedVideoRP91===entry)discardPreparedVideoRP91()}}
         entry.listener=listener;player.addListener(listener)
@@ -1441,7 +1440,6 @@ class AppState(context: Context) {
         val plan=warmRetryPlanRP92;warmRetryPlanRP92=null;plan?.job?.cancel()
         entry.expiryJob?.cancel()
         entry.listener?.let {entry.player.removeListener(it)}
-        entry.gate.activate()
         return entry.player
     }
     private suspend fun prepareVideoRP91(item:MediaSummary,imdb:String,season:Int,episode:Int,identity:Any,streams:List<StreamChoice>) {
@@ -1501,11 +1499,9 @@ class AppState(context: Context) {
                     discardPreparedVideoRP91(keepRetry=true)
                     val timing=com.miflix.native2.player.SubtitleTiming()
                     val request=PlayerRequest(plan.item,best,plan.season,plan.episode,plan.position)
-                    val memory=appContext.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
-                    val gate=WarmLoadControlRP91(lowMemory=memory==null || memory.isLowRamDevice || memory.memoryClass<=128)
-                    val player=createWarmPlaybackRP92(appContext,this,request,timing,gate) {validWarmRetryRP92(plan)}
+                    val player=createWarmPlaybackRP92(appContext,this,request,timing) {validWarmRetryRP92(plan)}
                     if(!validWarmRetryRP92(plan)) {player.release();return}
-                    val entry=PreparedVideoRP91(plan.identity,plan.imdb,request,candidate.url,player,timing,gate,android.os.SystemClock.elapsedRealtime())
+                    val entry=PreparedVideoRP91(plan.identity,plan.imdb,request,candidate.url,player,timing,android.os.SystemClock.elapsedRealtime())
                     preparedVideoRP91=entry
                     val listener=object:androidx.media3.common.Player.Listener {
                         override fun onPlayerError(error:androidx.media3.common.PlaybackException) {
@@ -1545,7 +1541,7 @@ class AppState(context: Context) {
         sourceWarmupJobRP90?.takeUnless {it===job}?.cancel()
         sourceWarmupJobRP90=job;sourceWarmupKeyRP90=key
         try {
-            // Keep source selection/materialization shared with an early Play; video buffers asynchronously.
+            // Share source selection and materialization with an early Play.
             val streams=kotlinx.coroutines.withTimeoutOrNull(12000L) {resolveCachedSourcesRP90(item,imdb,target.first,target.second)}.orEmpty()
             if(streams.isNotEmpty()) prepareVideoRP91(item,imdb,target.first,target.second,identity,streams)
         } catch(e:CancellationException) {throw e} catch(_:Exception) {

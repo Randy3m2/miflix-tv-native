@@ -1273,7 +1273,7 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     }}
 
                     if(category=="playback" && BuildConfig.APPLICATION_ID!="com.brunio.mobile") item(key="smart-prebuffer-rp167") {
-                        SettingsTileRC103("Smart Prebuffer",tr("Objetivo: 4 segundos / 8 MB del siguiente episodio. Solo TV con memoria, red y decoder suficientes; se omite si el episodio actual necesita búfer.","Target: 4 seconds / 8 MB of the next episode. Only on TVs with sufficient memory, network and decoder capacity; skips when current playback needs buffering."),"play",checked=state.smartPrebufferEnabledRP167) {state.saveSmartPrebufferRP167(!state.smartPrebufferEnabledRP167)}
+                        SettingsTileRC103(tr("Preparar siguiente episodio","Prepare next episode"),tr("Busca el enlace del próximo episodio mientras ves el actual. El video empieza al cambiar de episodio.","Finds a link for the next episode while you watch. Video starts when you switch episodes."),"play",checked=state.smartPrebufferEnabledRP167) {state.saveSmartPrebufferRP167(!state.smartPrebufferEnabledRP167)}
                     }
                     if(category=="playback") item(key="previous-live-channel") {
                         SettingsTileRC103(tr("TV en vivo · Canal anterior","Live TV · Previous channel"),tr("Alterna entre los dos últimos canales reproducidos. Historial por perfil durante esta sesión.","Switch between the last two played channels. Per-profile history for this session."),"previous",checked=state.previousLiveChannelEnabled) {state.savePreviousLiveChannelEnabled(!state.previousLiveChannelEnabled)}
@@ -1380,14 +1380,14 @@ fun SettingsScreen(state: AppState, onBack: () -> Unit) {
                     if(category=="playback") item(key="setting-prefetch-rp90") {
                         SettingsSectionCard(onFocused={
                             visualHelp=null;helpTitle=tr("Precargar enlaces","Preload sources")
-                            helpDescription=tr("Tras 250 ms elige una fuente y prepara hasta 15 segundos de vídeo, sin sonido. Play reutiliza ese reproductor. Hasta cinco fuentes si Autoplay next link está activado. Consume datos; solo modo normal, por perfil.","After 250 ms selects a source and prepares up to 15 seconds of video silently. Play reuses that player. Tries up to five sources if Autoplay next link is enabled. Uses data; normal mode only, per profile.")
+                            helpDescription=tr("Busca una fuente al abrir la sinopsis. El video empieza al pulsar Play. Disponible en modo normal y se guarda por perfil.","Finds a source when you open the synopsis. Video starts when you press Play. Available in normal mode and saved per profile.")
                             helpIndex=-1
                         }) {
                             Text(tr("Inicio más rápido","Faster playback start"),color=Color.White,fontSize=22.sp)
-                            FocusButton(tr("Preparar vídeo al abrir detalles","Prepare video in details")+": "+if(state.sourcePrefetchEnabledRP90) tr("Activado","ON") else tr("Desactivado","OFF"),modifier=Modifier.fillMaxWidth()) {
+                            FocusButton(tr("Buscar enlace al abrir detalles","Find source in details")+": "+if(state.sourcePrefetchEnabledRP90) tr("Activado","ON") else tr("Desactivado","OFF"),modifier=Modifier.fillMaxWidth()) {
                                 state.saveSourcePrefetchRP90(!state.sourcePrefetchEnabledRP90)
                             }
-                            Text(tr("Prepara unos segundos de vídeo mientras lees la sinopsis, sin sonido. Consume datos.","Silently prepares a few seconds of video while you read the synopsis. Uses data."),color=Muted,fontSize=14.sp)
+                            Text(tr("Adelanta la búsqueda del enlace mientras lees la sinopsis.","Finds a source while you read the synopsis."),color=Muted,fontSize=14.sp)
                         }
                     }
                     if(category=="sources") item(key="setting-8") {
@@ -1510,7 +1510,7 @@ internal fun playbackPreferencesRP92(state:AppState,request:PlayerRequest):Playb
 private class UnsupportedBluRayLayout(message:String): IllegalArgumentException(message)
 
 internal fun playbackSetupRP92(context:android.content.Context,prefs:PlaybackPreferencesRP92,request:PlayerRequest,
-    timing:com.miflix.native2.player.SubtitleTiming,warmGate:WarmLoadControlRP91?=null):PlaybackSetupRP92 {
+    timing:com.miflix.native2.player.SubtitleTiming):PlaybackSetupRP92 {
     val tvVod=!request.live && context.packageName!="com.brunio.mobile"
     if(tvVod) {
         val discLayout=listOf(request.stream.filename,Uri.parse(request.stream.url).path.orEmpty()).any {
@@ -1535,7 +1535,7 @@ internal fun playbackSetupRP92(context:android.content.Context,prefs:PlaybackPre
         .setLooper(android.os.Looper.getMainLooper())
         .setHandleAudioBecomingNoisy(true)
         .setMediaSourceFactory(DefaultMediaSourceFactory(DefaultDataSource.Factory(context,http)))
-        .setLoadControl(warmGate ?: if(tvVod) tvVodLoadControl(lowMemory) else androidx.media3.exoplayer.DefaultLoadControl.Builder()
+        .setLoadControl(if(tvVod) tvVodLoadControl(lowMemory) else androidx.media3.exoplayer.DefaultLoadControl.Builder()
             .setBufferDurationsMs(15000,50000,1000,1500).setTargetBufferBytes(48*1024*1024)
             .setPrioritizeTimeOverSizeThresholds(false).build())
     if(!request.live) builder.setAudioAttributes(androidx.media3.common.AudioAttributes.Builder()
@@ -1562,12 +1562,12 @@ internal fun playbackSetupRP92(context:android.content.Context,prefs:PlaybackPre
     if(!strictSpanish) saved?.optString("audio")?.takeIf {it.isNotBlank()}?.let {tracks.setPreferredAudioLanguage(it)}
     if(strictSpanish) tracks.setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,true)
     tracks.setTrackTypeDisabled(C.TRACK_TYPE_TEXT,text==null)
-    val play=warmGate==null && prefs.play
+    val play=prefs.play
     return PlaybackSetupRP92(builder,media.build(),tracks.build(),request.resumeMs,
-        if(warmGate!=null || strictSpanish) 0f else 1f,play,request.momentEndMs>0)
+        if(strictSpanish) 0f else 1f,play,request.momentEndMs>0)
 }
 
-internal fun configurePlaybackRP92(player:ExoPlayer,setup:PlaybackSetupRP92):ExoPlayer {
+internal fun configurePlaybackRP92(player:ExoPlayer,setup:PlaybackSetupRP92,prepare:Boolean=true):ExoPlayer {
     check(android.os.Looper.myLooper()==android.os.Looper.getMainLooper())
     player.setSeekBackIncrementMs(10_000);player.setSeekForwardIncrementMs(10_000)
     if(setup.exactSeek) player.setSeekParameters(androidx.media3.exoplayer.SeekParameters.EXACT)
@@ -1575,13 +1575,13 @@ internal fun configurePlaybackRP92(player:ExoPlayer,setup:PlaybackSetupRP92):Exo
     player.trackSelectionParameters=setup.tracks
     player.setMediaItem(setup.media,setup.position)
     player.videoScalingMode=C.VIDEO_SCALING_MODE_SCALE_TO_FIT
-    player.prepare();player.playWhenReady=setup.play
+    if(prepare) {player.prepare();player.playWhenReady=setup.play}
     return player
 }
 
 internal fun createPlaybackPlayerRP91(context:android.content.Context,state:AppState,request:PlayerRequest,
-    timing:com.miflix.native2.player.SubtitleTiming,warmGate:WarmLoadControlRP91?=null):ExoPlayer {
-    val setup=playbackSetupRP92(context,playbackPreferencesRP92(state,request),request,timing,warmGate)
+    timing:com.miflix.native2.player.SubtitleTiming):ExoPlayer {
+    val setup=playbackSetupRP92(context,playbackPreferencesRP92(state,request),request,timing)
     val player=setup.builder.build()
     return try {configurePlaybackRP92(player,setup)} catch(e:Exception) {player.release();throw e}
 }
@@ -1689,8 +1689,13 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
             val prepared=state.takePreparedPlayerRP91(request)
             val active=prepared ?: createPlaybackPlayerRP91(context,state,request,timing)
             if(prepared!=null) {
-                active.volume=1f
-                active.playWhenReady=!state.isPlaybackParked(request) && (request.sourceFallbackPlaying ?: true)
+                try {
+                    active.prepare()
+                    active.playWhenReady=!state.isPlaybackParked(request) && (request.sourceFallbackPlaying ?: true)
+                } catch(e:Exception) {
+                    active.release()
+                    throw e
+                }
             }
             Result.success(active)
         } catch(e:kotlinx.coroutines.CancellationException) {
@@ -1921,11 +1926,7 @@ fun PlayerScreen(state: AppState, request: PlayerRequest, onClose: () -> Unit) {
         if(!nextPrebufferEligibleRP167){if(!ended)state.stopNextPrebufferRP167(request.playbackId);return@LaunchedEffect}
         if(nextPrebufferAttemptedRP167)return@LaunchedEffect
         nextPrebufferAttemptedRP167=true
-        // Protect the current stream and scarce hardware decoders before creating one paused warm player.
-        if(player.bufferedPosition-player.currentPosition<5000 || (player.videoFormat?.height ?: 0)>1080)return@LaunchedEffect
-        val mimeRP167=player.videoFormat?.sampleMimeType
-        val supportsTwo=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {runCatching {android.media.MediaCodecList(android.media.MediaCodecList.REGULAR_CODECS).codecInfos.filter {!it.isEncoder && it.supportedTypes.any {t->t==mimeRP167}}.any {it.getCapabilitiesForType(mimeRP167!!).maxSupportedInstances>=2}}.getOrDefault(false)}
-        if(!supportsTwo)return@LaunchedEffect
+        if(player.bufferedPosition-player.currentPosition<5000)return@LaunchedEffect
         try {kotlinx.coroutines.withTimeoutOrNull(9000) {upcoming?.let {state.prepareNextPrebufferRP167(request,it) {player.playerError==null && player.bufferedPosition-player.currentPosition>=2000}}}} catch(e:kotlinx.coroutines.CancellationException){throw e} catch(_:OutOfMemoryError) {state.stopNextPrebufferRP167(request.playbackId)} catch(_:Exception) {state.stopNextPrebufferRP167(request.playbackId)}
     }
     DisposableEffect(request.playbackId) {onDispose {state.stopNextPrebufferRP167(request.playbackId)}}

@@ -23,20 +23,21 @@ private object WarmBuilderRP92 {
 }
 
 internal suspend fun createWarmPlaybackRP92(context:Context,state:AppState,request:PlayerRequest,
-    timing:SubtitleTiming,gate:WarmLoadControlRP91,valid:()->Boolean):ExoPlayer {
+    timing:SubtitleTiming,valid:()->Boolean):ExoPlayer {
     val prefs=playbackPreferencesRP92(state,request)
     return WarmBuilderRP92.engine.run(
         build={
             Trace.beginSection("BruniO.WarmBuild")
             try {
-                val setup=playbackSetupRP92(context,prefs,request,timing,gate)
+                val setup=playbackSetupRP92(context,prefs,request,timing)
                 setup.builder.build() to setup
             } finally {Trace.endSection()}
         },
         valid=valid,
         configure={player,setup ->
             Trace.beginSection("BruniO.WarmConfigure")
-            try {configurePlaybackRP92(player,setup)} finally {Trace.endSection()}
+            // Keep the player idle until it owns foreground playback.
+            try {configurePlaybackRP92(player,setup,prepare=false)} finally {Trace.endSection()}
         },
         release={player ->try {player.release()} catch(e:Exception) {LocalCrashRP87.record(context,e)}}
     )

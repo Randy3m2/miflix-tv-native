@@ -19,6 +19,19 @@ class AddonStartupRP12Test {
   }
   assertEquals(1,repo.resolve("tt1","movie",preferredAudio="en").size)
  }
+ @Test fun manualLookupUsesStreamEndpointWithoutWaitingForManifest()=runBlocking {
+  val requests=mutableListOf<String>()
+  val repo=StreamRepository("https://torrentio.strem.fun/config/manifest.json") {url,_ ->
+   requests.add(url)
+   check(!url.endsWith("manifest.json")) {"Manual lookup requested a manifest"}
+   stream("English")
+  }
+  val batches=mutableListOf<String>()
+  val rows=repo.resolve("tt1","movie") {batch -> batches.add(batch.single().addonName)}
+  assertEquals(listOf("https://torrentio.strem.fun/config/stream/movie/tt1.json"),requests)
+  assertEquals(listOf("Torrentio · 1"),batches)
+  assertEquals(1,rows.size)
+ }
  @Test fun fastProviderIsPublishedBeforeSlowProviderFinishes()=runBlocking {
   val releaseSlow=CompletableDeferred<Unit>()
   val batches=mutableListOf<String>()

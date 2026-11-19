@@ -22,7 +22,7 @@ class StreamRepository internal constructor(initialManifestUrl:String,
     private val metadata=java.util.concurrent.ConcurrentHashMap<String,ManifestInfo>()
     private fun label(manifest:String,position:Int):String {
         val host=runCatching {URI(manifest.replace("|","%7C")).host}.getOrNull().orEmpty().ifBlank {"Add-on"}
-        val known=when(host) {"peerflix.mov","addon.peerflix.mov"->"Peerflix";"addonlatam.duckdns.org"->"Addon Latam";"mg.homelabx.qzz.io"->"Deepflix";"torrentio.strem.fun"->"Torrentio";else->host}
+        val known=when(host) {"peerflix.mov","addon.peerflix.mov"->"Peerflix";"addonlatam.duckdns.org"->"Addon Latam";"mg.homelabx.qzz.io"->"Deepflix";"torrentio.strem.fun"->"Torrentio";"comet.feels.legal","comet.elfhosted.com"->"Comet";else->host}
         return if(manifest==BundledAddonsRP12.mandanguita) "Mandanguita TV" else (metadata[manifest]?.name?.takeIf {it.isNotBlank()} ?: known)+" · "+(position+1)
     }
     suspend fun inspectSourceAddons() = coroutineScope {
@@ -88,7 +88,7 @@ class StreamRepository internal constructor(initialManifestUrl:String,
             async {
                 val batch = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
                     try {
-                        val raw=resolveOne(manifest,index,imdbId,type,season,episode)
+                        val raw=resolveOne(manifest,index,imdbId,type,season,episode,checkManifest=onBatch==null)
                         val accepted=raw.filter {StreamFilters.allowed(it,type,movieYear,maxBytes,movieTitle)}
                         val unknownSize=if(maxBytes>0) raw.count {StreamOrdering.bytes(it)<=0 && !StreamFilters.allowsUnknownSize(it)} else 0
                         statuses[manifest]="Returned: ${raw.size} · Available: ${accepted.size}"+
@@ -108,7 +108,7 @@ class StreamRepository internal constructor(initialManifestUrl:String,
         }.awaitAll().flatten()
 
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-            StreamOrdering.sorted(rows.filter {StreamFilters.allowed(it,type,movieYear,maxBytes,movieTitle)},preferredAudio)
+            StreamOrdering.sorted(rows,preferredAudio)
         }
     }
 
@@ -140,17 +140,17 @@ class StreamRepository internal constructor(initialManifestUrl:String,
     }
 
     private suspend fun resolveOne(manifest: String, index:Int, imdbId: String, type: String, season: Int, episode: Int,
-        maxAccepted:Int=Int.MAX_VALUE,timeoutMs:Int=8000,accept:(StreamChoice)->Boolean={true}): List<StreamChoice> = coroutineScope {
+        maxAccepted:Int=Int.MAX_VALUE,timeoutMs:Int=8000,checkManifest:Boolean=true,accept:(StreamChoice)->Boolean={true}): List<StreamChoice> = coroutineScope {
         val base = manifest.removeSuffix("/manifest.json")
         val stremioType = if (type == "series") "series" else "movie"
         val mediaId = if (stremioType == "series") "$imdbId:$season:$episode" else imdbId
         torrentCounts[manifest]=0
         if(metadata[manifest]?.streams==false) return@coroutineScope emptyList()
-        // Metadata must not add a second sequential wait before the stream request.
-        val manifestInfo=async {info(manifest)}
-        val streamResponse=async {JSONObject(fetch("$base/stream/$stremioType/$mediaId.json",timeoutMs))}
-        val json=streamResponse.await()
-        if(!manifestInfo.await().streams) return@coroutineScope emptyList()
+        // The manual picker can use the installed add-on label even on a cold cache.
+        // Its first playable batch only depends on the stream endpoint.
+        val manifestInfo=if(checkManifest) async {info(manifest)} else null
+        val json=JSONObject(fetch("$base/stream/$stremioType/$mediaId.json",timeoutMs))
+        if(manifestInfo?.await()?.streams==false) return@coroutineScope emptyList()
         val addonName = label(manifest,index)
         val a = json.optJSONArray("streams") ?: return@coroutineScope emptyList()
         val context=kotlinx.coroutines.currentCoroutineContext()

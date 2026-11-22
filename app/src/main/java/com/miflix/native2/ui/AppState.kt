@@ -21,7 +21,6 @@ import com.miflix.native2.data.TmdbRepository
 import com.miflix.native2.data.UpdateRepository
 import com.miflix.native2.model.*
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.Dispatchers
@@ -469,6 +468,7 @@ class AppState(context: Context) {
         discardPreparedVideoRP91()
         sourceWarmupJobRP90?.cancel();sourceWarmupJobRP90=null;sourceWarmupKeyRP90=null
         latestPlaybackRP87.cancel()
+        cancelSourceLookups()
         playbackWork.invalidate(); sourceFallback=null; rememberedStartRP16=null; sourceSelection=null; busyMessage=null;playbackLoading=null
         playbackSubtitleJobs.values.forEach { it.cancel() }; playbackSubtitleJobs.clear()
     }
@@ -1359,11 +1359,17 @@ class AppState(context: Context) {
     }
     private var sourceWarmupJobRP90:kotlinx.coroutines.Job?=null
     private var sourceWarmupKeyRP90:PlaybackCacheKey?=null
-    private class WarmSourceLookup(val key:PlaybackCacheKey) {
+    private class SourceLookup {
         val batches=MutableStateFlow<List<StreamChoice>>(emptyList())
-        val finished=CompletableDeferred<List<StreamChoice>?>()
+        lateinit var result:Deferred<List<StreamChoice>>
     }
-    private var warmSourceLookup:WarmSourceLookup?=null
+    private val sourceLookups=linkedMapOf<PlaybackCacheKey,SourceLookup>()
+
+    private fun cancelSourceLookups() {
+        val running=sourceLookups.values.toList()
+        sourceLookups.clear()
+        running.forEach { it.result.cancel() }
+    }
     private data class WarmIdentityRP91(val sources:PlaybackCacheKey,val subtitle:String,val tracksRevision:Int)
     var smartPrebufferEnabledRP167 by mutableStateOf(playbackPrefs.getBoolean("smart_prebuffer_rp167",true))
         private set
@@ -1548,19 +1554,10 @@ class AppState(context: Context) {
         val job=kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job] ?: return
         sourceWarmupJobRP90?.takeUnless {it===job}?.cancel()
         sourceWarmupJobRP90=job;sourceWarmupKeyRP90=key
-        val lookup=WarmSourceLookup(key)
-        warmSourceLookup=lookup
         try {
-            val streams=try {
-                withTimeoutOrNull(12000L) {
-                    resolveCachedSourcesRP90(item,imdb,target.first,target.second) { batch ->
-                        lookup.batches.value=lookup.batches.value+batch
-                    }
-                }.also {lookup.finished.complete(it)}.orEmpty()
-            } finally {
-                lookup.finished.complete(null)
-                if(warmSourceLookup===lookup) warmSourceLookup=null
-            }
+            val streams=withTimeoutOrNull(12000L) {
+                resolveCachedSourcesRP90(item,imdb,target.first,target.second)
+            }.orEmpty()
             if(streams.isNotEmpty() && sourceSelection==null && playbackPrefs.getBoolean(sourcePrefetchKeyRP90(),false))
                 prepareVideoRP91(item,imdb,target.first,target.second,identity,streams)
         } catch(e:CancellationException) {throw e} catch(_:Exception) {
@@ -1587,21 +1584,7 @@ class AppState(context: Context) {
     private suspend fun resolvePlaybackSources(item: MediaSummary,imdb: String,season: Int,episode: Int,onBatch:(suspend (List<StreamChoice>)->Unit)?=null):List<StreamChoice> {
         val key=playbackCacheKey(item,imdb,season,episode)
         if(sourceWarmupKeyRP90!=null && sourceWarmupKeyRP90!=key) sourceWarmupJobRP90?.cancel()
-        val lookup=warmSourceLookup?.takeIf {it.key==key}
-        if(lookup==null || onBatch==null) return resolveCachedSourcesRP90(item,imdb,season,episode,onBatch)
-        return coroutineScope {
-            val updates=launch {lookup.batches.collect {if(it.isNotEmpty()) onBatch(it)}}
-            val resolved=try {
-                lookup.finished.await()
-            } finally {
-                updates.cancel()
-            }
-            // A timed-out prefetch did not populate the full cache. Keep its visible results
-            // and let the foreground request retry the missing lookup.
-            val partial=lookup.batches.value
-            if(partial.isNotEmpty()) onBatch(partial)
-            resolved ?: resolveCachedSourcesRP90(item,imdb,season,episode,onBatch)
-        }
+        return resolveCachedSourcesRP90(item,imdb,season,episode,onBatch)
     }
     private suspend fun sortPlaybackRowsRP92(rows:List<StreamChoice>,item:MediaSummary?=null):List<StreamChoice> {
         val audio=audioLanguage;val secondary=secondaryAudioLanguageRP62;val order=sourceProviderOrderRP2()
@@ -1611,13 +1594,44 @@ class AppState(context: Context) {
             StreamOrdering.sorted(accepted,audio,providerOrder=order,secondaryAudio=secondary,nativeSizeAscending=ascending,nativeSpanishOnly=spanish)
         }
     }
-    private suspend fun resolveCachedSourcesRP90(item: MediaSummary,imdb: String,season: Int,episode: Int,onBatch:(suspend (List<StreamChoice>)->Unit)?=null): List<StreamChoice> = playbackCacheMutex.withLock {
+    private suspend fun resolveCachedSourcesRP90(item: MediaSummary,imdb: String,season: Int,episode: Int,
+        onBatch:(suspend (List<StreamChoice>)->Unit)?=null):List<StreamChoice> {
         val key=playbackCacheKey(item,imdb,season,episode)
-        playbackLinkCache.get(key)?.let {return@withLock sortPlaybackRowsRP92(it)}
-        val streams=fetchPlaybackSources(item,imdb,season,episode,onBatch)
-        // Cache successful lists only; account/settings changes cannot publish stale results.
-        if(streams.isNotEmpty() && key==playbackCacheKey(item,imdb,season,episode)) playbackLinkCache.put(key,streams)
-        streams
+        if(appContext.packageName=="com.brunio.mobile" || easyModeRP79) return playbackCacheMutex.withLock {
+            playbackLinkCache.get(key)?.let {return@withLock sortPlaybackRowsRP92(it)}
+            val streams=fetchPlaybackSources(item,imdb,season,episode,onBatch)
+            if(streams.isNotEmpty() && key==playbackCacheKey(item,imdb,season,episode)) playbackLinkCache.put(key,streams)
+            streams
+        }
+        playbackLinkCache.get(key)?.let {return sortPlaybackRowsRP92(it)}
+        val lookup=sourceLookups.getOrPut(key) {
+            val session=SourceLookup()
+            session.result=appScope.async(start=kotlinx.coroutines.CoroutineStart.LAZY) {
+                try {
+                    val streams=withTimeoutOrNull(20_000L) {
+                        fetchPlaybackSources(item,imdb,season,episode) { batch ->
+                            session.batches.value=session.batches.value+batch
+                        }
+                    } ?: throw java.io.IOException(tr("La búsqueda de enlaces agotó el tiempo.","Source lookup timed out."))
+                    if(streams.isNotEmpty() && sourceLookups[key]===session && key==playbackCacheKey(item,imdb,season,episode))
+                        playbackLinkCache.put(key,streams)
+                    streams
+                } finally {
+                    if(sourceLookups[key]===session) sourceLookups.remove(key)
+                }
+            }
+            session
+        }
+        lookup.result.start()
+        if(onBatch==null) return lookup.result.await()
+        return coroutineScope {
+            val updates=launch {lookup.batches.collect {if(it.isNotEmpty()) onBatch(it)}}
+            try {
+                lookup.result.await()
+            } finally {
+                updates.cancel()
+            }
+        }
     }
     private suspend fun providerEpisodeRP107(item:MediaSummary,season:Int,episode:Int):Pair<Int,Int> {
         if(!com.miflix.native2.data.DbzEpisodeRP107.enabled(item.type,item.id)) return season to episode
@@ -3453,7 +3467,9 @@ class AppState(context: Context) {
             sourceWarmupJobRP90?.cancel()
         playbackCacheMutex.withLock {
             if(!playbackWork.current(ticket)) return
-            playbackLinkCache.remove(playbackCacheKey(selection.item,selection.imdb,selection.season,selection.episode))
+            val key=playbackCacheKey(selection.item,selection.imdb,selection.season,selection.episode)
+            sourceLookups.remove(key)?.result?.cancel()
+            playbackLinkCache.remove(key)
             nativeSources.invalidate()
         }
         if(playbackWork.current(ticket))
@@ -3701,7 +3717,9 @@ class AppState(context: Context) {
                 activeProfile.id==remembered.profile && playbackWork.generation==remembered.generation && autoplayNextLink && watchParty==null
             if(!stillValid()) return false
             val fresh=try {
-                playbackLinkCache.clear()
+                val key=playbackCacheKey(req.item,remembered.imdb,req.season,req.episode)
+                sourceLookups.remove(key)?.result?.cancel()
+                playbackLinkCache.remove(key)
                 resolvePlaybackSources(req.item,remembered.imdb,req.season,req.episode)
             } catch(e:CancellationException) {throw e} catch(_:Exception) {return false}
             if(!stillValid()) return false
@@ -4390,6 +4408,7 @@ class AppState(context: Context) {
         previousLiveChannels.clear();previousLiveRevision++
         sharedMoments.clear();sharedMomentsOwner=""
         profileSocialSession()?.let { presenceEvents.queue(it,"","",0,0,null,System.currentTimeMillis()) }
+        cancelSourceLookups()
         playbackLinkCache.clear()
         closeAvatarUpload()
         detachParty()

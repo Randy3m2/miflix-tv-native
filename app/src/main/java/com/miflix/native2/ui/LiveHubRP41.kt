@@ -202,13 +202,7 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,dayRP1
     var iptvF1RP43 by remember {mutableStateOf<List<HubEventRP41>>(emptyList())}
     var iptvWarningRP43 by remember {mutableStateOf("")}
     var recordingFilterRP97 by remember(ownerRP46) {mutableStateOf(LiveHubMemoryRP46.category(ownerRP46,"recording-sport").orEmpty().ifBlank {"all"})}
-    val showLeagueSchedule=section in listOf("basketball","baseball","f1")
-    val allDisplayedRP97=(events+nautaF1RP42+iptvF1RP43).filter {event ->
-        val text=event.channel.name+" "+event.channel.description+" "+event.category.name+" "+event.category.genre.orEmpty()
-        event.provider!="sports" || (SportsBrowsePolicyRP121.leagueEvent(section,text) &&
-            (!showLeagueSchedule || !liveAggregateRP41(event.category) ||
-                liveSportGroupRP41(LiveCategory(event.channel.type,"",event.channel.name,event.channel.description))==section))
-    }
+    val allDisplayedRP97=(events+nautaF1RP42+iptvF1RP43).filter {it.provider!="sports" || SportsBrowsePolicyRP121.leagueEvent(section,it.channel.name+" "+it.channel.description+" "+it.category.name+" "+it.category.genre.orEmpty())}
     val recordingModeRP97=section=="others" && (SportsRecordingPolicyRP72.recording(selected?.name,selected?.id,selected?.genre) || allDisplayedRP97.any {SportsRecordingPolicyRP72.recording(it.channel.name,it.channel.description)})
     val recordingKeysRP97=remember(allDisplayedRP97) {allDisplayedRP97.associate {entry ->
         val title=RecordingSportRP97.group(entry.channel.name)
@@ -264,7 +258,6 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,dayRP1
         try {
             val all=(if(retry==0) hubCatalogRP41.get(manifest) else null) ?: withContext(Dispatchers.IO) {repo.categories(manifest)}.also {hubCatalogRP41.put(manifest,it)}
             categories=all.filter {if(section=="others" && SportsRecordingPolicyRP72.recording(it.name,it.id,it.genre)) true else (if(section=="others") liveSportGroupRP41(it) in listOf("others","soccer","football") else if(section=="lidom") liveSportGroupRP41(it)=="baseball" || "lidom" in (it.name+" "+it.genre.orEmpty()).lowercase() else liveSportGroupRP41(it)==section && SportsBrowsePolicyRP121.leagueEvent(section,it.name+" "+it.id+" "+it.genre.orEmpty())) && (section!="others" || !liveAggregateRP41(it))}
-            if(categories.isEmpty() && showLeagueSchedule) categories=all.filter(::liveAggregateRP41)
             val savedRP46=LiveHubMemoryRP46.category(ownerRP46,section)
             selected=categories.firstOrNull {it.type+":"+it.id+":"+it.genre.orEmpty()==savedRP46}
                 ?: (if(section=="lidom") categories.firstOrNull {"lidom" in (it.name+" "+it.genre.orEmpty()).lowercase()} else null) ?: categories.firstOrNull()
@@ -332,9 +325,8 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,dayRP1
             FocusButton(tr("Tabla de posiciones","Standings")) {showStandingsRP120=true}
             FocusButton(tr("Calendario y suscripciones","Calendar & subscriptions")) {showCalendarRP120=true}
         }
-        if(showLeagueSchedule) LeagueScheduleRP210(section,retry)
-        if(dayRP121!=null || showLeagueSchedule) Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
-            Text(if(showLeagueSchedule) tr("Transmisiones","Streams") else tr("Enlaces de la fuente · sin fecha: solo Hoy","Published sources · undated: only Today"),color=Muted,fontSize=13.sp,modifier=Modifier.weight(1f))
+        if(dayRP121!=null) Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
+            Text(tr("Enlaces de la fuente · sin fecha: solo Hoy","Published sources · undated: only Today"),color=Muted,fontSize=10.sp,modifier=Modifier.weight(1f))
             FocusButton(tr("Actualizar","Refresh")) {if(!loading && !resolving) retry++}
         }
         // Only Others has category tabs. Dedicated sports present event cards only.
@@ -364,7 +356,7 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,dayRP1
         }
         }
             items(displayedRP42,key={it.key}) {event ->HubEventCardRP41(event.channel.name,event.channel.poster,when {event.provider=="nauta"->if(f1ChannelRP42(event.channel.name)) "Live TV · F1" else "Live TV · DAZN";event.provider in IptvRepository.sources->"IPTV · "+IptvRepository.sources[event.provider]?.first.orEmpty();else->listOf(SportsBrowsePolicyRP121.startLabel(event.channel.startsAtRP121),event.channel.description).filter {it.isNotBlank()}.joinToString(" · ")},sportLogoRP138=if(MotoGpCalendarRP138.matches(event.channel.name+" "+event.category.name+" "+event.category.genre.orEmpty())) CalendarSourcesRP120.logo("MOTOGP") else "",onHoldRP48={tune(event,manual=true)}) {tune(event)}}
-            if(!loading && displayedRP42.isEmpty() && customRowsRP48.isEmpty() && message.isBlank()) item(span={GridItemSpan(maxLineSpan)}) {Text(tr("No hay transmisiones publicadas ahora.","No streams published right now."),color=Muted)}
+            if(!loading && displayedRP42.isEmpty() && customRowsRP48.isEmpty() && message.isBlank()) item(span={GridItemSpan(maxLineSpan)}) {Text(tr("No hay eventos publicados ahora.","No events published right now."),color=Muted)}
             if(more && !loading) item(span={GridItemSpan(maxLineSpan)}) {FocusButton(tr("Cargar más","Load more")) {
                 val c=selected
                 if(c!=null) scope.launch {
@@ -392,65 +384,6 @@ private fun HubSportsRP41(state:AppState,section:String,modifier:Modifier,dayRP1
 }
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-@Composable
-private fun LeagueScheduleRP210(section:String,retry:Int) {
-    val scores=remember { LiveScoresRP11() }
-    val racing=remember { F1StatsRP131() }
-    var rows by remember(section) { mutableStateOf<List<Pair<String,String>>>(emptyList()) }
-    var loading by remember(section) { mutableStateOf(true) }
-    var failed by remember(section) { mutableStateOf(false) }
-
-    LaunchedEffect(section,retry) {
-        loading=true
-        failed=false
-        try {
-            rows=if(section=="f1") {
-                racing.load().sessions.map { session ->
-                    val phase=when {
-                        session.live -> tr("En vivo","Live")
-                        session.final -> tr("Finalizado","Finished")
-                        else -> tr("Programado","Scheduled")
-                    }
-                    listOf(session.event,session.type).filter { it.isNotBlank() }.joinToString(" · ") to
-                        listOf(phase,SportsBrowsePolicyRP121.startLabel(session.date)).filter { it.isNotBlank() }.joinToString(" · ")
-                }
-            } else {
-                val league=if(section=="basketball") "NBA" else "MLB"
-                val today=java.time.LocalDate.parse(LiveScoresRP11.today())
-                val current=scores.games(league,today.toString())
-                val overnight=try {
-                    scores.games(league,today.minusDays(1).toString()).filter { it.state=="live" }
-                } catch(e:CancellationException) {throw e} catch(_:Exception) {emptyList()}
-                (overnight+current).distinctBy { it.id }.map { game ->
-                    val matchup="${game.away.name} · ${game.home.name}"
-                    val detail=if(game.state=="scheduled") SportsBrowsePolicyRP121.startLabel(game.starts).ifBlank {game.phase}
-                        else "${game.away.score} – ${game.home.score} · ${game.phase}"
-                    matchup to detail
-                }
-            }
-        } catch(e:CancellationException) {
-            throw e
-        } catch(_:Exception) {
-            failed=true
-        } finally {
-            loading=false
-        }
-    }
-
-    Text(tr("Calendario y marcadores","Schedule and scores"),color=Color.White,fontSize=16.sp,fontWeight=FontWeight.Bold)
-    when {
-        failed -> Text(tr("No se pudieron actualizar los marcadores.","Could not refresh scores."),color=Muted)
-        loading && rows.isEmpty() -> Text(tr("Cargando marcadores…","Loading scores…"),color=Muted)
-        rows.isEmpty() -> Text(tr("No hay eventos en el calendario consultado.","No events on this schedule."),color=Muted)
-    }
-    rows.forEach { (title,detail) ->
-        Row(Modifier.fillMaxWidth().padding(vertical=3.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            Text(title,modifier=Modifier.weight(1f),color=Color.White,fontSize=14.sp)
-            Text(detail,color=Muted,fontSize=13.sp)
-        }
-    }
-}
-
 @Composable
 internal fun HubEventCardRP41(title:String,poster:String?,subtitle:String,onHoldRP48:(()->Unit)?=null,logoRP50:Boolean=false,sportLogoRP138:String="",cardHeightRP188:androidx.compose.ui.unit.Dp=194.dp,click:()->Unit) {
     var logoFailedRP50 by remember(poster) {mutableStateOf(false)}

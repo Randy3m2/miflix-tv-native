@@ -118,16 +118,25 @@ class AppState(context: Context) {
     fun saveTasteSetupPrompt(enabled:Boolean) {tasteSetupPromptEnabled=enabled;playbackPrefs.edit().putBoolean("taste_setup_prompt",enabled).apply()}
     internal fun shouldOfferTasteSetup()=!kidsMode && tasteSetupPromptEnabled && !tasteProfile.done(ratingsKey())
     internal fun moodArtworkRC102():Map<String,String> {
-        fun art(rows:List<MediaSummary>,offset:Int=0):String? {val images=rows.mapNotNull {it.backdrop ?: it.poster}.distinct();return if(images.isEmpty()) null else images[offset%images.size]}
-        val fallback=art(trending+movies)
-        return listOf(
-            "" to (art(forYou) ?: fallback),"christmas" to (art(christmasPicks) ?: genreCovers["family"]),
-            "happy" to art(comedy),"sad" to art(romancePicks,1),"documentary" to genreCovers["documentary"],
-            "marathon" to art(series),"background" to art(comedy,2),"twist" to art(thrillers),
-            "cozy" to art(romancePicks,3),"romantic" to art(romancePicks),"adrenaline" to art(action),
-            "mindbending" to art(sciFi),"family" to genreCovers["family"],"nostalgia" to art(classicPicks),
-            "quick" to art(newMovies,2),"meaningful" to art(topRated,2),"halloween" to art(horrorPicks)
-        ).mapNotNull {(key,value) ->(value ?: fallback)?.takeIf {it.isNotBlank()}?.let {key to it}}.toMap()
+        fun posters(rows:List<MediaSummary>)=rows.mapNotNull {it.poster ?: it.backdrop}
+        val fallback=posters(trending+movies+series)
+        fun imageKey(url:String)=url.substringBefore('?').substringAfterLast('/')
+        val used=posters(continueWatching).mapTo(mutableSetOf(),::imageKey)
+        val candidates=listOf(
+            "" to posters(forYou),"christmas" to posters(christmasPicks),
+            "happy" to posters(comedy),"sad" to posters(romancePicks).drop(1),
+            "documentary" to listOfNotNull(genreCovers["documentary"]),
+            "marathon" to posters(series),"background" to posters(comedy).drop(2),"twist" to posters(thrillers),
+            "cozy" to posters(romancePicks).drop(3),"romantic" to posters(romancePicks),"adrenaline" to posters(action),
+            "mindbending" to posters(sciFi),"family" to listOfNotNull(genreCovers["family"]),"nostalgia" to posters(classicPicks),
+            "quick" to posters(newMovies).drop(2),"meaningful" to posters(topRated).drop(2),"halloween" to posters(horrorPicks)
+        )
+        return buildMap {
+            for((mood,preferred) in candidates) {
+                val image=(preferred.asSequence()+fallback.asSequence()).firstOrNull {it.isNotBlank() && used.add(imageKey(it))}
+                if(image!=null) put(mood,image)
+            }
+        }
     }
 
     val novelasPicks=mutableStateListOf<MediaSummary>()

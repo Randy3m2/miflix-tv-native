@@ -19,6 +19,9 @@ internal val LocalHomeShelfMore=staticCompositionLocalOf<((String,String,List<co
 
 internal val LocalHomeCardRowHeight=staticCompositionLocalOf {188.dp}
 
+@Composable
+internal fun homePosterSlotWidth()=if(LocalSimpleHome.current) 172.dp else 130.dp
+
 /** One catalog group per remaining viewport. Header and artwork move as a unit in either direction. */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable

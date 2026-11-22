@@ -34,8 +34,6 @@ internal enum class ExploreDestinationRP194 { TRAILERS, SURPRISE, CINEMA, COLLEC
 private data class ExploreArtworkRP194(
     val destination: ExploreDestinationRP194,
     val title: String,
-    val caption: String,
-    val glyph: String,
     val imageRes: Int
 )
 
@@ -51,22 +49,21 @@ internal fun ExploreShortcutsRP194(
     onDailyRotation: () -> Unit
 ) {
     val entries=listOf(
-        ExploreArtworkRP194(ExploreDestinationRP194.TRAILERS,tr("Tráilers","Trailers"),tr("Avances y estrenos","Previews & releases"),"▶",R.drawable.brunio_pack_snyder),
-        ExploreArtworkRP194(ExploreDestinationRP194.SURPRISE,if(loading) tr("Preparando…","Preparing…") else tr("Sorpréndeme","Surprise me"),tr("Algo inesperado","Something unexpected"),"✧",R.drawable.theme_halloween_rp188),
-        ExploreArtworkRP194(ExploreDestinationRP194.CINEMA,tr("Mi universo de cine","My cinema hub"),tr("Explora a tu manera","Explore your way"),"◈",R.drawable.brunio_profile_landscape),
-        ExploreArtworkRP194(ExploreDestinationRP194.COLLECTIONS,tr("Colecciones","Collections"),tr("Historias para explorar","Curated worlds"),"▣",R.drawable.franchise_marvel),
-        ExploreArtworkRP194(ExploreDestinationRP194.OSCARS,"Oscars",tr("Premios y nominaciones","Awards & nominees"),"★",R.drawable.theme_sand_rp188),
-        ExploreArtworkRP194(ExploreDestinationRP194.AMBIENT,tr("Cine ambiental","Ambient Cinema"),tr("Fondos de película en pantalla completa","Full-screen cinematic art"),"✦",R.drawable.brunio_profile_landscape),
-        ExploreArtworkRP194(ExploreDestinationRP194.DAILY_ROTATION,tr("Rotación diaria","Daily Rotation"),tr("Selección nueva sin repetir títulos","Fresh picks, no repeats"),"◷",R.drawable.theme_sand_rp188)
+        ExploreArtworkRP194(ExploreDestinationRP194.TRAILERS,tr("Tráilers","Trailers"),R.drawable.brunio_profile_landscape),
+        ExploreArtworkRP194(ExploreDestinationRP194.SURPRISE,if(loading) tr("Preparando…","Preparing…") else tr("Sorpréndeme","Surprise me"),R.drawable.theme_halloween_rp188),
+        ExploreArtworkRP194(ExploreDestinationRP194.CINEMA,tr("Mi universo de cine","My cinema hub"),R.drawable.theme_storm_rp188),
+        ExploreArtworkRP194(ExploreDestinationRP194.COLLECTIONS,tr("Colecciones","Collections"),R.drawable.franchise_marvel),
+        ExploreArtworkRP194(ExploreDestinationRP194.OSCARS,"Oscars",R.drawable.theme_fogata_rp188),
+        ExploreArtworkRP194(ExploreDestinationRP194.AMBIENT,tr("Cine ambiental","Ambient Cinema"),R.drawable.theme_sea_rp188),
+        ExploreArtworkRP194(ExploreDestinationRP194.DAILY_ROTATION,tr("Rotación diaria","Daily Rotation"),R.drawable.theme_nature_rp188)
     )
     val rowHeight=if(LocalHomeShelfPaging.current) LocalHomeCardRowHeight.current+40.dp else 228.dp
-    Column(Modifier.fillMaxWidth().height(rowHeight).padding(start=40.dp,end=24.dp,top=4.dp,bottom=4.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-        Text(tr("Explorar","Explore"),color=Color.White,fontSize=22.sp,lineHeight=27.sp,fontWeight=FontWeight.Bold)
+    Column(Modifier.fillMaxWidth().height(rowHeight)) {
+        Text(tr("Explorar","Explore"),color=Color.White,fontSize=22.sp,lineHeight=27.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(start=40.dp,bottom=8.dp))
         HomeHorizontalRail {
             LazyRow(
-                Modifier.fillMaxWidth().smoothHorizontalDpad(),
-                horizontalArrangement=Arrangement.spacedBy(14.dp),
-                contentPadding=PaddingValues(start=3.dp,end=32.dp,top=4.dp,bottom=5.dp)
+                Modifier.fillMaxWidth().height(LocalHomeCardRowHeight.current).smoothHorizontalDpad(),
+                contentPadding=PaddingValues(horizontal=34.dp,vertical=6.dp)
             ) {
                 items(entries,key={it.destination}) {entry ->
                     val action=when(entry.destination) {
@@ -92,7 +89,7 @@ private fun ExploreShortcutCardRP194(entry:ExploreArtworkRP194,modifier:Modifier
     val stroke by animateColorAsState(if(focused) Accent else Color.White.copy(alpha=.12f),tween(120),label="exploreStroke")
     val shape=RoundedCornerShape(15.dp)
     Box(
-        modifier.width(254.dp).height(if(LocalHomeShelfPaging.current) (LocalHomeCardRowHeight.current-12.dp).coerceAtLeast(110.dp) else 174.dp)
+        modifier.width(homePosterSlotWidth()).height(LocalHomeCardRowHeight.current-12.dp).padding(horizontal=6.dp)
             .graphicsLayer { scaleX=scale;scaleY=scale }
             .onFocusChanged {focused=it.isFocused}
             .tvClick(onClick).clickable(onClick=onClick)
@@ -108,12 +105,7 @@ private fun ExploreShortcutCardRP194(entry:ExploreArtworkRP194,modifier:Modifier
             AsyncImage("file:///android_asset/league_logos_rp138/oscars.png",null,
                 Modifier.align(Alignment.TopEnd).padding(10.dp).size(42.dp),contentScale=ContentScale.Fit)
         }
-        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(horizontal=16.dp,vertical=14.dp),verticalArrangement=Arrangement.spacedBy(3.dp)) {
-            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                Text(entry.glyph,color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
-                Text(entry.title,color=Color.White,fontSize=17.sp,fontWeight=FontWeight.Bold,maxLines=1,overflow=TextOverflow.Ellipsis)
-            }
-            Text(entry.caption,color=Color(0xFFE2E2E5),fontSize=12.sp,maxLines=2,overflow=TextOverflow.Ellipsis)
-        }
+        Text(entry.title,color=Color.White,fontSize=13.sp,lineHeight=17.sp,fontWeight=FontWeight.Bold,
+            maxLines=2,overflow=TextOverflow.Ellipsis,modifier=Modifier.align(Alignment.BottomStart).padding(10.dp))
     }
 }

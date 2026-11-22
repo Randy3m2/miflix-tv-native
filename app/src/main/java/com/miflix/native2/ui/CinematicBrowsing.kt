@@ -171,7 +171,7 @@ private fun SpotlightCard(item: MediaSummary,expanded: Boolean,landscape: Boolea
     val cardBring=remember { BringIntoViewRequester() }
 
     // The measured slot expands with its artwork, so neighboring cards are pushed, never covered.
-    val baseWidth=if(landscape) 312f else if(simple) 172f else 130f
+    val baseWidth=if(landscape) 312f else homePosterSlotWidth().value
     val slotWidth by animateFloatAsState(if(expanded) 334f else baseWidth,
         tween(if(expanded) 220 else 160),label="spotlightSlotWidth")
     LaunchedEffect(expanded) {if(expanded) {delay(230);cardBring.bringIntoView()}}

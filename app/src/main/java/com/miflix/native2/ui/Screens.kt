@@ -185,34 +185,30 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     // so 7 seconds means 7 seconds of actual D-pad focus, not 7 + network latency.
     // A new focus (even on the same title in a different rail) restarts the timer;
     // leaving a poster cancels both countdown and metadata request.
-    var posterDwellRP200 by remember(discoveryOwner) {mutableStateOf<MediaSummary?>(null)}
+    var heroTrailer by remember(discoveryOwner) {mutableStateOf<Pair<String,String>?>(null)}
     var focusedPosterRP201 by remember(discoveryOwner) {mutableStateOf<MediaSummary?>(null)}
     var focusEpochRP201 by remember(discoveryOwner) {mutableIntStateOf(0)}
-    LaunchedEffect(discoveryOwner,focusEpochRP201,focusedPosterRP201?.cloudId,state.appForeground,state.kidsMode) {
+    val previewAllowed=state.appForeground && !state.kidsMode && !state.miniPlayer &&
+        !state.discoveryPreviewActive && !showTrailers && !showAmbientRP199 && !showCinemaHub
+    LaunchedEffect(discoveryOwner,focusEpochRP201,focusedPosterRP201?.cloudId,previewAllowed) {
+        heroTrailer=null
         val title=focusedPosterRP201 ?: return@LaunchedEffect
-        if(state.kidsMode || !state.appForeground || state.discoveryPreviewActive ||
-            showTrailers || showAmbientRP199 || posterDwellRP200!=null) return@LaunchedEffect
+        if(!previewAllowed) return@LaunchedEffect
         kotlinx.coroutines.coroutineScope {
-            val available=async {
+            val trailer=async {
                 try {
-                    state.tmdb.previewTrailers(title).any {
+                    state.tmdb.previewTrailers(title).firstOrNull {
                         it.site.equals("YouTube",ignoreCase=true) && it.key.isNotBlank()
                     }
                 } catch(e:kotlinx.coroutines.CancellationException) {throw e}
-                  catch(_:Exception) {false}
+                  catch(_:Exception) {null}
             }
             delay(7000L)
-            if(available.await() && focusedPosterRP201?.cloudId==title.cloudId &&
-                state.screen==Screen.HOME && state.appForeground && !state.kidsMode &&
-                !state.discoveryPreviewActive && !showTrailers && !showAmbientRP199 &&
-                posterDwellRP200==null) {
-                posterDwellRP200=title
+            val video=trailer.await()
+            if(video!=null && focusedPosterRP201?.cloudId==title.cloudId && state.screen==Screen.HOME) {
+                heroTrailer=title.cloudId to video.key
             }
         }
-    }
-    if(posterDwellRP200!=null) {
-        val selected=posterDwellRP200!!
-        TitleTrailerRP31(state,selected) {posterDwellRP200=null}
     }
     if(showTrailers) DiscoveryTrailers(state,(state.forYou+state.trending+state.movies+state.series).distinctBy {it.cloudId},mood=discoveryMood) {showTrailers=false}
     if(showAmbientRP199) AmbientCinemaRP199(
@@ -227,7 +223,6 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     val rowFocusRP198=remember(positionRP165) {mutableMapOf<String,FocusRequester>()}
     val scroll=positionRP165.vertical
     LaunchedEffect(state.activeProfile.id,state.interfaceLanguage) {if(state.trending.isEmpty()) state.loadHome()}
-    val heroFocus=remember { FocusRequester() }
     val contentFocus=remember { FocusRequester() }
     val scope=rememberCoroutineScope()
     LaunchedEffect(positionRP165) {
@@ -285,8 +280,9 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
         }) {
     BoxWithConstraints(Modifier.fillMaxSize().themePageRP186().onPreviewKeyEvent {if(it.type==KeyEventType.KeyDown) {startupInteractedRP129=true;homeReturn.pending=null};false}) {
         val homeHeroHeight=(maxHeight*.5f).coerceIn(228.dp,284.dp)
-        BrowsingViewport(state,(state.localRecommendations(state.trending)+state.localRecommendations(state.movies)).firstOrNull {it.type=="movie"},heroHeight=homeHeroHeight,headerInset=84.dp,heroFocus=heroFocus,ranked=(state.localRecommendations(state.trending)+state.localRecommendations(state.movies)).filter {it.type=="movie"}.distinctBy {it.cloudId}.take(10),
-            onRandom={if(!state.randomChoosing) state.launch {state.playRandomMovie()}}) {
+        BrowsingViewport(state,(state.localRecommendations(state.trending)+state.localRecommendations(state.movies)).firstOrNull {it.type=="movie"},heroHeight=homeHeroHeight,headerInset=84.dp,ranked=(state.localRecommendations(state.trending)+state.localRecommendations(state.movies)).filter {it.type=="movie"}.distinctBy {it.cloudId}.take(10),
+            trailer=heroTrailer.takeIf {previewAllowed && it?.first==focusedPosterRP201?.cloudId},
+            onTrailerFinished={heroTrailer=null}) {
         CompositionLocalProvider(LocalBringIntoViewSpec provides homeVerticalFocusSpec()) {
             LazyColumn(Modifier.fillMaxSize().smoothVerticalDpad { !scroll.isScrollInProgress }.focusRequester(contentFocus).focusGroup(),state=scroll,contentPadding=PaddingValues(0.dp)) {
                 var shelfIndex=0
@@ -497,13 +493,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
                     val visible=scroll.layoutInfo.visibleItemsInfo.any {it.key==selectedRow}
                     val target=if(visible) rowFocusRP198[selectedRow] else null
                     val resolved=target?.let {runCatching {it.requestFocus()}.getOrDefault(false)} ?: false
-                    if(!resolved) {
-                        if(scroll.firstVisibleItemIndex==0 &&
-                            state.localRecommendations(state.trending).isNotEmpty()) {
-                            if(!runCatching {heroFocus.requestFocus()}.getOrDefault(false))
-                                runCatching {contentFocus.requestFocus()}
-                        } else runCatching {contentFocus.requestFocus()}
-                    }
+                    if(!resolved) runCatching {contentFocus.requestFocus()}
                 })
                 Unit
             }))
@@ -812,12 +802,10 @@ fun PlatformScreen(state: AppState, onBack: () -> Unit) {
                 }
             }
             items(state.platformSections.filter {it.items.isNotEmpty()},key={it.id}) {section ->
-                CompositionLocalProvider(LocalHomeShelfKey provides section.id) {
-                    HomeShelfFrame(0,scroll,Modifier.fillParentMaxHeight().fillMaxWidth()) {
-                        if(section.id=="top10") SpotlightRail(section.title,section.items.take(10),ranked=true,
-                            onClick={state.launch {state.open(it)}})
-                        else MediaRail(section.title,section.items,landscape=section.landscape,onClick={state.launch {state.open(it)}})
-                    }
+                CompositionLocalProvider(LocalHomeShelfKey provides section.id,LocalHomeShelfPaging provides true) {
+                    if(section.id=="top10") SpotlightRail(section.title,section.items.take(10),ranked=true,
+                        onClick={state.launch {state.open(it)}})
+                    else MediaRail(section.title,section.items,landscape=section.landscape,onClick={state.launch {state.open(it)}})
                 }
             }
         }

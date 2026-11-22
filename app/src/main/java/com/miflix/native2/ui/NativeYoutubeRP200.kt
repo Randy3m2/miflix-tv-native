@@ -80,6 +80,63 @@ internal suspend fun awaitYoutubeLiveStall(player:Player) {
     }
 }
 
+/** Passive preview. It shares the resolver with full-screen trailers and leaves D-pad focus on Home. */
+@OptIn(UnstableApi::class)
+@Composable
+internal fun HomeHeroTrailer(video:String,modifier:Modifier,onFinished:()->Unit) {
+    val context=LocalContext.current
+    val finish by rememberUpdatedState(onFinished)
+    val player=remember(video) {ExoPlayer.Builder(context.applicationContext).build().apply {volume=0f}}
+    val attached=remember(player) {java.util.concurrent.atomic.AtomicReference<PlayerView?>()}
+    var firstFrame by remember(player) {mutableStateOf(false)}
+    val alpha by animateFloatAsState(if(firstFrame) 1f else 0f,tween(240),label="homeTrailer")
+    DisposableEffect(player) {
+        val listener=object:Player.Listener {
+            override fun onRenderedFirstFrame() {firstFrame=true}
+            override fun onPlaybackStateChanged(state:Int) {
+                if(state==Player.STATE_ENDED) finish()
+            }
+            override fun onPlayerError(error:androidx.media3.common.PlaybackException) {finish()}
+        }
+        player.addListener(listener)
+        onDispose {
+            player.removeListener(listener)
+            attached.getAndSet(null)?.player=null
+            player.release()
+        }
+    }
+    LaunchedEffect(player,video) {
+        try {
+            val source=kotlinx.coroutines.withTimeoutOrNull(12_000L) {NativeTrailerResolverRP200.get(video)}
+            if(source==null) {
+                finish()
+                return@LaunchedEffect
+            }
+            player.setNativeYoutubeSource(source)
+            player.playWhenReady=true
+            delay(12_000L)
+            if(!firstFrame) finish()
+        } catch(e:CancellationException) {
+            throw e
+        } catch(_:Exception) {
+            finish()
+        }
+    }
+    AndroidView(factory={ctx ->
+        (android.view.LayoutInflater.from(ctx).inflate(
+            com.miflix.native2.R.layout.mobile_multiview_texture_rp134,null,false) as PlayerView).apply {
+            isFocusable=false
+            descendantFocusability=android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS
+            resizeMode=androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+            setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+            this.player=player
+            attached.set(this)
+        }
+    },onRelease={view ->
+        if(attached.compareAndSet(view,null)) view.player=null
+    },modifier=modifier.graphicsLayer {this.alpha=alpha})
+}
+
 /** One lazily retained decoder/player, analogous to Nuvio's shared trailer pool. */
 private object NativeTrailerPlayerPoolRP200 {
     private var pooled:ExoPlayer?=null

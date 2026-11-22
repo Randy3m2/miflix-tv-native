@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -28,12 +26,13 @@ internal val LocalBrowsePreview=staticCompositionLocalOf<((MediaSummary) -> Unit
 /** Header and rails have separate viewports. No hero height/layout changes on focus. */
 @Composable
 internal fun BrowsingViewport(state: AppState,fallback: MediaSummary?,modifier: Modifier=Modifier,
-    heroHeight: Dp=228.dp,headerInset: Dp=0.dp,heroFocus: FocusRequester?=null,ranked: List<MediaSummary> = emptyList(),onRandom: (() -> Unit)?=null,content: @Composable () -> Unit) {
+    heroHeight: Dp=228.dp,headerInset: Dp=0.dp,ranked: List<MediaSummary> = emptyList(),trailer:Pair<String,String>?=null,
+    onTrailerFinished:()->Unit={},content: @Composable () -> Unit) {
     val pending=remember {mutableStateOf<MediaSummary?>(null)}
     val publish=remember { {item: MediaSummary -> pending.value=item} }
     CompositionLocalProvider(LocalBrowsePreview provides publish) {
         Column(modifier.fillMaxSize()) {
-            FocusedBrowseHero(state,pending,fallback,heroHeight,headerInset,heroFocus,ranked,onRandom)
+            FocusedBrowseHero(state,pending,fallback,heroHeight,headerInset,ranked,trailer,onTrailerFinished)
             Box(Modifier.weight(1f).fillMaxWidth()) {content()}
         }
     }
@@ -41,17 +40,16 @@ internal fun BrowsingViewport(state: AppState,fallback: MediaSummary?,modifier: 
 
 @Composable
 private fun FocusedBrowseHero(state: AppState,pending: State<MediaSummary?>,fallback: MediaSummary?,height: Dp,headerInset: Dp,
-    heroFocus: FocusRequester?,ranked: List<MediaSummary>,onRandom: (() -> Unit)?) {
+    ranked: List<MediaSummary>,trailer:Pair<String,String>?,onTrailerFinished:()->Unit) {
     var shown by remember {mutableStateOf(fallback)}
     var logo by remember {mutableStateOf<String?>(null)}
     var rankIndex by remember(ranked.map {it.cloudId}) {mutableIntStateOf(0)}
-    var heroFocused by remember {mutableStateOf(false)}
     LaunchedEffect(ranked.map {it.cloudId},state.appForeground) {
         // RP199: never run hero timers while app is backgrounded or a trailer dialog is open.
         while(ranked.size>1 && state.appForeground && !state.discoveryPreviewActive) {
             delay(6500)
             if(state.appForeground && !state.discoveryPreviewActive &&
-                pending.value==null && !heroFocused) rankIndex=(rankIndex+1)%ranked.size
+                pending.value==null) rankIndex=(rankIndex+1)%ranked.size
         }
     }
     val candidate=pending.value ?: ranked.getOrNull(rankIndex) ?: fallback
@@ -65,13 +63,18 @@ private fun FocusedBrowseHero(state: AppState,pending: State<MediaSummary?>,fall
         }
     }
     val item=shown
-    val compact=heroFocus!=null
+    val compact=headerInset>0.dp
     val veryCompact=compact && height<250.dp
     val canvas=if(state.screen in setOf(Screen.HOME,Screen.MY_LIST,Screen.DETAILS)) Color(0xFF050505) else Bg
     Box(Modifier.fillMaxWidth().height(height).background(canvas)) {
         if(item!=null) {
             Crossfade(item.backdrop ?: item.poster,modifier=Modifier.align(Alignment.CenterEnd).fillMaxHeight().fillMaxWidth(.75f),animationSpec=tween(140),label="browseBackdrop") {image ->
                 AsyncImage(image,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+            }
+            trailer?.takeIf {it.first==item.cloudId}?.let {(_,video) ->
+                key(video) {
+                    HomeHeroTrailer(video,Modifier.align(Alignment.CenterEnd).fillMaxHeight().fillMaxWidth(.75f),onTrailerFinished)
+                }
             }
             Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(if(headerInset>0.dp) 150.dp else 60.dp).background(Brush.verticalGradient(listOf(canvas,Color.Transparent))))
             Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(canvas,canvas.copy(alpha=.92f),Color.Transparent))))
@@ -83,12 +86,9 @@ private fun FocusedBrowseHero(state: AppState,pending: State<MediaSummary?>,fall
                 }
                 Text(listOf(if(item.type=="series") tr("Serie","Series") else tr("Película","Movie"),item.year,"★ ${"%.1f".format(item.rating)}").filter {it.isNotBlank()}.joinToString(" · "),color=Muted,fontSize=12.sp)
                 Text(item.overview,color=Color(0xFFD4D1DA),fontSize=if(compact) 12.sp else 13.sp,lineHeight=if(compact) 15.sp else 17.sp,maxLines=if(veryCompact) 1 else if(compact) 2 else if(height>=200.dp) 3 else 2,overflow=TextOverflow.Ellipsis)
-                if(heroFocus!=null) Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-                    FocusButton(tr("Ver detalles","View details"),primary=true,onFocused={heroFocused=it},modifier=Modifier.focusRequester(heroFocus).then(homeReturnFocus("home:hero"))) {state.launch {state.open(item)}}
-                    onRandom?.let {action -> FocusButton(tr("Aleatorio","Random"),onClick=action)}
-                }
+
             }
-            if(pending.value==null && heroFocus!=null) Text("#${rankIndex+1}  "+tr("TOP 10 · ESTA SEMANA","TOP 10 · THIS WEEK"),color=Accent,fontSize=11.sp,
+            if(pending.value==null && compact) Text("#${rankIndex+1}  "+tr("TOP 10 · ESTA SEMANA","TOP 10 · THIS WEEK"),color=Accent,fontSize=11.sp,
                 modifier=Modifier.align(Alignment.TopEnd).padding(end=34.dp,top=headerInset+12.dp))
         }
     }

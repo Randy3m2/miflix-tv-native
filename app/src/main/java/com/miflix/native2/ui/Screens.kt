@@ -241,7 +241,6 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     }
 
     val shelfMotion=remember(scroll) {HomeShelfMotion(scope)}
-    val verticalAnchorPx=with(androidx.compose.ui.platform.LocalDensity.current) {48.dp.toPx()}
     val headerWork=remember {mutableListOf<kotlinx.coroutines.Job>()}
     fun cancelHeaderWork() {headerWork.forEach {it.cancel()};headerWork.clear()}
 
@@ -288,16 +287,7 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
         val homeHeroHeight=(maxHeight*.5f).coerceIn(228.dp,284.dp)
         BrowsingViewport(state,(state.localRecommendations(state.trending)+state.localRecommendations(state.movies)).firstOrNull {it.type=="movie"},heroHeight=homeHeroHeight,headerInset=84.dp,heroFocus=heroFocus,ranked=(state.localRecommendations(state.trending)+state.localRecommendations(state.movies)).filter {it.type=="movie"}.distinctBy {it.cloudId}.take(10),
             onRandom={if(!state.randomChoosing) state.launch {state.playRandomMovie()}}) {
-        CompositionLocalProvider(LocalBringIntoViewSpec provides object : BringIntoViewSpec {
-            // RP60: native focus and native scrolling share one animation, as on horizontal rails.
-            // Keep enough space above the focused artwork for the row heading.
-            override fun calculateScrollDistance(offset: Float,size: Float,containerSize: Float): Float {
-                if(size<=0f || containerSize<=0f) return 0f
-                val anchor=minOf(verticalAnchorPx,(containerSize-size).coerceAtLeast(0f))
-                val distance=offset-anchor
-                return if(kotlin.math.abs(distance)<1f) 0f else distance*.72f
-            }
-        }) {
+        CompositionLocalProvider(LocalBringIntoViewSpec provides homeVerticalFocusSpec()) {
             LazyColumn(Modifier.fillMaxSize().smoothVerticalDpad { !scroll.isScrollInProgress }.focusRequester(contentFocus).focusGroup(),state=scroll,contentPadding=PaddingValues(0.dp)) {
                 var shelfIndex=0
                 val homeSections=mutableListOf<HomeSection>()
@@ -803,12 +793,16 @@ private fun GenreCard(g: GenreDefinition,modifier: Modifier=Modifier,onClick: ()
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PlatformScreen(state: AppState, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     BrowseReturnScope("platform:${state.platformTitle}") {
     AppShell(state, Screen.PLATFORM_DETAIL, { state.screen = it }) {
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = 32.dp, bottom = 64.dp)) {
+        val scroll=rememberLazyListState()
+        CompositionLocalProvider(LocalBringIntoViewSpec provides homeVerticalFocusSpec()) {
+        LazyColumn(Modifier.fillMaxSize().smoothVerticalDpad {!scroll.isScrollInProgress},state=scroll,
+            contentPadding=PaddingValues(top=32.dp,bottom=64.dp)) {
             item {
                 Column(Modifier.padding(horizontal = 34.dp)) {
                     Text(state.platformTitle, color = Color.White, fontSize = 34.sp, lineHeight=41.sp, fontWeight = FontWeight.Black)
@@ -817,11 +811,16 @@ fun PlatformScreen(state: AppState, onBack: () -> Unit) {
                     Spacer(Modifier.height(24.dp))
                 }
             }
-            items(state.platformSections, key = { it.id }) { section ->
-                if(section.id=="top10") SpotlightRail(section.title,section.items.take(10),ranked=true,
-                    onClick={state.launch {state.open(it)}})
-                else MediaRail(section.title, section.items, landscape = section.landscape, onClick = { state.launch { state.open(it) } })
+            items(state.platformSections.filter {it.items.isNotEmpty()},key={it.id}) {section ->
+                CompositionLocalProvider(LocalHomeShelfKey provides section.id) {
+                    HomeShelfFrame(0,scroll,Modifier.fillParentMaxHeight().fillMaxWidth()) {
+                        if(section.id=="top10") SpotlightRail(section.title,section.items.take(10),ranked=true,
+                            onClick={state.launch {state.open(it)}})
+                        else MediaRail(section.title,section.items,landscape=section.landscape,onClick={state.launch {state.open(it)}})
+                    }
+                }
             }
+        }
         }
     }
     }

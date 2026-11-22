@@ -1820,6 +1820,8 @@ class AppState(context: Context) {
             } finally { friendsTabLoading=false }
         }
     }
+    var franchiseReturnScreen by mutableStateOf(Screen.COLLECTIONS)
+        private set
     var franchiseBrand by mutableStateOf("marvel")
     var franchiseType by mutableStateOf("movie")
     val franchiseItems=mutableStateListOf<MediaSummary>()
@@ -1831,6 +1833,7 @@ class AppState(context: Context) {
     var franchiseScrollOffset=0
     suspend fun openFranchise(brand: String) {
         if(franchiseLoading) return
+        if(screen!=Screen.FRANCHISE) franchiseReturnScreen=screen
         franchiseBrand=brand;franchiseType=com.miflix.native2.data.FranchiseCatalogRP29.initialType(brand);franchiseItems.clear();franchisePage=0
         franchiseMore=false;franchiseError=""
         franchiseScrollIndex=0;franchiseScrollOffset=0;screen=Screen.FRANCHISE
@@ -2996,7 +2999,7 @@ class AppState(context: Context) {
     }
     suspend fun openGenre(g: GenreDefinition) {
         if(kidsMode) return
-        genreGeneration++;currentGenre=g;genreTitle=g.title;genreReturnScreen=Screen.COLLECTIONS
+        genreGeneration++;currentGenre=g;genreTitle=g.title;if(screen!=Screen.GENRE_DETAIL) genreReturnScreen=screen
         genreItems.clear();genreBacklog.clear();genrePageNumber=0;genreRemoteMore=true;genreHasMore=true
         genreMessage="";screen=Screen.GENRE_DETAIL
         loadMoreGenre()

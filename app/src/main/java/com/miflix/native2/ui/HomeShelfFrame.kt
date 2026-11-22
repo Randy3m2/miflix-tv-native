@@ -24,6 +24,22 @@ internal val LocalHomeCardRowHeight=staticCompositionLocalOf {188.dp}
 @Composable
 internal fun homePosterSlotWidth()=if(LocalSimpleHome.current) 172.dp else 130.dp
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+internal fun homeVerticalFocusSpec():BringIntoViewSpec {
+    val anchorPx=with(androidx.compose.ui.platform.LocalDensity.current) {48.dp.toPx()}
+    return remember(anchorPx) {
+        object:BringIntoViewSpec {
+            override fun calculateScrollDistance(offset:Float,size:Float,containerSize:Float):Float {
+                if(size<=0f || containerSize<=0f) return 0f
+                val anchor=minOf(anchorPx,(containerSize-size).coerceAtLeast(0f))
+                val distance=offset-anchor
+                return if(kotlin.math.abs(distance)<1f) 0f else distance*.72f
+            }
+        }
+    }
+}
+
 /** One catalog group per remaining viewport. Header and artwork move as a unit in either direction. */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable

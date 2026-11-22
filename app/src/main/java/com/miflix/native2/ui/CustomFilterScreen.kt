@@ -202,7 +202,7 @@ fun FranchiseScreen(state: AppState) {
     var previous by remember { mutableStateOf(state.franchiseType) }
     LaunchedEffect(state.franchiseType) { if(previous!=state.franchiseType) { grid.scrollToItem(0);previous=state.franchiseType } }
     DisposableEffect(grid) { onDispose { state.franchiseScrollIndex=grid.firstVisibleItemIndex;state.franchiseScrollOffset=grid.firstVisibleItemScrollOffset } }
-    BackHandler { state.screen=Screen.COLLECTIONS }
+    BackHandler { state.screen=state.franchiseReturnScreen }
     AppShell(state,Screen.FRANCHISE,{ state.screen=it }) {
         Column(Modifier.fillMaxSize().padding(horizontal=34.dp,vertical=24.dp),verticalArrangement=Arrangement.spacedBy(16.dp)) {
             Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -210,7 +210,7 @@ fun FranchiseScreen(state: AppState) {
                 if(com.miflix.native2.data.FranchiseCatalogRP29.supportsMovies(state.franchiseBrand)) FocusButton(tr("Películas","Movies"),primary=state.franchiseType=="movie") { state.launch { state.loadFranchise("movie") } }
                 FocusButton(tr("Series","Series"),primary=state.franchiseType=="series") { state.launch { state.loadFranchise("series") } }
                 FocusButton(tr("Línea temporal","Timeline")) {timelineRP150=true}
-                FocusButton(tr("Atrás","Back")) { state.screen=Screen.COLLECTIONS }
+                FocusButton(tr("Atrás","Back")) { state.screen=state.franchiseReturnScreen }
             }
             if(state.franchiseLoading) Text(tr("Cargando…","Loading…"),color=Muted)
             if(state.franchiseError.isNotBlank()) Text(state.franchiseError,color=Color.White,maxLines=3)

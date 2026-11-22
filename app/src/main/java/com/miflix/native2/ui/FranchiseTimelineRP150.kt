@@ -50,7 +50,7 @@ internal fun FranchiseTimelineRP150(state:AppState,catalog:()->Unit) {
     val list=key(brand) {rememberLazyListState()}
     val scope=rememberCoroutineScope()
     var spotlight by remember(brand) {mutableStateOf<MediaSummary?>(null)}
-    BackHandler {state.screen=Screen.COLLECTIONS}
+    BackHandler {state.screen=state.franchiseReturnScreen}
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xff17263c),Bg))).padding(horizontal=32.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -58,7 +58,7 @@ internal fun FranchiseTimelineRP150(state:AppState,catalog:()->Unit) {
                 if(ranks.values.any {it!=null}) FocusButton(tr("Cronología","Story order"),primary=story) {if(!story) scope.launch {list.scrollToItem(0)};chronological=true;state.saveCinemaJourneyChronological(true)}
                 FocusButton(tr("Estreno","Release order"),primary=!story) {if(story) scope.launch {list.scrollToItem(0)};chronological=false;state.saveCinemaJourneyChronological(false)}
                 FocusButton(tr("Catálogo","Catalog"),onClick=catalog)
-                FocusButton("×") {state.screen=Screen.COLLECTIONS}
+                FocusButton("×") {state.screen=state.franchiseReturnScreen}
             }
             Text(if(story) tr("Orden curado por inicio de la historia. Las series pueden solaparse; las entradas sin posición verificada quedan al final.","Curated by story beginning. Series can overlap; entries without a verified position appear last.") else tr("Películas y series por fecha de estreno.","Movies and series by release date."),color=Muted,fontSize=12.sp)
             if(state.franchiseLoading) Text(tr("Cargando…","Loading…"),color=Muted)

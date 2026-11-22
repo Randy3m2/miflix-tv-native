@@ -8,8 +8,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -60,24 +58,17 @@ internal fun ExploreShortcutsRP194(
     val rowHeight=if(LocalHomeShelfPaging.current) LocalHomeCardRowHeight.current+40.dp else 228.dp
     Column(Modifier.fillMaxWidth().height(rowHeight)) {
         Text(tr("Explorar","Explore"),color=Color.White,fontSize=22.sp,lineHeight=27.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(start=40.dp,bottom=8.dp))
-        HomeHorizontalRail {
-            LazyRow(
-                Modifier.fillMaxWidth().height(LocalHomeCardRowHeight.current).smoothHorizontalDpad(),
-                contentPadding=PaddingValues(horizontal=34.dp,vertical=6.dp)
-            ) {
-                items(entries,key={it.destination}) {entry ->
-                    val action=when(entry.destination) {
-                        ExploreDestinationRP194.TRAILERS -> onTrailers
-                        ExploreDestinationRP194.SURPRISE -> onSurprise
-                        ExploreDestinationRP194.CINEMA -> onCinema
-                        ExploreDestinationRP194.COLLECTIONS -> onCollections
-                        ExploreDestinationRP194.OSCARS -> onOscars
-                        ExploreDestinationRP194.AMBIENT -> onAmbient
-                        ExploreDestinationRP194.DAILY_ROTATION -> onDailyRotation
-                    }
-                    ExploreShortcutCardRP194(entry,homeReturnFocus("explore:"+entry.destination.name),action)
-                }
+        HomeShortcutRail("explore-shortcuts",entries,{it.destination.name}) {entry,modifier ->
+            val action=when(entry.destination) {
+                ExploreDestinationRP194.TRAILERS -> onTrailers
+                ExploreDestinationRP194.SURPRISE -> onSurprise
+                ExploreDestinationRP194.CINEMA -> onCinema
+                ExploreDestinationRP194.COLLECTIONS -> onCollections
+                ExploreDestinationRP194.OSCARS -> onOscars
+                ExploreDestinationRP194.AMBIENT -> onAmbient
+                ExploreDestinationRP194.DAILY_ROTATION -> onDailyRotation
             }
+            ExploreShortcutCardRP194(entry,modifier.then(homeReturnFocus("explore:"+entry.destination.name)),action)
         }
     }
 }

@@ -53,6 +53,18 @@ class AddonStartupRP12Test {
   assertEquals(listOf("English","Latino"),batches)
   assertEquals(listOf("Latino","English"),rows.map {it.name})
  }
+ @Test fun partialManualSearchReportsFailureWithoutLosingFastLinks()=runBlocking {
+  val repo=StreamRepository("https://fast.test/manifest.json") {url,timeout ->
+   assertEquals(15000,timeout)
+   if(url.contains("slow.test")) throw java.io.IOException("Timed out")
+   stream("English")
+  }
+  repo.addManifest("https://slow.test/manifest.json")
+  var failures=0
+  val rows=repo.resolve("tt1","movie",onProviderFailure={failures++}) {}
+  assertEquals(1,failures)
+  assertEquals(listOf("English"),rows.map {it.name})
+ }
  @Test fun allProviderResultsKeepSpanishBeforeEnglish()=runBlocking {
   val repo=StreamRepository("https://english.test/manifest.json") {url,_ ->
    if(url.endsWith("manifest.json")) manifest else if(url.contains("english")) stream("English")

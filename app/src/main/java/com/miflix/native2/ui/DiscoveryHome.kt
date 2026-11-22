@@ -111,15 +111,8 @@ internal fun MoodSelectorRowRP193(
     Column(Modifier.fillMaxWidth().height(rowHeight)) {
         Text(tr("Elige tu vibe","Pick your vibe"),color=Color.White,fontSize=22.sp,lineHeight=27.sp,
             fontWeight=FontWeight.Bold,modifier=Modifier.padding(start=40.dp,bottom=8.dp))
-        HomeHorizontalRail {
-            LazyRow(
-                Modifier.fillMaxWidth().height(LocalHomeCardRowHeight.current).smoothHorizontalDpad(),
-                contentPadding=PaddingValues(horizontal=34.dp,vertical=6.dp)
-            ) {
-                items(DiscoveryMoods,key={it.ifEmpty {"for-me"}}) { value ->
-                    MoodTile(value,mood==value,homeReturnFocus("mood:"+value.ifEmpty {"default"}),image=art[value]) {onMood(value)}
-                }
-            }
+        HomeShortcutRail("mood-selector",DiscoveryMoods,{it.ifEmpty {"for-me"}}) {value,modifier ->
+            MoodTile(value,mood==value,modifier.then(homeReturnFocus("mood:"+value.ifEmpty {"default"})),image=art[value]) {onMood(value)}
         }
     }
 }

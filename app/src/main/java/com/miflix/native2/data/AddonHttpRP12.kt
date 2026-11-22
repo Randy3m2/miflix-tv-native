@@ -15,7 +15,7 @@ internal class AddonHttpFailureRP12(val status:Int):IOException("HTTP $status")
 /** Independent cancellable public add-on requests. No auth/session refresh or Supabase involved. */
 internal object AddonHttpRP12 {
     private val client=OkHttpClient.Builder().connectTimeout(4,TimeUnit.SECONDS)
-        .readTimeout(8,TimeUnit.SECONDS).callTimeout(8,TimeUnit.SECONDS).build()
+        .readTimeout(15,TimeUnit.SECONDS).callTimeout(8,TimeUnit.SECONDS).build()
     suspend fun text(url:String,timeoutMs:Int):String = suspendCancellableCoroutine {continuation ->
         val call=client.newBuilder().callTimeout(timeoutMs.toLong(),TimeUnit.MILLISECONDS).build()
             .newCall(Request.Builder().url(url.replace("|","%7C")).header("Accept","application/json")

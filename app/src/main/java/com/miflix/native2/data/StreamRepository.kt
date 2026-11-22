@@ -81,14 +81,15 @@ class StreamRepository internal constructor(initialManifestUrl:String,
         manifestUrls.remove(value.trim().replace("|","%7C"))
     }
 
-    suspend fun resolve(imdbId: String, type: String, season: Int = 0, episode: Int = 0, movieYear: String? = null, maxBytes: Long = 0, movieTitle: String? = null, preferredAudio: String = "", onBatch: (suspend (List<StreamChoice>) -> Unit)? = null): List<StreamChoice> = coroutineScope {
+    suspend fun resolve(imdbId: String, type: String, season: Int = 0, episode: Int = 0, movieYear: String? = null, maxBytes: Long = 0, movieTitle: String? = null, preferredAudio: String = "", onProviderFailure: (() -> Unit)? = null, onBatch: (suspend (List<StreamChoice>) -> Unit)? = null): List<StreamChoice> = coroutineScope {
         val manifests = manifestUrls.toList()
         if (manifests.isEmpty()) throw IllegalStateException("No stream add-on is configured")
         val rows = manifests.mapIndexed { index,manifest ->
             async {
-                val batch = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                val batch:List<StreamChoice>? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
                     try {
-                        val raw=resolveOne(manifest,index,imdbId,type,season,episode,checkManifest=onBatch==null)
+                        val raw=resolveOne(manifest,index,imdbId,type,season,episode,
+                            timeoutMs=if(onBatch==null) 8000 else 15000,checkManifest=onBatch==null)
                         val accepted=raw.filter {StreamFilters.allowed(it,type,movieYear,maxBytes,movieTitle)}
                         val unknownSize=if(maxBytes>0) raw.count {StreamOrdering.bytes(it)<=0 && !StreamFilters.allowsUnknownSize(it)} else 0
                         statuses[manifest]="Returned: ${raw.size} · Available: ${accepted.size}"+
@@ -99,11 +100,12 @@ class StreamRepository internal constructor(initialManifestUrl:String,
                         val configured=statuses[manifest]=="Configuration required"
                         statuses[manifest]=if(configured) "Configuration required" else
                             if(e is AddonHttpFailureRP12) "HTTP ${e.status}" else if(e is HttpFailure) "HTTP ${e.status}" else "Request failed"
-                        emptyList()
+                        null
                     }
                 }
-                if(batch.isNotEmpty()) onBatch?.invoke(batch)
-                batch
+                if(batch==null) onProviderFailure?.invoke()
+                else if(batch.isNotEmpty()) onBatch?.invoke(batch)
+                batch.orEmpty()
             }
         }.awaitAll().flatten()
 

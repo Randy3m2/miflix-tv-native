@@ -5,6 +5,8 @@ import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -50,6 +52,40 @@ internal fun HomeHorizontalRail(content:@Composable ()->Unit) {
             horizontalAnchor.distance(offset,size,containerSize,android.os.SystemClock.uptimeMillis())
     }}
     CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalSpec,LocalHorizontalFocusAnchor provides horizontalAnchor) {content()}
+}
+
+@Composable
+internal fun <T> HomeShortcutRail(
+    key:String, rows:List<T>, id:(T)->String,
+    card:@Composable (T,Modifier)->Unit
+) {
+    val scroll=homeRailStateRP165(key)
+    var savedId by androidx.compose.runtime.saveable.rememberSaveable(key) {mutableStateOf<String?>(null)}
+    val focus=remember(key) {mutableMapOf<String,FocusRequester>()}
+    val first=remember(key) {FocusRequester()}
+    HomeHorizontalRail {
+        androidx.compose.foundation.lazy.LazyRow(
+            modifier=Modifier.fillMaxWidth().height(LocalHomeCardRowHeight.current)
+                .smoothHorizontalDpad {!scroll.isScrollInProgress}
+                .firstCardOnDown(scroll,first,
+                    restoreIndex={rows.indexOfFirst {id(it)==savedId}.coerceAtLeast(0)},
+                    restoreFocus={index -> rows.getOrNull(index)?.let {focus[id(it)]}}),
+            state=scroll,contentPadding=androidx.compose.foundation.layout.PaddingValues(horizontal=34.dp,vertical=6.dp)
+        ) {
+            items(rows.size,key={id(rows[it])}) {index ->
+                val row=rows[index]
+                val rowId=id(row)
+                val requester=if(index==0) first else remember(rowId) {FocusRequester()}
+                DisposableEffect(rowId,requester) {
+                    focus[rowId]=requester
+                    onDispose {if(focus[rowId]===requester) focus.remove(rowId)}
+                }
+                card(row,Modifier.focusRequester(requester).onFocusChanged {
+                    if(it.isFocused) savedId=rowId
+                })
+            }
+        }
+    }
 }
 
 /** Save IDs, not FocusRequester instances, across the details destination. */

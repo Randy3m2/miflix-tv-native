@@ -1608,7 +1608,7 @@ class AppState(context: Context) {
         val key=playbackCacheKey(item,imdb,season,episode)
         if(appContext.packageName=="com.brunio.mobile" || easyModeRP79) return playbackCacheMutex.withLock {
             playbackLinkCache.get(key)?.let {return@withLock sortPlaybackRowsRP92(it)}
-            val streams=fetchPlaybackSources(item,imdb,season,episode,onBatch)
+            val streams=fetchPlaybackSources(item,imdb,season,episode,onBatch=onBatch)
             if(streams.isNotEmpty() && key==playbackCacheKey(item,imdb,season,episode)) playbackLinkCache.put(key,streams)
             streams
         }
@@ -1617,12 +1617,13 @@ class AppState(context: Context) {
             val session=SourceLookup()
             session.result=appScope.async(start=kotlinx.coroutines.CoroutineStart.LAZY) {
                 try {
+                    var complete=true
                     val streams=withTimeoutOrNull(20_000L) {
-                        fetchPlaybackSources(item,imdb,season,episode) { batch ->
+                        fetchPlaybackSources(item,imdb,season,episode,onProviderFailure={complete=false}) { batch ->
                             session.batches.value=session.batches.value+batch
                         }
                     } ?: throw java.io.IOException(tr("La búsqueda de enlaces agotó el tiempo.","Source lookup timed out."))
-                    if(streams.isNotEmpty() && sourceLookups[key]===session && key==playbackCacheKey(item,imdb,season,episode))
+                    if(complete && streams.isNotEmpty() && sourceLookups[key]===session && key==playbackCacheKey(item,imdb,season,episode))
                         playbackLinkCache.put(key,streams)
                     streams
                 } finally {
@@ -1646,35 +1647,35 @@ class AppState(context: Context) {
         if(!com.miflix.native2.data.DbzEpisodeRP107.enabled(item.type,item.id)) return season to episode
         return com.miflix.native2.data.DbzEpisodeRP107.coordinates(season,episode,tmdb.season(item.id,1))
     }
-    private suspend fun fetchPlaybackSources(item:MediaSummary,imdb:String,season:Int,episode:Int,onBatch:(suspend (List<StreamChoice>)->Unit)?=null):List<StreamChoice> {
+    private suspend fun fetchPlaybackSources(item:MediaSummary,imdb:String,season:Int,episode:Int,onProviderFailure:(()->Unit)?=null,onBatch:(suspend (List<StreamChoice>)->Unit)?=null):List<StreamChoice> {
         if(com.miflix.native2.data.DbzEpisodeRP107.enabled(item.type,item.id)) {
             val target=providerEpisodeRP107(item,season,episode)
             // DBZ is ALWAYS S1:absolute at the provider boundary; never query saga seasons first.
-            return fetchCanonicalSourcesRP102(item,imdb,target.first,target.second,onBatch)
+            return fetchCanonicalSourcesRP102(item,imdb,target.first,target.second,onProviderFailure,onBatch)
         }
-        val normal=fetchCanonicalSourcesRP102(item,imdb,season,episode,onBatch)
+        val normal=fetchCanonicalSourcesRP102(item,imdb,season,episode,onProviderFailure,onBatch)
         if(normal.isNotEmpty() || item.type!="series" || !com.miflix.native2.data.AbsoluteEpisodeRP102.enabled(item.id)) return normal
         val absolute=tmdb.absoluteNumberRP102(item.id,season,episode) ?: return normal
         if(season==1 && episode==absolute) return normal
         // Only an empty result triggers the alternate numbering; never mix two episode identities.
-        return fetchCanonicalSourcesRP102(item,imdb,1,absolute,onBatch)
+        return fetchCanonicalSourcesRP102(item,imdb,1,absolute,onProviderFailure,onBatch)
     }
-    private suspend fun fetchCanonicalSourcesRP102(item: MediaSummary,imdb: String,season: Int,episode: Int,onBatch:(suspend (List<StreamChoice>)->Unit)?=null): List<StreamChoice> = supervisorScope {
+    private suspend fun fetchCanonicalSourcesRP102(item: MediaSummary,imdb: String,season: Int,episode: Int,onProviderFailure:(()->Unit)?=null,onBatch:(suspend (List<StreamChoice>)->Unit)?=null): List<StreamChoice> = supervisorScope {
         val owner=session?.userId
         val publish: (suspend (List<StreamChoice>) -> Unit)? = onBatch?.let { callback ->
             { rows -> callback(sortPlaybackRowsRP92(rows,item)) }
         }
         if(easyModeRP79) return@supervisorScope StreamOrdering.sorted(
-            easyStreamsRP79.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage,publish),
+            easyStreamsRP79.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage,onProviderFailure,publish),
             audioLanguage,secondaryAudio=secondaryAudioLanguageRP62)
         val native=owner!=null && nativeStore.enabled(owner)
         // Disabled is the default and leaves the existing add-on path unchanged.
         if(!native) return@supervisorScope sortPlaybackRowsRP92(
-            streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage,publish))
+            streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage,onProviderFailure,publish))
         val token=nativeStore.token(owner)
         val onlyNative=nativeOnlyRP75
         val addon=async {
-            if(onlyNative || streamRepo.manifests().isEmpty()) emptyList() else streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage,publish)
+            if(onlyNative || streamRepo.manifests().isEmpty()) emptyList() else streamRepo.resolve(imdb,item.type,season,episode,item.year,streamSizeBytes,item.title,audioLanguage,onProviderFailure,publish)
         }
         var failure: String?=null
         val builtIn=try {
@@ -1685,6 +1686,7 @@ class AppState(context: Context) {
                     try {tmdb.spanishTitle(item).ifBlank {item.title}} catch(e: CancellationException) {throw e} catch(_: Exception) {item.title}
                 else item.title),item.type,item.year,season,episode,streamSizeBytes,audioLanguage,spanishOnly=nativeSpanishOnlyRP77,sizeAscending=nativeSizeAscendingRP77) }
         } catch(e: kotlinx.coroutines.TimeoutCancellationException) { failure=tr("Motor nativo: tiempo agotado","Native engine: timed out");emptyList() } catch(e: CancellationException) { throw e } catch(e: Exception) { failure=e.message;emptyList() }
+        if(failure!=null) onProviderFailure?.invoke()
         if(builtIn.isNotEmpty()) publish?.invoke(builtIn)
         val links=sortPlaybackRowsRP92(addon.await()+builtIn,item)
         if(session?.userId==owner) nativeSourceStatus=failure ?: tr("Motor nativo: ","Native engine: ")+builtIn.size+tr(" enlaces disponibles"," available links")

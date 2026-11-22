@@ -2039,6 +2039,8 @@ class AppState(context: Context) {
     var collectionTitle by mutableStateOf("")
     val collectionItems = mutableStateListOf<MediaSummary>()
 
+    var platformReturnScreen by mutableStateOf(Screen.HOME)
+        private set
     var platformId by mutableStateOf("")
     var platformTitle by mutableStateOf("")
     val platformSections = mutableStateListOf<CatalogSection>()
@@ -2878,6 +2880,7 @@ class AppState(context: Context) {
 
     suspend fun openPlatform(id: String, title: String) = supervisorScope {
         val providerIds = providers[id] ?: return@supervisorScope
+        val origin=screen.takeUnless {it==Screen.PLATFORM_DETAIL} ?: platformReturnScreen
         busyMessage = "${tr("Cargando","Loading")} $title…"
         platformId = id
         platformTitle = title
@@ -2890,6 +2893,7 @@ class AppState(context: Context) {
             platformSections += CatalogSection("top10", "Top 10 ${tr("en","on")} $title", top.await(), landscape = true)
             platformSections += CatalogSection("movies", tr("Películas","Movies"), moviesJob.await())
             platformSections += CatalogSection("series", tr("Series","Series"), seriesJob.await())
+            platformReturnScreen=origin
             screen = Screen.PLATFORM_DETAIL
             busyMessage = null
 
@@ -3350,7 +3354,9 @@ class AppState(context: Context) {
         val target=tirsoTargetRP181(item) ?: return
         selected=target.item;details=target.detail
         detailsReturnScreen=returnTo
-        playResolved(target.item,target.detail.imdbId!!,target.season,target.episode,resumeOverride=0L,onStarted={request ->
+        playResolved(target.item,target.detail.imdbId!!,target.season,target.episode,resumeOverride=0L,
+            selectedStream=if(returnTo==Screen.DAILY_ROTATION) target.sources.firstOrNull() else null,
+            fallbackStreams=if(returnTo==Screen.DAILY_ROTATION) target.sources else emptyList(),onStarted={request ->
             playerRequest=request.copy(returnScreen=returnTo)
         })
     }
@@ -4606,7 +4612,7 @@ class AppState(context: Context) {
 enum class Screen {
     CALENDAR,
     SPLASH, HOME, SEARCH, MOVIES, SERIES, COLLECTIONS, OSCARS, COLLECTION_DETAIL, PLATFORM_DETAIL,
-    GENRES, GENRE_DETAIL, YEAR_DETAIL, MY_LIST, DOWNLOADS, SETTINGS, PROFILES, WATCH_PARTY, PAIR_DEVICE,
+    GENRES, GENRE_DETAIL, YEAR_DETAIL, DAILY_ROTATION, MY_LIST, DOWNLOADS, SETTINGS, PROFILES, WATCH_PARTY, PAIR_DEVICE,
     DETAILS, CUSTOM_FILTER, FRANCHISE, PLAYER, MULTIVIEW, LIVE_TV, LIDOM, FRIENDS, TRAKT, NOTIFICATIONS, DIRECTOR_DETAIL
 
 }

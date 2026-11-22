@@ -236,7 +236,8 @@ private fun MiFlixNativeAppImplRP150(initialPartyCode: String? = null,initialCon
             Screen.COLLECTIONS -> CollectionsScreen(state) { state.screen = Screen.HOME }
             Screen.OSCARS -> OscarsScreen(state)
             Screen.COLLECTION_DETAIL -> CatalogScreen(state, state.collectionTitle, state.collectionItems, onBack = { state.screen = Screen.COLLECTIONS })
-            Screen.PLATFORM_DETAIL -> PlatformScreen(state) { state.screen = Screen.COLLECTIONS }
+            Screen.PLATFORM_DETAIL -> PlatformScreen(state) { state.screen = state.platformReturnScreen }
+            Screen.DAILY_ROTATION -> DailyRotationScreenRP213(state)
             Screen.GENRES -> CollectionsScreen(state) { state.screen = Screen.HOME }
             Screen.GENRE_DETAIL -> CatalogScreen(state,state.genreTitle,state.genreItems,onBack={state.screen=state.genreReturnScreen},footer={
                 Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {

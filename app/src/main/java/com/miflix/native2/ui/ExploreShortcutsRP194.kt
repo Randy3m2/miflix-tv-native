@@ -61,7 +61,7 @@ internal fun ExploreShortcutsRP194(
     )
     val rowHeight=if(LocalHomeShelfPaging.current) LocalHomeCardRowHeight.current+40.dp else 228.dp
     Column(Modifier.fillMaxWidth().height(rowHeight).padding(start=40.dp,end=24.dp,top=4.dp,bottom=4.dp),verticalArrangement=Arrangement.spacedBy(5.dp)) {
-        Text(tr("Explorar","Explore"),color=Color.White,fontSize=23.sp,fontWeight=FontWeight.Bold)
+        Text(tr("Explorar","Explore"),color=Color.White,fontSize=22.sp,lineHeight=27.sp,fontWeight=FontWeight.Bold)
         HomeHorizontalRail {
             LazyRow(
                 Modifier.fillMaxWidth().smoothHorizontalDpad(),
@@ -92,7 +92,7 @@ private fun ExploreShortcutCardRP194(entry:ExploreArtworkRP194,modifier:Modifier
     val stroke by animateColorAsState(if(focused) Accent else Color.White.copy(alpha=.12f),tween(120),label="exploreStroke")
     val shape=RoundedCornerShape(15.dp)
     Box(
-        modifier.width(254.dp).height(if(LocalHomeShelfPaging.current) (LocalHomeCardRowHeight.current-14.dp).coerceAtLeast(110.dp) else 174.dp)
+        modifier.width(254.dp).height(if(LocalHomeShelfPaging.current) (LocalHomeCardRowHeight.current-12.dp).coerceAtLeast(110.dp) else 174.dp)
             .graphicsLayer { scaleX=scale;scaleY=scale }
             .onFocusChanged {focused=it.isFocused}
             .tvClick(onClick).clickable(onClick=onClick)

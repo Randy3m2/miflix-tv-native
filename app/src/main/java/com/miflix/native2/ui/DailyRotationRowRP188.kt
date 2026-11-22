@@ -1,7 +1,8 @@
 package com.miflix.native2.ui
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.focusGroup
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -21,7 +22,16 @@ import kotlinx.coroutines.delay
 import java.util.Calendar
 
 @Composable
-internal fun DailyRotationRowRP188(state:AppState,mobile:Boolean=false,filter:String="") {
+internal fun DailyRotationScreenRP213(state:AppState) {
+    BackHandler {state.screen=Screen.HOME}
+    AppShell(state,Screen.DAILY_ROTATION,{state.screen=it}) {
+        DailyRotationContent(state)
+    }
+}
+
+@Composable
+private fun DailyRotationContent(state:AppState) {
+    val filter=""
     if(state.kidsMode || state.partyRole==PartyRole.GUEST) return
     val owner=state.localExtrasScope()
     val context=LocalContext.current
@@ -45,8 +55,8 @@ internal fun DailyRotationRowRP188(state:AppState,mobile:Boolean=false,filter:St
     var loading by remember(key) {mutableStateOf(true)}
     var retry by remember(key) {mutableIntStateOf(0)}
     var opening by remember(key) {mutableStateOf(false)}
-    LaunchedEffect(key,retry,opening,state.appForeground) {
-        if(opening || !state.appForeground) return@LaunchedEffect
+    LaunchedEffect(key,retry,state.appForeground) {
+        if(!state.appForeground) return@LaunchedEffect
         loading=true
         try {
             val candidates=DailyRotationPolicyRP188.unseenCandidates(year,day,seenPrior,filter).take(36)
@@ -68,31 +78,46 @@ internal fun DailyRotationRowRP188(state:AppState,mobile:Boolean=false,filter:St
     val play:(MediaSummary)->Unit={item->
         val entry=rows.firstOrNull {it.second.cloudId==item.cloudId}?.first
         if(entry!=null && !opening) {opening=true;state.launch {
-            try {state.socialAction {state.playTirsoScheduleItemRP177(entry,Screen.HOME)}} finally {opening=false}
+            try {state.socialAction {state.playTirsoScheduleItemRP177(entry,Screen.DAILY_ROTATION)}} finally {opening=false}
         }}
     }
     val entryFocus=remember(key) {FocusRequester()}
     var placeholderFocused by remember(key) {mutableStateOf(false)}
     LaunchedEffect(rows.isNotEmpty()) {
-        if(rows.isNotEmpty() && placeholderFocused && !mobile) {
+        if(rows.isNotEmpty() && placeholderFocused) {
             withFrameNanos { };runCatching {entryFocus.requestFocus()}
         }
     }
-    val railHeight=if(mobile) 240.dp else if(LocalHomeShelfPaging.current) LocalHomeCardRowHeight.current+40.dp else 302.dp
-    Box(Modifier.fillMaxWidth().height(railHeight).focusRequester(entryFocus).focusGroup()) {
-    if(rows.isNotEmpty()) {
-        if(mobile) MobileRailRP133(state,title,rows.map {it.second},onSelectRP188=play)
-        else SpotlightRail(title,rows.map {it.second},showTitle=true,onClick=play)
-    } else Column(Modifier.fillMaxWidth().padding(horizontal=if(mobile) 16.dp else 40.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-        Text(title,color=Color.White,fontSize=if(mobile) 19.sp else 24.sp,fontWeight=FontWeight.Bold)
-        Text(if(loading) tr("Preparando la selección de hoy…","Preparing today's selection…") else tr("No encontramos enlaces para la selección de hoy. Revisa tus add-ons o reintenta.","No sources were found for today's selection. Check your add-ons or retry."),color=Muted,fontSize=14.sp)
-        if(loading && !mobile) FocusButton(tr("Comprobando enlaces…","Checking sources…"),modifier=Modifier.onFocusChanged {if(it.isFocused || rows.isEmpty()) placeholderFocused=it.isFocused}) { }
-        if(!loading) {
-            val again={state.dailyRotationRP188.invalidate(key);rows.clear();retry++;Unit}
-            if(mobile) MobileButtonRP133(tr("Reintentar","Retry"),click=again)
-            else FocusButton(tr("Reintentar","Retry"),modifier=Modifier.onFocusChanged {if(it.isFocused || rows.isEmpty()) placeholderFocused=it.isFocused},onClick=again)
+    LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(top=24.dp,bottom=48.dp)) {
+        item(key="heading") {
+            Column(Modifier.fillMaxWidth().padding(start=40.dp,end=40.dp,bottom=20.dp),
+                verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                Text(title,color=Color.White,fontSize=32.sp,fontWeight=FontWeight.Bold)
+                if(loading || opening) Text(if(opening) tr("Abriendo título…","Opening title…")
+                    else tr("Preparando la selección de hoy…","Preparing today's selection…"),color=Muted,fontSize=14.sp)
+                if(rows.isEmpty()) {
+                    if(loading) FocusButton(tr("Comprobando enlaces…","Checking sources…"),
+                        modifier=Modifier.onFocusChanged {if(it.isFocused || rows.isEmpty()) placeholderFocused=it.isFocused}) {}
+                    else {
+                        Text(tr("No encontramos enlaces para la selección de hoy.","No sources were found for today's selection."),color=Muted,fontSize=14.sp)
+                        FocusButton(tr("Reintentar","Retry"),modifier=Modifier.onFocusChanged {if(it.isFocused || rows.isEmpty()) placeholderFocused=it.isFocused}) {
+                            state.dailyRotationRP188.invalidate(key);retry++
+                        }
+                    }
+                }
+            }
+        }
+        val films=rows.map {it.second}.filter {it.type=="movie"}.distinctBy {it.cloudId}
+        val series=rows.map {it.second}.filter {it.type=="series"}.distinctBy {it.cloudId}
+        if(films.isNotEmpty()) item(key="films") {
+            Box(Modifier.focusRequester(entryFocus)) {
+                SpotlightRail(tr("Películas","Movies"),films,showTitle=true,onClick=play)
+            }
+        }
+        if(series.isNotEmpty()) item(key="series") {
+            Box(if(films.isEmpty()) Modifier.focusRequester(entryFocus) else Modifier) {
+                SpotlightRail(tr("Series","Series"),series,showTitle=true,onClick=play)
+            }
         }
     }
-}
-
 }

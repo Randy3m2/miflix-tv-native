@@ -4,5 +4,6 @@ package com.miflix.native2.data.rp200
 
 data class TrailerPlaybackSource(
     val videoUrl: String,
-    val audioUrl: String? = null
+    val audioUrl: String? = null,
+    val isHls: Boolean = false
 )

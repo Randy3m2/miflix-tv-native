@@ -1,7 +1,6 @@
 package com.miflix.native2.ui
 
 import androidx.annotation.OptIn
-import android.view.View
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,17 +17,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.common.PlaybackException
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.exoplayer.source.MergingMediaSource
 import androidx.media3.ui.PlayerView
 import androidx.tv.material3.Text
 import com.miflix.native2.data.LidomRepository
-import com.miflix.native2.data.rp200.YoutubeChunkedDataSourceFactory
 import kotlinx.coroutines.CancellationException
 
 /** RP200: native LIDOM Multiview tile; no embedded YouTube iframe. */
@@ -48,31 +41,23 @@ internal fun LidomSplitYoutubeTileRP9(req:PlayerRequest,audible:Boolean,modifier
         if(video==null) {message=tr("Enlace de YouTube inválido","Invalid YouTube URL");return@LaunchedEffect}
         message="";ready=false
         try {
-            val source=NativeTrailerResolverRP200.get(video)
-            if(source==null) {message=tr("No se pudo resolver el directo","Live stream unavailable");return@LaunchedEffect}
-            val factory=DefaultMediaSourceFactory(YoutubeChunkedDataSourceFactory())
-            if(!source.audioUrl.isNullOrBlank()) {
-                player.setMediaSource(MergingMediaSource(
-                    factory.createMediaSource(MediaItem.fromUri(source.videoUrl)),
-                    factory.createMediaSource(MediaItem.fromUri(source.audioUrl))
-                ))
-            } else player.setMediaSource(factory.createMediaSource(MediaItem.fromUri(source.videoUrl)))
-            player.prepare();ready=true
+            repeat(3) { attempt ->
+                if(attempt>0) message=tr("Reconectando el directo…","Reconnecting live stream…")
+                val source=NativeTrailerResolverRP200.get(video,live=true)
+                if(source==null) {message=tr("No se pudo resolver el directo","Live stream unavailable");return@LaunchedEffect}
+                player.setNativeYoutubeSource(source)
+                ready=true
+                message=""
+                awaitYoutubeLiveStall(player)
+                player.stop()
+            }
+            message=tr("No se pudo recuperar el directo","Could not recover live stream")
         } catch(e:CancellationException) {throw e}
           catch(_:Exception) {message=tr("No se pudo reproducir el directo","Could not play live stream")}
     }
     LaunchedEffect(audible,running,ready) {
         player.volume=if(audible) 1f else 0f
         player.playWhenReady=running && ready
-    }
-    DisposableEffect(player) {
-        val listener=object:Player.Listener {
-            override fun onPlayerError(cause:PlaybackException) {
-                message=tr("No se pudo reproducir el directo","Could not play live stream")
-            }
-        }
-        player.addListener(listener)
-        onDispose {player.removeListener(listener)}
     }
     DisposableEffect(lifecycle,player) {
         val observer=LifecycleEventObserver {_,event ->

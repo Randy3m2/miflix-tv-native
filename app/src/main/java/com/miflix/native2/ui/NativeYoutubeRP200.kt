@@ -40,11 +40,43 @@ import kotlinx.coroutines.delay
 internal object NativeTrailerResolverRP200 {
     val extractor = InAppYouTubeExtractor()
     private val cache=mutableMapOf<String,TrailerPlaybackSource>()
-    suspend fun get(id:String):TrailerPlaybackSource? {
+    suspend fun get(id:String,live:Boolean=false):TrailerPlaybackSource? {
+        if(live) return extractor.extractLivePlaybackSource("https://www.youtube.com/watch?v=$id")
         synchronized(cache) {cache[id]}?.let {return it}
         val result=extractor.extractPlaybackSource("https://www.youtube.com/watch?v=$id",maxVideoHeight=1080)
         if(result!=null) synchronized(cache) {if(cache.size>12) cache.clear();cache[id]=result}
         return result
+    }
+}
+
+@OptIn(UnstableApi::class)
+internal fun ExoPlayer.setNativeYoutubeSource(source:TrailerPlaybackSource) {
+    val dataSource=if(source.isHls) androidx.media3.datasource.DefaultHttpDataSource.Factory()
+        .setConnectTimeoutMs(8000).setReadTimeoutMs(8000)
+    else YoutubeChunkedDataSourceFactory()
+    val factory=DefaultMediaSourceFactory(dataSource)
+    val item=MediaItem.Builder().setUri(source.videoUrl)
+    if(source.isHls) item.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_M3U8)
+    val video=factory.createMediaSource(item.build())
+    val audio=source.audioUrl
+    if(audio.isNullOrBlank()) setMediaSource(video)
+    else setMediaSource(MergingMediaSource(video,factory.createMediaSource(MediaItem.fromUri(audio))))
+    prepare()
+}
+
+internal suspend fun awaitYoutubeLiveStall(player:Player) {
+    val pollMs=500L
+    val stallMs=8_000L
+    var position=player.currentPosition
+    var stalledSince=android.os.SystemClock.elapsedRealtime()
+    while(true) {
+        delay(pollMs)
+        val now=android.os.SystemClock.elapsedRealtime()
+        val next=player.currentPosition
+        if(!player.playWhenReady || next!=position) stalledSince=now
+        if(player.playWhenReady && (player.playerError!=null ||
+                player.playbackState==Player.STATE_ENDED || now-stalledSince>=stallMs)) return
+        position=next
     }
 }
 
@@ -81,8 +113,24 @@ internal fun NativeYoutubeRP200(
     var controls by remember(video) {mutableStateOf(true)}
     var paused by remember(video) {mutableStateOf(false)}
     var retry by remember(video) {mutableIntStateOf(0)}
+    var liveRecoveries by remember(video) {mutableIntStateOf(0)}
     var position by remember(video) {mutableLongStateOf(0L)}
     var duration by remember(video) {mutableLongStateOf(0L)}
+    val lifecycle=context.playbackActivity()?.lifecycle
+    var foreground by remember(lifecycle) {
+        mutableStateOf(lifecycle?.currentState?.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)!=false)
+    }
+    DisposableEffect(lifecycle) {
+        val observer=androidx.lifecycle.LifecycleEventObserver {_,event ->
+            when(event) {
+                androidx.lifecycle.Lifecycle.Event.ON_START -> foreground=true
+                androidx.lifecycle.Lifecycle.Event.ON_STOP -> foreground=false
+                else -> Unit
+            }
+        }
+        lifecycle?.addObserver(observer)
+        onDispose { lifecycle?.removeObserver(observer) }
+    }
     val workCallback by rememberUpdatedState(onWorking)
     val endCallback by rememberUpdatedState(onEnded)
     DisposableEffect(player) {
@@ -91,29 +139,42 @@ internal fun NativeYoutubeRP200(
             override fun onPlaybackStateChanged(state:Int) {
                 if(state==Player.STATE_ENDED) endCallback?.invoke()
             }
-            override fun onPlayerError(cause:androidx.media3.common.PlaybackException) {error=true}
+            override fun onPlayerError(cause:androidx.media3.common.PlaybackException) {if(preview) error=true}
         }
         player.addListener(listener)
         onDispose {player.removeListener(listener);NativeTrailerPlayerPoolRP200.park(player)}
     }
     LaunchedEffect(video,retry) {
         loading=true;error=false;firstFrame=false;source=null
-        try {source=NativeTrailerResolverRP200.get(video);if(source==null) error=true}
+        try {source=NativeTrailerResolverRP200.get(video,live=!preview);if(source==null) error=true}
         catch(e:CancellationException) {throw e}
         catch(_:Exception) {error=true}
         finally {loading=false}
     }
     LaunchedEffect(source) {
         val ready=source ?: return@LaunchedEffect
-        val factory=DefaultMediaSourceFactory(YoutubeChunkedDataSourceFactory())
-        if(!ready.audioUrl.isNullOrBlank()) {
-            val videoSource=factory.createMediaSource(MediaItem.fromUri(ready.videoUrl))
-            val audioSource=factory.createMediaSource(MediaItem.fromUri(ready.audioUrl))
-            player.setMediaSource(MergingMediaSource(videoSource,audioSource))
-        } else player.setMediaSource(factory.createMediaSource(MediaItem.fromUri(ready.videoUrl)))
-        player.prepare();player.playWhenReady=true
+        try {
+            player.setNativeYoutubeSource(ready)
+            player.playWhenReady=!paused && (preview || foreground)
+        } catch(e:CancellationException) {
+            throw e
+        } catch(_:Exception) {
+            error=true
+            return@LaunchedEffect
+        }
+        if(!preview) {
+            awaitYoutubeLiveStall(player)
+            if(liveRecoveries<2) {
+                liveRecoveries++
+                player.stop()
+                retry++
+            } else {
+                player.stop()
+                error=true
+            }
+        }
     }
-    LaunchedEffect(paused) {player.playWhenReady=!paused && source!=null}
+    LaunchedEffect(paused,foreground) {player.playWhenReady=!paused && source!=null && (preview || foreground)}
     LaunchedEffect(controls,firstFrame) {
         if(firstFrame && controls) {delay(3200);controls=false}
     }
@@ -158,7 +219,8 @@ internal fun NativeYoutubeRP200(
             setShutterBackgroundColor(android.graphics.Color.BLACK)
         }},modifier=Modifier.fillMaxSize().graphicsLayer {alpha=videoAlpha})
         if(!firstFrame) Box(Modifier.fillMaxSize().background(Color.Black),contentAlignment=Alignment.Center) {
-            Text(if(error) tr("No se pudo cargar el tráiler nativo","Native video unavailable")
+            Text(if(error) if(preview) tr("No se pudo cargar el tráiler nativo","Native video unavailable") else tr("No se pudo cargar el directo","Live stream unavailable")
+                else if(!preview && liveRecoveries>0) tr("Reconectando el directo…","Reconnecting live stream…")
                 else tr("Preparando reproducción…","Preparing playback…"),color=Color.White,fontSize=17.sp)
         }
         if(controls && firstFrame) Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
@@ -179,7 +241,7 @@ internal fun NativeYoutubeRP200(
             }
         }
         if(error) Row(Modifier.align(Alignment.BottomCenter).padding(20.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            FocusButton(tr("Reintentar","Retry")) {retry++}
+            FocusButton(tr("Reintentar","Retry")) {liveRecoveries=0;retry++}
             FocusButton(tr("Cerrar","Close"),onClick=close)
         }
     }

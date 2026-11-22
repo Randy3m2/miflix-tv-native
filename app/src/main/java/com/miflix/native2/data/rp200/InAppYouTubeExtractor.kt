@@ -325,7 +325,10 @@ class InAppYouTubeExtractor internal constructor(
      * every quality and lists the audio as its own rendition, then a progressive file.
      */
     suspend fun extractSingleUrl(youtubeUrl: String): String? =
-        extract(youtubeUrl, singleUrl = true)?.videoUrl
+        extractLivePlaybackSource(youtubeUrl)?.videoUrl
+
+    suspend fun extractLivePlaybackSource(youtubeUrl: String): TrailerPlaybackSource? =
+        extract(youtubeUrl, singleUrl = true)
 
     private suspend fun extract(
         youtubeUrl: String,
@@ -597,7 +600,7 @@ class InAppYouTubeExtractor internal constructor(
                 // only downloaded here, once the adaptive streams have failed.
                 PlaybackSourceKind.HLS_MANIFEST ->
                     pickBestManifest(streams.manifestUrls)
-                        ?.let { TrailerPlaybackSource(videoUrl = it.manifestUrl, audioUrl = null) }
+                        ?.let { TrailerPlaybackSource(videoUrl = it.manifestUrl, isHls = true) }
                 // Progressive (combined video+audio, usually low quality)
                 PlaybackSourceKind.PROGRESSIVE ->
                     sortCandidates(streams.progressive).firstOrNull()?.url?.let { resolveReachableUrl(it) }

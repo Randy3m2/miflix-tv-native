@@ -439,6 +439,7 @@ internal object UpdateNotes {
         "RP212: Live vuelve al diseño anterior." to "RP212: Live returns to its previous layout."
     )
     val rp213Changes=listOf(
+        "RP213: Explorar y Elige tu vibe usan las mismas medidas de tarjeta que las otras filas de Inicio." to "RP213: Explore and Pick your vibe use the same card height as the other Home shelves.",
         "RP213: Rotación diaria abre su propia pantalla y reproduce películas y series desde los enlaces comprobados." to "RP213: Daily Rotation opens its own screen and plays movies and shows from checked sources.",
         "RP213: Atrás en una plataforma vuelve a la pantalla desde donde abriste el catálogo." to "RP213: Back from a streaming platform returns to the screen that opened its catalog."
     )

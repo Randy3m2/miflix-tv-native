@@ -48,6 +48,22 @@ internal object ReleaseAlertsRP164 {
   val notification=NotificationCompat.Builder(c,CHANNEL).setSmallIcon(R.drawable.ic_release_rp164).setContentTitle(release.item.title).setContentText(release.message).setStyle(NotificationCompat.BigTextStyle().bigText(release.message)).setContentIntent(pi).setAutoCancel(true).build()
   try {manager.notify((owner+release.id).hashCode(),notification);prefs(c).edit().putStringSet("delivered:$owner",(delivered+release.id).toList().takeLast(1000).toSet()).apply()} catch(_:SecurityException) {}
  }
+ fun clearGeneration(prefs: SharedPreferences, key: String): Long =
+  prefs.getLong("clear_generation:$key", 0L)
+
+ @Synchronized fun clearHistory(prefs: SharedPreferences, key: String) {
+  prefs.edit().remove(key)
+   .putLong("clear_generation:$key", clearGeneration(prefs, key) + 1).apply()
+ }
+
+ @Synchronized fun saveHistory(
+  prefs: SharedPreferences, key: String, generation: Long, knownKey: String, known: JSONObject, rows: JSONArray
+ ): Boolean {
+  if (clearGeneration(prefs, key) != generation) return false
+  prefs.edit().putString(knownKey, known.toString()).putString(key, rows.toString()).apply()
+  return true
+ }
+
  suspend fun scan(c:Context)=lock.withLock {
   val p=prefs(c);val owner=p.getString("active","") ?: return@withLock
   val local=LocalStore(c);val current="${local.loadSession()?.userId ?: "local"}:${local.profileId()}"
@@ -58,6 +74,7 @@ internal object ReleaseAlertsRP164 {
   val repo=TmdbRepository(token).apply {language=p.getString("language:$owner","en-US").orEmpty()}
   val noticesPrefs=c.getSharedPreferences(PLAYBACK_PREFS,0)
   val knownKey="known_${owner.replaceFirst(':','_')}";val noticesKey="notices_${owner.replaceFirst(':','_')}"
+  val generation = clearGeneration(noticesPrefs, noticesKey)
   val known=runCatching {JSONObject(noticesPrefs.getString(knownKey,"{}"))}.getOrDefault(JSONObject())
   val old=runCatching {JSONArray(noticesPrefs.getString(noticesKey,"[]"))}.getOrDefault(JSONArray());val rows=objectsRP164(old).toMutableList()
   for(id in batch) {
@@ -71,7 +88,7 @@ internal object ReleaseAlertsRP164 {
     known.put(id,release?.id ?: "pending")
    } catch(e:CancellationException) {throw e} catch(_:Exception) {}
   }
-  noticesPrefs.edit().putString(knownKey,known.toString()).putString(noticesKey,JSONArray(rows.take(100)).toString()).apply()
+  if (!saveHistory(noticesPrefs, noticesKey, generation, knownKey, known, JSONArray(rows))) return@withLock
   p.edit().putInt("cursor:$owner",if(ids.isEmpty()) 0 else (cursor+batch.size)%ids.size).apply()
  }
  private fun objectsRP164(a:JSONArray)=(0 until a.length()).mapNotNull {a.optJSONObject(it)}

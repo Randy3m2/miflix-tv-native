@@ -231,10 +231,20 @@ internal fun MobileCalendarRP133(state:AppState) {
 
 @Composable
 internal fun MobileNotificationsRP133(state:AppState) {
-    LaunchedEffect(Unit) {state.markNoticesRead()}
+    LaunchedEffect(state.localExtrasScope(), state.appForeground) {
+        if (state.appForeground) {
+            state.restoreNotificationHistory()
+            state.markNoticesRead()
+        }
+    }
     LazyColumn(contentPadding=PaddingValues(16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         item {Text(tr("Notificaciones","Notifications"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)}
         item {MobileButtonRP133(tr("Novedades de BruniO","What's new in BruniO"),"bell",Modifier.fillMaxWidth()) {state.changelogOpen=true}}
+        if (state.notifications.isNotEmpty()) item("clear-history") {
+            MobileButtonRP133(tr("Borrar historial","Clear history"),"trash",Modifier.fillMaxWidth()) {
+                state.clearNotifications()
+            }
+        }
         items(state.notifications,key={it.id}) {notice->Row(Modifier.fillMaxWidth().mobileGlassRP133().clickable {state.launch {state.open(notice.item)}}.padding(12.dp),horizontalArrangement=Arrangement.spacedBy(12.dp)) {
             AsyncImage(notice.item.poster,notice.item.title,Modifier.width(46.dp).height(67.dp).clip(RoundedCornerShape(7.dp)),contentScale=ContentScale.Crop)
             Column {Text(notice.item.title,color=Color.White,fontWeight=FontWeight.Bold);Text(notice.message,color=Muted,fontSize=13.sp);Text(notice.date,color=Muted,fontSize=11.sp)}

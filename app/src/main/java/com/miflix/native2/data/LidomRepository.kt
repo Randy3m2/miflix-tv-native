@@ -91,23 +91,65 @@ internal class LidomRepository(private val context:Context, owner:String) {
         }
     }
 
-    suspend fun verifiedLive(source: LidomSource): LidomVideo? {
-        val url = java.net.URI(source.url.trim())
-        val channelPath = url.rawPath.split('/').filter { it.isNotEmpty() }
-            .take(if (url.rawPath.startsWith("/@")) 1 else 2).joinToString("/")
-        val page = Http.text(
-            "https://www.youtube.com/$channelPath/streams",
-            headers = mapOf(
-                "Accept" to "text/html",
-                "Accept-Language" to "en-US,en;q=0.9",
-                "User-Agent" to "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36"
-            ),
-            timeoutMs = 10000
-        )
-        // Abriendo Sports covers other teams and sports as well.
-        val teamName = "Escogido".takeIf { channelPath.equals("@abriendosports", ignoreCase = true) }
-        return LidomYouTubeLive.find(page, teamName)
+    suspend fun verifiedLive(source: LidomSource): LidomVideo? = supervisorScope {
+        val channel = youtubeChannelPath(source.url)
+        val club = requireNotNull(team(source.team))
+        val sharedChannel = channel.equals("@abriendosports", ignoreCase = true) ||
+            channel == "channel/UCF8EeDFLnGcD5-SRFS4Eyiw"
+        val primaryFilter = club.short.takeIf { sharedChannel }
+        val primary = async { checkYoutubeLive { LidomYouTubeLive.findChannelLive(youtubePage(channel, "live"), primaryFilter) } }
+        val streams = async { checkYoutubeLive { LidomYouTubeLive.find(youtubePage(channel, "streams"), primaryFilter) } }
+        try {
+            primary.await().getOrNull()?.let { return@supervisorScope it }
+            streams.await().getOrNull()?.let { return@supervisorScope it }
+        } finally {
+            primary.cancel()
+            streams.cancel()
+        }
+
+        // A matchup may appear only on the other club's channel. Require the selected
+        // club in the title before offering a broadcast from a different channel.
+        val alternatives = teams.asSequence().filter { it.id != club.id }
+            .mapNotNull { other -> sources(other.id).firstOrNull { it.kind == "YOUTUBE" && youtubeChannel(it.url) } }
+            .map { youtubeChannelPath(it.url) }.filterNot { it.equals(channel, ignoreCase = true) }
+            .distinct().map { other ->
+                async { checkYoutubeLive { LidomYouTubeLive.findChannelLive(youtubePage(other, "live"), club.short) } }
+            }.toList()
+        try {
+            for (candidate in alternatives) {
+                candidate.await().getOrNull()?.let { return@supervisorScope it }
+            }
+        } finally {
+            alternatives.forEach { it.cancel() }
+        }
+        primary.await().exceptionOrNull()?.let { if (streams.await().isFailure) throw it }
+        null
     }
+
+    private suspend fun checkYoutubeLive(block: suspend () -> LidomVideo?): Result<LidomVideo?> =
+        try {
+            Result.success(block())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+
+    private fun youtubeChannelPath(value: String): String {
+        val path = java.net.URI(value.trim()).rawPath
+        return path.split('/').filter { it.isNotEmpty() }
+            .take(if (path.startsWith("/@")) 1 else 2).joinToString("/")
+    }
+
+    private suspend fun youtubePage(channel: String, tab: String): String = Http.text(
+        "https://www.youtube.com/$channel/$tab",
+        headers = mapOf(
+            "Accept" to "text/html",
+            "Accept-Language" to "en-US,en;q=0.9",
+            "User-Agent" to "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36"
+        ),
+        timeoutMs = 8000
+    )
 
     private val youtubeChannelsRP61=mutableMapOf<String,String>()
     suspend fun videos(source:LidomSource):List<LidomVideo> {

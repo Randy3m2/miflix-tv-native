@@ -32,6 +32,18 @@ class LidomYouTubeLiveTest {
         assertEquals("live7654321", LidomYouTubeLive.find(page, "Escogido")?.id)
     }
 
+    @Test
+    fun channelLiveUsesCurrentVideoInsteadOfScheduledOrRecommendedVideos() {
+        fun page(live: Boolean, extra: String = "") =
+            """<script>var ytInitialPlayerResponse = {"videoDetails":{"videoId":"B9PI_Y74yH8","title":"ÁGUILAS CIBAEÑAS VS LEONES DEL ESCOGIDO"},"microformat":{"playerMicroformatRenderer":{"liveBroadcastDetails":{"isLiveNow":$live$extra}}}};</script>"""
+
+        assertEquals("B9PI_Y74yH8", LidomYouTubeLive.findChannelLive(page(true), "Aguilas")?.id)
+        assertEquals("B9PI_Y74yH8", LidomYouTubeLive.findChannelLive(page(true), "Escogido")?.id)
+        assertNull(LidomYouTubeLive.findChannelLive(page(true), "Toros"))
+        assertNull(LidomYouTubeLive.findChannelLive(page(false)))
+        assertNull(LidomYouTubeLive.findChannelLive(page(true, ""","endTimestamp":"2026-11-26T02:00:00Z"""")))
+    }
+
     private fun channelPage(vararg cards: String): String =
         """<script>var ytInitialData = {"contents":[${cards.joinToString(",")}]};</script>"""
 }

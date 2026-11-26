@@ -7,7 +7,6 @@ import android.content.Context
 import android.net.Uri
 import org.json.JSONObject
 import org.json.JSONArray
-import java.text.Normalizer
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
@@ -16,7 +15,6 @@ import com.miflix.native2.model.StreamChoice
 internal data class LidomTeam(val id:String,val mlb:Int,val name:String,val short:String,val color:String,val website:String,val logo:String)
 internal data class LidomSource(val id:String,val team:String,val name:String,val kind:String,val url:String,val reference:String="",val note:String="",val aliases:List<String> = emptyList())
 internal data class LidomGame(val id:Int,val home:LidomTeam,val away:LidomTeam,val time:String,val status:String,val broadcasts:List<String> = emptyList())
-internal data class LidomVideo(val id:String,val title:String)
 
 internal class LidomRepository(private val context:Context, owner:String) {
     private val prefs=context.getSharedPreferences("brunio_lidom",Context.MODE_PRIVATE)
@@ -93,39 +91,23 @@ internal class LidomRepository(private val context:Context, owner:String) {
         }
     }
 
-    /** RP200: only return a video when the team's configured channel marks it LIVE NOW.
-     * No title-only "live" guesses: a replay/premiere must never auto-launch as a live game.
-     * YouTube channel page markup can change; failure returns null and preserves manual sources.
-     */
-    suspend fun verifiedLive(teamId:String):Pair<LidomSource,LidomVideo>? =
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            for(source in sources(teamId).filter { it.kind=="YOUTUBE" && youtubeChannel(it.url) }) {
-                val page=runCatching {
-                    val link=source.url.trimEnd('/')+"/streams"
-                    Http.text(link,timeoutMs=10000)
-                }.getOrNull() ?: continue
-                // Each videoRenderer belongs to one video. Never use a generic page-wide LIVE badge.
-                val renderers=page.split("\"videoRenderer\":").drop(1).take(35)
-                for(renderer in renderers) {
-                    val block=renderer.take(9000).substringBefore("\"videoRenderer\":")
-                    val id=Regex("\"videoId\"\\s*:\\s*\"([A-Za-z0-9_-]{11})\"").find(block)?.groupValues?.get(1) ?: continue
-                    val live=block.contains("\"isLiveNow\":true") ||
-                        block.contains("BADGE_STYLE_TYPE_LIVE_NOW")
-                    if(!live) continue
-                    val title=Regex("\"text\"\\s*:\\s*\"([^\"]{3,180})\"")
-                        .find(block)?.groupValues?.get(1) ?: source.name
-                    val club=team(teamId) ?: continue
-                    fun fold(value:String)=Normalizer.normalize(value,Normalizer.Form.NFD)
-                        .replace(Regex("[\\u0300-\\u036f]"),"").lowercase(Locale.ROOT)
-                    val label=fold(title)
-                    val matches=sequenceOf(club.short,club.name,club.id)
-                        .map(::fold).any {it.length>=4 && label.contains(it)}
-                    if(!matches) continue
-                    return@withContext source to LidomVideo(id,title)
-                }
-            }
-            null
-        }
+    suspend fun verifiedLive(source: LidomSource): LidomVideo? {
+        val url = java.net.URI(source.url.trim())
+        val channelPath = url.rawPath.split('/').filter { it.isNotEmpty() }
+            .take(if (url.rawPath.startsWith("/@")) 1 else 2).joinToString("/")
+        val page = Http.text(
+            "https://www.youtube.com/$channelPath/streams",
+            headers = mapOf(
+                "Accept" to "text/html",
+                "Accept-Language" to "en-US,en;q=0.9",
+                "User-Agent" to "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36"
+            ),
+            timeoutMs = 10000
+        )
+        // Abriendo Sports covers other teams and sports as well.
+        val teamName = "Escogido".takeIf { channelPath.equals("@abriendosports", ignoreCase = true) }
+        return LidomYouTubeLive.find(page, teamName)
+    }
 
     private val youtubeChannelsRP61=mutableMapOf<String,String>()
     suspend fun videos(source:LidomSource):List<LidomVideo> {

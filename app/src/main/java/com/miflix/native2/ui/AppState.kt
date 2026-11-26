@@ -3561,6 +3561,7 @@ class AppState(context: Context) {
     fun cinemaJourneyChronological()=playbackPrefs.getBoolean("journey_order:${ratingsKey()}",false)
     fun saveCinemaJourneyChronological(value:Boolean) {playbackPrefs.edit().putBoolean("journey_order:${ratingsKey()}",value).apply()}
 
+    var lidomYoutubePlayerOpen by mutableStateOf(false)
     var discoveryPreviewActive by mutableStateOf(false)
         internal set
 

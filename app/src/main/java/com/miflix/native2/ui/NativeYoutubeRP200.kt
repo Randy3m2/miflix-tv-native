@@ -301,6 +301,7 @@ internal fun NativeYoutubeRP200(
             useController=false
             resizeMode=androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
             this.player=player
+            if (!preview) keepScreenOn = true
             setShutterBackgroundColor(android.graphics.Color.BLACK)
         }},modifier=Modifier.fillMaxSize().graphicsLayer {alpha=videoAlpha})
         Box(Modifier.fillMaxSize().focusRequester(focus).then(keyHandling).focusable())

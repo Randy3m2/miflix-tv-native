@@ -72,7 +72,7 @@ internal fun PlaybackArtwork(state: AppState,request: PlayerRequest) {
 
 @Composable
 internal fun MenuScreensaver(state: AppState) {
-    val eligible=state.appForeground && !state.discoveryPreviewActive && state.screen !in setOf(Screen.PLAYER,Screen.MULTIVIEW,Screen.SPLASH,Screen.PROFILES,Screen.PAIR_DEVICE) && !state.miniPlayer && state.busyMessage==null && state.sourceSelection==null && !state.localCastPairing
+    val eligible=state.appForeground && !state.lidomYoutubePlayerOpen && !state.discoveryPreviewActive && state.screen !in setOf(Screen.PLAYER,Screen.MULTIVIEW,Screen.SPLASH,Screen.PROFILES,Screen.PAIR_DEVICE) && !state.miniPlayer && state.busyMessage==null && state.sourceSelection==null && !state.localCastPairing
     val rows=(if(state.kidsMode) state.kidsMovies else (state.trending+state.movies).filter {it.type=="movie"}.distinctBy {it.cloudId}).filter {it.backdrop!=null}.take(10)
     val ready = eligible && rows.isNotEmpty()
     // Only count idle time from when this menu can actually show the screensaver.

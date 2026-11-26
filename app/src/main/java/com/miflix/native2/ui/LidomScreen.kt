@@ -240,6 +240,10 @@ internal fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTea
         playYoutube(source, id)
     },close={youtube=null})}
     video?.let { (request, id) ->
+        DisposableEffect(state) {
+            state.lidomYoutubePlayerOpen = true
+            onDispose { state.lidomYoutubePlayerOpen = false }
+        }
         NativeYoutubeRP200(id, caption=team.name+" · LIVE",
             onWorking={repo.working(team.id,request.lidomSource,id)},close={video=null},preview=false,
             onSplitView=if (state.kidsMode) null else {

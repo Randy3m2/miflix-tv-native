@@ -204,8 +204,8 @@ internal fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTea
                                     val live = repo.verifiedLive(source)
                                     if (live != null) playYoutube(source, live.id)
                                     else error = tr(
-                                        "No hay un directo activo del equipo en este canal.",
-                                        "There is no active stream for this team on this channel."
+                                        "No se encontró un directo del equipo en los canales configurados.",
+                                        "No active stream for this team was found on the configured channels."
                                     )
                                 } catch (e: CancellationException) {
                                     throw e

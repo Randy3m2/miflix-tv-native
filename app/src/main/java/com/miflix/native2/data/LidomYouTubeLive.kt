@@ -11,10 +11,32 @@ internal object LidomYouTubeLive {
     private val initialData = Regex("""(?:\bytInitialData|window\["ytInitialData"\])\s*=\s*(?=\{)""")
     private val videoId = Regex("[A-Za-z0-9_-]{11}")
 
+    private val initialPlayer = Regex("""(?:\bytInitialPlayerResponse|window\["ytInitialPlayerResponse"\])\s*=\s*(?=\{)""")
+
+    fun findChannelLive(page: String, teamName: String? = null): LidomVideo? {
+        val player = readObject(page, initialPlayer)
+        if (player == null) {
+            check(readObject(page, initialData)?.has("metadata") == true) { "Missing YouTube channel page" }
+            return null
+        }
+        val broadcast = player["microformat"]?.asJsonObject
+            ?.get("playerMicroformatRenderer")?.asJsonObject
+            ?.get("liveBroadcastDetails")?.asJsonObject ?: return null
+        if (broadcast["isLiveNow"]?.asBoolean != true || broadcast.has("endTimestamp")) return null
+        val details = player["videoDetails"]?.asJsonObject ?: return null
+        val id = details["videoId"]?.asString ?: return null
+        val title = details["title"]?.asString.orEmpty()
+        if (!videoId.matches(id) || (teamName != null && !LidomUrlPolicy.matchesStation(title, teamName))) return null
+        return LidomVideo(id, title)
+    }
+
+    private fun readObject(page: String, marker: Regex): JsonObject? {
+        val start = marker.find(page)?.range?.last?.plus(1) ?: return null
+        return JsonParser.parseReader(JsonReader(page.substring(start).reader())).asJsonObject
+    }
+
     fun find(page: String, teamName: String? = null): LidomVideo? {
-        val start = initialData.find(page)?.range?.last?.plus(1)
-            ?: error("Missing YouTube channel data")
-        val data = JsonParser.parseReader(JsonReader(page.substring(start).reader())).asJsonObject
+        val data = readObject(page, initialData) ?: error("Missing YouTube channel data")
         val contents = data.get("contents") ?: error("Missing YouTube channel contents")
         return entries(contents).firstOrNull { video ->
             teamName == null || LidomUrlPolicy.matchesStation(video.title, teamName)

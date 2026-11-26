@@ -31,8 +31,6 @@ import androidx.tv.material3.Text
 import com.miflix.native2.data.*
 import kotlinx.coroutines.CancellationException
 
-internal data class LidomYoutubeSelection(val team:String,val source:String,val video:String)
-
 internal fun openLidomWebsite(context:android.content.Context,url:String):Boolean {
     if(!LidomRepository.httpUrl(url)) return false
     return runCatching {context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));true}.getOrDefault(false)

@@ -161,24 +161,24 @@ internal fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTea
     val savedSourcesRP61=remember(team.id,repo,sourceRevisionRP61) {repo.sources(team.id)}
     val scope=rememberCoroutineScope();var busy by remember {mutableStateOf(false)};var error by remember {mutableStateOf("")}
     var youtube by remember {mutableStateOf<LidomSource?>(null)}
-    var video by remember {mutableStateOf<LidomYoutubeSelection?>(null)}
-    fun play(source:LidomSource,stream:com.miflix.native2.model.StreamChoice) {
-        state.lidomTeamId=team.id;state.lidomShowSources=false
+    var video by remember {mutableStateOf<Pair<PlayerRequest, String>?>(null)}
+    fun requestFor(source:LidomSource,stream:com.miflix.native2.model.StreamChoice): PlayerRequest {
         val item=MediaSummary(team.mlb,"live",team.name+" · "+source.name,tr("Transmisión seleccionada por el usuario. La programación puede variar.","User-selected broadcast. Programming may vary."),null,null,0.0,"LIDOM")
-        val request=PlayerRequest(item,stream,0,0,0,true,"lidom:${team.id}:${source.id}","lidom",liveType=if(source.kind=="YOUTUBE") "youtube" else "tv",liveMime=if(source.kind=="DASH") "application/dash+xml" else if(source.kind=="HLS") "application/x-mpegURL" else "",lidomTeam=team.id,lidomSource=source.id,returnScreen=Screen.LIDOM)
+        return PlayerRequest(item,stream,0,0,0,true,"lidom:${team.id}:${source.id}","lidom",liveType=if(source.kind=="YOUTUBE") "youtube" else "tv",liveMime=if(source.kind=="DASH") "application/dash+xml" else if(source.kind=="HLS") "application/x-mpegURL" else "",lidomTeam=team.id,lidomSource=source.id,returnScreen=Screen.LIDOM)
+    }
+    fun play(request: PlayerRequest, split: Boolean = splitMode) {
+        state.lidomTeamId=team.id;state.lidomShowSources=false
         if(onSplitSelect!=null) onSplitSelect(request)
-        else if(splitMode) state.launch {state.leaveWatchParty();state.beginMultiView(request)}
+        else if(split) state.launch {state.leaveWatchParty();state.beginMultiView(request)}
         else state.openLivePlayer(request)
         close()
     }
     fun playYoutube(source: LidomSource, id: String) {
-        if (onSplitSelect != null || splitMode) {
-            play(source, com.miflix.native2.model.StreamChoice(
-                "YouTube", "https://www.youtube.com/watch?v=$id", source.name, addonName = "LIDOM"
-            ))
-        } else {
-            video = LidomYoutubeSelection(team.id, source.id, id)
-        }
+        val request = requestFor(source, com.miflix.native2.model.StreamChoice(
+            "YouTube", "https://www.youtube.com/watch?v=$id", source.name, addonName = "LIDOM"
+        ))
+        if (onSplitSelect != null || splitMode) play(request)
+        else video = request to id
     }
     PlayerSideSheet(team.name+" · "+tr("Fuentes","Sources"),close) {
         if(onSplitSelect==null) item {
@@ -223,7 +223,7 @@ internal fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTea
                     else scope.launch {busy=true;try {
                         val streams=repo.resolve(source,state.calendarLiveManifest("nauta"))
                         val first=streams.firstOrNull()
-                        if(first!=null) play(source,first)
+                        if(first!=null) play(requestFor(source,first))
                         else error=tr("No se encontró una señal compatible en tus canales. Agrega una URL autorizada en configuración o elige otra fuente.","No compatible signal found in your channels. Add an authorized URL in settings or try another source.")
                     } catch(e:CancellationException) {throw e} catch(_:Exception) {error=tr("No se pudo cargar. Prueba otra fuente.","Could not load. Try another source.")} finally {busy=false}}
                 }
@@ -239,7 +239,13 @@ internal fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTea
         youtube=null
         playYoutube(source, id)
     },close={youtube=null})}
-    video?.let {playing -> NativeYoutubeRP200(playing.video,caption=team.name+" · LIVE",onWorking={repo.working(team.id,playing.source,playing.video)},close={video=null},preview=false)}
+    video?.let { (request, id) ->
+        NativeYoutubeRP200(id, caption=team.name+" · LIVE",
+            onWorking={repo.working(team.id,request.lidomSource,id)},close={video=null},preview=false,
+            onSplitView=if (state.kidsMode) null else {
+                { video=null; play(request, split=true) }
+            })
+    }
 }
 
 @Composable

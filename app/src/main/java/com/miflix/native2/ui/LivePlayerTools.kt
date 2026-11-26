@@ -128,7 +128,7 @@ fun MultiViewScreen(state: AppState) {
                 key(req.playbackId) {
                     Box(Modifier.offset(x=(tileWidth+12.dp)*(index%columns),y=(tileHeight+12.dp)*(index/columns)).width(tileWidth).height(tileHeight)) {
                         MultiViewTile(req,if(youtubeFull!=null) req.playbackId==youtubeFull?.playbackId else req.playbackId==sound,hd,players,
-                            Modifier.fillMaxSize(),index,statsFooterRP130=youtubeFull==null && slots.size in 2..3) {selected=req.playbackId}
+                            Modifier.fillMaxSize(),index,statsFooterRP130=youtubeFull==null && slots.size in 2..3) {sound=req.playbackId;selected=req.playbackId}
                         if(youtubeFull==null && SplitStatsPolicyRP130.mode(slots.size)!=0) {
                             SplitStatsActionRP130("▥ Stats",modifier=Modifier.align(Alignment.BottomEnd).padding(8.dp).height(32.dp),selected=if(slots.size==3) fourthStatsRP130 && statsSourceRP130==req.playbackId else statsOpenRP130[req.playbackId]==true,click={
                                 if(slots.size==3) {statsSourceRP130=req.playbackId;fourthStatsRP130=true}
@@ -193,7 +193,7 @@ fun MultiViewScreen(state: AppState) {
                 }
                 Text(tr("PANTALLAS ACTIVAS","ACTIVE SCREENS"),color=Muted,fontSize=11.sp,modifier=Modifier.padding(top=6.dp))
                 state.multiViewRequests.forEachIndexed {index,req ->
-                    FocusButton("${index+1} · "+req.item.title+(if(req.playbackId==sound) " · ♪" else ""),modifier=Modifier.fillMaxWidth()) {selected=req.playbackId}
+                    FocusButton("${index+1} · "+req.item.title+(if(req.playbackId==sound) " · ♪" else ""),modifier=Modifier.fillMaxWidth()) {sound=req.playbackId;selected=req.playbackId}
                 }
                 Text(tr("AUDIO Y OPCIONES","AUDIO & OPTIONS"),color=Muted,fontSize=11.sp,modifier=Modifier.padding(top=6.dp))
                 FocusButton(if(hd) "HD · 720p" else tr("Fluido · 540p","Smooth · 540p"),modifier=Modifier.fillMaxWidth()) {hd=!hd}
@@ -359,7 +359,7 @@ private fun MultiViewSourceDialog(state: AppState,req: PlayerRequest,choose: (co
 @Composable
 internal fun MultiViewTile(req: PlayerRequest, audible: Boolean, hd: Boolean, pool: MultiPlayerPool, modifier: Modifier, order: Int, statsFooterRP130:Boolean=false, click: () -> Unit) {
     if(req.liveType=="youtube") {
-        LidomSplitYoutubeTileRP9(req,audible,modifier,click)
+        LidomSplitYoutubeTileRP9(req,audible,pool,modifier,click)
         return
     }
     val context=LocalContext.current
@@ -397,7 +397,7 @@ internal fun MultiViewTile(req: PlayerRequest, audible: Boolean, hd: Boolean, po
             p.trackSelectionParameters=p.trackSelectionParameters.buildUpon().setMaxVideoSize(if(latestHd) 1280 else 960,if(latestHd) 720 else 540)
                 .setMaxVideoBitrate(if(latestHd) 3000000 else 1800000).setMaxVideoFrameRate(30).setTrackTypeDisabled(C.TRACK_TYPE_TEXT,true)
                 .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,!latestAudible).build()
-            p.volume=if(latestAudible) 1f else 0f
+            pool.setAudible(req.playbackId,p,latestAudible)
             val retry=Live404RetrySessionRP144(this,
                 Live404RetryBudgetRP144.eligible(req.live,req.sportsRecordingRP72,req.liveProvider,req.liveType),
                 owner={pool.owns(req.playbackId,p) && player===p},
@@ -430,7 +430,7 @@ internal fun MultiViewTile(req: PlayerRequest, audible: Boolean, hd: Boolean, po
     }
     LaunchedEffect(player,audible,hd) {
         player?.let { p ->
-            p.volume=if(audible) 1f else 0f
+            pool.setAudible(req.playbackId,p,audible)
             p.trackSelectionParameters=p.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO,!audible)
                 .setMaxVideoSize(if(hd) 1280 else 960,if(hd) 720 else 540).setMaxVideoBitrate(if(hd) 3000000 else 1800000).build()
         }
@@ -456,8 +456,17 @@ internal class MultiPlayerPool {
     fun owns(id:String,player:ExoPlayer)=!closed && players[id]===player
     fun add(id: String,player: ExoPlayer): Boolean {
         if(closed) { player.release();return false }
+        player.volume=0f
         release(id);players[id]=player;return true
     }
+    fun setAudible(id: String, player: ExoPlayer, audible: Boolean) {
+        if (!owns(id, player)) return
+        if (audible) players.forEach { (otherId, other) ->
+            if (otherId != id) other.volume = 0f
+        }
+        player.volume = if (audible) 1f else 0f
+    }
+
     fun release(id: String) { players.remove(id)?.release() }
     fun releaseAll() { closed=true;val old=players.values.toList();players.clear();old.forEach { it.release() } }
 }

@@ -27,7 +27,7 @@ import kotlinx.coroutines.CancellationException
 /** RP200: native LIDOM Multiview tile; no embedded YouTube iframe. */
 @OptIn(UnstableApi::class)
 @Composable
-internal fun LidomSplitYoutubeTileRP9(req:PlayerRequest,audible:Boolean,modifier:Modifier,click:()->Unit) {
+internal fun LidomSplitYoutubeTileRP9(req:PlayerRequest,audible:Boolean,pool:MultiPlayerPool,modifier:Modifier,click:()->Unit) {
     val context=LocalContext.current
     val video=LidomRepository.youtubeId(req.stream.url)
     var focused by remember(req.playbackId) {mutableStateOf(false)}
@@ -37,6 +37,10 @@ internal fun LidomSplitYoutubeTileRP9(req:PlayerRequest,audible:Boolean,modifier
     val lifecycle=context.playbackActivity()?.lifecycle
     val running=lifecycle?.currentState?.isAtLeast(Lifecycle.State.STARTED)!=false
     val readyState by rememberUpdatedState(ready)
+    DisposableEffect(pool, player) {
+        pool.add(req.playbackId, player)
+        onDispose { if(pool.owns(req.playbackId, player)) pool.release(req.playbackId) }
+    }
     LaunchedEffect(video) {
         if(video==null) {message=tr("Enlace de YouTube inválido","Invalid YouTube URL");return@LaunchedEffect}
         message="";ready=false
@@ -56,7 +60,7 @@ internal fun LidomSplitYoutubeTileRP9(req:PlayerRequest,audible:Boolean,modifier
           catch(_:Exception) {message=tr("No se pudo reproducir el directo","Could not play live stream")}
     }
     LaunchedEffect(audible,running,ready) {
-        player.volume=if(audible) 1f else 0f
+        pool.setAudible(req.playbackId,player,audible)
         player.playWhenReady=running && ready
     }
     DisposableEffect(lifecycle,player) {
@@ -65,7 +69,7 @@ internal fun LidomSplitYoutubeTileRP9(req:PlayerRequest,audible:Boolean,modifier
             else if(event==Lifecycle.Event.ON_START && readyState) player.playWhenReady=true
         }
         lifecycle?.addObserver(observer)
-        onDispose {lifecycle?.removeObserver(observer);player.release()}
+        onDispose {lifecycle?.removeObserver(observer)}
     }
     Box(modifier.onFocusChanged {focused=it.hasFocus}.tvClick(click).focusable()
         .border(if(focused) 3.dp else 1.dp,if(focused) Accent else Color(0xFF444444))

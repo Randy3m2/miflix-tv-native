@@ -4,6 +4,7 @@ import android.view.KeyEvent
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
@@ -11,6 +12,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.animateFloatAsState
@@ -165,10 +168,14 @@ internal fun NativeYoutubeRP200(
     video:String, caption:String, close:()->Unit, onWorking:()->Unit={},
     preview:Boolean=true, embedded:Boolean=false,
     previous:(()->Unit)?=null,next:(()->Unit)?=null,onEnded:(()->Unit)?=null,
-    details:(()->Unit)?=null,watch:(()->Unit)?=null,swipe:Modifier=Modifier
+    details:(()->Unit)?=null,watch:(()->Unit)?=null,swipe:Modifier=Modifier,
+    onSplitView:(()->Unit)?=null
 ) {
     val context=LocalContext.current
     val focus=remember(video) {FocusRequester()}
+    val splitFocus = remember(video) { FocusRequester() }
+    var focusControls by remember(video) { mutableStateOf(false) }
+    var controlsFocused by remember(video) { mutableStateOf(false) }
     val player=remember(video) {NativeTrailerPlayerPoolRP200.acquire(context)}
     var source by remember(video) {mutableStateOf<TrailerPlaybackSource?>(null)}
     var loading by remember(video) {mutableStateOf(true)}
@@ -239,8 +246,8 @@ internal fun NativeYoutubeRP200(
         }
     }
     LaunchedEffect(paused,foreground) {player.playWhenReady=!paused && source!=null && (preview || foreground)}
-    LaunchedEffect(controls,firstFrame) {
-        if(firstFrame && controls) {delay(3200);controls=false}
+    LaunchedEffect(controls,firstFrame,controlsFocused) {
+        if(firstFrame && controls && !controlsFocused) {delay(3200);controls=false}
     }
     LaunchedEffect(player,source) {
         while(source!=null) {
@@ -250,6 +257,13 @@ internal fun NativeYoutubeRP200(
         }
     }
     LaunchedEffect(video) {withFrameNanos {};runCatching {focus.requestFocus()}}
+    LaunchedEffect(focusControls, firstFrame) {
+        if (focusControls && firstFrame && onSplitView != null) {
+            withFrameNanos {}
+            runCatching { splitFocus.requestFocus() }
+            focusControls = false
+        }
+    }
     val videoAlpha by animateFloatAsState(if(firstFrame) 1f else 0f,animationSpec=tween(280),label="rp200NativeFirstFrame")
     val keyHandling=Modifier.onPreviewKeyEvent {event ->
         val k=event.nativeKeyEvent
@@ -269,25 +283,34 @@ internal fun NativeYoutubeRP200(
                 controls=true;true
             }
             KeyEvent.KEYCODE_DPAD_UP -> {if(preview) details?.invoke() else controls=true;true}
-            KeyEvent.KEYCODE_DPAD_DOWN -> {if(preview) watch?.invoke() else controls=true;true}
+            KeyEvent.KEYCODE_DPAD_DOWN -> {
+                if(preview) watch?.invoke()
+                else {
+                    controls=true
+                    if(onSplitView!=null) focusControls=true
+                }
+                true
+            }
             KeyEvent.KEYCODE_BACK,KeyEvent.KEYCODE_ESCAPE -> {close();true}
             else -> false
         }
     }
     val playerContent: @Composable () -> Unit = {
-    Box(Modifier.fillMaxSize().background(Color.Black).then(swipe).focusRequester(focus).then(keyHandling).focusable()) {
+    Box(Modifier.fillMaxSize().background(Color.Black).then(swipe)) {
         AndroidView(factory={ctx->PlayerView(ctx).apply {
             useController=false
             resizeMode=androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
             this.player=player
             setShutterBackgroundColor(android.graphics.Color.BLACK)
         }},modifier=Modifier.fillMaxSize().graphicsLayer {alpha=videoAlpha})
+        Box(Modifier.fillMaxSize().focusRequester(focus).then(keyHandling).focusable())
         if(!firstFrame) Box(Modifier.fillMaxSize().background(Color.Black),contentAlignment=Alignment.Center) {
             Text(if(error) if(preview) tr("No se pudo cargar el tráiler nativo","Native video unavailable") else tr("No se pudo cargar el directo","Live stream unavailable")
                 else if(!preview && liveRecoveries>0) tr("Reconectando el directo…","Reconnecting live stream…")
                 else tr("Preparando reproducción…","Preparing playback…"),color=Color.White,fontSize=17.sp)
         }
-        if(controls && firstFrame) Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+        if(controls && firstFrame && !error) Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+            .onFocusChanged { controlsFocused=it.hasFocus }.focusGroup()
             .background(Color.Black.copy(alpha=.68f),RoundedCornerShape(topStart=16.dp,topEnd=16.dp))
             .padding(18.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
             Text(caption,color=Color.White,fontSize=19.sp)
@@ -301,6 +324,8 @@ internal fun NativeYoutubeRP200(
                 FocusButton(if(paused) "▶" else "Ⅱ") {paused=!paused;controls=true}
                 FocusButton("−10s") {player.seekTo((player.currentPosition-10000).coerceAtLeast(0));controls=true}
                 FocusButton("+10s") {player.seekTo((player.currentPosition+10000).coerceAtMost(player.duration.coerceAtLeast(0)));controls=true}
+                if(onSplitView!=null) FocusButton("Split View",modifier=Modifier
+                    .focusRequester(splitFocus).focusProperties { up=focus },onClick=onSplitView)
                 FocusButton(tr("Cerrar","Close"),onClick=close)
             }
         }

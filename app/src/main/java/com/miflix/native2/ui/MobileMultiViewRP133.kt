@@ -79,13 +79,13 @@ internal fun MobileMultiViewRP133(state:AppState) {
         }
         val requests=state.multiViewRequests.toList()
         if(portrait && requests.size<=2) {
-            requests.forEachIndexed {index,req->key(req.playbackId) {MultiViewTile(req,sound==req.playbackId,hd,pool,Modifier.fillMaxWidth().aspectRatio(16f/9f),index) {selected=req}}}
+            requests.forEachIndexed {index,req->key(req.playbackId) {MultiViewTile(req,sound==req.playbackId,hd,pool,Modifier.fillMaxWidth().aspectRatio(16f/9f),index) {sound=req.playbackId;selected=req}}}
             if(target!=null) MobileSplitStatsRP133(state,target,repo,f1,game,{game=it},{choosing=true},{stats=null},videoFocus,forceF1,Modifier.weight(1f))
             else Spacer(Modifier.weight(1f))
         } else if(!portrait && requests.size<=2 && target!=null) {
             Row(Modifier.weight(1f).fillMaxWidth()) {
                 Row(Modifier.weight(2f).fillMaxHeight()) {
-                    requests.forEachIndexed {index,req->key(req.playbackId) {MultiViewTile(req,sound==req.playbackId,hd,pool,Modifier.weight(1f).fillMaxHeight(),index) {selected=req}}}
+                    requests.forEachIndexed {index,req->key(req.playbackId) {MultiViewTile(req,sound==req.playbackId,hd,pool,Modifier.weight(1f).fillMaxHeight(),index) {sound=req.playbackId;selected=req}}}
                 }
                 MobileSplitStatsRP133(state,target,repo,f1,game,{game=it},{choosing=true},{stats=null},videoFocus,forceF1,Modifier.weight(1f).fillMaxHeight())
             }
@@ -93,7 +93,7 @@ internal fun MobileMultiViewRP133(state:AppState) {
             Column(Modifier.weight(1f)) {
                 requests.chunked(2).forEachIndexed {row,entries->
                     Row(Modifier.weight(1f)) {
-                        entries.forEachIndexed {col,req->key(req.playbackId) {MultiViewTile(req,sound==req.playbackId,hd,pool,Modifier.weight(1f).fillMaxHeight(),row*2+col) {selected=req}}}
+                        entries.forEachIndexed {col,req->key(req.playbackId) {MultiViewTile(req,sound==req.playbackId,hd,pool,Modifier.weight(1f).fillMaxHeight(),row*2+col) {sound=req.playbackId;selected=req}}}
                         if(entries.size==1 && requests.size==3 && target!=null) MobileSplitStatsRP133(state,target,repo,f1,game,{game=it},{choosing=true},{stats=null},videoFocus,forceF1,Modifier.weight(1f).fillMaxHeight())
                     }
                 }

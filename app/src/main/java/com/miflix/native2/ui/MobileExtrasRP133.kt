@@ -132,7 +132,10 @@ internal fun MobileYoutubeRP133(state:AppState,request:PlayerRequest,close:()->U
             Text(request.item.title,color=Color.White,modifier=Modifier.weight(1f))
             MobileIconButtonRP133("grid","SplitScreen") {state.launch {state.leaveWatchParty();state.beginMultiView(request)}}
         }
-        if(video!=null) LidomYoutubePlayer(video,{state.socialPlaybackStarted(request,0,0)},close,embedded=true,caption=request.item.title)
+        if(video!=null) Box(Modifier.weight(1f).fillMaxWidth()) {
+            NativeYoutubeRP200(video, caption=request.item.title, close=close, preview=false, embedded=true,
+                onWorking={state.socialPlaybackStarted(request,0,0)})
+        }
         else Text(tr("Selecciona un video de YouTube válido.","Select a valid YouTube video."),color=Color.White)
     }
 }

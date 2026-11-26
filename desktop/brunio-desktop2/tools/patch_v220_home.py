@@ -37,21 +37,17 @@ def apply(root: Path) -> None:
                 )
                 // Core Home rows render immediately. Optional provider rows and
                 // profile-private recommendations stream in without blocking them.
-                val optionalJob = async { try {
+                val optional = try {
                     BrunioHomeExtras.load()
                 } catch (cancel: CancellationException) {
                     throw cancel
-                } catch (_: Exception) { emptyList() } }
-                val recommendationsJob = async { try {
+                } catch (_: Exception) { emptyList() }
+                val recommendations = try {
                     BrunioRatingsRecommendations.load()
                 } catch (cancel: CancellationException) {
                     throw cancel
-                } catch (_: Exception) { emptyList() } }
-                val recommendations = recommendationsJob.await()
-                if (recommendations.isNotEmpty()) {
-                    _uiState.value = _uiState.value.copy(sections = results + recommendations)
-                }
-                val allRows = results + recommendations + optionalJob.await()
+                } catch (_: Exception) { emptyList() }
+                val allRows = results + recommendations + optional
                 if (allRows.isNotEmpty()) {
                     _uiState.value = _uiState.value.copy(sections = allRows)
                 }

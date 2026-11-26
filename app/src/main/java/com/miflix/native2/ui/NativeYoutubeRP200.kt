@@ -22,6 +22,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -86,7 +88,12 @@ internal suspend fun awaitYoutubeLiveStall(player:Player) {
 internal fun HomeHeroTrailer(video:String,modifier:Modifier,onFinished:()->Unit) {
     val context=LocalContext.current
     val finish by rememberUpdatedState(onFinished)
-    val player=remember(video) {ExoPlayer.Builder(context.applicationContext).build().apply {volume=0f}}
+    val player = remember(video) {
+        ExoPlayer.Builder(context.applicationContext).build().apply {
+            setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA)
+                .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), true)
+        }
+    }
     val attached=remember(player) {java.util.concurrent.atomic.AtomicReference<PlayerView?>()}
     var firstFrame by remember(player) {mutableStateOf(false)}
     val alpha by animateFloatAsState(if(firstFrame) 1f else 0f,tween(240),label="homeTrailer")
@@ -127,7 +134,7 @@ internal fun HomeHeroTrailer(video:String,modifier:Modifier,onFinished:()->Unit)
             com.miflix.native2.R.layout.mobile_multiview_texture_rp134,null,false) as PlayerView).apply {
             isFocusable=false
             descendantFocusability=android.view.ViewGroup.FOCUS_BLOCK_DESCENDANTS
-            resizeMode=androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+            resizeMode=androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
             setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
             this.player=player
             attached.set(this)

@@ -71,15 +71,37 @@ private fun FocusedBrowseHero(state: AppState,pending: State<MediaSummary?>,fall
             Crossfade(item.backdrop ?: item.poster,modifier=Modifier.align(Alignment.CenterEnd).fillMaxHeight().fillMaxWidth(.75f),animationSpec=tween(140),label="browseBackdrop") {image ->
                 AsyncImage(image,null,Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
             }
-            trailer?.takeIf {it.first==item.cloudId}?.let {(_,video) ->
-                key(video) {
-                    HomeHeroTrailer(video,Modifier.align(Alignment.CenterEnd).fillMaxHeight().fillMaxWidth(.75f),onTrailerFinished)
+            val activeTrailer = trailer?.takeIf { it.first == item.cloudId }
+            if (activeTrailer == null) {
+                Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(if(headerInset>0.dp) 150.dp else 60.dp).background(Brush.verticalGradient(listOf(canvas,Color.Transparent))))
+                Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(canvas,canvas.copy(alpha=.92f),Color.Transparent))))
+                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,canvas))))
+            } else {
+                // Keep the synopsis in its own column and fit the video within the right panel.
+                BoxWithConstraints(Modifier.align(Alignment.CenterEnd).fillMaxHeight().fillMaxWidth(.60f)) {
+                    val videoWidth = minOf(maxWidth, maxHeight * (16f / 9f))
+                    key(activeTrailer.second) {
+                        Box(Modifier.align(Alignment.CenterEnd).width(videoWidth).aspectRatio(16f / 9f)) {
+                            HomeHeroTrailer(activeTrailer.second, Modifier.fillMaxSize(), onTrailerFinished)
+                            Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(
+                                0f to canvas, .18f to Color.Transparent
+                            )))
+                            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
+                                0f to canvas, .12f to Color.Transparent, .86f to Color.Transparent, 1f to canvas
+                            )))
+                        }
+                    }
                 }
+                Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(
+                    0f to canvas, .36f to canvas, .51f to Color.Transparent
+                )))
+                Box(Modifier.align(Alignment.TopCenter).fillMaxWidth()
+                    .height(if (compact) headerInset + 24.dp else 28.dp)
+                    .background(Brush.verticalGradient(listOf(canvas, Color.Transparent))))
+                Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(30.dp)
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, canvas))))
             }
-            Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(if(headerInset>0.dp) 150.dp else 60.dp).background(Brush.verticalGradient(listOf(canvas,Color.Transparent))))
-            Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(canvas,canvas.copy(alpha=.92f),Color.Transparent))))
-            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent,canvas))))
-            Column(Modifier.align(Alignment.TopStart).fillMaxHeight().padding(start=40.dp,end=22.dp,top=headerInset+8.dp,bottom=if(compact) 10.dp else 12.dp).fillMaxWidth(.65f),verticalArrangement=Arrangement.spacedBy(if(compact) 5.dp else 7.dp)) {
+            Column(Modifier.align(Alignment.TopStart).fillMaxHeight().padding(start=40.dp,end=22.dp,top=headerInset+8.dp,bottom=if(compact) 10.dp else 12.dp).fillMaxWidth(if (activeTrailer != null) .40f else .65f),verticalArrangement=Arrangement.spacedBy(if(compact) 5.dp else 7.dp)) {
                 Box(Modifier.fillMaxWidth().height(if(veryCompact) 36.dp else if(compact) 52.dp else if(height>=200.dp) 64.dp else 44.dp),contentAlignment=Alignment.CenterStart) {
                     if(logo!=null) AsyncImage(logo,item.title,Modifier.widthIn(max=280.dp).fillMaxHeight(),contentScale=ContentScale.Fit)
                     else Text(item.title,color=Color.White,fontSize=if(veryCompact) 20.sp else if(compact) 23.sp else if(height>=200.dp) 28.sp else 23.sp,lineHeight=if(compact) 24.sp else if(height>=200.dp) 30.sp else 23.sp,fontWeight=FontWeight.Black,maxLines=if(veryCompact) 1 else 2,overflow=TextOverflow.Ellipsis)

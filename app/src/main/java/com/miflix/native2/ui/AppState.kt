@@ -3091,15 +3091,6 @@ class AppState(context: Context) {
         private set
     private var detailsEpoch=0L
     private val detailsCache=linkedMapOf<String,Pair<Long,MediaDetails>>()
-    private fun cachedDetails(key: String): MediaDetails? =
-        detailsCache[key]?.takeIf { System.currentTimeMillis() - it.first < 15 * 60 * 1000L }?.second
-
-    private fun cacheDetails(key: String, details: MediaDetails) {
-        detailsCache.remove(key)
-        if (detailsCache.size >= 12) detailsCache.remove(detailsCache.keys.first())
-        detailsCache[key] = System.currentTimeMillis() to details
-    }
-
     suspend fun open(item: MediaSummary,upcoming: Boolean=false) {
         if(kidsMode && !tmdb.kidsAllowed(item)) {error=tr("Este título no está disponible en Kids.","This title is not available in Kids.");return}
         if(selected?.cloudId!=item.cloudId) invalidatePlaybackWork()
@@ -3110,13 +3101,14 @@ class AppState(context: Context) {
         assistantDescriptionRP157=null;assistantEpisodeRP157=null
         selected=item
         selectedUpcoming=upcoming || (comingMovies+comingSeries).any { it.cloudId==item.cloudId }
-        details=cachedDetails(cacheKey)
+        details=detailsCache[cacheKey]?.takeIf { System.currentTimeMillis()-it.first<15*60*1000L }?.second
         episodes.clear();currentSeason=1
         screen=Screen.DETAILS
         try {
             val loaded=details ?: tmdb.details(item)
             if(ticket!=detailsEpoch || selected?.cloudId!=item.cloudId || language!=tmdb.language) return
-            cacheDetails(cacheKey,loaded)
+            if(detailsCache.size>=12) detailsCache.remove(detailsCache.keys.first())
+            detailsCache[cacheKey]=System.currentTimeMillis() to loaded
             details=loaded
             val today=java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US).format(java.util.Date())
             if(loaded.releaseDate.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))  ) selectedUpcoming=loaded.releaseDate>today

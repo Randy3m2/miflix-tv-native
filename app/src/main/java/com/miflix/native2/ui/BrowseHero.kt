@@ -53,11 +53,11 @@ private fun FocusedBrowseHero(state: AppState,pending: State<MediaSummary?>,fall
         }
     }
     val candidate=pending.value ?: ranked.getOrNull(rankIndex) ?: fallback
-    LaunchedEffect(candidate?.cloudId,state.interfaceLanguage,state.appForeground) {
+    LaunchedEffect(candidate?.cloudId,state.interfaceLanguage) {
         // Coalesce fast focus movements before decoding artwork or requesting logos.
         delay(350)
         shown=candidate;logo=null
-        if(candidate!=null && state.appForeground) {
+        if(candidate!=null) {
             delay(650)
             try {logo=state.tmdb.browseLogo(candidate)} catch(e: CancellationException) {throw e} catch(_: Exception) { }
         }

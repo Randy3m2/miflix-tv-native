@@ -278,180 +278,176 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
             }
             Unit
         }) {
-    val visibleTrending = state.localRecommendations(state.trending)
-    val visibleMovies = state.localRecommendations(state.movies)
-    val rankedHomeMovies = (visibleTrending.asSequence() + visibleMovies.asSequence())
-        .filter { it.type == "movie" }.distinctBy { it.cloudId }.take(10).toList()
-    val homeSections = buildList<HomeSection> {
-        fun shelf(key: String, content: @Composable () -> Unit) { add(HomeSection(key, content)) }
-        if(state.localExtras.enabled("lists")) shelf(key="local_lists") {
-            LocalListsHomeRC104(state) {id ->initialLocalList=id;showLocalLists=true}
-        }
-        shelf(key="explore-shortcuts") {
-            ExploreShortcutsRP194(
-                loading=discoveryLoading || state.randomChoosing,
-                onTrailers={showTrailers=true},
-                onSurprise={if(!discoveryLoading && !state.randomChoosing) {if(state.localRecommendations(discoveryRows).isEmpty()) state.error=tr("La selección aún no está disponible. Elige otro ánimo o reintenta.","Picks are not available yet. Choose another mood or retry.") else state.launch {state.surpriseDiscovery(state.localRecommendations(discoveryRows))}}},
-                onCinema={showCinemaHub=true},
-                onCollections={onNavigate(Screen.COLLECTIONS)},
-                onOscars={onNavigate(Screen.OSCARS)},
-                onAmbient={showAmbientRP199=true},
-                onDailyRotation={onNavigate(Screen.DAILY_ROTATION)}
-            )
-        }
-        shelf(key="mood-selector") {
-            MoodSelectorRowRP193(
-                discoveryMood,
-                onMood={discoveryMood=it;discoveryRetry++},
-                art=state.moodArtworkRC102()
-            )
-        }
-        if(state.localRecommendations(discoveryRows).isNotEmpty()) shelf(key="discovery-picks") {
-            SpotlightRail(moodTitle(effectiveMood),state.localRecommendations(discoveryRows),eyebrow=if(discoveryMood.isEmpty()) tr("PARA ESTE MOMENTO","FOR THIS MOMENT") else tr("TU ÁNIMO · TU SELECCIÓN","YOUR MOOD · YOUR PICKS"),onClick=openItem)
-        }
-        if(discoveryError) shelf(key="discovery-retry") {
-            FeatureActionCard(tr("No se pudo cargar la selección","Could not load picks"),tr("Presiona para reintentar","Press to retry"),modifier=Modifier.padding(40.dp)) {discoveryRetry++}
-        }
-        if(simple) shelf(key="simple-actions") {
-            Column(Modifier.padding(horizontal=40.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                Text(tr("Elige una portada y presiona OK para ver sus opciones.","Choose a cover and press OK to see its options."),color=Color.White,fontSize=20.sp)
-                Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
-                    FocusButton(tr("Buscar","Search")) {onNavigate(Screen.SEARCH)}
-                    FocusButton(tr("Mi lista","My List")) {onNavigate(Screen.MY_LIST)}
-                    FocusButton(tr("Vista completa","Full view")) {state.saveSimpleHome(false)}
-                }
-            }
-        }
-        if(com.miflix.native2.data.HomeStartupPolicyRP129.reserveContinue(state.continueHomeReadyRP129,state.continueWatching.isNotEmpty(),state.tmdb.token.isNotBlank())) shelf(key="continue") {
-            if(state.continueWatching.isEmpty()) Column(Modifier.fillMaxWidth().padding(horizontal=40.dp,vertical=18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                Text(tr("Seguir viendo","Continue Watching"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
-                Text(tr("Cargando tu progreso…","Loading your progress…"),color=Muted,fontSize=14.sp)
-            } else {
-            SpotlightRail(title=tr("Seguir viendo","Continue Watching"),rows=state.continueWatching,showTitle=true,
-                progressFor={ state.progress[it.cloudId]?.percent },onLongClick={state.titleActions(it,true)},onClick=openItem)
-            }
-        }
-        shelf(key="live_favorites") {LiveFavoritesHomeRP205(state)}
-        shelf(key="streaming") { CollectionRail(tr("Plataformas","Streaming"),StreamingTiles,openCollection) }
-        shelf(key="genres_home") { Column {
-            Row(Modifier.fillMaxWidth().padding(start=40.dp,end=40.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                Text(tr("Explora por género","Browse by genre"),color=Color.White,fontSize=22.sp,lineHeight=27.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
-            }
-            HomeHorizontalRail {
-            LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=32.dp).clipToBounds().smoothHorizontalDpad().firstCardOnDown(genreScroll,firstGenre),state=genreScroll,contentPadding=PaddingValues(horizontal=8.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
-                items(state.genres,key={it.id}) { genre -> GenreCard(genre.copy(coverUrl=state.genreCovers[genre.id] ?: genre.coverUrl),modifier=(if(genre.id==state.genres.firstOrNull()?.id) Modifier.focusRequester(firstGenre) else Modifier).then(homeReturnFocus("genre:${genre.id}"))) { state.launch { state.openGenre(genre) } } }
-                item(key="genres_more") {FocusButton(tr("Ver todos","View all"),modifier=Modifier.width(180.dp).height(136.dp).then(homeReturnFocus("genres:more"))) {onNavigate(Screen.COLLECTIONS)}}
-            }
-            }
-            Spacer(Modifier.height(8.dp))
-        } }
-        if(!state.kidsMode) shelf(key="comfort_comedies") {
-            if(state.comfortComedyMatch && state.comfortComedyPicks.isNotEmpty()) {
-                SpotlightRail(tr("Comedias para desconectar","Comfort comedies"),state.comfortComedyPicks.take(25),
-                    eyebrow=tr("TUS FAVORITAS · RISAS · BUENA COMPAÑÍA","FAMILIAR FAVORITES · LAUGHS · GOOD COMPANY"),onClick=openItem)
-            } else Column(Modifier.padding(horizontal=40.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                Text(tr("Comedias para desconectar","Comfort comedies"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
-                Text(if(state.comfortComedyLoading) tr("Preparando historias para ti…","Preparing stories for you…") else state.comfortComedyMessage.ifBlank {tr("Descubre tu próxima comedia favorita.","Find your next favorite comedies.")},color=Muted)
-                if(!state.comfortComedyLoading) FocusButton(tr("Ver comedias","Explore comedies")) {state.launch {state.loadComfortComedyHome()}}
-            }
-        }
-        shelf(key="novelas") {
-            if(state.novelasMatch && state.localRecommendations(state.novelasPicks).isNotEmpty()) {
-                SpotlightRail(tr("Novelas que atrapan","Telenovelas to fall for"),state.localRecommendations(state.novelasPicks).take(25),
-                    eyebrow=tr("GRANDES AMORES · SECRETOS · HISTORIAS INOLVIDABLES","BIG LOVE · SECRETS · UNFORGETTABLE STORIES"),onClick=openItem)
-            } else Column(Modifier.padding(horizontal=40.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                Text(tr("Novelas que atrapan","Telenovelas to fall for"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
-                Text(if(state.novelasLoading) tr("Preparando historias para ti…","Preparing stories for you…") else state.novelasMessage.ifBlank {tr("Descubre tus próximas novelas favoritas.","Find your next favorite telenovelas.")},color=Muted)
-                if(!state.novelasLoading) FocusButton(tr("Ver novelas","Explore telenovelas")) {state.launch {state.loadNovelasHome()}}
-            }
-        }
-        if(state.localRecommendations(state.forYou).isNotEmpty()) shelf(key="for_you") { SpotlightRail(title=tr("Para ti · según lo que ves","For you · Based on what you watch"),rows=state.localRecommendations(state.forYou),onClick=openItem) }
-        if(state.becauseWatchedMatches && state.localRecommendations(state.becauseWatchedPicks).isNotEmpty()) shelf(key="because_you_watched") {
-            SpotlightRail(tr("Porque viste ","Because you watched ")+state.becauseWatchedTitle,state.localRecommendations(state.becauseWatchedPicks),
-                eyebrow=tr("MÁS HISTORIAS PARA TI","MORE STORIES FOR YOU"),onClick=openItem)
-        }
-        if(!simple && visibleTrending.isNotEmpty()) shelf(key="ranked_movies") {
-            SpotlightRail(tr("Top 10 · Películas","Top 10 · Movies"),
-                rankedHomeMovies,
-                ranked=true,eyebrow=tr("TENDENCIAS EN BRUNIO","TRENDING ON BRUNIO"),onClick=openItem)
-        }
-        if(state.familiarHomeMatches && state.localRecommendations(state.oscarPicks).isNotEmpty()) shelf(key="oscar_picks") {
-            SpotlightRail(tr("Oscar · Ganadoras y nominadas","Oscar · Winners & nominees"),state.localRecommendations(state.oscarPicks),
-                awardLabels=true,eyebrow=tr("SELECCIÓN · PREMIOS ","CURATED · AWARDS ")+com.miflix.native2.data.AwardSelections.latestYear("oscar"),onClick=openItem)
-        }
-        if(state.familiarHomeMatches && state.localRecommendations(state.emmyPicks).isNotEmpty()) shelf(key="emmy_picks") {
-            SpotlightRail(tr("Emmy · Series premiadas","Emmy · Award-winning series"),state.localRecommendations(state.emmyPicks),
-                awardLabels=true,eyebrow=tr("SELECCIÓN · PREMIOS ","CURATED · AWARDS ")+com.miflix.native2.data.AwardSelections.latestYear("emmy"),onClick=openItem)
-        }
-        if(!simple && (state.localRecommendations(state.topRated).isNotEmpty() || state.localRecommendations(state.bestSeries).isNotEmpty())) shelf(key="rewatch_favorites") {
-            val films=state.localRecommendations(state.topRated).filter {it.rating>=8.0}.distinctBy {it.cloudId}.take(10)
-            val shows=state.localRecommendations(state.bestSeries).filter {it.rating>=8.0}.distinctBy {it.cloudId}.take(10)
-            val rewatch=(0 until maxOf(films.size,shows.size)).flatMap {index ->listOfNotNull(films.getOrNull(index),shows.getOrNull(index))}
-            SpotlightRail(tr("Ojalá olvidarlas para verlas otra vez","Make me forget so I can rewatch"),rewatch,
-                eyebrow=tr("PELÍCULAS Y SERIES · HISTORIAS INOLVIDABLES","MOVIES & SERIES · UNFORGETTABLE STORIES"),onClick=openItem)
-        }
-        if(state.familiarHomeMatches && state.localRecommendations(state.romancePicks).isNotEmpty()) shelf(key="romance_picks") {
-            SpotlightRail(tr("Historias de amor","Romance & love stories"),state.localRecommendations(state.romancePicks),onClick=openItem)
-        }
-        if(state.familiarHomeMatches && state.localRecommendations(state.koreanPicks).isNotEmpty()) shelf(key="korean_picks") {
-            SpotlightRail(tr("Dramas coreanos","K-dramas"),state.localRecommendations(state.koreanPicks),onClick=openItem)
-        }
-        if(state.familiarHomeMatches && state.localRecommendations(state.classicPicks).isNotEmpty()) shelf(key="classic_picks") {
-            SpotlightRail(tr("Clásicos de siempre","Timeless classics"),state.localRecommendations(state.classicPicks),onClick=openItem)
-        }
-        if(!simple) shelf(key="franchises_home") {
-            CollectionRail(tr("Franquicias","Franchises"),com.miflix.native2.data.FranchiseCatalogRP29.brands.map { (brand,label) -> CollectionTile("franchise:$brand",label,"") }) { tile ->
-                state.launch { state.openFranchise(tile.id.substringAfter(":")) }
-            }
-        }
-        if(state.localRecommendations(state.seasonalItems).isNotEmpty()) shelf(key="seasonal") {
-            SpotlightRail(seasonalTitle(state.seasonalTheme),state.localRecommendations(state.seasonalItems),onClick=openItem,
-                eyebrow=tr("SELECCIÓN DE TEMPORADA","SEASONAL SPOTLIGHT"))
-        }
-        shelf(key="movies") { SpotlightRail(title=tr("Películas populares","Popular · Movies"),rows=visibleMovies,onClick=openItem) }
-        shelf(key="series") { SpotlightRail(title=tr("Series populares","Popular · Series"),rows=state.localRecommendations(state.series),onClick=openItem) }
-        if(!simple) shelf(key="top") { SpotlightRail(title=tr("Mejor valorados","Top Rated"),rows=state.localRecommendations(state.topRated),onClick=openItem) }
-        if(!simple) shelf(key="now_playing") { SpotlightRail(tr("Estrenos en cartelera","Now playing"),state.localRecommendations(state.newMovies),onClick=openItem) }
-        if(!simple) shelf(key="best_series") { SpotlightRail(tr("Series mejor valoradas","Top rated series"),state.localRecommendations(state.bestSeries),onClick=openItem) }
-        if(!simple) shelf(key="action") { SpotlightRail(tr("Acción para esta noche","Action tonight"),state.localRecommendations(state.action),onClick=openItem) }
-        if(!simple) shelf(key="scifi") { SpotlightRail(tr("Ciencia ficción","Science fiction"),state.localRecommendations(state.sciFi),onClick=openItem) }
-        shelf(key="comedy") { SpotlightRail(tr("Algo para reír","Time for a comedy"),state.localRecommendations(state.comedy),onClick=openItem) }
-        if(!simple) shelf(key="thrillers") { SpotlightRail(tr("Suspenso y misterio","Thrillers & mystery"),state.localRecommendations(state.thrillers),onClick=openItem) }
-        if(state.holidayHomeMatches && state.localRecommendations(state.horrorPicks).isNotEmpty()) shelf(key="horror_movies") {
-            SpotlightRail(tr("Terror","Horror"),state.localRecommendations(state.horrorPicks),onClick=openItem)
-        }
-        shelf(key="christmas_movies") {
-            if(state.holidayHomeMatches && state.localRecommendations(state.christmasPicks).isNotEmpty()) {
-                SpotlightRail(tr("Películas navideñas","Christmas Movies"),state.localRecommendations(state.christmasPicks),
-                    eyebrow=tr("UN POCO DE MAGIA NAVIDEÑA","A LITTLE CHRISTMAS MAGIC"),onClick=openItem)
-            } else Column(Modifier.padding(horizontal=40.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                Text(tr("Películas navideñas","Christmas Movies"),color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
-                Text(if(state.holidayHomeLoading) tr("Cargando…","Loading…") else state.holidayHomeMessage.ifBlank {tr("Carga la selección de Navidad.","Load the Christmas selection.")},color=Muted,fontSize=14.sp)
-                if(!state.holidayHomeLoading) FocusButton(tr("Reintentar","Retry")) {state.launch {state.loadHolidayHome()}}
-            }
-        }
-        if(!simple && (state.localRecommendations(state.comingMovies).isNotEmpty() || state.localRecommendations(state.comingSeries).isNotEmpty())) shelf(key="coming_soon_home") {
-            SpotlightRail(tr("Próximamente","Coming soon"),(state.localRecommendations(state.comingMovies)+state.localRecommendations(state.comingSeries)).distinctBy { it.cloudId }.take(30),onClick={ state.launch { state.open(it,upcoming=true) } })
-        }
-    }
-    // RP194: migrate RP193's missing Mood key into the visible Home order.
-    // New visual shortcuts and Mood stay near the top even for older saved orders.
-    val homeOrderRP194=(listOf("continue","explore-shortcuts","mood-selector")+
-        state.homeRowOrder.filterNot {it=="discovery-controls"}+
-        homeSections.map {it.key}).distinct()
-    val order=com.miflix.native2.data.DailyRotationPolicyRP188.homeOrder(homeOrderRP194)
-    val orderedSectionsRP165=homeSections.filter {it.key !in state.hiddenHomeRows &&
-        (it.key!="discovery-retry" || "discovery-picks" !in state.hiddenHomeRows)}.sortedWith(compareBy<HomeSection> {order.indexOf(it.key).let {i ->if(i<0) Int.MAX_VALUE else i}})
-    val sectionKeys = orderedSectionsRP165.map { it.key }
-    SideEffect { positionRP165.sectionKeys = sectionKeys }
     BoxWithConstraints(Modifier.fillMaxSize().themePageRP186().onPreviewKeyEvent {if(it.type==KeyEventType.KeyDown) {startupInteractedRP129=true;homeReturn.pending=null};false}) {
         val homeHeroHeight=(maxHeight*.5f).coerceIn(228.dp,284.dp)
-        BrowsingViewport(state,rankedHomeMovies.firstOrNull(),heroHeight=homeHeroHeight,headerInset=84.dp,ranked=rankedHomeMovies,
+        BrowsingViewport(state,(state.localRecommendations(state.trending)+state.localRecommendations(state.movies)).firstOrNull {it.type=="movie"},heroHeight=homeHeroHeight,headerInset=84.dp,ranked=(state.localRecommendations(state.trending)+state.localRecommendations(state.movies)).filter {it.type=="movie"}.distinctBy {it.cloudId}.take(10),
             trailer=heroTrailer.takeIf {previewAllowed && it?.first==focusedPosterRP201?.cloudId},
             onTrailerFinished={heroTrailer=null}) {
         CompositionLocalProvider(LocalBringIntoViewSpec provides homeVerticalFocusSpec()) {
             LazyColumn(Modifier.fillMaxSize().smoothVerticalDpad { !scroll.isScrollInProgress }.focusRequester(contentFocus).focusGroup(),state=scroll,contentPadding=PaddingValues(0.dp)) {
-                orderedSectionsRP165.forEachIndexed { index, section ->
+                var shelfIndex=0
+                val homeSections=mutableListOf<HomeSection>()
+                fun shelf(key:String,content:@Composable ()->Unit) {homeSections.add(HomeSection(key,content))}
+                if(state.localExtras.enabled("lists")) shelf(key="local_lists") {
+                    LocalListsHomeRC104(state) {id ->initialLocalList=id;showLocalLists=true}
+                }
+                shelf(key="explore-shortcuts") {
+                    ExploreShortcutsRP194(
+                        loading=discoveryLoading || state.randomChoosing,
+                        onTrailers={showTrailers=true},
+                        onSurprise={if(!discoveryLoading && !state.randomChoosing) {if(state.localRecommendations(discoveryRows).isEmpty()) state.error=tr("La selección aún no está disponible. Elige otro ánimo o reintenta.","Picks are not available yet. Choose another mood or retry.") else state.launch {state.surpriseDiscovery(state.localRecommendations(discoveryRows))}}},
+                        onCinema={showCinemaHub=true},
+                        onCollections={onNavigate(Screen.COLLECTIONS)},
+                        onOscars={onNavigate(Screen.OSCARS)},
+                        onAmbient={showAmbientRP199=true},
+                        onDailyRotation={onNavigate(Screen.DAILY_ROTATION)}
+                    )
+                }
+                shelf(key="mood-selector") {
+                    MoodSelectorRowRP193(
+                        discoveryMood,
+                        onMood={discoveryMood=it;discoveryRetry++},
+                        art=state.moodArtworkRC102()
+                    )
+                }
+                if(state.localRecommendations(discoveryRows).isNotEmpty()) shelf(key="discovery-picks") {
+                    SpotlightRail(moodTitle(effectiveMood),state.localRecommendations(discoveryRows),eyebrow=if(discoveryMood.isEmpty()) tr("PARA ESTE MOMENTO","FOR THIS MOMENT") else tr("TU ÁNIMO · TU SELECCIÓN","YOUR MOOD · YOUR PICKS"),onClick=openItem)
+                }
+                if(discoveryError) shelf(key="discovery-retry") {
+                    FeatureActionCard(tr("No se pudo cargar la selección","Could not load picks"),tr("Presiona para reintentar","Press to retry"),modifier=Modifier.padding(40.dp)) {discoveryRetry++}
+                }
+                if(simple) shelf(key="simple-actions") {
+                    Column(Modifier.padding(horizontal=40.dp,vertical=10.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                        Text(tr("Elige una portada y presiona OK para ver sus opciones.","Choose a cover and press OK to see its options."),color=Color.White,fontSize=20.sp)
+                        Row(horizontalArrangement=Arrangement.spacedBy(14.dp)) {
+                            FocusButton(tr("Buscar","Search")) {onNavigate(Screen.SEARCH)}
+                            FocusButton(tr("Mi lista","My List")) {onNavigate(Screen.MY_LIST)}
+                            FocusButton(tr("Vista completa","Full view")) {state.saveSimpleHome(false)}
+                        }
+                    }
+                }
+                if(com.miflix.native2.data.HomeStartupPolicyRP129.reserveContinue(state.continueHomeReadyRP129,state.continueWatching.isNotEmpty(),state.tmdb.token.isNotBlank())) shelf(key="continue") {
+                    if(state.continueWatching.isEmpty()) Column(Modifier.fillMaxWidth().padding(horizontal=40.dp,vertical=18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                        Text(tr("Seguir viendo","Continue Watching"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
+                        Text(tr("Cargando tu progreso…","Loading your progress…"),color=Muted,fontSize=14.sp)
+                    } else {
+                    SpotlightRail(title=tr("Seguir viendo","Continue Watching"),rows=state.continueWatching,showTitle=true,
+                        progressFor={ state.progress[it.cloudId]?.percent },onLongClick={state.titleActions(it,true)},onClick=openItem)
+                    }
+                }
+                shelf(key="live_favorites") {LiveFavoritesHomeRP205(state)}
+                shelf(key="streaming") { CollectionRail(tr("Plataformas","Streaming"),StreamingTiles,openCollection) }
+                shelf(key="genres_home") { Column {
+                    Row(Modifier.fillMaxWidth().padding(start=40.dp,end=40.dp,bottom=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                        Text(tr("Explora por género","Browse by genre"),color=Color.White,fontSize=22.sp,lineHeight=27.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
+                    }
+                    HomeHorizontalRail {
+                    LazyRow(modifier=Modifier.fillMaxWidth().padding(horizontal=32.dp).clipToBounds().smoothHorizontalDpad().firstCardOnDown(genreScroll,firstGenre),state=genreScroll,contentPadding=PaddingValues(horizontal=8.dp,vertical=8.dp),horizontalArrangement=Arrangement.spacedBy(18.dp)) {
+                        items(state.genres,key={it.id}) { genre -> GenreCard(genre.copy(coverUrl=state.genreCovers[genre.id] ?: genre.coverUrl),modifier=(if(genre.id==state.genres.firstOrNull()?.id) Modifier.focusRequester(firstGenre) else Modifier).then(homeReturnFocus("genre:${genre.id}"))) { state.launch { state.openGenre(genre) } } }
+                        item(key="genres_more") {FocusButton(tr("Ver todos","View all"),modifier=Modifier.width(180.dp).height(136.dp).then(homeReturnFocus("genres:more"))) {onNavigate(Screen.COLLECTIONS)}}
+                    }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                } }
+                if(!state.kidsMode) shelf(key="comfort_comedies") {
+                    if(state.comfortComedyMatch && state.comfortComedyPicks.isNotEmpty()) {
+                        SpotlightRail(tr("Comedias para desconectar","Comfort comedies"),state.comfortComedyPicks.take(25),
+                            eyebrow=tr("TUS FAVORITAS · RISAS · BUENA COMPAÑÍA","FAMILIAR FAVORITES · LAUGHS · GOOD COMPANY"),onClick=openItem)
+                    } else Column(Modifier.padding(horizontal=40.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                        Text(tr("Comedias para desconectar","Comfort comedies"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
+                        Text(if(state.comfortComedyLoading) tr("Preparando historias para ti…","Preparing stories for you…") else state.comfortComedyMessage.ifBlank {tr("Descubre tu próxima comedia favorita.","Find your next favorite comedies.")},color=Muted)
+                        if(!state.comfortComedyLoading) FocusButton(tr("Ver comedias","Explore comedies")) {state.launch {state.loadComfortComedyHome()}}
+                    }
+                }
+                shelf(key="novelas") {
+                    if(state.novelasMatch && state.localRecommendations(state.novelasPicks).isNotEmpty()) {
+                        SpotlightRail(tr("Novelas que atrapan","Telenovelas to fall for"),state.localRecommendations(state.novelasPicks).take(25),
+                            eyebrow=tr("GRANDES AMORES · SECRETOS · HISTORIAS INOLVIDABLES","BIG LOVE · SECRETS · UNFORGETTABLE STORIES"),onClick=openItem)
+                    } else Column(Modifier.padding(horizontal=40.dp,vertical=16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                        Text(tr("Novelas que atrapan","Telenovelas to fall for"),color=Color.White,fontSize=24.sp,fontWeight=FontWeight.Bold)
+                        Text(if(state.novelasLoading) tr("Preparando historias para ti…","Preparing stories for you…") else state.novelasMessage.ifBlank {tr("Descubre tus próximas novelas favoritas.","Find your next favorite telenovelas.")},color=Muted)
+                        if(!state.novelasLoading) FocusButton(tr("Ver novelas","Explore telenovelas")) {state.launch {state.loadNovelasHome()}}
+                    }
+                }
+                if(state.localRecommendations(state.forYou).isNotEmpty()) shelf(key="for_you") { SpotlightRail(title=tr("Para ti · según lo que ves","For you · Based on what you watch"),rows=state.localRecommendations(state.forYou),onClick=openItem) }
+                if(state.becauseWatchedMatches && state.localRecommendations(state.becauseWatchedPicks).isNotEmpty()) shelf(key="because_you_watched") {
+                    SpotlightRail(tr("Porque viste ","Because you watched ")+state.becauseWatchedTitle,state.localRecommendations(state.becauseWatchedPicks),
+                        eyebrow=tr("MÁS HISTORIAS PARA TI","MORE STORIES FOR YOU"),onClick=openItem)
+                }
+                if(!simple && state.localRecommendations(state.trending).isNotEmpty()) shelf(key="ranked_movies") {
+                    SpotlightRail(tr("Top 10 · Películas","Top 10 · Movies"),
+                        (state.localRecommendations(state.trending)+state.localRecommendations(state.movies)).filter {it.type=="movie"}.distinctBy {it.cloudId}.take(10),
+                        ranked=true,eyebrow=tr("TENDENCIAS EN BRUNIO","TRENDING ON BRUNIO"),onClick=openItem)
+                }
+                if(state.familiarHomeMatches && state.localRecommendations(state.oscarPicks).isNotEmpty()) shelf(key="oscar_picks") {
+                    SpotlightRail(tr("Oscar · Ganadoras y nominadas","Oscar · Winners & nominees"),state.localRecommendations(state.oscarPicks),
+                        awardLabels=true,eyebrow=tr("SELECCIÓN · PREMIOS ","CURATED · AWARDS ")+com.miflix.native2.data.AwardSelections.latestYear("oscar"),onClick=openItem)
+                }
+                if(state.familiarHomeMatches && state.localRecommendations(state.emmyPicks).isNotEmpty()) shelf(key="emmy_picks") {
+                    SpotlightRail(tr("Emmy · Series premiadas","Emmy · Award-winning series"),state.localRecommendations(state.emmyPicks),
+                        awardLabels=true,eyebrow=tr("SELECCIÓN · PREMIOS ","CURATED · AWARDS ")+com.miflix.native2.data.AwardSelections.latestYear("emmy"),onClick=openItem)
+                }
+                if(!simple && (state.localRecommendations(state.topRated).isNotEmpty() || state.localRecommendations(state.bestSeries).isNotEmpty())) shelf(key="rewatch_favorites") {
+                    val films=state.localRecommendations(state.topRated).filter {it.rating>=8.0}.distinctBy {it.cloudId}.take(10)
+                    val shows=state.localRecommendations(state.bestSeries).filter {it.rating>=8.0}.distinctBy {it.cloudId}.take(10)
+                    val rewatch=(0 until maxOf(films.size,shows.size)).flatMap {index ->listOfNotNull(films.getOrNull(index),shows.getOrNull(index))}
+                    SpotlightRail(tr("Ojalá olvidarlas para verlas otra vez","Make me forget so I can rewatch"),rewatch,
+                        eyebrow=tr("PELÍCULAS Y SERIES · HISTORIAS INOLVIDABLES","MOVIES & SERIES · UNFORGETTABLE STORIES"),onClick=openItem)
+                }
+                if(state.familiarHomeMatches && state.localRecommendations(state.romancePicks).isNotEmpty()) shelf(key="romance_picks") {
+                    SpotlightRail(tr("Historias de amor","Romance & love stories"),state.localRecommendations(state.romancePicks),onClick=openItem)
+                }
+                if(state.familiarHomeMatches && state.localRecommendations(state.koreanPicks).isNotEmpty()) shelf(key="korean_picks") {
+                    SpotlightRail(tr("Dramas coreanos","K-dramas"),state.localRecommendations(state.koreanPicks),onClick=openItem)
+                }
+                if(state.familiarHomeMatches && state.localRecommendations(state.classicPicks).isNotEmpty()) shelf(key="classic_picks") {
+                    SpotlightRail(tr("Clásicos de siempre","Timeless classics"),state.localRecommendations(state.classicPicks),onClick=openItem)
+                }
+                if(!simple) shelf(key="franchises_home") {
+                    CollectionRail(tr("Franquicias","Franchises"),com.miflix.native2.data.FranchiseCatalogRP29.brands.map { (brand,label) -> CollectionTile("franchise:$brand",label,"") }) { tile ->
+                        state.launch { state.openFranchise(tile.id.substringAfter(":")) }
+                    }
+                }
+                if(state.localRecommendations(state.seasonalItems).isNotEmpty()) shelf(key="seasonal") {
+                    SpotlightRail(seasonalTitle(state.seasonalTheme),state.localRecommendations(state.seasonalItems),onClick=openItem,
+                        eyebrow=tr("SELECCIÓN DE TEMPORADA","SEASONAL SPOTLIGHT"))
+                }
+                shelf(key="movies") { SpotlightRail(title=tr("Películas populares","Popular · Movies"),rows=state.localRecommendations(state.movies),onClick=openItem) }
+                shelf(key="series") { SpotlightRail(title=tr("Series populares","Popular · Series"),rows=state.localRecommendations(state.series),onClick=openItem) }
+                if(!simple) shelf(key="top") { SpotlightRail(title=tr("Mejor valorados","Top Rated"),rows=state.localRecommendations(state.topRated),onClick=openItem) }
+                if(!simple) shelf(key="now_playing") { SpotlightRail(tr("Estrenos en cartelera","Now playing"),state.localRecommendations(state.newMovies),onClick=openItem) }
+                if(!simple) shelf(key="best_series") { SpotlightRail(tr("Series mejor valoradas","Top rated series"),state.localRecommendations(state.bestSeries),onClick=openItem) }
+                if(!simple) shelf(key="action") { SpotlightRail(tr("Acción para esta noche","Action tonight"),state.localRecommendations(state.action),onClick=openItem) }
+                if(!simple) shelf(key="scifi") { SpotlightRail(tr("Ciencia ficción","Science fiction"),state.localRecommendations(state.sciFi),onClick=openItem) }
+                shelf(key="comedy") { SpotlightRail(tr("Algo para reír","Time for a comedy"),state.localRecommendations(state.comedy),onClick=openItem) }
+                if(!simple) shelf(key="thrillers") { SpotlightRail(tr("Suspenso y misterio","Thrillers & mystery"),state.localRecommendations(state.thrillers),onClick=openItem) }
+                if(state.holidayHomeMatches && state.localRecommendations(state.horrorPicks).isNotEmpty()) shelf(key="horror_movies") {
+                    SpotlightRail(tr("Terror","Horror"),state.localRecommendations(state.horrorPicks),onClick=openItem)
+                }
+                shelf(key="christmas_movies") {
+                    if(state.holidayHomeMatches && state.localRecommendations(state.christmasPicks).isNotEmpty()) {
+                        SpotlightRail(tr("Películas navideñas","Christmas Movies"),state.localRecommendations(state.christmasPicks),
+                            eyebrow=tr("UN POCO DE MAGIA NAVIDEÑA","A LITTLE CHRISTMAS MAGIC"),onClick=openItem)
+                    } else Column(Modifier.padding(horizontal=40.dp,vertical=12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                        Text(tr("Películas navideñas","Christmas Movies"),color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
+                        Text(if(state.holidayHomeLoading) tr("Cargando…","Loading…") else state.holidayHomeMessage.ifBlank {tr("Carga la selección de Navidad.","Load the Christmas selection.")},color=Muted,fontSize=14.sp)
+                        if(!state.holidayHomeLoading) FocusButton(tr("Reintentar","Retry")) {state.launch {state.loadHolidayHome()}}
+                    }
+                }
+                if(!simple && (state.localRecommendations(state.comingMovies).isNotEmpty() || state.localRecommendations(state.comingSeries).isNotEmpty())) shelf(key="coming_soon_home") {
+                    SpotlightRail(tr("Próximamente","Coming soon"),(state.localRecommendations(state.comingMovies)+state.localRecommendations(state.comingSeries)).distinctBy { it.cloudId }.take(30),onClick={ state.launch { state.open(it,upcoming=true) } })
+                }
+                // RP194: migrate RP193's missing Mood key into the visible Home order.
+                // New visual shortcuts and Mood stay near the top even for older saved orders.
+                val homeOrderRP194=(listOf("continue","explore-shortcuts","mood-selector")+
+                    state.homeRowOrder.filterNot {it=="discovery-controls"}+
+                    homeSections.map {it.key}).distinct()
+                val order=com.miflix.native2.data.DailyRotationPolicyRP188.homeOrder(homeOrderRP194)
+                val orderedSectionsRP165=homeSections.filter {it.key !in state.hiddenHomeRows &&
+                    (it.key!="discovery-retry" || "discovery-picks" !in state.hiddenHomeRows)}.sortedWith(compareBy<HomeSection> {order.indexOf(it.key).let {i ->if(i<0) Int.MAX_VALUE else i}})
+                positionRP165.sectionKeys=orderedSectionsRP165.map {it.key}
+                orderedSectionsRP165.forEach {section ->
+                    val index=shelfIndex++
                     val focusTargetRP198=rowFocusRP198.getOrPut(section.key) {FocusRequester()}
                     item(key=section.key) {
                         CompositionLocalProvider(LocalHomeShelfKey provides section.key) {

@@ -38,7 +38,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -91,14 +90,25 @@ internal fun SpotlightRail(
     val cardRowHeight=if(homeShelf) LocalHomeCardRowHeight.current else 188.dp
     if(rows.isEmpty()) return
     var selectedId by rememberSaveable(title) { mutableStateOf(rows.first().cloudId) }
-    val homeRail = shelfKey.isNotBlank() && homeShelf && pinned
+    val prefetchContextRP204=androidx.compose.ui.platform.LocalContext.current
+    // Prewarm the next three posters only after focus settles. The shared
+    // Coil cache suppresses duplicate downloads and limits concurrent work.
+    LaunchedEffect(selectedId) {
+        kotlinx.coroutines.delay(180)
+        val index=rows.indexOfFirst {it.cloudId==selectedId}
+        if(index>=0) com.miflix.native2.data.BrunioImageCacheRP204.prefetch(
+            prefetchContextRP204,
+            rows.drop(index+1).take(3).mapNotNull {it.poster ?: it.backdrop}
+        )
+    }
+
     var active by remember { mutableStateOf(false) }
     var settledId by remember { mutableStateOf<String?>(null) }
     val bring=remember { BringIntoViewRequester() }
     val railScroll=homeRailStateRP165("spotlight:$shelfKey:$title")
     val firstCard=remember {FocusRequester()}
     val cardFocusRP61=remember {mutableMapOf<String,FocusRequester>()}
-    LaunchedEffect(selectedId,active) { settledId=null;if(active && !simple && !homeRail) { delay(3000);settledId=selectedId } }
+    LaunchedEffect(selectedId,active) { settledId=null;if(active && !simple) { delay(3000);settledId=selectedId } }
     LaunchedEffect(active) { if(active && !homeShelf) { delay(50); bring.bringIntoView() } }
     val infoVisibility by animateFloatAsState(if(active && settledId==selectedId) 1f else 0f,tween(150),label="railInfo")
     val horizontalAnchor=remember {com.miflix.native2.data.HorizontalFocusAnchor()}
@@ -114,10 +124,8 @@ internal fun SpotlightRail(
         Text(title,color=Color.White,fontSize=if(simple) 27.sp else 22.sp,lineHeight=if(simple) 32.sp else 27.sp,fontWeight=FontWeight.Bold,
             maxLines=1,overflow=TextOverflow.Ellipsis,
             modifier=Modifier.padding(start=40.dp,end=40.dp,bottom=8.dp))
-        val railContent: @Composable () -> Unit = {
-        LazyRow(Modifier.fillMaxWidth().height(cardRowHeight)
-            .then(if (homeRail) Modifier.clipToBounds().smoothHorizontalDpad()
-                else Modifier.smoothHorizontalDpad { !railScroll.isScrollInProgress }).firstCardOnDown(railScroll,firstCard,restoreIndex={rows.indexOfFirst {it.cloudId==selectedId}.coerceAtLeast(0)},restoreFocus={index -> rows.getOrNull(index)?.let {cardFocusRP61[it.cloudId]}}),state=railScroll,contentPadding=PaddingValues(horizontal=34.dp,vertical=6.dp)) {
+        CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalSpec,LocalHorizontalFocusAnchor provides horizontalAnchor) {
+        LazyRow(Modifier.fillMaxWidth().height(cardRowHeight).smoothHorizontalDpad { !railScroll.isScrollInProgress }.firstCardOnDown(railScroll,firstCard,restoreIndex={rows.indexOfFirst {it.cloudId==selectedId}.coerceAtLeast(0)},restoreFocus={index -> rows.getOrNull(index)?.let {cardFocusRP61[it.cloudId]}}),state=railScroll,contentPadding=PaddingValues(horizontal=34.dp,vertical=6.dp)) {
             items(rows,key={it.cloudId},contentType={"spotlight"}) { item ->
                 val cardFocus=remember(item.cloudId) {FocusRequester()}
                 DisposableEffect(item.cloudId,cardFocus) {
@@ -135,9 +143,6 @@ internal fun SpotlightRail(
             }
         }
         }
-        if (homeRail) HomeHorizontalRail { railContent() }
-        else CompositionLocalProvider(LocalBringIntoViewSpec provides horizontalSpec,
-            LocalHorizontalFocusAnchor provides horizontalAnchor) { railContent() }
         // Reserved space prevents neighboring rails from jumping when focus changes.
         if(!pinned) Column(Modifier.padding(start=40.dp,end=40.dp,top=4.dp).fillMaxWidth().height(72.dp)
             .graphicsLayer { alpha=infoVisibility;translationY=(1f-infoVisibility)*6.dp.toPx() }) {

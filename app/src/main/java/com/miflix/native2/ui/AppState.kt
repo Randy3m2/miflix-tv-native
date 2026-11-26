@@ -3100,17 +3100,6 @@ class AppState(context: Context) {
         detailsCache[key] = System.currentTimeMillis() to details
     }
 
-    internal suspend fun prefetchHomeDetails(item: MediaSummary) {
-        if (kidsMode || !appForeground || screen != Screen.HOME) return
-        val language = tmdb.language
-        val key = "$language:${item.cloudId}"
-        if (cachedDetails(key) != null) return
-        val loaded = tmdb.details(item)
-        if (language == tmdb.language && screen == Screen.HOME && appForeground && cachedDetails(key) == null) {
-            cacheDetails(key, loaded)
-        }
-    }
-
     suspend fun open(item: MediaSummary,upcoming: Boolean=false) {
         if(kidsMode && !tmdb.kidsAllowed(item)) {error=tr("Este título no está disponible en Kids.","This title is not available in Kids.");return}
         if(selected?.cloudId!=item.cloudId) invalidatePlaybackWork()

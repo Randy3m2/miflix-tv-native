@@ -188,13 +188,6 @@ fun HomeScreen(state: AppState,onNavigate: (Screen) -> Unit) {
     var heroTrailer by remember(discoveryOwner) {mutableStateOf<Pair<String,String>?>(null)}
     var focusedPosterRP201 by remember(discoveryOwner) {mutableStateOf<MediaSummary?>(null)}
     var focusEpochRP201 by remember(discoveryOwner) {mutableIntStateOf(0)}
-    LaunchedEffect(discoveryOwner, focusedPosterRP201?.cloudId, state.appForeground) {
-        val item = focusedPosterRP201 ?: return@LaunchedEffect
-        delay(1200)
-        try { state.prefetchHomeDetails(item) }
-        catch (e: kotlinx.coroutines.CancellationException) { throw e }
-        catch (_: Exception) { }
-    }
     val previewAllowed=state.appForeground && !state.kidsMode && !state.miniPlayer &&
         !state.discoveryPreviewActive && !showTrailers && !showAmbientRP199 && !showCinemaHub
     LaunchedEffect(discoveryOwner,focusEpochRP201,focusedPosterRP201?.cloudId,previewAllowed) {

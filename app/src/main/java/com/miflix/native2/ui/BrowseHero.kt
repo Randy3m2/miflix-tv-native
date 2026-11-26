@@ -52,13 +52,14 @@ private fun FocusedBrowseHero(state: AppState,pending: State<MediaSummary?>,fall
                 pending.value==null) rankIndex=(rankIndex+1)%ranked.size
         }
     }
+    val home = state.screen == Screen.HOME
     val candidate=pending.value ?: ranked.getOrNull(rankIndex) ?: fallback
-    LaunchedEffect(candidate?.cloudId,state.interfaceLanguage) {
+    LaunchedEffect(candidate?.cloudId,state.interfaceLanguage,state.appForeground,home) {
         // Coalesce fast focus movements before decoding artwork or requesting logos.
-        delay(350)
+        delay(if (home) 140L else 350L)
         shown=candidate;logo=null
-        if(candidate!=null) {
-            delay(650)
+        if(candidate!=null && state.appForeground) {
+            delay(if (home) 240L else 650L)
             try {logo=state.tmdb.browseLogo(candidate)} catch(e: CancellationException) {throw e} catch(_: Exception) { }
         }
     }

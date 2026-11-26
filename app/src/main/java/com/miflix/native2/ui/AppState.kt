@@ -275,7 +275,7 @@ class AppState(context: Context) {
             }
         }
     }
-    internal fun localRecommendations(rows:List<MediaSummary>)=rows.filterNot {localExtras.hidden(ratingsKey(),it.cloudId)}
+    internal fun localRecommendations(rows:List<MediaSummary>)=localExtras.visibleRecommendations(ratingsKey(),rows)
     internal fun exportLocalBackupRC100():org.json.JSONObject=org.json.JSONObject()
         .put("brunioLocalBackup",100).put("extras",localExtras.export(ratingsKey()))
         .put("homeOrder",org.json.JSONArray(homeRowOrder)).put("hiddenRows",org.json.JSONArray(hiddenHomeRows.toList()))
@@ -3066,6 +3066,26 @@ class AppState(context: Context) {
         private set
     private var detailsEpoch=0L
     private val detailsCache=linkedMapOf<String,Pair<Long,MediaDetails>>()
+    private fun cachedDetails(key: String): MediaDetails? =
+        detailsCache[key]?.takeIf { System.currentTimeMillis() - it.first < 15 * 60 * 1000L }?.second
+
+    private fun cacheDetails(key: String, details: MediaDetails) {
+        detailsCache.remove(key)
+        if (detailsCache.size >= 12) detailsCache.remove(detailsCache.keys.first())
+        detailsCache[key] = System.currentTimeMillis() to details
+    }
+
+    internal suspend fun prefetchHomeDetails(item: MediaSummary) {
+        if (kidsMode || !appForeground || screen != Screen.HOME) return
+        val language = tmdb.language
+        val key = "$language:${item.cloudId}"
+        if (cachedDetails(key) != null) return
+        val loaded = tmdb.details(item)
+        if (language == tmdb.language && screen == Screen.HOME && appForeground && cachedDetails(key) == null) {
+            cacheDetails(key, loaded)
+        }
+    }
+
     suspend fun open(item: MediaSummary,upcoming: Boolean=false) {
         if(kidsMode && !tmdb.kidsAllowed(item)) {error=tr("Este título no está disponible en Kids.","This title is not available in Kids.");return}
         if(selected?.cloudId!=item.cloudId) invalidatePlaybackWork()
@@ -3076,14 +3096,13 @@ class AppState(context: Context) {
         assistantDescriptionRP157=null;assistantEpisodeRP157=null
         selected=item
         selectedUpcoming=upcoming || (comingMovies+comingSeries).any { it.cloudId==item.cloudId }
-        details=detailsCache[cacheKey]?.takeIf { System.currentTimeMillis()-it.first<15*60*1000L }?.second
+        details=cachedDetails(cacheKey)
         episodes.clear();currentSeason=1
         screen=Screen.DETAILS
         try {
             val loaded=details ?: tmdb.details(item)
             if(ticket!=detailsEpoch || selected?.cloudId!=item.cloudId || language!=tmdb.language) return
-            if(detailsCache.size>=12) detailsCache.remove(detailsCache.keys.first())
-            detailsCache[cacheKey]=System.currentTimeMillis() to loaded
+            cacheDetails(cacheKey,loaded)
             details=loaded
             val today=java.text.SimpleDateFormat("yyyy-MM-dd",Locale.US).format(java.util.Date())
             if(loaded.releaseDate.matches(Regex("\\d{4}-\\d{2}-\\d{2}"))  ) selectedUpcoming=loaded.releaseDate>today

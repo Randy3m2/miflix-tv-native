@@ -98,6 +98,12 @@ internal class LocalExtrasRC100(private val prefs:SharedPreferences) {
     fun remove(scope:String,id:String,cloud:String) {editList(scope,id) {row -> val a=row.optJSONArray("items") ?: JSONArray();row.put("items",JSONArray((0 until a.length()).map {a.getJSONObject(it)}.filter {it.optString("cloud")!=cloud}))}}
     fun hide(scope:String,cloud:String,days:Int) {mutate(scope) {val h=it.optJSONObject("hidden") ?: JSONObject();h.put(cloud,System.currentTimeMillis()+days*86_400_000L);it.put("hidden",h)}}
     fun hidden(scope:String,cloud:String):Boolean=enabled("hide") && data(scope).optJSONObject("hidden")?.optLong(cloud,0L)?.let {it>System.currentTimeMillis()}==true
+    fun visibleRecommendations(scope: String, rows: List<MediaSummary>): List<MediaSummary> {
+        if (!enabled("hide")) return rows.toList()
+        val hidden = data(scope).optJSONObject("hidden") ?: return rows.toList()
+        val now = System.currentTimeMillis()
+        return rows.filterNot { hidden.optLong(it.cloudId, 0L) > now }
+    }
     fun restoreHidden(scope:String) {mutate(scope) {it.remove("hidden")}}
     fun preference(scope:String,key:String):JSONObject=data(scope).optJSONObject(key) ?: JSONObject()
     fun savePreference(scope:String,key:String,value:JSONObject) {mutate(scope) {it.put(key,value)}}

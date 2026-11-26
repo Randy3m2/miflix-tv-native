@@ -91,18 +91,19 @@ internal fun SpotlightRail(
     if(rows.isEmpty()) return
     var selectedId by rememberSaveable(title) { mutableStateOf(rows.first().cloudId) }
     val prefetchContextRP204=androidx.compose.ui.platform.LocalContext.current
-    // Prewarm the next three posters only after focus settles. The shared
-    // Coil cache suppresses duplicate downloads and limits concurrent work.
-    LaunchedEffect(selectedId) {
-        kotlinx.coroutines.delay(180)
-        val index=rows.indexOfFirst {it.cloudId==selectedId}
-        if(index>=0) com.miflix.native2.data.BrunioImageCacheRP204.prefetch(
+    var active by remember { mutableStateOf(false) }
+    // Only the focused row preloads artwork. Include both directions for D-pad navigation.
+    LaunchedEffect(selectedId, active, rows) {
+        if (!active) return@LaunchedEffect
+        delay(180)
+        val index = rows.indexOfFirst { it.cloudId == selectedId }
+        if (index >= 0) com.miflix.native2.data.BrunioImageCacheRP204.prefetch(
             prefetchContextRP204,
-            rows.drop(index+1).take(3).mapNotNull {it.poster ?: it.backdrop}
+            listOfNotNull(rows.getOrNull(index + 1), rows.getOrNull(index - 1), rows.getOrNull(index + 2))
+                .mapNotNull { it.poster ?: it.backdrop }
         )
     }
 
-    var active by remember { mutableStateOf(false) }
     var settledId by remember { mutableStateOf<String?>(null) }
     val bring=remember { BringIntoViewRequester() }
     val railScroll=homeRailStateRP165("spotlight:$shelfKey:$title")

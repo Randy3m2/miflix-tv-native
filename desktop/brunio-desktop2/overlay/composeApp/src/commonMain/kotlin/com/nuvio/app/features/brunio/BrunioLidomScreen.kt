@@ -43,6 +43,8 @@ import com.nuvio.app.features.trailer.TrailerPlaybackResolver
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -93,37 +95,40 @@ private object BrunioLidomData {
         }.distinctBy { it.id }.sortedWith(compareByDescending<LIdomStand> { it.wins.toDouble() / (it.wins + it.losses).coerceAtLeast(1) }.thenByDescending { it.wins })
     }
 
-    /**
-     * YouTube /streams can omit an active broadcast (or use a different renderer).
-     * Check the channel /live page first and require videoDetails.isLiveContent,
-     * then check each stream renderer for a video-specific LIVE NOW marker.
-     * Never treat an unrelated replay or channel-wide "LIVE" badge as a game.
-     */
-    suspend fun live(team: BrunioLidomTeam): LIdomLive? = withContext(Dispatchers.IO) {
-        val headers = mapOf("Accept" to "text/html",
-            "Accept-Language" to "es-DO,es;q=0.9,en;q=0.5")
-        val watch = runCatching {
+    private fun mentions(title: String, team: BrunioLidomTeam): Boolean {
+        val normalized = title.lowercase().replace('á', 'a')
+        return Regex("""\b${team.id}\b""").containsMatchIn(normalized)
+    }
+
+    private suspend fun channelLive(team: BrunioLidomTeam, headers: Map<String, String>): LIdomLive? {
+        val watch = try {
             httpGetTextWithHeaders(team.handle.trimEnd('/') + "/live", headers)
-        }.getOrNull()
-        if (watch != null) {
-            val playerStart = watch.indexOf("ytInitialPlayerResponse")
-            if (playerStart >= 0) {
-                val player = watch.substring(playerStart).take(80000)
-                val details = player.substringAfter("\"videoDetails\"", "")
-                    .take(12000)
-                val liveFlag = Regex(""""isLiveContent"\s*:\s*true""")
-                val videoId = Regex(""""videoId"\s*:\s*"([A-Za-z0-9_-]{11})"""")
-                    .find(details)?.groupValues?.getOrNull(1)
-                val title = Regex(""""title"\s*:\s*"([^"]{3,160})"""")
-                    .find(details)?.groupValues?.getOrNull(1) ?: team.name
-                if (videoId != null && liveFlag.containsMatchIn(details)) {
-                    return@withContext LIdomLive(videoId, title)
-                }
-            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            return null
         }
+        val playerStart = Regex("""\bytInitialPlayerResponse\s*=\s*(?=\{)""").find(watch) ?: return null
+        val player = watch.substring(playerStart.range.last + 1).take(200_000)
+        val broadcast = Regex(""""liveBroadcastDetails"\s*:\s*\{([^{}]*)}""")
+            .find(player)?.groupValues?.get(1) ?: return null
+        if (!Regex(""""isLiveNow"\s*:\s*true\b""").containsMatchIn(broadcast) ||
+            broadcast.contains("endTimestamp")) return null
+        val details = player.substringAfter("\"videoDetails\"", "").take(12000)
+        val id = Regex(""""videoId"\s*:\s*"([A-Za-z0-9_-]{11})"""")
+            .find(details)?.groupValues?.get(1) ?: return null
+        val title = Regex(""""title"\s*:\s*"([^"]+)"""")
+            .find(details)?.groupValues?.get(1).orEmpty()
+        return LIdomLive(id, title)
+    }
+
+    suspend fun live(team: BrunioLidomTeam): LIdomLive? = withContext(Dispatchers.IO) {
+        val headers = mapOf("Accept" to "text/html", "Accept-Language" to "es-DO,es;q=0.9,en;q=0.5")
+        channelLive(team, headers)?.takeIf { team.id != "escogido" || mentions(it.title, team) }
+            ?.let { return@withContext it }
         val streams = runCatching {
             httpGetTextWithHeaders(team.handle.trimEnd('/') + "/streams", headers)
-        }.getOrNull() ?: return@withContext null
+        }.getOrNull().orEmpty()
         val markers = listOf("\"videoRenderer\":", "\"gridVideoRenderer\":")
         for (marker in markers) {
             for (chunk in streams.split(marker).drop(1).take(60)) {
@@ -136,10 +141,14 @@ private object BrunioLidomData {
                     .find(block)?.groupValues?.getOrNull(1) ?: continue
                 val title = Regex(""""text"\s*:\s*"([^"]{3,160})"""")
                     .find(block)?.groupValues?.getOrNull(1) ?: team.name
-                return@withContext LIdomLive(id, title)
+                if (team.id != "escogido" || mentions(title, team)) return@withContext LIdomLive(id, title)
             }
         }
-        null
+        kotlinx.coroutines.coroutineScope {
+            teamsLidom.filter { it.id != team.id }.map { other ->
+                async { channelLive(other, headers)?.takeIf { mentions(it.title, team) } }
+            }.awaitAll().firstOrNull { it != null }
+        }
     }
 }
 

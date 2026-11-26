@@ -72,17 +72,22 @@ internal fun PlaybackArtwork(state: AppState,request: PlayerRequest) {
 
 @Composable
 internal fun MenuScreensaver(state: AppState) {
-    var visible by remember {mutableStateOf(false)}
-    val eligible=state.appForeground && !state.discoveryPreviewActive && state.screen !in setOf(Screen.PLAYER,Screen.MULTIVIEW,Screen.SPLASH,Screen.PAIR_DEVICE) && !state.miniPlayer && state.busyMessage==null && state.sourceSelection==null && !state.localCastPairing
+    val eligible=state.appForeground && !state.discoveryPreviewActive && state.screen !in setOf(Screen.PLAYER,Screen.MULTIVIEW,Screen.SPLASH,Screen.PROFILES,Screen.PAIR_DEVICE) && !state.miniPlayer && state.busyMessage==null && state.sourceSelection==null && !state.localCastPairing
     val rows=(if(state.kidsMode) state.kidsMovies else (state.trending+state.movies).filter {it.type=="movie"}.distinctBy {it.cloudId}).filter {it.backdrop!=null}.take(10)
-    LaunchedEffect(eligible,state.screen,MenuActivity.lastInput,rows.map {it.cloudId}) {
-        visible=false
-        if(eligible && rows.isNotEmpty()) {
-            delay((300000L-(SystemClock.elapsedRealtime()-MenuActivity.lastInput)).coerceAtLeast(0L))
-            visible=true
+    val ready = eligible && rows.isNotEmpty()
+    // Only count idle time from when this menu can actually show the screensaver.
+    val menuReadyAt = remember(ready, state.screen) { SystemClock.elapsedRealtime() }
+    val idleSince = maxOf(menuReadyAt, MenuActivity.lastInput)
+    var visible by remember(ready, state.screen, idleSince) { mutableStateOf(false) }
+
+    LaunchedEffect(ready, state.screen, idleSince) {
+        if (ready) {
+            val elapsed = SystemClock.elapsedRealtime() - idleSince
+            delay((300_000L - elapsed).coerceAtLeast(0L))
+            visible = true
         }
     }
-    if(!visible || !eligible || rows.isEmpty()) return
+    if (!visible || !ready) return
     var index by remember {mutableIntStateOf(0)}
     LaunchedEffect(rows.map {it.cloudId}) {while(true) {delay(14000);index=(index+1)%rows.size} }
     fun dismiss() {visible=false;MenuActivity.touch()}

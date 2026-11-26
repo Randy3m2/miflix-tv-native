@@ -24,14 +24,26 @@ import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.miflix.native2.model.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.collect
 
 @Composable
 internal fun MobileRailRP133(state:AppState,title:String,rows:List<MediaSummary>,landscape:Boolean=false,topTen:Boolean=false,onSelectRP188:((MediaSummary)->Unit)?=null) {
     if(rows.isEmpty()) return
     Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
         Text(title,color=Color.White,fontSize=19.sp,fontWeight=FontWeight.Bold,modifier=Modifier.padding(horizontal=16.dp))
-        LazyRow(contentPadding=PaddingValues(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-            itemsIndexed(if(topTen) rows.take(10) else rows,key={_,it->it.cloudId}) {index,item->
+        val rail = androidx.compose.foundation.lazy.rememberLazyListState()
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val visibleRows = if (topTen) rows.take(10) else rows
+        LaunchedEffect(rail, visibleRows) {
+            snapshotFlow { rail.layoutInfo.visibleItemsInfo.lastOrNull()?.index?.takeUnless { rail.isScrollInProgress } }
+                .collect { index ->
+                    if (index != null) com.miflix.native2.data.BrunioImageCacheRP204.prefetch(
+                        context, visibleRows.drop(index + 1).take(2).mapNotNull { it.poster ?: it.backdrop }
+                    )
+                }
+        }
+        LazyRow(state=rail,contentPadding=PaddingValues(horizontal=16.dp),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+            itemsIndexed(visibleRows,key={_,it->it.cloudId}) {index,item->
                 MobilePosterRP133(state,item,landscape=landscape,rank=if(topTen) index+1 else null,onSelectRP188=onSelectRP188)
             }
         }
@@ -71,6 +83,24 @@ internal fun MobileHomeRP133(state:AppState) {
     fun filtered(items:List<MediaSummary>)=state.localRecommendations(items).filter {filter.isEmpty() || it.type==filter}
     val continueRows=filtered(if(kids) state.kidsContinue.toList() else state.continueWatching.toList())
     val hero=filtered(state.trending.toList()+state.movies.toList()).firstOrNull()
+    val mobileKeysRP205=listOf(
+        "movies","series","ranked_movies","best_series","for_you","novelas",
+        "classic_picks","action","scifi","comedy","thrillers","because_you_watched",
+        "now_playing","romance_picks","horror_movies","seasonal",
+        "platform_netflix","platform_disney","platform_prime","platform_max"
+    )
+    val preferredOrderRP205=state.homeRowOrder
+    val hiddenRP205=state.hiddenHomeRows
+    val visibleRowsRP205=rows.take(more).mapIndexed {index,pair->
+        Triple(mobileKeysRP205.getOrElse(index) {"mobile:$index"},pair.first,filtered(pair.second))
+    }.filter {(key,_,items)->items.isNotEmpty() && key !in hiddenRP205}
+        .let {sections->
+            if(!kids && !state.easyModeRP79 && "live_favorites" !in hiddenRP205)
+                sections+Triple("live_favorites",tr("Mis canales favoritos","Favorite live channels"),emptyList<MediaSummary>())
+            else sections
+        }.sortedWith(compareBy {section->
+            preferredOrderRP205.indexOf(section.first).let {if(it<0) Int.MAX_VALUE else it}
+        })
     LazyColumn(verticalArrangement=Arrangement.spacedBy(22.dp),contentPadding=PaddingValues(bottom=24.dp)) {
         if(!kids && !state.easyModeRP79) item("home-studio-rp205") {
             MobileButtonRP133(tr("✦ Personalizar Home","✦ Customize Home"),"grid",
@@ -116,27 +146,9 @@ internal fun MobileHomeRP133(state:AppState) {
                 }
             }
         }
-        val mobileKeysRP205=listOf(
-            "movies","series","ranked_movies","best_series","for_you","novelas",
-            "classic_picks","action","scifi","comedy","thrillers","because_you_watched",
-            "now_playing","romance_picks","horror_movies","seasonal",
-            "platform_netflix","platform_disney","platform_prime","platform_max"
-        )
-        val preferredOrderRP205=state.homeRowOrder
-        val hiddenRP205=state.hiddenHomeRows
-        val visibleRowsRP205=rows.take(more).mapIndexed {index,pair->
-            Triple(mobileKeysRP205.getOrElse(index) {"mobile:$index"},pair.first,pair.second)
-        }.filter {(key,_,items)->filtered(items).isNotEmpty() && key !in hiddenRP205}
-            .let {sections->
-                if(!kids && !state.easyModeRP79 && "live_favorites" !in hiddenRP205)
-                    sections+Triple("live_favorites",tr("Mis canales favoritos","Favorite live channels"),emptyList<MediaSummary>())
-                else sections
-            }.sortedWith(compareBy {section->
-                preferredOrderRP205.indexOf(section.first).let {if(it<0) Int.MAX_VALUE else it}
-            })
         visibleRowsRP205.forEach { (key,title,items)->
             if(key=="live_favorites") item(key) {LiveFavoritesHomeRP205(state,mobile=true)}
-            else item(key) {MobileRailRP133(state,title,filtered(items),topTen=title.startsWith("Top 10"))}
+            else item(key) {MobileRailRP133(state,title,items,topTen=title.startsWith("Top 10"))}
         }
         if(!kids && !state.easyModeRP79) item("franchises") {
             Column(Modifier.padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {

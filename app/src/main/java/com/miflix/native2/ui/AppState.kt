@@ -657,23 +657,39 @@ class AppState(context: Context) {
     suspend fun deleteCalendarEvent(id: String) { profileSocialSession()?.let { social.deleteCalendar(it,id);refreshCalendar() } }
     private fun noticesKey() = "notices_${session?.userId ?: "local"}_${activeProfile.id}"
     private fun knownKey() = "known_${session?.userId ?: "local"}_${activeProfile.id}"
-    private fun persistNotices() {
-        val a = org.json.JSONArray()
-        notifications.forEach { n -> a.put(org.json.JSONObject().put("id",n.id).put("cloud",n.item.cloudId).put("title",n.item.title).put("overview",n.item.overview).put("poster",n.item.poster).put("message",n.message).put("date",n.date)) }
-        playbackPrefs.edit().putString(noticesKey(),a.toString()).apply()
+    private fun readNoticeHistory(key: String): List<ReleaseNotice> {
+        val rows = runCatching { org.json.JSONArray(playbackPrefs.getString(key, "[]")) }
+            .getOrDefault(org.json.JSONArray())
+        return (0 until rows.length()).mapNotNull { index ->
+            val row = rows.optJSONObject(index) ?: return@mapNotNull null
+            val parts = row.optString("cloud").split(':')
+            val itemId = parts.getOrNull(2)?.toIntOrNull() ?: return@mapNotNull null
+            val id = row.optString("id").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            ReleaseNotice(id, MediaSummary(itemId, parts[1], row.optString("title"),
+                row.optString("overview"), null, row.optString("poster").takeIf { it.isNotBlank() },
+                0.0, ""), row.optString("message"), row.optString("date"))
+        }.distinctBy { it.id }
     }
-    fun clearNotifications() { notifications.clear(); persistNotices() }
+    fun restoreNotificationHistory() {
+        val history = readNoticeHistory(noticesKey())
+        if (notifications.toList() != history) {
+            notifications.clear()
+            notifications.addAll(history)
+        }
+    }
+    fun clearNotifications() {
+        com.miflix.native2.data.ReleaseAlertsRP164.clearHistory(playbackPrefs, noticesKey())
+        notifications.clear()
+    }
     suspend fun checkNotifications() {
         if(easyModeRP79 || checkingNotices || tmdb.token.isBlank()) return
         com.miflix.native2.data.ReleaseAlertsRP164.lock.lock()
         checkingNotices = true
         val ownerKey = noticesKey(); val knownOwner = knownKey(); val ids = favorites.toList()
         try {
-            val stored = org.json.JSONArray(playbackPrefs.getString(ownerKey,"[]"))
-            val existing = (0 until stored.length()).mapNotNull { i ->
-                val n = stored.getJSONObject(i); val parts = n.optString("cloud").split(":")
-                if(parts.size != 3) null else ReleaseNotice(n.getString("id"),MediaSummary(parts[2].toInt(),parts[1],n.getString("title"),n.optString("overview"),null,n.optString("poster").takeIf { it.isNotBlank() },0.0,""),n.getString("message"),n.optString("date"))
-            }.toMutableList()
+            val alerts = com.miflix.native2.data.ReleaseAlertsRP164
+            val generation = alerts.clearGeneration(playbackPrefs, ownerKey)
+            val existing = readNoticeHistory(ownerKey).toMutableList()
             val known = org.json.JSONObject(playbackPrefs.getString(knownOwner,"{}"))
             for(id in ids) {
                 val item = runCatching { tmdb.byCloudId(id) }.getOrNull() ?: continue
@@ -689,12 +705,21 @@ class AppState(context: Context) {
                 }
             }
             if(ownerKey != noticesKey()) return
-            notifications.clear(); notifications.addAll(existing.take(100))
             // Preserve subscriptions added while this check was awaiting TMDB.
             val fresh=org.json.JSONObject(playbackPrefs.getString(knownOwner,"{}"))
             val keys=fresh.keys()
             while(keys.hasNext()) { val key=keys.next();if(!known.has(key)) known.put(key,fresh.optString(key)) }
-            playbackPrefs.edit().putString(knownOwner,known.toString()).apply(); persistNotices()
+            val history = if (com.miflix.native2.data.ReleaseAlertsRP164.enabled(appContext)) existing else existing.take(100)
+            val stored = org.json.JSONArray()
+            history.forEach { notice ->
+                stored.put(org.json.JSONObject().put("id", notice.id).put("cloud", notice.item.cloudId)
+                    .put("title", notice.item.title).put("overview", notice.item.overview)
+                    .put("poster", notice.item.poster).put("message", notice.message).put("date", notice.date))
+            }
+            if (alerts.saveHistory(playbackPrefs, ownerKey, generation, knownOwner, known, stored)) {
+                notifications.clear()
+                notifications.addAll(history)
+            }
         } finally { checkingNotices = false;com.miflix.native2.data.ReleaseAlertsRP164.lock.unlock() }
     }
     suspend fun playbackSegments(req: PlayerRequest): PlaybackSegments = runCatching {

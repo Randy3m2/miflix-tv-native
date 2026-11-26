@@ -15,9 +15,9 @@
           "team": "licey",
           "name": "YouTube · Licey",
           "kind": "YOUTUBE",
-          "url": "https://www.youtube.com/channel/UCodG7MOVMjh3lpV47EUTnMA",
+          "url": "https://www.youtube.com/@TigresDelLicey1",
           "reference": "https://lidom.com/tigres-del-licey/licey-renueva-su-equipo-de-comunicacion-y-transmision-96860.html",
-          "note": "Select a video; availability and embedding checked by YouTube",
+          "note": "YouTube · Live streams",
           "aliases": []
         },
         {
@@ -73,9 +73,9 @@
           "team": "aguilas",
           "name": "YouTube · Águilas",
           "kind": "YOUTUBE",
-          "url": "https://www.youtube.com/channel/UC_l6h1_eJl7yJ1aagWximmA",
+          "url": "https://www.youtube.com/@%C3%81guilasCibae%C3%B1asoficial",
           "reference": "https://aguilas.com.do/wp-content/uploads/2025/10/Boletin-de-Prensa-No.1-Aguilas-Cibaenas-Serie-Regular-2025-26.pdf",
-          "note": "Select a video; availability and embedding checked by YouTube",
+          "note": "YouTube · Live streams",
           "aliases": []
         },
         {
@@ -118,11 +118,11 @@
         {
           "id": "escogido-youtube",
           "team": "escogido",
-          "name": "YouTube · Abriendo Sports / La Cueva Roja",
+          "name": "YouTube · Abriendo Sports",
           "kind": "YOUTUBE",
-          "url": "",
+          "url": "https://www.youtube.com/@abriendosports",
           "reference": "https://lidom.com/leones-del-escogido/escogido-apuesta-por-jovenes-y-formato-digital-para-ampliar-audiencia-en-youtube-96582.html",
-          "note": "Select a video; availability and embedding checked by YouTube",
+          "note": "YouTube · Live streams",
           "aliases": []
         },
         {
@@ -161,11 +161,11 @@
         {
           "id": "gigantes-youtube",
           "team": "gigantes",
-          "name": "YouTube / ION Creators · verify",
+          "name": "YouTube · Gigantes",
           "kind": "YOUTUBE",
-          "url": "",
+          "url": "https://www.youtube.com/@GigantesCibao",
           "reference": "https://lidom.com/gigantes-del-cibao/gigantes-renuevan-acuerdo-con-telemedios-canal-8-96975.html",
-          "note": "Select a video; availability and embedding checked by YouTube",
+          "note": "YouTube · Live streams",
           "aliases": []
         },
         {
@@ -199,9 +199,9 @@
           "team": "toros",
           "name": "YouTube · Toros",
           "kind": "YOUTUBE",
-          "url": "",
+          "url": "https://www.youtube.com/@torosdeleste",
           "reference": "https://torosdeleste.com/",
-          "note": "Select a video; availability and embedding checked by YouTube",
+          "note": "YouTube · Live streams",
           "aliases": []
         },
         {
@@ -259,9 +259,9 @@
           "team": "estrellas",
           "name": "YouTube · Estrellas",
           "kind": "YOUTUBE",
-          "url": "",
+          "url": "https://www.youtube.com/@EstrellasBaseballClub",
           "reference": "https://estrellasorientales.com.do/",
-          "note": "Select a video; availability and embedding checked by YouTube",
+          "note": "YouTube · Live streams",
           "aliases": []
         },
         {

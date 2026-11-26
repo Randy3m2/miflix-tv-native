@@ -162,15 +162,6 @@ internal fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTea
     val scope=rememberCoroutineScope();var busy by remember {mutableStateOf(false)};var error by remember {mutableStateOf("")}
     var youtube by remember {mutableStateOf<LidomSource?>(null)}
     var video by remember {mutableStateOf<LidomYoutubeSelection?>(null)}
-    var liveCheckRP200 by remember(team.id) {mutableStateOf(true)}
-    var liveFoundRP200 by remember(team.id) {mutableStateOf<Pair<LidomSource,LidomVideo>?>(null)}
-    var liveRefreshRP200 by remember(team.id) {mutableIntStateOf(0)}
-    LaunchedEffect(team.id,liveRefreshRP200,sourceRevisionRP61) {
-        liveCheckRP200=true
-        liveFoundRP200=try {repo.verifiedLive(team.id)}
-            catch(e:CancellationException) {throw e} catch(_:Exception) {null}
-        finally {liveCheckRP200=false}
-    }
     fun play(source:LidomSource,stream:com.miflix.native2.model.StreamChoice) {
         state.lidomTeamId=team.id;state.lidomShowSources=false
         val item=MediaSummary(team.mlb,"live",team.name+" · "+source.name,tr("Transmisión seleccionada por el usuario. La programación puede variar.","User-selected broadcast. Programming may vary."),null,null,0.0,"LIDOM")
@@ -180,21 +171,18 @@ internal fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTea
         else state.openLivePlayer(request)
         close()
     }
-    PlayerSideSheet(team.name+" · "+tr("Fuentes","Sources"),close) {
-        item {Text(tr("Buscamos primero un directo confirmado del equipo seleccionado. Si no existe, conservamos tus fuentes manuales.","We first search for a confirmed live video from the selected team's channel; manual sources remain available."),color=Muted,fontSize=13.sp)}
-        item {
-            if(liveCheckRP200) Text(tr("Buscando directo del equipo…","Checking team live stream…"),color=Muted)
-            else if(liveFoundRP200!=null) {
-                val match=liveFoundRP200!!
-                FocusButton("● LIVE · "+match.second.title,modifier=Modifier.fillMaxWidth(),primary=true) {
-                    if(onSplitSelect!=null || splitMode) play(match.first,com.miflix.native2.model.StreamChoice("YouTube LIVE","https://www.youtube.com/watch?v=${match.second.id}",match.first.name,addonName="LIDOM"))
-                    else video=LidomYoutubeSelection(team.id,match.first.id,match.second.id)
-                }
-            } else Text(tr("Sin directo verificado ahora mismo. Puedes elegir una fuente manualmente.","No verified live video right now. Choose a source manually."),color=Muted,fontSize=13.sp)
+    fun playYoutube(source: LidomSource, id: String) {
+        if (onSplitSelect != null || splitMode) {
+            play(source, com.miflix.native2.model.StreamChoice(
+                "YouTube", "https://www.youtube.com/watch?v=$id", source.name, addonName = "LIDOM"
+            ))
+        } else {
+            video = LidomYoutubeSelection(team.id, source.id, id)
         }
-        item {FocusButton(tr("Volver a buscar LIVE","Refresh LIVE search")) {liveRefreshRP200++}}
+    }
+    PlayerSideSheet(team.name+" · "+tr("Fuentes","Sources"),close) {
         if(onSplitSelect==null) item {
-            FocusButton(if(splitMode) tr("SplitScreen activado · elige una fuente","SplitScreen on · choose a source") else tr("Abrir en SplitScreen","Open in SplitScreen"),primary=splitMode) {splitMode=!splitMode}
+            FocusButton(if(splitMode) tr("SplitScreen activado · elige una fuente","SplitScreen on · choose a source") else tr("Abrir en SplitScreen","Open in SplitScreen"),primary=splitMode) {if(!busy) splitMode=!splitMode}
         }
         item {
             FocusButton(tr("Actualizar YouTube / fuente por QR","Update YouTube / source by QR"),modifier=Modifier.fillMaxWidth()) {showYoutubeQRRP61=true}
@@ -207,9 +195,30 @@ internal fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTea
                     error=""
                     if(source.kind=="YOUTUBE") {
                         val id=LidomRepository.youtubeId(source.url)
-                        if(id==null) youtube=source
-                        else if(onSplitSelect!=null || splitMode) play(source,com.miflix.native2.model.StreamChoice("YouTube","https://www.youtube.com/watch?v=$id",source.name,addonName="LIDOM"))
-                        else video=LidomYoutubeSelection(team.id,source.id,id)
+                        when {
+                            id != null -> playYoutube(source, id)
+                            !LidomRepository.youtubeChannel(source.url) -> youtube = source
+                            else -> scope.launch {
+                                busy = true
+                                try {
+                                    val live = repo.verifiedLive(source)
+                                    if (live != null) playYoutube(source, live.id)
+                                    else error = tr(
+                                        "No hay un directo activo del equipo en este canal.",
+                                        "There is no active stream for this team on this channel."
+                                    )
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (_: Exception) {
+                                    error = tr(
+                                        "No se pudo consultar el canal de YouTube. Intenta de nuevo.",
+                                        "Could not check the YouTube channel. Try again."
+                                    )
+                                } finally {
+                                    busy = false
+                                }
+                            }
+                        }
                     }
                     else scope.launch {busy=true;try {
                         val streams=repo.resolve(source,state.calendarLiveManifest("nauta"))
@@ -228,8 +237,7 @@ internal fun LidomSourcesSheet(state:AppState,repo:LidomRepository,team:LidomTea
     if(showYoutubeQRRP61) LidomYoutubeQRSheetRP61(state,repo,team,{sourceRevisionRP61++}) {showYoutubeQRRP61=false}
     youtube?.let {source -> LidomYoutubeChooser(repo,source,onPlay={id ->
         youtube=null
-        if(onSplitSelect!=null || splitMode) play(source,com.miflix.native2.model.StreamChoice("YouTube","https://www.youtube.com/watch?v=$id",source.name,addonName="LIDOM"))
-        else video=LidomYoutubeSelection(team.id,source.id,id)
+        playYoutube(source, id)
     },close={youtube=null})}
     video?.let {playing -> NativeYoutubeRP200(playing.video,caption=team.name+" · LIVE",onWorking={repo.working(team.id,playing.source,playing.video)},close={video=null},preview=false)}
 }
